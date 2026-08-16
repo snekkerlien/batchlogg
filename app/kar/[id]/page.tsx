@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import { createClient } from "@supabase/supabase-js";
 import { createBatch } from "./actions/createBatch";
 
 type Props = {
@@ -13,6 +13,12 @@ export default async function KarPage({ params }: Props) {
   if (isNaN(karId) || karId < 1 || karId > 6) {
     notFound();
   }
+
+  // Server-side Supabase client
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
   // Hent aktiv batch
   const { data: batch } = await supabase
@@ -29,8 +35,7 @@ export default async function KarPage({ params }: Props) {
       <div className="max-w-xl w-full">
         <h1 className="text-4xl font-bold mb-6 text-center">Kar {karId}</h1>
 
-        {/* LEDIG KAR */}
-        {ledig && (
+        {ledig ? (
           <div className="border border-white/10 rounded-xl p-8 bg-white/5">
             <h2 className="text-2xl font-semibold mb-4 text-center">
               Ledig kar
@@ -117,10 +122,7 @@ export default async function KarPage({ params }: Props) {
               </button>
             </form>
           </div>
-        )}
-
-        {/* AKTIV BATCH */}
-        {!ledig && (
+        ) : (
           <div className="border border-white/10 rounded-xl p-8 bg-white/5">
             <h2 className="text-2xl font-semibold mb-4 text-center">
               Aktiv batch
