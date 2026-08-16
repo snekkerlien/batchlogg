@@ -64,3 +64,86 @@ export default async function KarPage({ params }: Props) {
                   required
                   className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
                 />
+              </div>
+
+              <div>
+                <label className="block mb-1">Startdato</label>
+                <input
+                  type="date"
+                  name="startdato"
+                  required
+                  className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
+                />
+              </div>
+
+              <input type="hidden" name="kar" value={karId} />
+
+              <div>
+                <label className="block mb-1">Status</label>
+                <select
+                  name="status"
+                  required
+                  className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
+                >
+                  <option value="Aktiv">Aktiv</option>
+                  <option value="Secondary">Secondary</option>
+                  <option value="Klaring">Klaring</option>
+                  <option value="Flasket">Flasket</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block mb-1">Batchstørrelse (liter)</label>
+                <input
+                  type="number"
+                  name="batchstorrelse"
+                  required
+                  className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
+                />
+              </div>
+
+              <div>
+                <label className="block mb-1">OG</label>
+                <input
+                  type="number"
+                  step="0.001"
+                  name="og"
+                  required
+                  className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
+                />
+              </div>
+
+              <div>
+                <label className="block mb-1">FG</label>
+                <input
+                  type="number"
+                  step="0.001"
+                  name="fg"
+                  required
+                  className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
+                />
+              </div>
+
+              <div>
+                <label className="block mb-1">Oppskrift</label>
+                <input
+                  type="text"
+                  name="oppskrift"
+                  required
+                  className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-green-600 hover:bg-green-700 p-2 rounded font-semibold"
+              >
+                Opprett batch
+              </button>
+            </form>
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}
