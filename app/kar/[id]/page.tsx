@@ -2,15 +2,12 @@ import { notFound } from "next/navigation";
 import { createBatch } from "../../actions/createBatch";
 
 interface Props {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }
 
 export default async function KarPage({ params }: Props) {
-  // Next.js 16: params er en Promise → må awaites
-  const { id } = await params;
-  const karId = Number(id);
+  const karId = Number(params.id);
 
-  // Valider ID (1–6)
   if (isNaN(karId) || karId < 1 || karId > 6) {
     notFound();
   }
