@@ -1,8 +1,9 @@
-"use server";
-
+import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
 
-export async function createBatch(formData: FormData) {
+export async function POST(req: Request) {
+  const formData = await req.formData();
+
   const name = formData.get("name") as string;
   const volume = Number(formData.get("volume"));
   const kar = Number(formData.get("kar"));
@@ -31,5 +32,8 @@ export async function createBatch(formData: FormData) {
 
   if (error) {
     console.error(error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  return NextResponse.json({ success: true });
 }
