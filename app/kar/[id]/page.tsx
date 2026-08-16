@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { createBatch } from "../../actions/createBatch";
+import { createBatch } from "@/app/actions/createBatch";
 
 interface Props {
   params: { id: string };
