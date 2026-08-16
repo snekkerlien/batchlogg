@@ -12,29 +12,16 @@ export default function HomePage() {
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
-          <a
-            href="/kar/1"
-            className="border border-white/10 rounded-xl p-6 text-center hover:bg-white/5 transition"
-          >
-            <h2 className="text-xl font-semibold mb-2">Kar 1</h2>
-            <p className="text-sm opacity-70">Se status</p>
-          </a>
-
-          <a
-            href="/kar/2"
-            className="border border-white/10 rounded-xl p-6 text-center hover:bg-white/5 transition"
-          >
-            <h2 className="text-xl font-semibold mb-2">Kar 2</h2>
-            <p className="text-sm opacity-70">Se status</p>
-          </a>
-
-          <a
-            href="/kar/3"
-            className="border border-white/10 rounded-xl p-6 text-center hover:bg-white/5 transition"
-          >
-            <h2 className="text-xl font-semibold mb-2">Kar 3</h2>
-            <p className="text-sm opacity-70">Se status</p>
-          </a>
+          {[1, 2, 3, 4, 5, 6].map((kar) => (
+            <a
+              key={kar}
+              href={`/kar/${kar}`}
+              className="border border-white/10 rounded-xl p-6 text-center hover:bg-white/5 transition"
+            >
+              <h2 className="text-xl font-semibold mb-2">Kar {kar}</h2>
+              <p className="text-sm opacity-70">Se status</p>
+            </a>
+          ))}
         </div>
 
         <p className="text-sm opacity-40 mt-12">
