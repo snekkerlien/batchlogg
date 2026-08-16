@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import { createBatch } from "./actions/createBatch";
+
 
 type Props = {
   params: Promise<{ id: string }>;
