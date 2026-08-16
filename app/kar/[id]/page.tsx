@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
-import { createBatch } from "./actions/createBatch";
+import { createBatch } from "@/app/actions/createBatch";
 import { notFound } from "next/navigation";
 
 type Props = {
