@@ -11,12 +11,10 @@ type Props = {
 export default async function KarPage({ params }: Props) {
   const karId = Number(params.id);
 
-  // Gyldige kar: 1–6
   if (isNaN(karId) || karId < 1 || karId > 6) {
     notFound();
   }
 
-  // Finn aktiv batch på dette karet
   const { data: activeBatch } = await supabase
     .from("batches")
     .select("*")
@@ -34,9 +32,6 @@ export default async function KarPage({ params }: Props) {
         </h1>
 
         {hasActive ? (
-          // ============================
-          //  VIS AKTIV BATCH
-          // ============================
           <div className="space-y-2">
             <p className="text-lg font-semibold">
               Aktiv batch: {activeBatch.batchnavn}
@@ -55,9 +50,17 @@ export default async function KarPage({ params }: Props) {
             </p>
           </div>
         ) : (
-          // ============================
-          //  SKJEMA FOR NY BATCH
-          // ============================
           <div>
             <p className="mb-4 text-sm text-zinc-300">
               Ingen aktiv gjæring på dette karet. Opprett ny batch:
+            </p>
+
+            <form action={createBatch} className="space-y-4">
+              <div>
+                <label className="block mb-1">Batchnavn</label>
+                <input
+                  type="text"
+                  name="batchnavn"
+                  required
+                  className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
+                />
