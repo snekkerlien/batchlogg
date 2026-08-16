@@ -19,8 +19,8 @@ export async function createBatch(formData: FormData) {
 
   if (error) {
     console.error(error);
-    return { success: false, error };
+    return;
   }
 
-  return { success: true, data };
+  return;
 }
