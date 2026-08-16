@@ -1,64 +1,28 @@
 import { notFound } from "next/navigation";
 
-interface Props {
-  params: { id: string };
-}
+type Props = {
+  params: Promise<{ id: string }>;
+};
 
-export default function KarPage({ params }: Props) {
-  const karId = Number(params.id);
+export default async function KarPage({ params }: Props) {
+  // Next.js 16: params er en Promise → må await'es
+  const { id } = await params;
 
+  const karId = Number(id);
+
+  // Valider ID
   if (isNaN(karId) || karId < 1 || karId > 6) {
     notFound();
   }
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Kar {karId}</h1>
-
-      <form action="/api/batch" method="POST" className="space-y-4">
-        <input type="hidden" name="kar" value={karId} />
-
-        <div>
-          <label className="block mb-1">Batchnavn</label>
-          <input
-            type="text"
-            name="name"
-            required
-            className="border p-2 rounded w-full"
-          />
-        </div>
-
-        <div>
-          <label className="block mb-1">Volum (liter)</label>
-          <input
-            type="number"
-            name="volume"
-            required
-            className="border p-2 rounded w-full"
-          />
-        </div>
-
-        <div>
-          <label className="block mb-1">Status</label>
-          <select
-            name="status"
-            required
-            className="border p-2 rounded w-full"
-          >
-            <option value="Aktiv">Aktiv</option>
-            <option value="Secondary">Secondary</option>
-            <option value="Klaring">Klaring</option>
-            <option value="Flasket">Flasket</option>
-          </select>
-        </div>
-
-        <button
-          type="submit"
-          className="bg-blue-600 text-white px-4 py-2 rounded"
-        >
-          Opprett batch
-        </button>
-      </form>
-    </div>
+    <main className="min-h-screen bg-black text-white flex items-center justify-center">
+      <div className="text-center">
+        <h1 className="text-4xl font-bold mb-4">Kar {karId}</h1>
+        <p className="text-lg opacity-80">
+          Dette er informasjonssiden for kar nummer {karId}.
+        </p>
+      </div>
+    </main>
   );
 }
