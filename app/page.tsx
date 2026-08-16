@@ -4,7 +4,7 @@ interface Props {
   params: { id: string };
 }
 
-export default async function KarPage({ params }: Props) {
+export default function KarPage({ params }: Props) {
   const karId = Number(params.id);
 
   if (isNaN(karId) || karId < 1 || karId > 6) {
@@ -15,7 +15,7 @@ export default async function KarPage({ params }: Props) {
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Kar {karId}</h1>
 
-      <form action={createBatch} className="space-y-4">
+      <form action="/api/batch" method="POST" className="space-y-4">
         <input type="hidden" name="kar" value={karId} />
 
         <div>
