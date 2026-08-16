@@ -14,13 +14,11 @@ export default async function KarPage({ params }: Props) {
     notFound();
   }
 
-  // Server-side Supabase client
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // Hent aktiv batch
   const { data: batch } = await supabase
     .from("batches")
     .select("*")
