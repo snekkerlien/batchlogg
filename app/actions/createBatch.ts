@@ -8,7 +8,6 @@ export async function createBatch(formData: FormData) {
   const kar = Number(formData.get("kar"));
   const status = formData.get("status") as string;
 
-  // Finn neste batchnummer
   const { data: existing } = await supabase
     .from("batches")
     .select("batchnummer")
@@ -33,6 +32,4 @@ export async function createBatch(formData: FormData) {
   if (error) {
     console.error(error);
   }
-
-  return;
 }
