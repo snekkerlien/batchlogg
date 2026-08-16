@@ -5,7 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 export async function createBatch(formData: FormData) {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.SUPABASE_SERVICE_ROLE_KEY! // ← viktig
   );
 
   const kar = Number(formData.get("kar"));
@@ -28,6 +28,6 @@ export async function createBatch(formData: FormData) {
   });
 
   if (error) {
-    console.error("Feil ved insert:", error);
+    console.error("Supabase insert error:", error);
   }
 }
