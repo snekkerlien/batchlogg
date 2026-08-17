@@ -29,14 +29,15 @@ export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
 
     setLoading(false);
 
-    // Supabase error (rare)
+    // Teknisk feil
     if (error) {
       setErrorMsg("En teknisk feil oppstod. Prøv igjen.");
       return;
     }
 
     // Ingen rader slettet → feil kode
-    if (!data || data.length === 0) {
+    const deletedRows = Array.isArray(data) ? data : [];
+    if (deletedRows.length === 0) {
       setErrorMsg("Feil kode. Sjekk koden og prøv igjen.");
       return;
     }
