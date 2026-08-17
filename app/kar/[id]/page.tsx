@@ -52,6 +52,17 @@ export default async function KarPage({ params }: Props) {
             <form action={createBatch} className="space-y-4">
               <input type="hidden" name="kar" value={karId} />
 
+              {/* Batchnummer */}
+              <div>
+                <label className="block mb-1">Batchnummer</label>
+                <input
+                  type="number"
+                  name="batchnummer"
+                  required
+                  className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
+                />
+              </div>
+
               <div>
                 <label className="block mb-1">Batchnavn</label>
                 <input
@@ -66,7 +77,7 @@ export default async function KarPage({ params }: Props) {
                 <label className="block mb-1">Batchstørrelse (liter)</label>
                 <input
                   type="number"
-                  name="volume"
+                  name="volume_l"
                   required
                   className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
                 />
@@ -129,6 +140,12 @@ export default async function KarPage({ params }: Props) {
             </h2>
 
             <div className="space-y-3 text-left">
+
+              <p>
+                <span className="opacity-70">Batchnummer:</span>{" "}
+                <span className="font-semibold">{batch.batchnummer}</span>
+              </p>
+
               <p>
                 <span className="opacity-70">Batchnavn:</span>{" "}
                 <span className="font-semibold">{batch.name}</span>

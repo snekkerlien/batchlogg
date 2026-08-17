@@ -15,6 +15,7 @@ export async function createBatch(formData: FormData) {
   const og = Number(formData.get("og"));
   const fg = Number(formData.get("fg"));
   const oppskrift = formData.get("oppskrift") as string;
+  const batchnummer = Number(formData.get("batchnummer"));
 
   const { error } = await supabase.from("Batches").insert({
     aktivt_kar: kar,
