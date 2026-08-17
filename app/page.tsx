@@ -19,13 +19,41 @@ export default async function HomePage() {
     <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
       {/* Boble-animasjon (CSS) */}
       <style>{`
-        @keyframes bubbles {
-          0% { transform: translateY(0) scale(1); opacity: 0.3; }
-          50% { transform: translateY(-6px) scale(1.1); opacity: 0.6; }
-          100% { transform: translateY(0) scale(1); opacity: 0.3; }
+        .bubble-wrap {
+          position: relative;
         }
-        .bubble {
-          animation: bubbles 2.2s ease-in-out infinite;
+
+        .bubble-wrap::before,
+        .bubble-wrap::after {
+          content: "";
+          position: absolute;
+          left: 50%;
+          width: 6px;
+          height: 6px;
+          background: rgba(0, 255, 100, 0.4);
+          border-radius: 50%;
+          animation: bubble-rise 2.4s infinite ease-in-out;
+        }
+
+        .bubble-wrap::after {
+          width: 4px;
+          height: 4px;
+          animation-duration: 3.1s;
+          animation-delay: 0.8s;
+        }
+
+        @keyframes bubble-rise {
+          0% {
+            transform: translate(-50%, 6px) scale(0.8);
+            opacity: 0.0;
+          }
+          30% {
+            opacity: 0.5;
+          }
+          100% {
+            transform: translate(-50%, -14px) scale(1);
+            opacity: 0;
+          }
         }
       `}</style>
 
@@ -44,12 +72,12 @@ export default async function HomePage() {
               <a
                 key={kar}
                 href={`/kar/${kar}`}
-                className="border border-white/10 rounded-xl p-6 bg-white/5 hover:bg-white/10 transition flex flex-col items-center"
+                className="border border-white/10 rounded-xl p-6 bg-white/5 hover:bg-white/10 transition flex flex-col items-center relative overflow-hidden"
               >
                 <span className="text-xl font-semibold mb-2">Kar {kar}</span>
 
                 {aktiv ? (
-                  <span className="text-green-400 font-semibold bubble">
+                  <span className="text-green-400 font-semibold bubble-wrap">
                     Aktiv batch
                   </span>
                 ) : (
