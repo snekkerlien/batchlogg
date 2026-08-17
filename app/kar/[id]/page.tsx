@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { createBatch } from "./actions/createBatch";
+import { VolumeSelector } from "./VolumeSelector";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -60,15 +61,8 @@ export default async function KarPage({ params }: Props) {
                 />
               </div>
 
-              <div>
-                <label className="block mb-1">Batchstørrelse (liter)</label>
-                <input
-                  type="number"
-                  name="volume_l"
-                  required
-                  className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
-                />
-              </div>
+              {/* NY: Volum-knapper */}
+              <VolumeSelector />
 
               <div>
                 <label className="block mb-1">Startdato</label>
