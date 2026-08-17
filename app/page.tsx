@@ -140,7 +140,7 @@ export default async function HomePage() {
         </div>
 
         <p className="text-sm opacity-40 mt-12">
-          © {new Date().getFullYear()} Batchlogg – laget av Mads
+          © {new Date().getFullYear()} Fiklebrygg. Alle rettigheter reservert.
         </p>
       </div>
     </main>
