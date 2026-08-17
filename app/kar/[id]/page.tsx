@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 export const revalidate = 0; // 🔥 Slår av caching i Next.js 16
 
 import { notFound } from "next/navigation";

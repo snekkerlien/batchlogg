@@ -1,18 +1,25 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import { createClient } from "@supabase/supabase-js";
 
 export default async function HomePage() {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      global: {
+        fetch: (url, opts) => fetch(url, { ...opts, cache: "no-store" })
+      }
+    }
   );
 
-  // Hent alle aktive batches
+  // Hent alle aktive batches (alltid ferske data)
   const { data: batches } = await supabase
     .from("Batches")
     .select("*")
     .eq("status", "Aktiv");
 
-  // Lag et kart over hvilke kar som er aktive
   const aktiveKar = new Set(batches?.map((b) => b.aktivt_kar));
 
   return (
@@ -23,7 +30,6 @@ export default async function HomePage() {
           position: relative;
         }
 
-        /* 5 bobler med forskjellig posisjon, størrelse og timing */
         .bubble-wrap span.b1,
         .bubble-wrap span.b2,
         .bubble-wrap span.b3,
@@ -112,8 +118,6 @@ export default async function HomePage() {
                 {aktiv ? (
                   <span className="text-green-400 font-semibold bubble-wrap">
                     Aktiv batch
-
-                    {/* 5 bobler */}
                     <span className="b1"></span>
                     <span className="b2"></span>
                     <span className="b3"></span>
