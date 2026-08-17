@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { createBatch } from "./actions/createBatch";
+import { deleteBatch } from "./actions/deleteBatch";
 import { RecipeEditor } from "./RecipeEditor";
 
 type Props = {
@@ -36,6 +37,7 @@ export default async function KarPage(props: Props) {
         <h1 className="text-4xl font-bold mb-6 text-center">Kar {karId}</h1>
 
         {ledig ? (
+          /* LEDIG KAR */
           <div className="border border-white/10 rounded-xl p-8 bg-white/5">
             <h2 className="text-2xl font-semibold mb-4 text-center">
               Ledig kar
@@ -119,6 +121,7 @@ export default async function KarPage(props: Props) {
             </form>
           </div>
         ) : (
+          /* AKTIV BATCH */
           <div className="border border-white/10 rounded-xl p-8 bg-white/5">
             <h2 className="text-2xl font-semibold mb-4 text-center">
               Aktiv batch
@@ -162,6 +165,33 @@ export default async function KarPage(props: Props) {
                 {batch.oppskrift}
               </p>
             </div>
+
+            {/* SLETTINGSSKJEMA */}
+            <form action={deleteBatch} className="mt-8 space-y-4">
+              <input
+                type="hidden"
+                name="batchnummer"
+                value={batch.batchnummer}
+              />
+
+              <div>
+                <label className="block mb-1">Sikkerhetskode</label>
+                <input
+                  type="text"
+                  name="kode"
+                  required
+                  placeholder="Skriv koden for å slette batchen"
+                  className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-red-600 hover:bg-red-700 p-2 rounded font-semibold"
+              >
+                Slett batch
+              </button>
+            </form>
           </div>
         )}
 
