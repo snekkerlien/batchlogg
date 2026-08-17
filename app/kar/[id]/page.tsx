@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { createBatch } from "./createBatch";
 import { RecipeEditor } from "./RecipeEditor";
+import ActiveBatch from "./ActiveBatch"; // 👈 DeleteModal er flyttet HIT
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -38,7 +39,6 @@ export default async function KarPage(props: Props) {
         <h1 className="text-4xl font-bold mb-6 text-center">Kar {karId}</h1>
 
         {ledig ? (
-          /* LEDIG KAR */
           <div className="border border-white/10 rounded-xl p-8 bg-white/5">
             <h2 className="text-2xl font-semibold mb-4 text-center">
               Ledig kar
@@ -129,7 +129,6 @@ export default async function KarPage(props: Props) {
             </a>
           </div>
         ) : (
-          /* AKTIV BATCH */
           <div className="border border-white/10 rounded-xl p-8 bg-white/5">
             <h2 className="text-2xl font-semibold mb-4 text-center">
               Aktiv batch
@@ -174,25 +173,7 @@ export default async function KarPage(props: Props) {
               </p>
             </div>
 
-            <div className="flex justify-between mt-8">
-              <a
-                href="/"
-                className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold transition"
-              >
-                ← Tilbake
-              </a>
-
-              {/* ⭐ Importeres kun her, ikke globalt */}
-              {(() => {
-                const DeleteModal =
-                  require("./DeleteModal").default;
-                return (
-                  <DeleteModal
-                    batchnummer={batch.batchnummer ?? ""}
-                  />
-                );
-              })()}
-            </div>
+            <ActiveBatch batch={batch} />
           </div>
         )}
 
