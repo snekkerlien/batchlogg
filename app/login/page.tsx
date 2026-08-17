@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const router = useRouter();
+
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -68,6 +69,13 @@ export default function LoginPage() {
         >
           Logg inn
         </button>
+
+        <a
+          href="/signup"
+          className="block text-center text-sm text-blue-400 hover:text-blue-300 mt-4"
+        >
+          Registrer ny konto
+        </a>
       </form>
     </div>
   );
