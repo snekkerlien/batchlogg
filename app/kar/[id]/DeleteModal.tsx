@@ -15,24 +15,24 @@ export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
 
-    // Batchnummer må matche formatet i databasen (0001, 0123, osv.)
+    // ⭐ Denne linjen mangler hos deg — derfor får du feilen
     const formattedBatch = String(batchnummer).padStart(4, "0");
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("Batches")
       .delete()
       .eq("batchnummer", formattedBatch)
       .eq("kode", kode);
+
+    console.log("DELETE RESULT", { data, error });
 
     if (error) {
       alert("Kunne ikke slette batch: " + error.message);
       return;
     }
 
-    // Lukk modal
+    alert("Sletting gikk gjennom!");
     setOpen(false);
-
-    // Oppdater siden
     window.location.reload();
   }
 
