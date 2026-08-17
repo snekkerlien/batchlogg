@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { createBatch } from "./actions/createBatch";
-import { deleteBatch } from "./actions/deleteBatch";
 import { RecipeEditor } from "./RecipeEditor";
+import DeleteModal from "./DeleteModal";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -174,66 +174,7 @@ export default async function KarPage(props: Props) {
                 ← Tilbake
               </a>
 
-              {/* ÅPNE MODAL */}
-              <button
-                type="button"
-                onClick={() => {
-                  const modal = document.getElementById("deleteModal");
-                  modal?.classList.remove("hidden");
-                }}
-                className="px-6 py-3 bg-red-600 hover:bg-red-700 rounded-lg font-semibold"
-              >
-                Slett batch
-              </button>
-            </div>
-
-            {/* MODAL */}
-            <div
-              id="deleteModal"
-              className="hidden fixed inset-0 bg-black/70 flex items-center justify-center"
-            >
-              <div className="bg-zinc-900 border border-white/10 p-6 rounded-xl w-80">
-                <h3 className="text-xl font-semibold mb-4 text-center">
-                  Bekreft sletting
-                </h3>
-
-                <form action={deleteBatch} className="space-y-4">
-                  <input
-                    type="hidden"
-                    name="batchnummer"
-                    value={batch.batchnummer}
-                  />
-
-                  <div>
-                    <label className="block mb-1">Sikkerhetskode</label>
-                    <input
-                      type="text"
-                      name="kode"
-                      required
-                      placeholder="Skriv koden"
-                      className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="w-full bg-red-600 hover:bg-red-700 p-2 rounded font-semibold"
-                  >
-                    Slett batch
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const modal = document.getElementById("deleteModal");
-                      modal?.classList.add("hidden");
-                    }}
-                    className="w-full bg-zinc-700 hover:bg-zinc-600 p-2 rounded font-semibold mt-2"
-                  >
-                    Avbryt
-                  </button>
-                </form>
-              </div>
+              <DeleteModal batchnummer={batch.batchnummer} />
             </div>
           </div>
         )}
