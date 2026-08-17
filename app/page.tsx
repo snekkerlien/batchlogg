@@ -8,7 +8,7 @@ export default async function HomePage() {
 
   // Hent alle aktive batches
   const { data: batches } = await supabase
-    .from("batches")
+    .from("Batches")
     .select("*")
     .eq("status", "Aktiv");
 
