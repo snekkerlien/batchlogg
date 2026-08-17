@@ -9,7 +9,6 @@ type Props = {
 };
 
 export default async function KarPage(props: Props) {
-  // Next.js 16: params er en Promise → må awaites
   const { id } = await props.params;
   const karId = Number(id);
 
@@ -166,46 +165,81 @@ export default async function KarPage(props: Props) {
               </p>
             </div>
 
-            {/* SLETTINGSSKJEMA */}
-            <form action={deleteBatch} className="mt-8 space-y-4">
-              <input
-                type="hidden"
-                name="batchnummer"
-                value={batch.batchnummer}
-              />
+            {/* KNAPPER SAMMEN */}
+            <div className="flex justify-between mt-8">
+              <a
+                href="/"
+                className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold transition"
+              >
+                ← Tilbake
+              </a>
 
-              <div>
-                <label className="block mb-1">Sikkerhetskode</label>
-                <input
-                  type="text"
-                  name="kode"
-                  required
-                  placeholder="Skriv koden for å slette batchen"
-                  className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
-                />
-              </div>
-
+              {/* ÅPNE MODAL */}
               <button
-                type="submit"
-                className="w-full bg-red-600 hover:bg-red-700 p-2 rounded font-semibold"
+                type="button"
+                onClick={() => {
+                  const modal = document.getElementById("deleteModal");
+                  modal?.classList.remove("hidden");
+                }}
+                className="px-6 py-3 bg-red-600 hover:bg-red-700 rounded-lg font-semibold"
               >
                 Slett batch
               </button>
-            </form>
+            </div>
+
+            {/* MODAL */}
+            <div
+              id="deleteModal"
+              className="hidden fixed inset-0 bg-black/70 flex items-center justify-center"
+            >
+              <div className="bg-zinc-900 border border-white/10 p-6 rounded-xl w-80">
+                <h3 className="text-xl font-semibold mb-4 text-center">
+                  Bekreft sletting
+                </h3>
+
+                <form action={deleteBatch} className="space-y-4">
+                  <input
+                    type="hidden"
+                    name="batchnummer"
+                    value={batch.batchnummer}
+                  />
+
+                  <div>
+                    <label className="block mb-1">Sikkerhetskode</label>
+                    <input
+                      type="text"
+                      name="kode"
+                      required
+                      placeholder="Skriv koden"
+                      className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full bg-red-600 hover:bg-red-700 p-2 rounded font-semibold"
+                  >
+                    Slett batch
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const modal = document.getElementById("deleteModal");
+                      modal?.classList.add("hidden");
+                    }}
+                    className="w-full bg-zinc-700 hover:bg-zinc-600 p-2 rounded font-semibold mt-2"
+                  >
+                    Avbryt
+                  </button>
+                </form>
+              </div>
+            </div>
           </div>
         )}
 
-        <div className="mt-8 text-center">
-          <a
-            href="/"
-            className="inline-block px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold transition"
-          >
-            ← Tilbake til hovedsiden
-          </a>
-        </div>
-
         <p className="text-sm opacity-40 mt-12 text-center">
-          © {new Date().getFullYear()} Batchlogg – laget av Fiklebrygg
+          © {new Date().getFullYear()} Batchlogg – laget av Mads
         </p>
       </div>
     </main>
