@@ -14,13 +14,11 @@ export default async function KarPage({ params }: Props) {
     notFound();
   }
 
-  // RIKTIG CLIENT (service-role)
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // Hent aktiv batch for dette karet
   const { data: batch } = await supabase
     .from("Batches")
     .select("*")
@@ -129,7 +127,6 @@ export default async function KarPage({ params }: Props) {
             </h2>
 
             <div className="space-y-3 text-left">
-
               <p>
                 <span className="opacity-70">Batchnummer:</span>{" "}
                 <span className="font-semibold">{batch.batchnummer}</span>
@@ -174,6 +171,16 @@ export default async function KarPage({ params }: Props) {
             </div>
           </div>
         )}
+
+        {/* Tilbake-knapp */}
+        <div className="mt-8 text-center">
+          <a
+            href="/"
+            className="inline-block px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold transition"
+          >
+            ← Tilbake til hovedsiden
+          </a>
+        </div>
 
         <p className="text-sm opacity-40 mt-12 text-center">
           © {new Date().getFullYear()} Batchlogg – laget av Mads
