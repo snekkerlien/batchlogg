@@ -14,13 +14,15 @@ export default async function KarPage({ params }: Props) {
     notFound();
   }
 
+  // RIKTIG CLIENT (service-role)
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
+  // RIKTIG TABELLNAVN (Batches)
   const { data: batch } = await supabase
-    .from("batches")
+    .from("Batches")
     .select("*")
     .eq("aktivt_kar", karId)
     .eq("status", "Aktiv")
