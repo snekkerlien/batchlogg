@@ -29,5 +29,5 @@ export async function deleteBatch(formData: FormData) {
   // Oppdater siden
   revalidatePath("/");
 
-  return { ok: true };
+  return;
 }
