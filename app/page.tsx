@@ -24,73 +24,28 @@ export default async function HomePage() {
 
   return (
     <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
-      {/* Boble-animasjon (CSS) */}
+
+      {/* CO₂-boble-animasjon */}
       <style>{`
-        .bubble-wrap {
-          position: relative;
-        }
-
-        .bubble-wrap span.b1,
-        .bubble-wrap span.b2,
-        .bubble-wrap span.b3,
-        .bubble-wrap span.b4,
-        .bubble-wrap span.b5 {
+        .co2-bubble {
           position: absolute;
-          bottom: -4px;
-          background: rgba(0, 255, 100, 0.35);
+          bottom: 0;
+          background: rgba(0, 255, 100, 0.25);
           border-radius: 50%;
-          animation: bubble-rise 2.8s infinite ease-in-out;
+          animation: co2-rise var(--speed) infinite ease-in-out;
+          opacity: 0;
         }
 
-        .bubble-wrap span.b1 {
-          left: 20%;
-          width: 6px;
-          height: 6px;
-          animation-delay: 0.2s;
-        }
-
-        .bubble-wrap span.b2 {
-          left: 40%;
-          width: 4px;
-          height: 4px;
-          animation-delay: 0.6s;
-          animation-duration: 3.2s;
-        }
-
-        .bubble-wrap span.b3 {
-          left: 60%;
-          width: 7px;
-          height: 7px;
-          animation-delay: 1.0s;
-          animation-duration: 2.6s;
-        }
-
-        .bubble-wrap span.b4 {
-          left: 75%;
-          width: 5px;
-          height: 5px;
-          animation-delay: 1.4s;
-          animation-duration: 3.0s;
-        }
-
-        .bubble-wrap span.b5 {
-          left: 30%;
-          width: 3px;
-          height: 3px;
-          animation-delay: 1.8s;
-          animation-duration: 2.4s;
-        }
-
-        @keyframes bubble-rise {
+        @keyframes co2-rise {
           0% {
             transform: translateY(0) scale(0.8);
             opacity: 0;
           }
           20% {
-            opacity: 0.5;
+            opacity: 0.4;
           }
           100% {
-            transform: translateY(-18px) scale(1);
+            transform: translateY(-28px) scale(1);
             opacity: 0;
           }
         }
@@ -113,16 +68,43 @@ export default async function HomePage() {
                 href={`/kar/${kar}`}
                 className="border border-white/10 rounded-xl p-6 bg-white/5 hover:bg-white/10 transition flex flex-col items-center relative overflow-hidden"
               >
-                <span className="text-xl font-semibold mb-2">Kar {kar}</span>
+                {/* Gjæringskar-ikon */}
+                <div className="flex flex-col items-center mb-2">
+                  <svg
+                    width="32"
+                    height="32"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="text-green-300"
+                  >
+                    <path d="M6 3h12v2H6z" />
+                    <path d="M8 5v14a4 4 0 0 0 8 0V5" />
+                    <path d="M10 9h4" />
+                  </svg>
+                </div>
 
                 {aktiv ? (
-                  <span className="text-green-400 font-semibold bubble-wrap">
+                  <span className="text-green-400 font-semibold relative overflow-hidden">
                     Aktiv batch
-                    <span className="b1"></span>
-                    <span className="b2"></span>
-                    <span className="b3"></span>
-                    <span className="b4"></span>
-                    <span className="b5"></span>
+
+                    {/* CO₂-bobler */}
+                    {[...Array(12)].map((_, i) => (
+                      <span
+                        key={i}
+                        className="co2-bubble"
+                        style={{
+                          left: `${Math.random() * 100}%`,
+                          width: `${5 + Math.random() * 7}px`,
+                          height: `${5 + Math.random() * 7}px`,
+                          animationDelay: `${Math.random() * 2.5}s`,
+                          ...({ ["--speed"]: `${3.5 + Math.random() * 2}s` } as any)
+                        }}
+                      />
+                    ))}
                   </span>
                 ) : (
                   <span className="text-zinc-400">Ledig</span>
