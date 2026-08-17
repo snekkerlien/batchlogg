@@ -102,10 +102,12 @@ export default async function HomePage() {
                 </div>
 
                 {aktiv ? (
-                  <span className="text-green-400 font-semibold relative overflow-hidden">
-                    Aktiv batch
+                  <>
+                    <span className="text-green-400 font-semibold">
+                      Aktiv batch
+                    </span>
 
-                    {/* CO₂-bobler */}
+                    {/* CO₂-bobler (nå på knappen, ikke teksten) */}
                     {[...Array(12)].map((_, i) => (
                       <span
                         key={i}
@@ -119,7 +121,7 @@ export default async function HomePage() {
                         }}
                       />
                     ))}
-                  </span>
+                  </>
                 ) : (
                   <span className="text-zinc-400">Ledig</span>
                 )}
