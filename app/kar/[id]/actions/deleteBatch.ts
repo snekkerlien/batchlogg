@@ -12,7 +12,6 @@ export async function deleteBatch(formData: FormData) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // Logg at funksjonen ble kalt
   await supabase.from("server_log").insert({
     message: `deleteBatch called: batchnummer=${batchnummer}, kode=${kode}`
   });
@@ -23,11 +22,9 @@ export async function deleteBatch(formData: FormData) {
     .eq("batchnummer", batchnummer)
     .maybeSingle();
 
-  if (error) {
-    await supabase.from("server_log").insert({
-      message: `Supabase error: ${error.message}`
-    });
-  }
+  await supabase.from("server_log").insert({
+    message: `Production batch: ${JSON.stringify(batch)}`
+  });
 
   if (!batch) {
     await supabase.from("server_log").insert({
