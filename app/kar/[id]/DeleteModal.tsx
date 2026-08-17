@@ -6,32 +6,33 @@ import { createClient } from "@supabase/supabase-js";
 export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
   const [open, setOpen] = useState(false);
   const [kode, setKode] = useState("");
+  const [loading, setLoading] = useState(false);
 
   async function handleDelete(e: React.FormEvent) {
     e.preventDefault();
+    setLoading(true);
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
 
-    // ⭐ Denne linjen mangler hos deg — derfor får du feilen
     const formattedBatch = String(batchnummer).padStart(4, "0");
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("Batches")
       .delete()
       .eq("batchnummer", formattedBatch)
       .eq("kode", kode);
 
-    console.log("DELETE RESULT", { data, error });
+    setLoading(false);
 
     if (error) {
       alert("Kunne ikke slette batch: " + error.message);
       return;
     }
 
-    alert("Sletting gikk gjennom!");
+    // Smooth sletting uten alert
     setOpen(false);
     window.location.reload();
   }
@@ -61,22 +62,32 @@ export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
                   value={kode}
                   onChange={(e) => setKode(e.target.value)}
                   required
+                  disabled={loading}
                   placeholder="Skriv koden"
-                  className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
+                  className="w-full p-2 rounded bg-zinc-800 border border-zinc-700 disabled:opacity-50"
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-red-600 hover:bg-red-700 p-2 rounded font-semibold"
+                disabled={loading}
+                className="w-full bg-red-600 hover:bg-red-700 p-2 rounded font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                Slett batch
+                {loading ? (
+                  <>
+                    <span className="animate-spin border-2 border-white/30 border-t-white rounded-full w-4 h-4"></span>
+                    Sletter…
+                  </>
+                ) : (
+                  "Slett batch"
+                )}
               </button>
 
               <button
                 type="button"
-                onClick={() => setOpen(false)}
-                className="w-full bg-zinc-700 hover:bg-zinc-600 p-2 rounded font-semibold mt-2"
+                onClick={() => !loading && setOpen(false)}
+                disabled={loading}
+                className="w-full bg-zinc-700 hover:bg-zinc-600 p-2 rounded font-semibold mt-2 disabled:opacity-50"
               >
                 Avbryt
               </button>
