@@ -17,6 +17,18 @@ export default async function HomePage() {
 
   return (
     <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
+      {/* Boble-animasjon (CSS) */}
+      <style>{`
+        @keyframes bubbles {
+          0% { transform: translateY(0) scale(1); opacity: 0.3; }
+          50% { transform: translateY(-6px) scale(1.1); opacity: 0.6; }
+          100% { transform: translateY(0) scale(1); opacity: 0.3; }
+        }
+        .bubble {
+          animation: bubbles 2.2s ease-in-out infinite;
+        }
+      `}</style>
+
       <div className="max-w-xl w-full text-center">
         <h1 className="text-4xl font-bold mb-6">Batchlogg</h1>
 
@@ -37,7 +49,7 @@ export default async function HomePage() {
                 <span className="text-xl font-semibold mb-2">Kar {kar}</span>
 
                 {aktiv ? (
-                  <span className="text-green-400 font-semibold">
+                  <span className="text-green-400 font-semibold bubble">
                     Aktiv batch
                   </span>
                 ) : (
