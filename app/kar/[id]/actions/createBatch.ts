@@ -1,36 +1,58 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
-import { redirect } from "next/navigation";
 
 export async function createBatch(formData: FormData) {
-  const name = formData.get("name") as string;
-  const volume_l = Number(formData.get("volume_l"));
-  const startdato = formData.get("startdato") as string;
-  const og = Number(formData.get("og"));
-  const oppskrift = formData.get("oppskrift") as string;
-  const kar = Number(formData.get("kar"));
-  const kode = formData.get("kode") as string;
-
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      global: {
+        fetch: (url, opts) => fetch(url, { ...opts, cache: "no-store" })
+      }
+    }
   );
 
-  const { error } = await supabase.from("Batches").insert({
-    name,
-    volume_l,
-    startdato,
-    og,
-    oppskrift,
-    aktivt_kar: kar,
-    status: "Aktiv",
-    kode,
-  });
+  // 1. Finn høyeste batchnummer
+  const { data: existing, error: fetchError } = await supabase
+    .from("Batches")
+    .select("batchnummer")
+    .order("batchnummer", { ascending: false })
+    .limit(1);
 
-  if (error) {
-    throw new Error(error.message);
+  if (fetchError) {
+    console.error("Feil ved henting av batchnummer:", fetchError);
+    throw new Error("Kunne ikke hente eksisterende batchnummer");
   }
 
-  redirect(`/kar/${kar}`);
+  // 2. Generer neste nummer
+  const nextBatchNumber =
+    existing && existing.length > 0 ? existing[0].batchnummer + 1 : 1;
+
+  // 3. Formater som 4-sifret nummer
+  const formattedBatchNumber = String(nextBatchNumber).padStart(4, "0");
+
+  // 4. Hent verdier fra formData
+  const navn = formData.get("navn") as string;
+  const beskrivelse = formData.get("beskrivelse") as string;
+  const aktivt_kar = Number(formData.get("aktivt_kar"));
+
+  // 5. Opprett batch
+  const { data, error } = await supabase.from("Batches").insert([
+    {
+      navn,
+      beskrivelse,
+      aktivt_kar,
+      batchnummer: formattedBatchNumber,
+      status: "Aktiv",
+      created_at: new Date().toISOString()
+    }
+  ]);
+
+  if (error) {
+    console.error("Feil ved oppretting av batch:", error);
+    throw new Error("Kunne ikke opprette batch");
+  }
+
+  return data;
 }
