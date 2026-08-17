@@ -7,10 +7,12 @@ export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
   const [open, setOpen] = useState(false);
   const [kode, setKode] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   async function handleDelete(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setErrorMsg("");
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,7 +21,7 @@ export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
 
     const formattedBatch = String(batchnummer).padStart(4, "0");
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("Batches")
       .delete()
       .eq("batchnummer", formattedBatch)
@@ -27,12 +29,19 @@ export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
 
     setLoading(false);
 
+    // Supabase error (rare)
     if (error) {
-      alert("Kunne ikke slette batch: " + error.message);
+      setErrorMsg("En teknisk feil oppstod. Prøv igjen.");
       return;
     }
 
-    // Smooth sletting uten alert
+    // Ingen rader slettet → feil kode
+    if (!data || data.length === 0) {
+      setErrorMsg("Feil kode. Sjekk koden og prøv igjen.");
+      return;
+    }
+
+    // Sletting OK
     setOpen(false);
     window.location.reload();
   }
@@ -66,6 +75,10 @@ export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
                   placeholder="Skriv koden"
                   className="w-full p-2 rounded bg-zinc-800 border border-zinc-700 disabled:opacity-50"
                 />
+
+                {errorMsg && (
+                  <p className="text-red-400 text-sm mt-2">{errorMsg}</p>
+                )}
               </div>
 
               <button
