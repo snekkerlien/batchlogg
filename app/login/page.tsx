@@ -12,7 +12,7 @@ export default function LoginPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -20,13 +20,16 @@ export default function LoginPage() {
     e.preventDefault();
     setErrorMsg("");
 
+    // Supabase krever en email → vi lager en fake en basert på brukernavnet
+    const fakeEmail = `${username}@fake.local`;
+
     const { data, error } = await supabase.auth.signInWithPassword({
-      email,
+      email: fakeEmail,
       password
     });
 
     if (error) {
-      setErrorMsg("Feil e‑post eller passord.");
+      setErrorMsg("Feil brukernavn eller passord.");
       return;
     }
 
@@ -42,10 +45,10 @@ export default function LoginPage() {
         <h2 className="text-xl font-semibold text-center">Logg inn</h2>
 
         <input
-          type="email"
-          placeholder="E-post"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          type="text"
+          placeholder="Brukernavn"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
           required
           className="w-full p-2 rounded bg-zinc-700"
         />

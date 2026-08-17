@@ -12,17 +12,19 @@ export default function SignupPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     setErrorMsg("");
 
+    // Supabase krever en email → vi lager en fake en basert på brukernavnet
+    const fakeEmail = `${username}@fake.local`;
+
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: fakeEmail,
       password
     });
 
@@ -31,7 +33,6 @@ export default function SignupPage() {
       return;
     }
 
-    // VIKTIG: data.user.id er riktig ID
     const userId = data.user?.id;
 
     if (!userId) {
@@ -39,6 +40,7 @@ export default function SignupPage() {
       return;
     }
 
+    // Opprett profil-rad med ekte brukernavn
     const { error: profileError } = await supabase.from("profiles").insert({
       id: userId,
       username
@@ -65,15 +67,6 @@ export default function SignupPage() {
           placeholder="Brukernavn"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          required
-          className="w-full p-2 rounded bg-zinc-700"
-        />
-
-        <input
-          type="email"
-          placeholder="E-post"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
           required
           className="w-full p-2 rounded bg-zinc-700"
         />
