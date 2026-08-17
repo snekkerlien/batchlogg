@@ -21,9 +21,9 @@ export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
 
     const formattedBatch = String(batchnummer).padStart(4, "0");
 
-    const { data, error } = await supabase
+    const { error, count } = await supabase
       .from("Batches")
-      .delete()
+      .delete({ count: "exact" })
       .eq("batchnummer", formattedBatch)
       .eq("kode", kode);
 
@@ -36,8 +36,7 @@ export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
     }
 
     // Ingen rader slettet → feil kode
-    const deletedRows = Array.isArray(data) ? data : [];
-    if (deletedRows.length === 0) {
+    if (count === 0) {
       setErrorMsg("Feil kode. Sjekk koden og prøv igjen.");
       return;
     }
