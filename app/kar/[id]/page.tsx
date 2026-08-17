@@ -61,7 +61,7 @@ export default async function KarPage({ params }: Props) {
                 />
               </div>
 
-              {/* NY: Volum-knapper */}
+              {/* NY: Volum-hjul */}
               <VolumeSelector />
 
               <div>
