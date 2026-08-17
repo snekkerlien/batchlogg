@@ -34,7 +34,7 @@ export async function createBatch(formData: FormData) {
   const kode = formData.get("kode") as string;
   const oppskrift = formData.get("oppskrift") as string;
 
-  // 3. Opprett batch
+  // 3. Opprett batch (uten created_at)
   const { error } = await supabase.from("Batches").insert([
     {
       aktivt_kar,
@@ -45,13 +45,12 @@ export async function createBatch(formData: FormData) {
       kode,
       oppskrift,
       batchnummer: formattedBatchNumber,
-      status: "Aktiv",
-      created_at: new Date().toISOString()
+      status: "Aktiv"
     }
   ]);
 
   if (error) {
     console.error("Feil ved oppretting av batch:", error);
-    return; // Ikke throw → Next.js krasjer ikke
+    return; // ikke throw → Next.js krasjer ikke
   }
 }

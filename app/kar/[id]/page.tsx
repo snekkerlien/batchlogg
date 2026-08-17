@@ -3,7 +3,7 @@ export const revalidate = 0; // 🔥 Slår av caching i Next.js 16
 
 import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
-import { createBatch } from "./actions/createBatch";
+import { createBatch } from "./createBatch";
 import { RecipeEditor } from "./RecipeEditor";
 import DeleteModal from "./DeleteModal";
 
