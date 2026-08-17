@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { createBatch } from "./actions/createBatch";
-import { deleteBatch } from "./actions/deleteBatch";
 import { RecipeEditor } from "./RecipeEditor";
 
 type Props = {
@@ -161,29 +160,6 @@ export default async function KarPage({ params }: Props) {
                 {batch.oppskrift}
               </p>
             </div>
-
-            {/* Slett batch */}
-            <form action={deleteBatch} className="space-y-2 mt-6">
-              <input type="hidden" name="batchId" value={batch.id} />
-
-              <div>
-                <label className="block mb-1">Bekreft kode</label>
-                <input
-                  type="text"
-                  name="kode"
-                  required
-                  placeholder="Skriv koden du valgte"
-                  className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full bg-red-600 hover:bg-red-700 p-2 rounded font-semibold"
-              >
-                Slett batch
-              </button>
-            </form>
           </div>
         )}
 
