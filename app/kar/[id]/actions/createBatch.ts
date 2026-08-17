@@ -1,16 +1,21 @@
 "use server";
 
-import { supabase } from "@/lib/supabaseClient";
+import { createClient } from "@supabase/supabase-js";
 
 export async function createBatch(formData: FormData) {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
   const name = formData.get("name") as string;
   const volume_l = Number(formData.get("volume_l"));
   const kar = Number(formData.get("kar"));
-  const status = "Aktiv";
   const startdato = formData.get("startdato") as string;
   const og = Number(formData.get("og"));
   const fg = Number(formData.get("fg"));
   const oppskrift = formData.get("oppskrift") as string;
+  const status = "Aktiv";
 
   // Finn neste batchnummer
   const { data: existing } = await supabase
@@ -20,7 +25,7 @@ export async function createBatch(formData: FormData) {
     .limit(1);
 
   const nextBatchNumber =
-    existing && existing.length > 0 ? existing[0].batchnummer + 1 : 1;
+    existing && existing.length > 0 ? Number(existing[0].batchnummer) + 1 : 1;
 
   const formattedBatchNumber = String(nextBatchNumber).padStart(4, "0");
 
@@ -40,8 +45,6 @@ export async function createBatch(formData: FormData) {
   ]);
 
   if (error) {
-    console.error(error);
+    console.error("Feil ved oppretting av batch:", error.message);
   }
-
-  return;
 }
