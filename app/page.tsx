@@ -23,35 +23,68 @@ export default async function HomePage() {
           position: relative;
         }
 
-        .bubble-wrap::before,
-        .bubble-wrap::after {
-          content: "";
+        /* 5 bobler med forskjellig posisjon, størrelse og timing */
+        .bubble-wrap span.b1,
+        .bubble-wrap span.b2,
+        .bubble-wrap span.b3,
+        .bubble-wrap span.b4,
+        .bubble-wrap span.b5 {
           position: absolute;
-          left: 50%;
-          width: 6px;
-          height: 6px;
-          background: rgba(0, 255, 100, 0.4);
+          bottom: -4px;
+          background: rgba(0, 255, 100, 0.35);
           border-radius: 50%;
-          animation: bubble-rise 2.4s infinite ease-in-out;
+          animation: bubble-rise 2.8s infinite ease-in-out;
         }
 
-        .bubble-wrap::after {
+        .bubble-wrap span.b1 {
+          left: 20%;
+          width: 6px;
+          height: 6px;
+          animation-delay: 0.2s;
+        }
+
+        .bubble-wrap span.b2 {
+          left: 40%;
           width: 4px;
           height: 4px;
-          animation-duration: 3.1s;
-          animation-delay: 0.8s;
+          animation-delay: 0.6s;
+          animation-duration: 3.2s;
+        }
+
+        .bubble-wrap span.b3 {
+          left: 60%;
+          width: 7px;
+          height: 7px;
+          animation-delay: 1.0s;
+          animation-duration: 2.6s;
+        }
+
+        .bubble-wrap span.b4 {
+          left: 75%;
+          width: 5px;
+          height: 5px;
+          animation-delay: 1.4s;
+          animation-duration: 3.0s;
+        }
+
+        .bubble-wrap span.b5 {
+          left: 30%;
+          width: 3px;
+          height: 3px;
+          animation-delay: 1.8s;
+          animation-duration: 2.4s;
         }
 
         @keyframes bubble-rise {
           0% {
-            transform: translate(-50%, 6px) scale(0.8);
-            opacity: 0.0;
+            transform: translateY(0) scale(0.8);
+            opacity: 0;
           }
-          30% {
+          20% {
             opacity: 0.5;
           }
           100% {
-            transform: translate(-50%, -14px) scale(1);
+            transform: translateY(-18px) scale(1);
             opacity: 0;
           }
         }
@@ -79,6 +112,13 @@ export default async function HomePage() {
                 {aktiv ? (
                   <span className="text-green-400 font-semibold bubble-wrap">
                     Aktiv batch
+
+                    {/* 5 bobler */}
+                    <span className="b1"></span>
+                    <span className="b2"></span>
+                    <span className="b3"></span>
+                    <span className="b4"></span>
+                    <span className="b5"></span>
                   </span>
                 ) : (
                   <span className="text-zinc-400">Ledig</span>
