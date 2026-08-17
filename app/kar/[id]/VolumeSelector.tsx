@@ -2,7 +2,7 @@
 import { useState } from "react";
 
 export function VolumeSelector() {
-  const [value, setValue] = useState(20); // default volum, endre hvis du vil
+  const [value, setValue] = useState(20); // default volum
 
   const adjust = (amount: number) => {
     setValue((v) => Math.max(0, v + amount)); // hindrer negative tall
@@ -12,7 +12,8 @@ export function VolumeSelector() {
     <div>
       <label className="block mb-1">Batchstørrelse (liter)</label>
 
-      <div className="flex items-center gap-2 mb-2 flex-wrap">
+      <div className="flex flex-wrap items-center gap-2 mb-2">
+        {/* Minus-knapper */}
         <button
           type="button"
           onClick={() => adjust(-10)}
@@ -35,10 +36,12 @@ export function VolumeSelector() {
           -1
         </button>
 
-        <span className="px-4 py-2 bg-zinc-800 rounded border border-zinc-700 font-semibold">
+        {/* Volum-display */}
+        <span className="px-4 py-2 bg-zinc-800 rounded border border-zinc-700 font-semibold min-w-[70px] text-center">
           {value} L
         </span>
 
+        {/* Pluss-knapper */}
         <button
           type="button"
           onClick={() => adjust(1)}
