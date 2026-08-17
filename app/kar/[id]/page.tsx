@@ -76,6 +76,7 @@ export default async function KarPage({ params }: Props) {
                   type="date"
                   name="startdato"
                   required
+                  defaultValue={new Date().toISOString().split("T")[0]}
                   className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
                 />
               </div>
