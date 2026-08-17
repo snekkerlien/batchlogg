@@ -68,8 +68,8 @@ export default async function HomePage() {
                 href={`/kar/${kar}`}
                 className="border border-white/10 rounded-xl p-6 bg-white/5 hover:bg-white/10 transition flex flex-col items-center relative overflow-hidden"
               >
-                {/* Nytt gjæringskar-ikon */}
-                <div className="flex flex-col items-center mb-2">
+                {/* Gjæringskar-ikon med tall inni */}
+                <div className="flex flex-col items-center mb-2 relative">
                   <svg
                     width="40"
                     height="40"
@@ -94,6 +94,11 @@ export default async function HomePage() {
                     <path d="M12 2v2" />
                     <circle cx="12" cy="2" r="1" />
                   </svg>
+
+                  {/* Tall inni ikonet */}
+                  <span className="absolute top-[14px] text-lg font-bold text-green-300">
+                    {kar}
+                  </span>
                 </div>
 
                 {aktiv ? (
