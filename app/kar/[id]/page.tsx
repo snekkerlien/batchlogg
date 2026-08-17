@@ -57,6 +57,7 @@ export default async function KarPage({ params }: Props) {
                   type="text"
                   name="name"
                   required
+                  placeholder="Skriv navn på batchen her..."
                   className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
                 />
               </div>
@@ -67,6 +68,7 @@ export default async function KarPage({ params }: Props) {
                   type="number"
                   name="volume_l"
                   required
+                  placeholder="Skriv antall liter her..."
                   className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
                 />
               </div>
@@ -89,11 +91,12 @@ export default async function KarPage({ params }: Props) {
                   step="0.001"
                   name="og"
                   required
+                  placeholder="Skriv original gravity"
                   className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
                 />
               </div>
 
-              {/* NY: Oppskrifts-editor */}
+              {/* Oppskrifts-editor */}
               <RecipeEditor />
 
               <button
