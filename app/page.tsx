@@ -68,11 +68,11 @@ export default async function HomePage() {
                 href={`/kar/${kar}`}
                 className="border border-white/10 rounded-xl p-6 bg-white/5 hover:bg-white/10 transition flex flex-col items-center relative overflow-hidden"
               >
-                {/* Gjæringskar-ikon */}
+                {/* Nytt gjæringskar-ikon */}
                 <div className="flex flex-col items-center mb-2">
                   <svg
-                    width="32"
-                    height="32"
+                    width="40"
+                    height="40"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -81,9 +81,18 @@ export default async function HomePage() {
                     strokeLinejoin="round"
                     className="text-green-300"
                   >
-                    <path d="M6 3h12v2H6z" />
-                    <path d="M8 5v14a4 4 0 0 0 8 0V5" />
-                    <path d="M10 9h4" />
+                    {/* Lokk */}
+                    <path d="M4 4h16v2H4z" />
+
+                    {/* Bøtteform */}
+                    <path d="M6 6v11a5 5 0 0 0 5 5h2a5 5 0 0 0 5-5V6" />
+
+                    {/* Nivåmerking */}
+                    <path d="M9 10h6" />
+
+                    {/* Gjærlås */}
+                    <path d="M12 2v2" />
+                    <circle cx="12" cy="2" r="1" />
                   </svg>
                 </div>
 
