@@ -24,6 +24,7 @@ export default async function KarPage(props: Props) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
+  // Sjekk om karet har en aktiv batch
   const { data: batch } = await supabase
     .from("Batches")
     .select("*")
@@ -52,7 +53,6 @@ export default async function KarPage(props: Props) {
               Registrer ny batch
             </h3>
 
-            {/* ⭐ Nytt client-skjema */}
             <RegisterBatchForm karId={karId} />
 
             <a
@@ -68,46 +68,8 @@ export default async function KarPage(props: Props) {
               Aktiv batch
             </h2>
 
-            <div className="space-y-3 text-left">
-              <p>
-                <span className="opacity-70">Batchnummer:</span>{" "}
-                <span className="font-semibold">{batch.batchnummer ?? "?"}</span>
-              </p>
-
-              <p>
-                <span className="opacity-70">Batchnavn:</span>{" "}
-                <span className="font-semibold">{batch.name}</span>
-              </p>
-
-              <p>
-                <span className="opacity-70">Status:</span>{" "}
-                <span className="text-green-400 font-semibold">
-                  {batch.status}
-                </span>
-              </p>
-
-              <p>
-                <span className="opacity-70">Startdato:</span>{" "}
-                {batch.startdato}
-              </p>
-
-              <p>
-                <span className="opacity-70">Volum:</span>{" "}
-                {batch.volume_l} L
-              </p>
-
-              <p>
-                <span className="opacity-70">OG:</span>{" "}
-                {batch.og}
-              </p>
-
-              <p>
-                <span className="opacity-70">Oppskrift:</span>{" "}
-                {batch.oppskrift}
-              </p>
-            </div>
-
-            <ActiveBatch batch={batch} />
+            {/* ActiveBatch henter batchen selv basert på batchnummer */}
+            <ActiveBatch batchnummer={batch.batchnummer} />
           </div>
         )}
 

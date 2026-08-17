@@ -1,10 +1,39 @@
 "use client";
 
 import { useState } from "react";
-import { DeleteBatchAction } from "../DeleteBatchAction";
+import { createClient } from "@supabase/supabase-js";
 
 export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
   const [open, setOpen] = useState(false);
+  const [kode, setKode] = useState("");
+
+  async function handleDelete(e: React.FormEvent) {
+    e.preventDefault();
+
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    const formattedBatch = String(batchnummer).padStart(4, "0");
+
+    const { error } = await supabase
+      .from("Batches")
+      .delete()
+      .eq("batchnummer", formattedBatch)
+      .eq("kode", kode);
+
+    if (error) {
+      alert("Kunne ikke slette batch: " + error.message);
+      return;
+    }
+
+    // Lukk modal
+    setOpen(false);
+
+    // Oppdater siden
+    window.location.reload();
+  }
 
   return (
     <>
@@ -23,14 +52,13 @@ export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
               Bekreft sletting
             </h3>
 
-            <form action={DeleteBatchAction} className="space-y-4">
-              <input type="hidden" name="batchnummer" value={batchnummer} />
-
+            <form onSubmit={handleDelete} className="space-y-4">
               <div>
                 <label className="block mb-1">Sikkerhetskode</label>
                 <input
                   type="text"
-                  name="kode"
+                  value={kode}
+                  onChange={(e) => setKode(e.target.value)}
                   required
                   placeholder="Skriv koden"
                   className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
