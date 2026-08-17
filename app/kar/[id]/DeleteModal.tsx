@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { DeleteBatchAction } from "./DeleteBatchAction";
+import { DeleteBatchAction } from "../DeleteBatchAction";
 
 export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
   const [open, setOpen] = useState(false);

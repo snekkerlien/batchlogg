@@ -1,6 +1,6 @@
 "use server";
 
-import { deleteBatch } from "./deleteBatch";
+import { deleteBatch } from "./[id]/deleteBatch";
 
 export async function DeleteBatchAction(formData: FormData) {
   return deleteBatch(formData);
