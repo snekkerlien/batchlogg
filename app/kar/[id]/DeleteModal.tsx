@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { deleteBatch } from "./deleteBatch";
+import { DeleteBatchAction } from "./DeleteBatchAction";
 
 export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
   const [open, setOpen] = useState(false);
@@ -25,7 +25,8 @@ export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
               Bekreft sletting
             </h3>
 
-            <form action={deleteBatch} className="space-y-4">
+            <form action={DeleteBatchAction} className="space-y-4">
+              {/* Batchnummer sendes som hidden input */}
               <input type="hidden" name="batchnummer" value={batchnummer} />
 
               <div>
