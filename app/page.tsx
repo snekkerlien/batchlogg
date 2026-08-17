@@ -117,7 +117,7 @@ export default async function HomePage() {
                           width: `${5 + Math.random() * 7}px`,
                           height: `${5 + Math.random() * 7}px`,
                           animationDelay: `${Math.random() * 2.5}s`,
-                          ...({ ["--speed"]: `${3.5 + Math.random() * 2}s` } as any)
+                          ...({ ["--speed"]: `${8 + Math.random() * 6}s` } as any)
                         }}
                       />
                     ))}
