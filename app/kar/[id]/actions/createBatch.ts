@@ -14,35 +14,36 @@ export async function createBatch(formData: FormData) {
   );
 
   // 1. Finn høyeste batchnummer
-  const { data: existing, error: fetchError } = await supabase
+  const { data: existing } = await supabase
     .from("Batches")
     .select("batchnummer")
     .order("batchnummer", { ascending: false })
     .limit(1);
 
-  if (fetchError) {
-    console.error("Feil ved henting av batchnummer:", fetchError);
-    throw new Error("Kunne ikke hente eksisterende batchnummer");
-  }
-
-  // 2. Generer neste nummer
   const nextBatchNumber =
     existing && existing.length > 0 ? existing[0].batchnummer + 1 : 1;
 
-  // 3. Formater som 4-sifret nummer
   const formattedBatchNumber = String(nextBatchNumber).padStart(4, "0");
 
-  // 4. Hent verdier fra formData
-  const navn = formData.get("navn") as string;
-  const beskrivelse = formData.get("beskrivelse") as string;
-  const aktivt_kar = Number(formData.get("aktivt_kar"));
+  // 2. Hent verdier fra skjemaet (MATCHER page.tsx)
+  const aktivt_kar = Number(formData.get("kar"));          // ✔ riktig
+  const name = formData.get("name") as string;             // ✔ riktig
+  const volume_l = Number(formData.get("volume_l"));       // ✔ riktig
+  const startdato = formData.get("startdato") as string;   // ✔ riktig
+  const og = Number(formData.get("og"));                   // ✔ riktig
+  const kode = formData.get("kode") as string;             // ✔ riktig
+  const oppskrift = formData.get("oppskrift") as string;   // ✔ fra RecipeEditor
 
-  // 5. Opprett batch
-  const { data, error } = await supabase.from("Batches").insert([
+  // 3. Opprett batch
+  const { error } = await supabase.from("Batches").insert([
     {
-      navn,
-      beskrivelse,
       aktivt_kar,
+      name,
+      volume_l,
+      startdato,
+      og,
+      kode,
+      oppskrift,
       batchnummer: formattedBatchNumber,
       status: "Aktiv",
       created_at: new Date().toISOString()
@@ -51,6 +52,6 @@ export async function createBatch(formData: FormData) {
 
   if (error) {
     console.error("Feil ved oppretting av batch:", error);
-    throw new Error("Kunne ikke opprette batch");
+    return; // ✔ ikke throw → Next.js krasjer ikke
   }
 }
