@@ -15,6 +15,7 @@ export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
 
+    // Batchnummer må matche formatet i databasen (0001, 0123, osv.)
     const formattedBatch = String(batchnummer).padStart(4, "0");
 
     const { error } = await supabase
