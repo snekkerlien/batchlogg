@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 export default function SignupPage() {
   const router = useRouter();
+
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -30,11 +31,23 @@ export default function SignupPage() {
       return;
     }
 
-    // Opprett profil-rad
-    await supabase.from("profiles").insert({
-      id: data.user?.id,
+    // VIKTIG: data.user.id er riktig ID
+    const userId = data.user?.id;
+
+    if (!userId) {
+      setErrorMsg("Kunne ikke hente bruker-ID.");
+      return;
+    }
+
+    const { error: profileError } = await supabase.from("profiles").insert({
+      id: userId,
       username
     });
+
+    if (profileError) {
+      setErrorMsg(profileError.message);
+      return;
+    }
 
     router.push("/login");
   }
@@ -45,7 +58,7 @@ export default function SignupPage() {
         onSubmit={handleSignup}
         className="bg-zinc-800 p-6 rounded-xl w-80 space-y-4"
       >
-        <h2 className="text-xl font-semibold text-center">Lag konto</h2>
+        <h2 className="text-xl font-semibold text-center">Registrer konto</h2>
 
         <input
           type="text"
@@ -84,6 +97,13 @@ export default function SignupPage() {
         >
           Registrer
         </button>
+
+        <a
+          href="/login"
+          className="block text-center text-sm text-blue-400 hover:text-blue-300 mt-4"
+        >
+          Har du konto? Logg inn
+        </a>
       </form>
     </div>
   );
