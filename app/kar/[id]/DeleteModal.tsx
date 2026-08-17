@@ -8,7 +8,6 @@ export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
 
   return (
     <>
-      {/* Knapp som åpner modal */}
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -17,7 +16,6 @@ export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
         Slett batch
       </button>
 
-      {/* Modal */}
       {open && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center">
           <div className="bg-zinc-900 border border-white/10 p-6 rounded-xl w-80">
@@ -26,7 +24,6 @@ export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
             </h3>
 
             <form action={DeleteBatchAction} className="space-y-4">
-              {/* Batchnummer sendes som hidden input */}
               <input type="hidden" name="batchnummer" value={batchnummer} />
 
               <div>
