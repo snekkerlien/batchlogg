@@ -4,23 +4,35 @@ import { createClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 
 export async function createBatch(formData: FormData) {
-  // Logg for debugging
-  console.log("createBatch formData keys:", Array.from(formData.keys()));
-
-  const kar = Number(formData.get("kar"));
-  const name = String(formData.get("name"));
-  const volume_l = Number(formData.get("volume_l"));
-  const startdato = String(formData.get("startdato"));
-  const og = Number(formData.get("og"));
-  const kode = String(formData.get("kode"));
-  const oppskrift = String(formData.get("oppskrift") ?? "");
-
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
+  // 1. Finn siste batchnummer
+  const { data: last } = await supabase
+    .from("Batches")
+    .select("batchnummer")
+    .order("batchnummer", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  // 2. Generer neste nummer
+  const nextNumber = last ? Number(last.batchnummer) + 1 : 1;
+  const formattedBatchnummer = String(nextNumber).padStart(4, "0");
+
+  // 3. Hent felter fra formData
+  const kar = Number(formData.get("kar"));
+  const name = formData.get("name");
+  const volume_l = Number(formData.get("volume_l"));
+  const startdato = formData.get("startdato");
+  const og = Number(formData.get("og"));
+  const kode = formData.get("kode");
+  const oppskrift = formData.get("oppskrift");
+
+  // 4. Sett inn ny batch
   const { error } = await supabase.from("Batches").insert({
+    batchnummer: formattedBatchnummer,
     aktivt_kar: kar,
     name,
     volume_l,
@@ -32,13 +44,11 @@ export async function createBatch(formData: FormData) {
   });
 
   if (error) {
-    console.error("Feil ved oppretting av batch:", error);
-    throw new Error("Kunne ikke opprette batch");
+    throw new Error("Insert failed: " + error.message);
   }
 
-  // 🔥 Viktig: Oppdater cache for denne siden
+  // 5. Oppdater siden
   revalidatePath(`/kar/${kar}`);
 
-  // 🔥 Returner karId slik at client-komponenten kan gjøre router.push()
   return { kar };
 }
