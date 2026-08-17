@@ -53,6 +53,4 @@ export async function createBatch(formData: FormData) {
     console.error("Feil ved oppretting av batch:", error);
     throw new Error("Kunne ikke opprette batch");
   }
-
-  return data;
 }
