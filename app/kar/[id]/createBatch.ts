@@ -26,13 +26,13 @@ export async function createBatch(formData: FormData) {
   const formattedBatchNumber = String(nextBatchNumber).padStart(4, "0");
 
   // 2. Hent verdier fra skjemaet (MATCHER page.tsx)
-  const aktivt_kar = Number(formData.get("kar"));          // ✔ riktig
-  const name = formData.get("name") as string;             // ✔ riktig
-  const volume_l = Number(formData.get("volume_l"));       // ✔ riktig
-  const startdato = formData.get("startdato") as string;   // ✔ riktig
-  const og = Number(formData.get("og"));                   // ✔ riktig
-  const kode = formData.get("kode") as string;             // ✔ riktig
-  const oppskrift = formData.get("oppskrift") as string;   // ✔ fra RecipeEditor
+  const aktivt_kar = Number(formData.get("kar"));
+  const name = formData.get("name") as string;
+  const volume_l = Number(formData.get("volume_l"));
+  const startdato = formData.get("startdato") as string;
+  const og = Number(formData.get("og"));
+  const kode = formData.get("kode") as string;
+  const oppskrift = formData.get("oppskrift") as string;
 
   // 3. Opprett batch
   const { error } = await supabase.from("Batches").insert([
@@ -52,6 +52,6 @@ export async function createBatch(formData: FormData) {
 
   if (error) {
     console.error("Feil ved oppretting av batch:", error);
-    return; // ✔ ikke throw → Next.js krasjer ikke
+    return; // Ikke throw → Next.js krasjer ikke
   }
 }
