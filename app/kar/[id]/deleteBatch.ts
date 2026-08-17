@@ -1,63 +1,33 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
-import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 
 export async function deleteBatch(formData: FormData) {
-  const batchnummer = String(formData.get("batchnummer"));   // 👈 TEKST, IKKE Number()
-  const kode = String(formData.get("kode"));
-
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // Logg kall
-  await supabase.from("server_log").insert({
-    message: `deleteBatch called: batchnummer=${batchnummer}, kode=${kode}`
-  });
+  // batchnummer må alltid være tekst med leading zeros
+  const rawBatchnummer = formData.get("batchnummer");
+  const batchnummer = String(rawBatchnummer).padStart(4, "0");
 
-  // Finn batch (tekst-søk)
-  const { data: batch, error } = await supabase
-    .from("Batches")
-    .select("*")
-    .eq("batchnummer", batchnummer)   // 👈 matcher "0001", "0002", osv.
-    .maybeSingle();
+  const kode = formData.get("kode");
 
-  await supabase.from("server_log").insert({
-    message: `Production batch lookup result: ${JSON.stringify(batch)}`
-  });
-
-  // Batch finnes ikke
-  if (!batch) {
-    await supabase.from("server_log").insert({
-      message: `Batch not found in production for batchnummer=${batchnummer}`
-    });
-    return; // 👈 IKKE throw → Next.js krasjer ikke
-  }
-
-  // Feil kode
-  if (batch.kode !== kode) {
-    await supabase.from("server_log").insert({
-      message: `Wrong code for batchnummer=${batchnummer}`
-    });
-    return; // 👈 IKKE throw → unngår hvit skjerm
-  }
-
-  // Slett batch
-  await supabase.from("server_log").insert({
-    message: `Deleting batch ${batchnummer}`
-  });
-
-  await supabase
+  // Slett riktig rad
+  const { error } = await supabase
     .from("Batches")
     .delete()
-    .eq("batchnummer", batchnummer);
+    .eq("batchnummer", batchnummer)
+    .eq("kode", kode);
 
-  await supabase.from("server_log").insert({
-    message: `Batch ${batchnummer} deleted OK`
-  });
+  if (error) {
+    throw new Error("Delete failed: " + error.message);
+  }
 
-  // Redirect tilbake til riktig kar
-  redirect(`/kar/${batch.aktivt_kar}`);
+  // Oppdater siden
+  revalidatePath("/");
+
+  return { ok: true };
 }
