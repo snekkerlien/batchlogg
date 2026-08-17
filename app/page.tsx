@@ -45,7 +45,7 @@ export default async function HomePage() {
             opacity: 0.4;
           }
           100% {
-            transform: translateY(-28px) scale(1);
+            transform: translateY(-100%) scale(1);
             opacity: 0;
           }
         }
