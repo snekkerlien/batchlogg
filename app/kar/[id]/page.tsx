@@ -1,3 +1,5 @@
+export const revalidate = 0; // 🔥 Slår av caching i Next.js 16
+
 import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { createBatch } from "./actions/createBatch";
@@ -21,6 +23,7 @@ export default async function KarPage(props: Props) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
+  // 🔥 Hent ferske data uten cache
   const { data: batch } = await supabase
     .from("Batches")
     .select("*")
@@ -129,7 +132,7 @@ export default async function KarPage(props: Props) {
             <div className="space-y-3 text-left">
               <p>
                 <span className="opacity-70">Batchnummer:</span>{" "}
-                <span className="font-semibold">{batch.batchnummer}</span>
+                <span className="font-semibold">{batch.batchnummer ?? "?"}</span>
               </p>
 
               <p>
@@ -165,7 +168,6 @@ export default async function KarPage(props: Props) {
               </p>
             </div>
 
-            {/* KNAPPER SAMMEN */}
             <div className="flex justify-between mt-8">
               <a
                 href="/"
@@ -174,7 +176,7 @@ export default async function KarPage(props: Props) {
                 ← Tilbake
               </a>
 
-              <DeleteModal batchnummer={batch.batchnummer} />
+              <DeleteModal batchnummer={batch.batchnummer ?? ""} />
             </div>
           </div>
         )}
