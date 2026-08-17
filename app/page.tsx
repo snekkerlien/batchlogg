@@ -25,7 +25,7 @@ export default async function HomePage() {
   return (
     <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
 
-      {/* CO₂-boble-animasjon */}
+      {/* CO₂-boble-animasjon + lokk-hover */}
       <style>{`
         .co2-bubble {
           position: absolute;
@@ -49,6 +49,11 @@ export default async function HomePage() {
             opacity: 0;
           }
         }
+
+        /* Lokk-animasjon */
+        .group:hover .lokket {
+          transform: rotate(-8deg);
+        }
       `}</style>
 
       <div className="max-w-xl w-full text-center">
@@ -66,7 +71,7 @@ export default async function HomePage() {
               <a
                 key={kar}
                 href={`/kar/${kar}`}
-                className="border border-white/10 rounded-xl p-6 bg-white/5 hover:bg-white/10 transition flex flex-col items-center relative overflow-hidden"
+                className="group border border-white/10 rounded-xl p-6 bg-white/5 hover:bg-white/10 transition flex flex-col items-center relative overflow-hidden"
               >
                 {/* Gjæringskar-ikon med tall inni */}
                 <div className="flex flex-col items-center mb-2 relative">
@@ -81,8 +86,12 @@ export default async function HomePage() {
                     strokeLinejoin="round"
                     className="text-green-300"
                   >
-                    {/* Lokk */}
-                    <path d="M4 4h16v2H4z" />
+                    {/* Lokk – nå animerbart */}
+                    <path
+                      d="M4 4h16v2H4z"
+                      className="lokket transition-transform duration-300"
+                      style={{ transformOrigin: "12px 4px" }}
+                    />
 
                     {/* Bøtteform */}
                     <path d="M6 6v11a5 5 0 0 0 5 5h2a5 5 0 0 0 5-5V6" />
@@ -107,7 +116,7 @@ export default async function HomePage() {
                       Aktiv batch
                     </span>
 
-                    {/* CO₂-bobler (nå på knappen, ikke teksten) */}
+                    {/* CO₂-bobler */}
                     {[...Array(12)].map((_, i) => (
                       <span
                         key={i}
