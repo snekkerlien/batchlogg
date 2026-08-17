@@ -9,35 +9,37 @@ export function VolumeSelector() {
   };
 
   return (
-    <div>
-      <label className="block mb-1">Batchstørrelse (liter)</label>
+    <div className="w-full text-center">
+      <label className="block mb-2 text-center">Batchstørrelse (liter)</label>
 
-      <div className="flex flex-wrap items-center gap-2 mb-2">
+      {/* Grid som fungerer perfekt på mobil */}
+      <div className="grid grid-cols-3 gap-2 place-items-center mb-3">
+
         {/* Minus-knapper */}
         <button
           type="button"
           onClick={() => adjust(-10)}
-          className="px-3 py-2 bg-zinc-700 hover:bg-zinc-600 rounded"
+          className="px-3 py-2 bg-zinc-700 hover:bg-zinc-600 rounded w-full"
         >
           -10
         </button>
         <button
           type="button"
           onClick={() => adjust(-5)}
-          className="px-3 py-2 bg-zinc-700 hover:bg-zinc-600 rounded"
+          className="px-3 py-2 bg-zinc-700 hover:bg-zinc-600 rounded w-full"
         >
           -5
         </button>
         <button
           type="button"
           onClick={() => adjust(-1)}
-          className="px-3 py-2 bg-zinc-700 hover:bg-zinc-600 rounded"
+          className="px-3 py-2 bg-zinc-700 hover:bg-zinc-600 rounded w-full"
         >
           -1
         </button>
 
-        {/* Volum-display */}
-        <span className="px-4 py-2 bg-zinc-800 rounded border border-zinc-700 font-semibold min-w-[70px] text-center">
+        {/* Volum-display i midten */}
+        <span className="px-4 py-2 bg-zinc-800 rounded border border-zinc-700 font-semibold w-full text-center col-span-3">
           {value} L
         </span>
 
@@ -45,21 +47,21 @@ export function VolumeSelector() {
         <button
           type="button"
           onClick={() => adjust(1)}
-          className="px-3 py-2 bg-zinc-700 hover:bg-zinc-600 rounded"
+          className="px-3 py-2 bg-zinc-700 hover:bg-zinc-600 rounded w-full"
         >
           +1
         </button>
         <button
           type="button"
           onClick={() => adjust(5)}
-          className="px-3 py-2 bg-zinc-700 hover:bg-zinc-600 rounded"
+          className="px-3 py-2 bg-zinc-700 hover:bg-zinc-600 rounded w-full"
         >
           +5
         </button>
         <button
           type="button"
           onClick={() => adjust(10)}
-          className="px-3 py-2 bg-zinc-700 hover:bg-zinc-600 rounded"
+          className="px-3 py-2 bg-zinc-700 hover:bg-zinc-600 rounded w-full"
         >
           +10
         </button>
