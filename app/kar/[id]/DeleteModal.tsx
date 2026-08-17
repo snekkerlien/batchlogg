@@ -26,7 +26,6 @@ export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
             </h3>
 
             <form action={deleteBatch} className="space-y-4">
-              {/* batchnummer som TEXT */}
               <input type="hidden" name="batchnummer" value={batchnummer} />
 
               <div>
