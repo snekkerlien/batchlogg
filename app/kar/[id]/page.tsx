@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { createBatch } from "./actions/createBatch";
+import { RecipeEditor } from "./RecipeEditor";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -92,15 +93,8 @@ export default async function KarPage({ params }: Props) {
                 />
               </div>
 
-              <div>
-                <label className="block mb-1">Oppskrift</label>
-                <input
-                  type="text"
-                  name="oppskrift"
-                  required
-                  className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
-                />
-              </div>
+              {/* NY: Oppskrifts-editor */}
+              <RecipeEditor />
 
               <button
                 type="submit"
