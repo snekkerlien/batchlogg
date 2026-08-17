@@ -20,7 +20,7 @@ export default async function KarPage({ params }: Props) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // RIKTIG TABELLNAVN (Batches)
+  // Hent aktiv batch for dette karet
   const { data: batch } = await supabase
     .from("Batches")
     .select("*")
@@ -51,17 +51,6 @@ export default async function KarPage({ params }: Props) {
 
             <form action={createBatch} className="space-y-4">
               <input type="hidden" name="kar" value={karId} />
-
-              {/* Batchnummer */}
-              <div>
-                <label className="block mb-1">Batchnummer</label>
-                <input
-                  type="number"
-                  name="batchnummer"
-                  required
-                  className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
-                />
-              </div>
 
               <div>
                 <label className="block mb-1">Batchnavn</label>
