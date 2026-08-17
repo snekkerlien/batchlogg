@@ -12,7 +12,6 @@ export async function deleteBatch(formData: FormData) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // Hent batch for å sjekke kode
   const { data: batch } = await supabase
     .from("Batches")
     .select("*")
@@ -27,7 +26,6 @@ export async function deleteBatch(formData: FormData) {
     throw new Error("Feil kode");
   }
 
-  // Slett batch
   await supabase
     .from("Batches")
     .delete()
