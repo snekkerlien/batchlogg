@@ -205,7 +205,7 @@ export default async function KarPage(props: Props) {
         </div>
 
         <p className="text-sm opacity-40 mt-12 text-center">
-          © {new Date().getFullYear()} Batchlogg – laget av Mads
+          © {new Date().getFullYear()} Batchlogg – laget av Fiklebrygg
         </p>
       </div>
     </main>
