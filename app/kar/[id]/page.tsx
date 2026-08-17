@@ -60,7 +60,6 @@ export default async function KarPage({ params }: Props) {
                 />
               </div>
 
-              {/* Tilbake til vanlig tekstfelt */}
               <div>
                 <label className="block mb-1">Batchstørrelse (liter)</label>
                 <input
@@ -88,17 +87,6 @@ export default async function KarPage({ params }: Props) {
                   type="number"
                   step="0.001"
                   name="og"
-                  required
-                  className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
-                />
-              </div>
-
-              <div>
-                <label className="block mb-1">FG (nå)</label>
-                <input
-                  type="number"
-                  step="0.001"
-                  name="fg"
                   required
                   className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
                 />
@@ -162,11 +150,6 @@ export default async function KarPage({ params }: Props) {
               </p>
 
               <p>
-                <span className="opacity-70">FG (nå):</span>{" "}
-                {batch.fg}
-              </p>
-
-              <p>
                 <span className="opacity-70">Oppskrift:</span>{" "}
                 {batch.oppskrift}
               </p>
@@ -174,7 +157,6 @@ export default async function KarPage({ params }: Props) {
           </div>
         )}
 
-        {/* Tilbake-knapp */}
         <div className="mt-8 text-center">
           <a
             href="/"
