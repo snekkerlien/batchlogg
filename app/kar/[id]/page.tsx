@@ -4,11 +4,13 @@ import { createBatch } from "./actions/createBatch";
 import { RecipeEditor } from "./RecipeEditor";
 
 type Props = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
-export default async function KarPage({ params }: Props) {
-  const karId = Number(params.id);
+export default async function KarPage(props: Props) {
+  // Next.js 16: params er en Promise → må awaites
+  const { id } = await props.params;
+  const karId = Number(id);
 
   if (isNaN(karId) || karId < 1 || karId > 6) {
     notFound();
