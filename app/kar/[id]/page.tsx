@@ -1,11 +1,10 @@
 export const dynamic = "force-dynamic";
-export const revalidate = 0; // 🔥 Slår av caching i Next.js 16
+export const revalidate = 0;
 
 import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { createBatch } from "./createBatch";
 import { RecipeEditor } from "./RecipeEditor";
-import DeleteModal from "./DeleteModal";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -24,7 +23,6 @@ export default async function KarPage(props: Props) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // 🔥 Hent ferske data uten cache
   const { data: batch } = await supabase
     .from("Batches")
     .select("*")
@@ -122,6 +120,13 @@ export default async function KarPage(props: Props) {
                 Registrer batch
               </button>
             </form>
+
+            <a
+              href="/"
+              className="mt-6 block text-center px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold transition"
+            >
+              ← Tilbake
+            </a>
           </div>
         ) : (
           /* AKTIV BATCH */
@@ -177,7 +182,16 @@ export default async function KarPage(props: Props) {
                 ← Tilbake
               </a>
 
-              <DeleteModal batchnummer={batch.batchnummer ?? ""} />
+              {/* ⭐ Importeres kun her, ikke globalt */}
+              {(() => {
+                const DeleteModal =
+                  require("./DeleteModal").default;
+                return (
+                  <DeleteModal
+                    batchnummer={batch.batchnummer ?? ""}
+                  />
+                );
+              })()}
             </div>
           </div>
         )}

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 
-function AutoTextarea({ value, onChange, placeholder }: any) {
+function AutoTextarea({ value, onChange, placeholder, name }: any) {
   const ref = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -13,6 +13,7 @@ function AutoTextarea({ value, onChange, placeholder }: any) {
   return (
     <textarea
       ref={ref}
+      name={name}   // 👈 KRITISK – gjør at formData ikke blir tom
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
@@ -42,6 +43,7 @@ ${notes}
       <div>
         <label className="block mb-1">Ingredienser</label>
         <AutoTextarea
+          name="ingredients"   // 👈 viktig
           value={ingredients}
           onChange={setIngredients}
           placeholder="Skriv ingrediensene her..."
@@ -51,6 +53,7 @@ ${notes}
       <div>
         <label className="block mb-1">Fremgangsmåte</label>
         <AutoTextarea
+          name="steps"   // 👈 viktig
           value={steps}
           onChange={setSteps}
           placeholder="Skriv steg-for-steg her..."
@@ -60,6 +63,7 @@ ${notes}
       <div>
         <label className="block mb-1">Notater</label>
         <AutoTextarea
+          name="notes"   // 👈 viktig
           value={notes}
           onChange={setNotes}
           placeholder="Ekstra notater..."
