@@ -12,24 +12,49 @@ export async function deleteBatch(formData: FormData) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  const { data: batch } = await supabase
+  // Logg at funksjonen ble kalt
+  await supabase.from("server_log").insert({
+    message: `deleteBatch called: batchnummer=${batchnummer}, kode=${kode}`
+  });
+
+  const { data: batch, error } = await supabase
     .from("Batches")
     .select("*")
     .eq("batchnummer", batchnummer)
     .maybeSingle();
 
+  if (error) {
+    await supabase.from("server_log").insert({
+      message: `Supabase error: ${error.message}`
+    });
+  }
+
   if (!batch) {
+    await supabase.from("server_log").insert({
+      message: `Batch not found in production`
+    });
     throw new Error("Batch finnes ikke");
   }
 
   if (batch.kode !== kode) {
+    await supabase.from("server_log").insert({
+      message: `Wrong code in production`
+    });
     throw new Error("Feil kode");
   }
+
+  await supabase.from("server_log").insert({
+    message: `Deleting batch ${batchnummer}`
+  });
 
   await supabase
     .from("Batches")
     .delete()
     .eq("batchnummer", batchnummer);
+
+  await supabase.from("server_log").insert({
+    message: `Batch ${batchnummer} deleted OK`
+  });
 
   redirect(`/kar/${batch.aktivt_kar}`);
 }
