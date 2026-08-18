@@ -1,16 +1,26 @@
 "use server";
 
-import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
 export async function createBatch(formData: FormData) {
-  // Klient som kan hente session
-  const supabase = createClient(
+  // Supabase-klient som leser cookies (riktig for server actions)
+  const cookieStore = cookies();
+
+  const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name) {
+          return cookieStore.get(name)?.value;
+        },
+      },
+    }
   );
 
-  // Hent session
+  // Hent session riktig
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -32,7 +42,7 @@ export async function createBatch(formData: FormData) {
   const nextNumber = last ? Number(last.batchnummer) + 1 : 1;
   const formattedBatchnummer = String(nextNumber).padStart(4, "0");
 
-  // Hent felter
+  // Hent felter fra formData
   const kar = Number(formData.get("kar"));
   const name = formData.get("name");
   const volume_l = Number(formData.get("volume_l"));
@@ -41,11 +51,11 @@ export async function createBatch(formData: FormData) {
   const kode = formData.get("kode");
   const oppskrift = formData.get("oppskrift");
 
-  // Sett inn batch MED user_id
+  // Sett inn batch
   const { error } = await supabase.from("Batches").insert({
     batchnummer: formattedBatchnummer,
     aktivt_kar: kar,
-    user_id: userId,            // ← FIX
+    user_id: userId,
     name,
     volume_l,
     startdato,
@@ -59,6 +69,7 @@ export async function createBatch(formData: FormData) {
     throw new Error("Insert failed: " + error.message);
   }
 
+  // Oppdater siden
   revalidatePath(`/kar/${kar}`);
 
   return { kar };
