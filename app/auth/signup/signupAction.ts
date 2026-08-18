@@ -1,21 +1,24 @@
 "use server";
 
-import { supabaseServer } from "../../../lib/supabaseServer";
+import { createClient } from "@supabase/supabase-js";
 
 export async function signupAction(username: string, password: string) {
-  const supabase = await supabaseServer();
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
 
   const fakeEmail = `${username}@fake.local`;
 
-  const { data, error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.admin.createUser({
     email: fakeEmail,
     password,
+    email_confirm: true
   });
 
   if (error) {
-    console.error("SIGNUP ERROR:", error);
-    throw error;
+    return { error: error.message };
   }
 
-  return data;
+  return { user: data.user };
 }
