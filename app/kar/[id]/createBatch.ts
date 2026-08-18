@@ -5,8 +5,8 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
 export async function createBatch(formData: FormData) {
-  // Supabase-klient som leser cookies (riktig for server actions)
-  const cookieStore = cookies();
+  // Next.js 16: cookies() returnerer en Promise → må await'es
+  const cookieStore = await cookies();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -20,7 +20,7 @@ export async function createBatch(formData: FormData) {
     }
   );
 
-  // Hent session riktig
+  // Hent session riktig (server-side)
   const {
     data: { session },
   } = await supabase.auth.getSession();
