@@ -1,12 +1,12 @@
-export default function SignupPage() {
+export default function LoginPage() {
   return (
     <main className="flex items-center justify-center h-screen bg-zinc-900 text-white">
       <form
-        action="https://batchlogg.vercel.app/auth/signup"
+        action="/auth/login"
         method="post"
         className="bg-zinc-800 p-6 rounded-xl w-80 space-y-4"
       >
-        <h2 className="text-xl font-semibold text-center">Registrer ny konto</h2>
+        <h2 className="text-xl font-semibold text-center">Logg inn</h2>
 
         <input
           type="text"
@@ -26,16 +26,16 @@ export default function SignupPage() {
 
         <button
           type="submit"
-          className="w-full bg-green-600 hover:bg-green-700 p-2 rounded font-semibold"
+          className="w-full bg-blue-600 hover:bg-blue-700 p-2 rounded font-semibold"
         >
-          Registrer
+          Logg inn
         </button>
 
         <a
-          href="/login"
+          href="/auth/signup"
           className="block text-center text-sm text-blue-400 hover:text-blue-300 mt-4"
         >
-          Allerede bruker? Logg inn
+          Registrer ny konto
         </a>
       </form>
     </main>
