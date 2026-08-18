@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "../../../lib/supabaseClient";
 import ActiveBatch from "./ActiveBatch";
 import RegisterBatchForm from "./RegisterBatchForm";
 
