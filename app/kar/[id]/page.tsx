@@ -22,7 +22,9 @@ function LogoutButton() {
 export default function KarPage() {
   const router = useRouter();
   const params = useParams();
-  const karId = Number(params.id);
+
+  // UUID, ikke number
+  const karId = params.id as string;
 
   const [loading, setLoading] = useState(true);
   const [kar, setKar] = useState<any>(null);
@@ -31,7 +33,6 @@ export default function KarPage() {
 
   useEffect(() => {
     async function init() {
-      // Hent session fra supabase-js
       const { data: sessionData } = await supabase.auth.getSession();
 
       if (!sessionData.session) {
@@ -41,7 +42,7 @@ export default function KarPage() {
 
       const user = sessionData.session.user;
 
-      // Hent kar
+      // Hent kar med UUID
       const { data: karData } = await supabase
         .from("kar")
         .select("*")
@@ -84,7 +85,6 @@ export default function KarPage() {
   return (
     <main className="min-h-screen bg-black text-white flex flex-col items-center px-6 py-12">
 
-      {/* Hjem-knapp */}
       <a
         href="/dashboard"
         className="block mb-4 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold w-fit"
@@ -92,10 +92,8 @@ export default function KarPage() {
         🏠 Hjem
       </a>
 
-      {/* LOGG UT-KNAPP */}
       <LogoutButton />
 
-      {/* Tilbake-knapp */}
       <button
         onClick={() => window.history.back()}
         className="block mb-8 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold w-fit"
@@ -103,10 +101,8 @@ export default function KarPage() {
         ← Tilbake
       </button>
 
-      {/* Aktiv batch */}
       {batch && <ActiveBatch batch={batch} />}
 
-      {/* Ledig kar */}
       {ledig && isOwner && <RegisterBatchForm karId={karId} />}
 
       {!ledig && !isOwner && (

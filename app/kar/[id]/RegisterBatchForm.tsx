@@ -4,12 +4,15 @@ import { useRouter } from "next/navigation";
 import { createBatch } from "./createBatch";
 import { RecipeEditor } from "./RecipeEditor";
 
-export default function RegisterBatchForm({ karId }: { karId: number }) {
+export default function RegisterBatchForm({ karId }: { karId: string }) {
   const router = useRouter();
 
   return (
     <form
       action={async (formData) => {
+        // Sett riktig kar-id (uuid)
+        formData.set("kar", karId);
+
         // Kall server action
         await createBatch(formData);
 
@@ -38,7 +41,7 @@ export default function RegisterBatchForm({ karId }: { karId: number }) {
           type="number"
           name="volume_l"
           required
-          placeholder="Skriv antant liter"
+          placeholder="Skriv antall liter"
           className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
         />
       </div>

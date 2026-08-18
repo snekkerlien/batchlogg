@@ -4,18 +4,16 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 
-
-
 type Kar = {
-  id: number;
+  id: string;        // UUID
   user_id: string;
   navn: string;
 };
 
 type Batch = {
-  id: number;
+  id: string;
   user_id: string;
-  aktivt_kar: number;
+  aktivt_kar: string; // UUID
   batchnummer: number;
   status: string;
 };
@@ -26,7 +24,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [kar, setKar] = useState<Kar[]>([]);
-  const [aktiveKar, setAktiveKar] = useState<Set<number>>(new Set());
+  const [aktiveKar, setAktiveKar] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     async function init() {
@@ -40,12 +38,14 @@ export default function DashboardPage() {
       const safeUser = sessionData.session.user;
       setUser(safeUser);
 
+      // HENT KAR
       let { data: karData } = await supabase
         .from("kar")
         .select("*")
         .eq("user_id", safeUser.id)
-        .order("id");
+        .order("created_at");
 
+      // HVIS INGEN KAR → OPPRETT KAR 1
       if (!karData || karData.length === 0) {
         await supabase.from("kar").insert({
           user_id: safeUser.id,
@@ -56,13 +56,14 @@ export default function DashboardPage() {
           .from("kar")
           .select("*")
           .eq("user_id", safeUser.id)
-          .order("id");
+          .order("created_at");
 
         karData = refreshed.data ?? [];
       }
 
       setKar(karData as Kar[]);
 
+      // HENT AKTIVE BATCHER
       const { data: batches } = await supabase
         .from("Batches")
         .select("*")
@@ -100,7 +101,7 @@ export default function DashboardPage() {
     window.location.reload();
   }
 
-  async function removeKarClient(karId: number) {
+  async function removeKarClient(karId: string) {
     if (!user) return;
 
     if (kar.length <= 1) {
@@ -145,13 +146,6 @@ export default function DashboardPage() {
   return (
     <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-6xl mx-auto text-center">
-
-        <a
-          href="/profiles"
-          className="inline-block mb-6 px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
-        >
-          Se alle profiler →
-        </a>
 
         <button
           onClick={async () => {
