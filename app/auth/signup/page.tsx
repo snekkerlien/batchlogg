@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 export default function SignupPage() {
   return (
     <main className="flex items-center justify-center h-screen bg-zinc-900 text-white">
