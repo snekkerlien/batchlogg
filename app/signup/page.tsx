@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
-import { createProfile } from "./actions";
+import { signupAction } from "./actions";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -35,9 +35,13 @@ export default function SignupPage() {
       return;
     }
 
-    // 2. Lag profil (server action)
+    // 2. Kall server action (trigger lager profil automatisk)
     try {
-      await createProfile(userId, username);
+      const formData = new FormData();
+      formData.append("username", username);
+      formData.append("password", password);
+
+      await signupAction(formData);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Ukjent feil oppstod.";
