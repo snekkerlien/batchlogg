@@ -20,7 +20,6 @@ export default function LoginPage() {
     e.preventDefault();
     setErrorMsg("");
 
-    // Supabase krever en email → vi lager en fake en basert på brukernavnet
     const fakeEmail = `${username}@fake.local`;
 
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -28,10 +27,13 @@ export default function LoginPage() {
       password
     });
 
-    if (error) {
+    if (error || !data.session) {
       setErrorMsg("Feil brukernavn eller passord.");
       return;
     }
+
+    // Gi Supabase tid til å skrive session-cookie
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     router.push("/dashboard");
   }
