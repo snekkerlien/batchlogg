@@ -17,13 +17,7 @@
       {
         "name": "next"
       }
-    ],
-
-    "ignoreDeprecations": "6.0",   // ← fjerner TS6 warning
-    "baseUrl": ".",                // ← nødvendig for alias
-    "paths": {
-      "@/*": ["./*"]               // ← gjør at "@/lib/..." fungerer
-    }
+    ]
   },
 
   "include": [
