@@ -10,7 +10,7 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    redirect("https://batchlogg.vercel.app/login");
   }
 
   // Hent kar
@@ -29,7 +29,7 @@ export default async function DashboardPage() {
         navn: "Kar 1",
       });
 
-    redirect("/dashboard");
+    redirect("https://batchlogg.vercel.app/dashboard");
   }
 
   // Hent aktive batcher
