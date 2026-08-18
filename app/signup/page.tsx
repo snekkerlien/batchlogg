@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
-
-
+import { createProfile } from "./actions";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -13,15 +12,16 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
-  async function handleSignup(e: React.FormEvent) {
+  async function handleSignup(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setErrorMsg("");
 
     const fakeEmail = `${username}@fake.local`;
 
+    // 1. Registrer bruker (client-side)
     const { data, error } = await supabase.auth.signUp({
       email: fakeEmail,
-      password
+      password,
     });
 
     if (error) {
@@ -30,21 +30,18 @@ export default function SignupPage() {
     }
 
     const userId = data.user?.id;
-
     if (!userId) {
       setErrorMsg("Kunne ikke hente bruker-ID.");
       return;
     }
 
-    const { error: profileError } = await supabase
-      .from("public_profiles")
-      .insert({
-        id: userId,
-        username
-      });
-
-    if (profileError) {
-      setErrorMsg(profileError.message);
+    // 2. Lag profil (server action)
+    try {
+      await createProfile(userId, username);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Ukjent feil oppstod.";
+      setErrorMsg(message);
       return;
     }
 
