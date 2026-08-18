@@ -8,7 +8,6 @@ export async function POST(req: Request) {
   const username = form.get("username") as string;
   const password = form.get("password") as string;
 
-  // Fake email → matcher signup
   const email = `${username}@example.com`;
 
   const { error } = await supabase.auth.signInWithPassword({
