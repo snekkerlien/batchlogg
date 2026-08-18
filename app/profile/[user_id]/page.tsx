@@ -33,7 +33,6 @@ export default function ProfilePage() {
 
   useEffect(() => {
     async function load() {
-      // Hent brukernavn
       const { data: profile } = await supabase
         .from("public_profiles")
         .select("username")
@@ -42,7 +41,6 @@ export default function ProfilePage() {
 
       setUsername(profile?.username ?? "Ukjent bruker");
 
-      // Hent kar til brukeren (alle kan se alle kar)
       const { data: karData } = await supabase
         .from("kar")
         .select("*")
@@ -51,7 +49,6 @@ export default function ProfilePage() {
 
       setKar((karData as Kar[]) || []);
 
-      // Hent batches til brukeren
       const { data: batchData } = await supabase
         .from("Batches")
         .select("*")
@@ -60,7 +57,6 @@ export default function ProfilePage() {
 
       setBatches((batchData as Batch[]) || []);
 
-      // Finn aktive kar
       const aktivSet = new Set(
         (batchData as Batch[] | null)
           ?.filter((b) => b.status === "Aktiv")
@@ -85,6 +81,23 @@ export default function ProfilePage() {
 
   return (
     <main className="min-h-screen bg-black text-white px-6 py-12">
+
+      {/* Hjem-knapp */}
+      <a
+        href="/dashboard"
+        className="block mb-4 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold w-fit"
+      >
+        🏠 Hjem
+      </a>
+
+      {/* Tilbake-knapp */}
+      <button
+        onClick={() => window.history.back()}
+        className="block mb-8 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold w-fit"
+      >
+        ← Tilbake
+      </button>
+
       <h1 className="text-4xl font-bold mb-2 text-center">{username}</h1>
 
       <p className="opacity-80 text-center mb-10">
@@ -105,7 +118,6 @@ export default function ProfilePage() {
               key={k.id}
               className="relative border border-white/10 rounded-xl p-4 bg-white/5 flex flex-col items-center w-28 h-28"
             >
-              {/* Bobleanimasjon kun på aktive kar */}
               {aktiv && (
                 <div className="absolute inset-0 pointer-events-none bubble-animation"></div>
               )}
@@ -179,7 +191,6 @@ export default function ProfilePage() {
         © {new Date().getFullYear()} Fiklebrygg. Offentlig profil.
       </p>
 
-      {/* Bobleanimasjon CSS */}
       <style>{`
         .bubble-animation {
           background-image: radial-gradient(circle, rgba(255,255,255,0.2) 2px, transparent 2px);

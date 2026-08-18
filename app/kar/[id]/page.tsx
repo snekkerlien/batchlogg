@@ -28,6 +28,7 @@ export default function KarPage() {
   const [loading, setLoading] = useState(true);
   const [kar, setKar] = useState<Kar | null>(null);
   const [batch, setBatch] = useState<Batch | null>(null);
+  const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => {
     async function init() {
@@ -40,12 +41,11 @@ export default function KarPage() {
 
       const user = sessionData.session.user;
 
-      // Hent karet (bruker må eie karet)
+      // Hent karet (ALLE kan se alle kar)
       const { data: karData } = await supabase
         .from("kar")
         .select("*")
         .eq("id", karId)
-        .eq("user_id", user.id)
         .maybeSingle();
 
       if (!karData) {
@@ -55,7 +55,10 @@ export default function KarPage() {
 
       setKar(karData as Kar);
 
-      // Hent aktiv batch (ALLE kan se alle batches)
+      // Sjekk om brukeren eier karet
+      setIsOwner(karData.user_id === user.id);
+
+      // Hent aktiv batch
       const { data: batchData } = await supabase
         .from("Batches")
         .select("*")
@@ -82,7 +85,24 @@ export default function KarPage() {
   const ledig = !batch;
 
   return (
-    <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
+    <main className="min-h-screen bg-black text-white flex flex-col items-center px-6 py-12">
+
+      {/* Hjem-knapp */}
+      <a
+        href="/dashboard"
+        className="block mb-4 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold w-fit"
+      >
+        🏠 Hjem
+      </a>
+
+      {/* Tilbake-knapp */}
+      <button
+        onClick={() => window.history.back()}
+        className="block mb-8 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold w-fit"
+      >
+        ← Tilbake
+      </button>
+
       <div className="max-w-xl w-full">
         <h1 className="text-4xl font-bold mb-6 text-center">{kar!.navn}</h1>
 
@@ -96,18 +116,22 @@ export default function KarPage() {
               Dette karet har ingen aktiv gjæring.
             </p>
 
-            <h3 className="text-xl font-semibold mb-4 text-center">
-              Registrer ny batch
-            </h3>
+            {/* Kun eier kan registrere batch */}
+            {isOwner && (
+              <>
+                <h3 className="text-xl font-semibold mb-4 text-center">
+                  Registrer ny batch
+                </h3>
 
-            <RegisterBatchForm karId={karId} />
+                <RegisterBatchForm karId={karId} />
+              </>
+            )}
 
-            <a
-              href="/dashboard"
-              className="mt-6 block text-center px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold transition"
-            >
-              ← Tilbake
-            </a>
+            {!isOwner && (
+              <p className="text-center opacity-60">
+                Du kan se dette karet, men ikke registrere batch.
+              </p>
+            )}
           </div>
         ) : (
           <div className="border border-white/10 rounded-xl p-8 bg-white/5">

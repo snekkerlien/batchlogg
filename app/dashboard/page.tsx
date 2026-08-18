@@ -38,14 +38,12 @@ export default function DashboardPage() {
       const safeUser = sessionData.session.user;
       setUser(safeUser);
 
-      // Hent brukerens kar
       let { data: karData } = await supabase
         .from("kar")
         .select("*")
         .eq("user_id", safeUser.id)
         .order("id");
 
-      // Opprett Kar 1 hvis ingen finnes
       if (!karData || karData.length === 0) {
         await supabase.from("kar").insert({
           user_id: safeUser.id,
@@ -63,13 +61,11 @@ export default function DashboardPage() {
 
       setKar(karData as Kar[]);
 
-      // Hent aktive batches (ALLE kan se alle batches)
       const { data: batches } = await supabase
         .from("Batches")
         .select("*")
         .eq("status", "Aktiv");
 
-      // Finn hvilke kar som er aktive
       const aktivSet = new Set(
         (batches as Batch[] | null)?.map((b) => b.aktivt_kar) ?? []
       );
@@ -110,7 +106,6 @@ export default function DashboardPage() {
       return;
     }
 
-    // Sjekk om karet er aktivt (ALLE kan se batches)
     const { data: active } = await supabase
       .from("Batches")
       .select("*")
@@ -148,6 +143,15 @@ export default function DashboardPage() {
   return (
     <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-6xl mx-auto text-center">
+
+        {/* Se alle profiler */}
+        <a
+          href="/profiles"
+          className="inline-block mb-6 px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
+        >
+          Se alle profiler →
+        </a>
+
         <h1 className="text-4xl font-bold mb-6">Batchlogg</h1>
 
         <p className="opacity-80 mb-8">

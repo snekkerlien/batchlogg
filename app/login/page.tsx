@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -10,6 +10,17 @@ export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+
+  // Redirect hvis bruker allerede er logget inn
+  useEffect(() => {
+    async function checkSession() {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData.session) {
+        router.push("/dashboard");
+      }
+    }
+    checkSession();
+  }, []);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
