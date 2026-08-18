@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServerActionClient } from "../../../lib/supabaseServerAction";
+import { createServerActionClient } from "../../../../lib/supabaseServerAction";
 
 export async function POST(req: Request) {
   const supabase = await createServerActionClient();
