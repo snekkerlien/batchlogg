@@ -1,57 +1,24 @@
+import { NextResponse } from "next/server";
 import { createServerClient } from "../../lib/supabaseServer";
-import { redirect } from "next/navigation";
 
-export default async function LoginPage() {
+export async function POST(req: Request) {
   const supabase = await createServerClient();
+  const form = await req.formData();
 
-  // Hvis bruker allerede er innlogget → redirect
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const username = form.get("username") as string;
+  const password = form.get("password") as string;
 
-  if (user) {
-    redirect("https://batchlogg.vercel.app/dashboard");
+  const email = `${username}@example.com`;
+
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+  });
+
+  if (error) {
+    return NextResponse.redirect("https://batchlogg.vercel.app/signup?error=1");
   }
 
-  return (
-    <main className="flex items-center justify-center h-screen bg-zinc-900 text-white">
-      <form
-        action="/auth/login"
-        method="post"
-        className="bg-zinc-800 p-6 rounded-xl w-80 space-y-4"
-      >
-        <h2 className="text-xl font-semibold text-center">Logg inn</h2>
-
-        <input
-          type="text"
-          name="username"
-          placeholder="Brukernavn"
-          required
-          className="w-full p-2 rounded bg-zinc-700"
-        />
-
-        <input
-          type="password"
-          name="password"
-          placeholder="Passord"
-          required
-          className="w-full p-2 rounded bg-zinc-700"
-        />
-
-        <button
-          type="submit"
-          className="w-full bg-blue-600 hover:bg-blue-700 p-2 rounded font-semibold"
-        >
-          Logg inn
-        </button>
-
-        <a
-          href="/signup"
-          className="block text-center text-sm text-blue-400 hover:text-blue-300 mt-4"
-        >
-          Registrer ny konto
-        </a>
-      </form>
-    </main>
-  );
+  // Etter signup → send bruker til login
+  return NextResponse.redirect("https://batchlogg.vercel.app/login");
 }
