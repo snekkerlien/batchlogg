@@ -155,7 +155,8 @@ export default function DashboardPage() {
                 key={k.id}
                 className="relative border border-white/10 rounded-xl p-6 bg-white/5 hover:bg-white/10 transition flex flex-col items-center w-32 h-32"
               >
-                {!aktiv && kar.length > 1 && (
+                {/* Kryss-knapp – ALDRI på Kar 1 */}
+                {!aktiv && kar.length > 1 && k.navn !== "Kar 1" && (
                   <button
                     onClick={() => removeKarClient(k.id)}
                     className="absolute top-1 right-2 text-red-400 hover:text-red-300 text-xl font-bold"
