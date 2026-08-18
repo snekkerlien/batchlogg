@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
-// Typer
 type Kar = {
   id: number;
   user_id: string;
@@ -27,9 +26,6 @@ export default function DashboardPage() {
   const [kar, setKar] = useState<Kar[]>([]);
   const [aktiveKar, setAktiveKar] = useState<Set<number>>(new Set());
 
-  // ---------------------------
-  // HENT DATA
-  // ---------------------------
   useEffect(() => {
     async function init() {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -42,14 +38,12 @@ export default function DashboardPage() {
       const safeUser = sessionData.session.user;
       setUser(safeUser);
 
-      // Hent kar
       let { data: karData } = await supabase
         .from("kar")
         .select("*")
         .eq("user_id", safeUser.id)
         .order("id");
 
-      // Hvis ingen kar → lag Kar 1
       if (!karData || karData.length === 0) {
         await supabase.from("kar").insert({
           user_id: safeUser.id,
@@ -67,7 +61,6 @@ export default function DashboardPage() {
 
       setKar(karData as Kar[]);
 
-      // Hent aktive batches
       const { data: batches } = await supabase
         .from("Batches")
         .select("*")
@@ -86,9 +79,6 @@ export default function DashboardPage() {
     init();
   }, []);
 
-  // ---------------------------
-  // LEGG TIL NYTT KAR (CLIENT)
-  // ---------------------------
   async function addKarClient() {
     if (!user) return;
 
@@ -109,13 +99,14 @@ export default function DashboardPage() {
     window.location.reload();
   }
 
-  // ---------------------------
-  // FJERN KAR (CLIENT)
-  // ---------------------------
   async function removeKarClient(karId: number) {
     if (!user) return;
 
-    // Sjekk om karet har aktiv batch
+    if (kar.length <= 1) {
+      alert("Du kan ikke slette det siste karet.");
+      return;
+    }
+
     const { data: active } = await supabase
       .from("Batches")
       .select("*")
@@ -125,7 +116,7 @@ export default function DashboardPage() {
       .maybeSingle();
 
     if (active) {
-      alert("Du kan ikke fjerne et kar som er i bruk.");
+      alert("Du kan ikke slette et kar som er i bruk.");
       return;
     }
 
@@ -138,9 +129,6 @@ export default function DashboardPage() {
     window.location.reload();
   }
 
-  // ---------------------------
-  // LOADING
-  // ---------------------------
   if (loading) {
     return (
       <main className="min-h-screen bg-black text-white flex items-center justify-center">
@@ -149,27 +137,34 @@ export default function DashboardPage() {
     );
   }
 
-  // ---------------------------
-  // UI
-  // ---------------------------
   return (
     <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
-      <div className="max-w-xl w-full text-center">
+      <div className="w-full max-w-3xl mx-auto text-center">
         <h1 className="text-4xl font-bold mb-6">Batchlogg</h1>
 
         <p className="opacity-80 mb-8">
           Oversikt over alle kar og deres status.
         </p>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-6 justify-items-center">
           {kar.map((k) => {
             const aktiv = aktiveKar.has(k.id);
 
             return (
               <div
                 key={k.id}
-                className="group border border-white/10 rounded-xl p-6 bg-white/5 hover:bg-white/10 transition flex flex-col items-center relative overflow-hidden"
+                className="relative border border-white/10 rounded-xl p-6 bg-white/5 hover:bg-white/10 transition flex flex-col items-center w-32 h-32"
               >
+                {/* Kryss-knapp */}
+                {!aktiv && kar.length > 1 && (
+                  <button
+                    onClick={() => removeKarClient(k.id)}
+                    className="absolute top-1 right-2 text-red-400 hover:text-red-300 text-xl font-bold"
+                  >
+                    ×
+                  </button>
+                )}
+
                 <a
                   href={`/kar/${k.id}`}
                   className="flex flex-col items-center mb-2 relative"
@@ -206,26 +201,16 @@ export default function DashboardPage() {
                     Aktiv batch
                   </span>
                 ) : (
-                  <>
-                    <span className="text-zinc-400">Ledig</span>
-
-                    <button
-                      onClick={() => removeKarClient(k.id)}
-                      className="mt-2 text-red-400 hover:text-red-300 text-sm"
-                    >
-                      Fjern kar
-                    </button>
-                  </>
+                  <span className="text-zinc-400">Ledig</span>
                 )}
               </div>
             );
           })}
 
-          {/* + knapp */}
           {kar.length < 9 && (
             <button
               onClick={addKarClient}
-              className="border border-white/10 rounded-xl p-6 bg-white/5 hover:bg-white/10 transition flex flex-col items-center justify-center text-4xl font-bold text-green-300"
+              className="border border-white/10 rounded-xl p-6 bg-white/5 hover:bg-white/10 transition flex flex-col items-center justify-center text-4xl font-bold text-green-300 w-32 h-32"
             >
               +
             </button>
