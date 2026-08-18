@@ -11,10 +11,10 @@ export default function RegisterBatchForm({ karId }: { karId: number }) {
     <form
       action={async (formData) => {
         // Kall server action
-        const result = await createBatch(formData);
+        await createBatch(formData);
 
-        // Redirect til riktig kar-side
-        router.push(`/kar/${result.kar}`);
+        // Oppdater siden slik at KarPage henter batch på nytt
+        router.refresh();
       }}
       className="space-y-4"
     >
@@ -38,7 +38,7 @@ export default function RegisterBatchForm({ karId }: { karId: number }) {
           type="number"
           name="volume_l"
           required
-          placeholder="Skriv antall liter"
+          placeholder="Skriv antant liter"
           className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
         />
       </div>
@@ -77,7 +77,6 @@ export default function RegisterBatchForm({ karId }: { karId: number }) {
         />
       </div>
 
-      {/* Oppskrift-editor */}
       <RecipeEditor />
 
       <button
