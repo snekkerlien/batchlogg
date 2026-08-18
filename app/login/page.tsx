@@ -1,17 +1,6 @@
-import { createServerClient } from "../../lib/supabaseServer";
 import { redirect } from "next/navigation";
 
-export default async function LoginPage() {
-  const supabase = await createServerClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (user) {
-    redirect("https://batchlogg.vercel.app/dashboard");
-  }
-
+export default function LoginPage() {
   return (
     <main className="flex items-center justify-center h-screen bg-zinc-900 text-white">
       <form
