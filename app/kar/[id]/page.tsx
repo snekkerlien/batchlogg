@@ -40,6 +40,7 @@ export default function KarPage() {
 
       const user = sessionData.session.user;
 
+      // Hent karet (bruker må eie karet)
       const { data: karData } = await supabase
         .from("kar")
         .select("*")
@@ -54,11 +55,11 @@ export default function KarPage() {
 
       setKar(karData as Kar);
 
+      // Hent aktiv batch (ALLE kan se alle batches)
       const { data: batchData } = await supabase
         .from("Batches")
         .select("*")
         .eq("aktivt_kar", karId)
-        .eq("user_id", user.id)
         .eq("status", "Aktiv")
         .maybeSingle();
 

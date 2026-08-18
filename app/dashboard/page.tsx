@@ -38,12 +38,14 @@ export default function DashboardPage() {
       const safeUser = sessionData.session.user;
       setUser(safeUser);
 
+      // Hent brukerens kar
       let { data: karData } = await supabase
         .from("kar")
         .select("*")
         .eq("user_id", safeUser.id)
         .order("id");
 
+      // Opprett Kar 1 hvis ingen finnes
       if (!karData || karData.length === 0) {
         await supabase.from("kar").insert({
           user_id: safeUser.id,
@@ -61,12 +63,13 @@ export default function DashboardPage() {
 
       setKar(karData as Kar[]);
 
+      // Hent aktive batches (ALLE kan se alle batches)
       const { data: batches } = await supabase
         .from("Batches")
         .select("*")
-        .eq("user_id", safeUser.id)
         .eq("status", "Aktiv");
 
+      // Finn hvilke kar som er aktive
       const aktivSet = new Set(
         (batches as Batch[] | null)?.map((b) => b.aktivt_kar) ?? []
       );
@@ -107,11 +110,11 @@ export default function DashboardPage() {
       return;
     }
 
+    // Sjekk om karet er aktivt (ALLE kan se batches)
     const { data: active } = await supabase
       .from("Batches")
       .select("*")
       .eq("aktivt_kar", karId)
-      .eq("user_id", user.id)
       .eq("status", "Aktiv")
       .maybeSingle();
 
