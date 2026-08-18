@@ -1,11 +1,11 @@
 import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient as createSupabaseServerClient } from "@supabase/ssr";
 
-export async function supabaseServer() {
-  // Next.js 14+: cookies() er async → må await'es
+export async function createServerClient() {
+  // Next.js 16: cookies() er async i server actions → må await'es
   const cookieStore = await cookies();
 
-  return createServerClient(
+  return createSupabaseServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -14,10 +14,10 @@ export async function supabaseServer() {
           return cookieStore.get(name)?.value;
         },
         set(name: string, value: string, options: any) {
-          cookieStore.set({ name, value, ...options });
+          cookieStore.set(name, value, options); // ✔ riktig signatur
         },
         remove(name: string, options: any) {
-          cookieStore.set({ name, value: "", ...options });
+          cookieStore.set(name, "", options); // ✔ riktig signatur
         },
       },
     }

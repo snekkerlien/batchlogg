@@ -1,11 +1,11 @@
 "use server";
 
-import { supabaseServer } from "../../../lib/supabaseServer";
+import { createServerClient } from "../../../lib/supabaseServer";
 import { revalidatePath } from "next/cache";
 
 export async function createBatch(formData: FormData) {
   // Supabase server-klient (må await'es)
-  const supabase = await supabaseServer();
+  const supabase = await createServerClient();
 
   // Hent session
   const {
