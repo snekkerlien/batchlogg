@@ -139,8 +139,8 @@ export default function DashboardPage() {
 
   const layoutClass =
     kar.length <= 2
-      ? "flex justify-center gap-6"
-      : "grid grid-cols-3 gap-6 justify-items-center";
+      ? "flex justify-center gap-4"
+      : "grid grid-cols-3 gap-4 justify-items-center max-w-[420px] mx-auto";
 
   return (
     <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
@@ -158,7 +158,7 @@ export default function DashboardPage() {
             return (
               <div
                 key={k.id}
-                className="relative border border-white/10 rounded-xl p-6 bg-white/5 hover:bg-white/10 transition flex flex-col items-center w-32 h-32"
+                className="relative border border-white/10 rounded-xl p-4 bg-white/5 hover:bg-white/10 transition flex flex-col items-center w-28 h-28"
               >
                 {!aktiv && kar.length > 1 && k.navn !== "Kar 1" && (
                   <button
@@ -174,8 +174,8 @@ export default function DashboardPage() {
                   className="flex flex-col items-center mb-2 relative"
                 >
                   <svg
-                    width="40"
-                    height="40"
+                    width="32"
+                    height="32"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -191,7 +191,7 @@ export default function DashboardPage() {
                     <circle cx="12" cy="2" r="1" />
                   </svg>
 
-                  <span className="absolute top-[14px] text-lg font-bold text-green-300">
+                  <span className="absolute top-[10px] text-lg font-bold text-green-300">
                     {k.navn.replace("Kar ", "")}
                   </span>
                 </a>
@@ -210,7 +210,7 @@ export default function DashboardPage() {
           {kar.length < 9 && (
             <button
               onClick={addKarClient}
-              className="border border-white/10 rounded-xl p-6 bg-white/5 hover:bg-white/10 transition flex flex-col items-center justify-center text-4xl font-bold text-green-300 w-32 h-32"
+              className="border border-white/10 rounded-xl p-4 bg-white/5 hover:bg-white/10 transition flex flex-col items-center justify-center text-4xl font-bold text-green-300 w-28 h-28"
             >
               +
             </button>
