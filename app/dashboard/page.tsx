@@ -4,12 +4,28 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
+// Typer for kar og batch
+type Kar = {
+  id: number;
+  user_id: string;
+  navn: string;
+};
+
+type Batch = {
+  id: number;
+  user_id: string;
+  aktivt_kar: number;
+  batchnummer: number;
+  status: string;
+};
+
 export default function DashboardPage() {
   const router = useRouter();
+
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(null);
-  const [kar, setKar] = useState([]);
-  const [aktiveKar, setAktiveKar] = useState(new Set());
+  const [user, setUser] = useState<any>(null);
+  const [kar, setKar] = useState<Kar[]>([]);
+  const [aktiveKar, setAktiveKar] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     async function init() {
@@ -46,7 +62,7 @@ export default function DashboardPage() {
         karData = refreshed.data ?? [];
       }
 
-      setKar(karData);
+      setKar(karData as Kar[]);
 
       // 3: hent aktive batches
       const { data: batches } = await supabase
@@ -55,7 +71,11 @@ export default function DashboardPage() {
         .eq("user_id", safeUser.id)
         .eq("status", "Aktiv");
 
-      setAktiveKar(new Set(batches?.map((b) => b.aktivt_kar)));
+      const aktivSet = new Set(
+        (batches as Batch[] | null)?.map((b) => b.aktivt_kar) ?? []
+      );
+
+      setAktiveKar(aktivSet);
 
       setLoading(false);
     }
@@ -119,11 +139,9 @@ export default function DashboardPage() {
                 </div>
 
                 {aktiv ? (
-                  <>
-                    <span className="text-green-400 font-semibold">
-                      Aktiv batch
-                    </span>
-                  </>
+                  <span className="text-green-400 font-semibold">
+                    Aktiv batch
+                  </span>
                 ) : (
                   <span className="text-zinc-400">Ledig</span>
                 )}
