@@ -1,8 +1,10 @@
+export const dynamic = "force-dynamic";
+
 export default function LoginPage() {
   return (
     <main className="flex items-center justify-center h-screen bg-zinc-900 text-white">
       <form
-        action="https://batchlogg.vercel.app/auth/login"
+        action="/auth/login/action"
         method="post"
         className="bg-zinc-800 p-6 rounded-xl w-80 space-y-4"
       >
@@ -35,7 +37,7 @@ export default function LoginPage() {
           href="/auth/signup"
           className="block text-center text-sm text-blue-400 hover:text-blue-300 mt-4"
         >
-          Registrer ny kontooooooooooooooooooooo
+          Registrer ny konto
         </a>
       </form>
     </main>
