@@ -5,14 +5,14 @@ export default function Home() {
         <h1 className="text-3xl font-bold text-white">Batchlogg</h1>
 
         <a
-          href="/login"
+          href="/auth/login"
           className="block bg-blue-600 hover:bg-blue-700 p-3 rounded font-semibold"
         >
           Logg inn
         </a>
 
         <a
-          href="/signup"
+          href="/auth/signup"
           className="block bg-green-600 hover:bg-green-700 p-3 rounded font-semibold"
         >
           Registrer
