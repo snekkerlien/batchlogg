@@ -236,7 +236,7 @@ export default function DashboardPage() {
         </div>
 
         <p className="text-sm opacity-40 mt-12">
-          © {new Date().getFullYear()} Fiklebrygg. Alle rettighete reservert.
+          © {new Date().getFullYear()} Fiklebrygg. Alle rettigheter reservert.
         </p>
       </div>
     </main>
