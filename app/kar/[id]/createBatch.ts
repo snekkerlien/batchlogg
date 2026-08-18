@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 export async function createBatch(formData: FormData) {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!   // ← FIX
   );
 
   // 1. Finn siste batchnummer
