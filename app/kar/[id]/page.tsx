@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import ActiveBatch from "./ActiveBatch";
 import RegisterBatchForm from "./RegisterBatchForm";
@@ -16,12 +16,13 @@ type Batch = {
   id: number;
   user_id: string;
   aktivt_kar: number;
-  batchnummer: number; // Supabase gir number, det er riktig
+  batchnummer: number;
   status: string;
 };
 
-export default function KarPage({ params }: { params: { id: string } }) {
+export default function KarPage() {
   const router = useRouter();
+  const params = useParams();
   const karId = Number(params.id);
 
   const [loading, setLoading] = useState(true);
@@ -113,7 +114,6 @@ export default function KarPage({ params }: { params: { id: string } }) {
               Aktiv batch
             </h2>
 
-            {/* FIX: batchnummer må være string */}
             <ActiveBatch batchnummer={String(batch!.batchnummer)} />
           </div>
         )}
