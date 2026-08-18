@@ -1,24 +1,20 @@
 import { redirect } from "next/navigation";
 
 export default async function DashboardPage() {
-  // Hent session via API
   const sessionRes = await fetch("https://batchlogg.vercel.app/api/session", {
     cache: "no-store",
   });
 
-  // Hvis API feiler → redirect til login
   if (!sessionRes.ok) {
     redirect("https://batchlogg.vercel.app/auth/login");
   }
 
   const { user } = await sessionRes.json();
 
-  // Hvis ingen bruker → redirect til login
   if (!user) {
     redirect("https://batchlogg.vercel.app/auth/login");
   }
 
-  // Hent kar via API
   const karRes = await fetch(
     `https://batchlogg.vercel.app/api/kar?user=${user.id}`,
     {
