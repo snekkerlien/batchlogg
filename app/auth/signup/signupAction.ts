@@ -1,19 +1,18 @@
 "use server";
 
-import { supabaseAdmin } from "../../../lib/supabaseAdmin";
+import { supabaseServerClient } from "../../../lib/supabaseServerClient";
 
 export async function signupAction(username: string, password: string) {
   console.log("SIGNUP ACTION STARTED");
 
-  const supabase = supabaseAdmin();
-  const email = `${username}@invalid.test`;
+  const supabase = await supabaseServerClient();
+  const email = `${username}@fake.local`;
 
   console.log("EMAIL:", email);
 
-  const { data, error } = await supabase.auth.admin.createUser({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    email_confirm: true,
   });
 
   console.log("SUPABASE RESPONSE:", data, error);
