@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { signupAction } from "../auth/signup/signupAction";
+// signupAction er midlertidig fjernet mens vi bygger Supabase fra scratch
 
 export default function SignupPage() {
   const router = useRouter();
@@ -15,13 +15,8 @@ export default function SignupPage() {
     e.preventDefault();
     setErrorMsg("");
 
-    try {
-      await signupAction(username, password);
-      router.push("/login");
-    } catch (err: any) {
-      console.error("CLIENT ERROR:", err);
-      setErrorMsg(err.message);
-    }
+    // Midlertidig deaktivert til Supabase er satt opp
+    console.log("Signup disabled until Supabase is ready");
   }
 
   return (
