@@ -9,14 +9,14 @@ export async function POST(req: Request) {
   const password = form.get("password") as string;
   const email = `${username}@example.com`;
 
-  const { error } = await supabase.auth.signUp({
+  const { error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
   if (error) {
-    return NextResponse.redirect("/signup?error=1");
+    return NextResponse.redirect("https://batchlogg.vercel.app/login?error=1");
   }
 
-  return NextResponse.redirect("/login");
+  return NextResponse.redirect("https://batchlogg.vercel.app/dashboard");
 }
