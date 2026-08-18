@@ -1,26 +1,12 @@
 "use server";
 
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { supabaseServer } from "@/lib/supabaseServer";
 import { revalidatePath } from "next/cache";
 
 export async function createBatch(formData: FormData) {
-  // Next.js 16: cookies() returnerer en Promise → må await'es
-  const cookieStore = await cookies();
+  // MÅ await'es – ellers får du en Promise i stedet for en klient
+  const supabase = await supabaseServer();
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name) {
-          return cookieStore.get(name)?.value;
-        },
-      },
-    }
-  );
-
-  // Hent session riktig (server-side)
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -69,7 +55,6 @@ export async function createBatch(formData: FormData) {
     throw new Error("Insert failed: " + error.message);
   }
 
-  // Oppdater siden
   revalidatePath(`/kar/${kar}`);
 
   return { kar };
