@@ -27,7 +27,7 @@ export default function LoginPage() {
     e.preventDefault();
     setErrorMsg("");
 
-    const fakeEmail = `${username}@fake.local`;
+    const fakeEmail = `${username}@example.com`;
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email: fakeEmail,
