@@ -139,7 +139,7 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
-      <div className="w-full max-w-3xl mx-auto text-center">
+      <div className="w-full max-w-5xl mx-auto text-center">
         <h1 className="text-4xl font-bold mb-6">Batchlogg</h1>
 
         <p className="opacity-80 mb-8">
@@ -155,7 +155,6 @@ export default function DashboardPage() {
                 key={k.id}
                 className="relative border border-white/10 rounded-xl p-6 bg-white/5 hover:bg-white/10 transition flex flex-col items-center w-32 h-32"
               >
-                {/* Kryss-knapp */}
                 {!aktiv && kar.length > 1 && (
                   <button
                     onClick={() => removeKarClient(k.id)}
@@ -180,11 +179,7 @@ export default function DashboardPage() {
                     strokeLinejoin="round"
                     className="text-green-300"
                   >
-                    <path
-                      d="M4 4h16v2H4z"
-                      className="lokket transition-transform duration-300"
-                      style={{ transformOrigin: "12px 4px" }}
-                    />
+                    <path d="M4 4h16v2H4z" />
                     <path d="M6 6v11a5 5 0 0 0 5 5h2a5 5 0 0 0 5-5V6" />
                     <path d="M9 10h6" />
                     <path d="M12 2v2" />
