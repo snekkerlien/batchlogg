@@ -1,12 +1,13 @@
 "use server";
 
-import { supabaseServer } from "@/lib/supabaseServer";
+import { supabaseServer } from "@/app/lib/supabaseServer";
 import { revalidatePath } from "next/cache";
 
 export async function createBatch(formData: FormData) {
-  // MÅ await'es – ellers får du en Promise i stedet for en klient
+  // Supabase-klient for server actions
   const supabase = await supabaseServer();
 
+  // Hent session
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -14,8 +15,6 @@ export async function createBatch(formData: FormData) {
   if (!session) {
     throw new Error("Ingen session – bruker ikke innlogget.");
   }
-
-  const userId = session.user.id;
 
   // Finn siste batchnummer
   const { data: last } = await supabase
@@ -37,11 +36,10 @@ export async function createBatch(formData: FormData) {
   const kode = formData.get("kode");
   const oppskrift = formData.get("oppskrift");
 
-  // Sett inn batch
+  // Sett inn batch (user_id settes automatisk av Supabase)
   const { error } = await supabase.from("Batches").insert({
     batchnummer: formattedBatchnummer,
     aktivt_kar: kar,
-    user_id: userId,
     name,
     volume_l,
     startdato,
@@ -55,6 +53,7 @@ export async function createBatch(formData: FormData) {
     throw new Error("Insert failed: " + error.message);
   }
 
+  // Oppdater siden
   revalidatePath(`/kar/${kar}`);
 
   return { kar };

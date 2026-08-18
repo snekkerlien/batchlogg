@@ -144,7 +144,6 @@ export default function DashboardPage() {
     <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-6xl mx-auto text-center">
 
-        {/* Se alle profiler */}
         <a
           href="/profiles"
           className="inline-block mb-6 px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
@@ -152,7 +151,6 @@ export default function DashboardPage() {
           Se alle profiler →
         </a>
 
-        {/* Logg ut */}
         <button
           onClick={async () => {
             await supabase.auth.signOut();

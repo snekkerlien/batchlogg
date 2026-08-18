@@ -2,9 +2,22 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/app/lib/supabaseClient";
 import ActiveBatch from "./ActiveBatch";
 import RegisterBatchForm from "./RegisterBatchForm";
+
+function LogoutButton() {
+  return (
+    <button
+      onClick={async () => {
+        await supabase.auth.signOut();
+      }}
+      className="block mb-4 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold w-fit"
+    >
+      Logg ut
+    </button>
+  );
+}
 
 export default function KarPage() {
   const router = useRouter();
@@ -12,12 +25,13 @@ export default function KarPage() {
   const karId = Number(params.id);
 
   const [loading, setLoading] = useState(true);
-  const [kar, setKar] = useState(null);
-  const [batch, setBatch] = useState(null);
+  const [kar, setKar] = useState<any>(null);
+  const [batch, setBatch] = useState<any>(null);
   const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => {
     async function init() {
+      // Hent session fra supabase-js
       const { data: sessionData } = await supabase.auth.getSession();
 
       if (!sessionData.session) {
@@ -27,6 +41,7 @@ export default function KarPage() {
 
       const user = sessionData.session.user;
 
+      // Hent kar
       const { data: karData } = await supabase
         .from("kar")
         .select("*")
@@ -41,6 +56,7 @@ export default function KarPage() {
       setKar(karData);
       setIsOwner(karData.user_id === user.id);
 
+      // Hent aktiv batch
       const { data: batchData } = await supabase
         .from("Batches")
         .select("*")
@@ -77,17 +93,7 @@ export default function KarPage() {
       </a>
 
       {/* LOGG UT-KNAPP */}
-      <button
-        onClick={async () => {
-          console.log("CLICK");
-          const { error } = await supabase.auth.signOut();
-          console.log("SIGNOUT ERROR:", error);
-          router.push("/login");
-        }}
-        className="block mb-4 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold w-fit"
-      >
-        Logg ut
-      </button>
+      <LogoutButton />
 
       {/* Tilbake-knapp */}
       <button
@@ -97,15 +103,11 @@ export default function KarPage() {
         ← Tilbake
       </button>
 
-      {/* Hvis kar har aktiv batch */}
-      {batch && (
-        <ActiveBatch batch={batch} />
-      )}
+      {/* Aktiv batch */}
+      {batch && <ActiveBatch batch={batch} />}
 
-      {/* Hvis kar er ledig */}
-      {ledig && isOwner && (
-        <RegisterBatchForm karId={karId} />
-      )}
+      {/* Ledig kar */}
+      {ledig && isOwner && <RegisterBatchForm karId={karId} />}
 
       {!ledig && !isOwner && (
         <p className="text-gray-400 mt-4">Dette karet er i bruk.</p>

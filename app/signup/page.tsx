@@ -1,16 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function SignupPage() {
   const router = useRouter();
-
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -20,7 +15,6 @@ export default function SignupPage() {
     e.preventDefault();
     setErrorMsg("");
 
-    // Supabase krever en email → vi lager en fake en basert på brukernavnet
     const fakeEmail = `${username}@fake.local`;
 
     const { data, error } = await supabase.auth.signUp({
@@ -40,7 +34,6 @@ export default function SignupPage() {
       return;
     }
 
-    // RIKTIG TABELL: public_profiles
     const { error: profileError } = await supabase
       .from("public_profiles")
       .insert({
