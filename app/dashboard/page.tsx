@@ -63,7 +63,7 @@ export default async function DashboardPage() {
         </div>
 
         <p className="text-sm opacity-40 mt-12">
-          © {new Date().getFullYear()} Fiklebrygg. Alle rettigheter reservert.
+          © {new Date().getFullYear()} Fiklebrygg. Alle rettigheters reservert.
         </p>
       </div>
     </main>
