@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import ActiveBatch from "./ActiveBatch";
+import RegisterBatchForm from "./RegisterBatchForm";
 
 type Kar = {
   id: number;
@@ -14,17 +16,17 @@ type Batch = {
   id: number;
   user_id: string;
   aktivt_kar: number;
-  batchnummer: number;
+  batchnummer: number; // Supabase gir number, det er riktig
   status: string;
 };
 
-export default function DashboardPage() {
+export default function KarPage({ params }: { params: { id: string } }) {
   const router = useRouter();
+  const karId = Number(params.id);
 
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
-  const [kar, setKar] = useState<Kar[]>([]);
-  const [aktiveKar, setAktiveKar] = useState<Set<number>>(new Set());
+  const [kar, setKar] = useState<Kar | null>(null);
+  const [batch, setBatch] = useState<Batch | null>(null);
 
   useEffect(() => {
     async function init() {
@@ -35,51 +37,37 @@ export default function DashboardPage() {
         return;
       }
 
-      const safeUser = sessionData.session.user;
-      setUser(safeUser);
+      const user = sessionData.session.user;
 
-      // Hent kar
-      let { data: karData } = await supabase
+      const { data: karData } = await supabase
         .from("kar")
         .select("*")
-        .eq("user_id", safeUser.id)
-        .order("id");
+        .eq("id", karId)
+        .eq("user_id", user.id)
+        .maybeSingle();
 
-      if (!karData || karData.length === 0) {
-        await supabase.from("kar").insert({
-          user_id: safeUser.id,
-          navn: "Kar 1"
-        });
-
-        const refreshed = await supabase
-          .from("kar")
-          .select("*")
-          .eq("user_id", safeUser.id)
-          .order("id");
-
-        karData = refreshed.data ?? [];
+      if (!karData) {
+        router.push("/dashboard");
+        return;
       }
 
-      setKar(karData as Kar[]);
+      setKar(karData as Kar);
 
-      // Hent aktive batches
-      const { data: batches } = await supabase
+      const { data: batchData } = await supabase
         .from("Batches")
         .select("*")
-        .eq("user_id", safeUser.id)
-        .eq("status", "Aktiv");
+        .eq("aktivt_kar", karId)
+        .eq("user_id", user.id)
+        .eq("status", "Aktiv")
+        .maybeSingle();
 
-      const aktivSet = new Set(
-        (batches as Batch[] | null)?.map((b) => b.aktivt_kar) ?? []
-      );
-
-      setAktiveKar(aktivSet);
+      setBatch(batchData as Batch | null);
 
       setLoading(false);
     }
 
     init();
-  }, []);
+  }, [karId]);
 
   if (loading) {
     return (
@@ -89,66 +77,48 @@ export default function DashboardPage() {
     );
   }
 
+  const ledig = !batch;
+
   return (
     <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
-      <div className="max-w-xl w-full text-center">
-        <h1 className="text-4xl font-bold mb-6">Batchlogg</h1>
+      <div className="max-w-xl w-full">
+        <h1 className="text-4xl font-bold mb-6 text-center">{kar!.navn}</h1>
 
-        <p className="opacity-80 mb-8">
-          Oversikt over alle kar og deres status.
-        </p>
+        {ledig ? (
+          <div className="border border-white/10 rounded-xl p-8 bg-white/5">
+            <h2 className="text-2xl font-semibold mb-4 text-center">
+              Ledig kar
+            </h2>
 
-        <div className="grid grid-cols-2 gap-4">
-          {kar.map((k) => {
-            const aktiv = aktiveKar.has(k.id);
+            <p className="opacity-80 mb-6 text-center">
+              Dette karet har ingen aktiv gjæring.
+            </p>
 
-            return (
-              <a
-                key={k.id}
-                href={`/kar/${k.id}`}
-                className="group border border-white/10 rounded-xl p-6 bg-white/5 hover:bg-white/10 transition flex flex-col items-center relative overflow-hidden"
-              >
-                <div className="flex flex-col items-center mb-2 relative">
-                  <svg
-                    width="40"
-                    height="40"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="text-green-300"
-                  >
-                    <path
-                      d="M4 4h16v2H4z"
-                      className="lokket transition-transform duration-300"
-                      style={{ transformOrigin: "12px 4px" }}
-                    />
-                    <path d="M6 6v11a5 5 0 0 0 5 5h2a5 5 0 0 0 5-5V6" />
-                    <path d="M9 10h6" />
-                    <path d="M12 2v2" />
-                    <circle cx="12" cy="2" r="1" />
-                  </svg>
+            <h3 className="text-xl font-semibold mb-4 text-center">
+              Registrer ny batch
+            </h3>
 
-                  <span className="absolute top-[14px] text-lg font-bold text-green-300">
-                    {k.navn.replace("Kar ", "")}
-                  </span>
-                </div>
+            <RegisterBatchForm karId={karId} />
 
-                {aktiv ? (
-                  <span className="text-green-400 font-semibold">
-                    Aktiv batch
-                  </span>
-                ) : (
-                  <span className="text-zinc-400">Ledig</span>
-                )}
-              </a>
-            );
-          })}
-        </div>
+            <a
+              href="/dashboard"
+              className="mt-6 block text-center px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold transition"
+            >
+              ← Tilbake
+            </a>
+          </div>
+        ) : (
+          <div className="border border-white/10 rounded-xl p-8 bg-white/5">
+            <h2 className="text-2xl font-semibold mb-4 text-center">
+              Aktiv batch
+            </h2>
 
-        <p className="text-sm opacity-40 mt-12">
+            {/* FIX: batchnummer må være string */}
+            <ActiveBatch batchnummer={String(batch!.batchnummer)} />
+          </div>
+        )}
+
+        <p className="text-sm opacity-40 mt-12 text-center">
           © {new Date().getFullYear()} Fiklebrygg. Alle rettigheter reservert.
         </p>
       </div>
