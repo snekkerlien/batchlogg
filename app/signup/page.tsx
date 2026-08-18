@@ -40,11 +40,13 @@ export default function SignupPage() {
       return;
     }
 
-    // Opprett profil-rad med ekte brukernavn
-    const { error: profileError } = await supabase.from("profiles").insert({
-      id: userId,
-      username
-    });
+    // RIKTIG TABELL: public_profiles
+    const { error: profileError } = await supabase
+      .from("public_profiles")
+      .insert({
+        id: userId,
+        username
+      });
 
     if (profileError) {
       setErrorMsg(profileError.message);
