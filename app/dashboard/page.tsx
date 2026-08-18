@@ -137,6 +137,11 @@ export default function DashboardPage() {
     );
   }
 
+  const layoutClass =
+    kar.length <= 2
+      ? "flex justify-center gap-6"
+      : "grid grid-cols-3 gap-6 justify-items-center";
+
   return (
     <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-6xl mx-auto text-center">
@@ -146,8 +151,7 @@ export default function DashboardPage() {
           Oversikt over alle kar og deres status.
         </p>
 
-        {/* DYNAMISK GRID SOM ALLTID ER SYMMETRISK */}
-        <div className="grid grid-flow-col auto-cols-max gap-6 justify-center">
+        <div className={layoutClass}>
           {kar.map((k) => {
             const aktiv = aktiveKar.has(k.id);
 
@@ -156,7 +160,6 @@ export default function DashboardPage() {
                 key={k.id}
                 className="relative border border-white/10 rounded-xl p-6 bg-white/5 hover:bg-white/10 transition flex flex-col items-center w-32 h-32"
               >
-                {/* Kryss-knapp – ALDRI på Kar 1 */}
                 {!aktiv && kar.length > 1 && k.navn !== "Kar 1" && (
                   <button
                     onClick={() => removeKarClient(k.id)}
