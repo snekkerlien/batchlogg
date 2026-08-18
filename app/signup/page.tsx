@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
-import { signupAction } from "./actions";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -18,7 +17,6 @@ export default function SignupPage() {
 
     const fakeEmail = `${username}@fake.local`;
 
-    // 1. Registrer bruker (client-side)
     const { data, error } = await supabase.auth.signUp({
       email: fakeEmail,
       password,
@@ -29,25 +27,12 @@ export default function SignupPage() {
       return;
     }
 
-    const userId = data.user?.id;
-    if (!userId) {
+    if (!data.user?.id) {
       setErrorMsg("Kunne ikke hente bruker-ID.");
       return;
     }
 
-    // 2. Kall server action (trigger lager profil automatisk)
-    try {
-      const formData = new FormData();
-      formData.append("username", username);
-      formData.append("password", password);
-
-      await signupAction(formData);
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Ukjent feil oppstod.";
-      setErrorMsg(message);
-      return;
-    }
+    // Triggeren i databasen lager public_profiles-raden automatisk
 
     router.push("/login");
   }
