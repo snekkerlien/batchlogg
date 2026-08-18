@@ -2,7 +2,7 @@ export default function SignupPage() {
   return (
     <main className="flex items-center justify-center h-screen bg-zinc-900 text-white">
       <form
-        action="/auth/signup"
+        action="https://batchlogg.vercel.app/auth/signup"
         method="post"
         className="bg-zinc-800 p-6 rounded-xl w-80 space-y-4"
       >
