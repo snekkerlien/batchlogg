@@ -139,14 +139,14 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
-      <div className="w-full max-w-5xl mx-auto text-center">
+      <div className="w-full max-w-6xl mx-auto text-center">
         <h1 className="text-4xl font-bold mb-6">Batchlogg</h1>
 
         <p className="opacity-80 mb-8">
           Oversikt over alle kar og deres status.
         </p>
 
-        <div className="grid grid-cols-3 gap-6 justify-items-center">
+        <div className="grid grid-cols-3 gap-6 justify-items-center justify-center">
           {kar.map((k) => {
             const aktiv = aktiveKar.has(k.id);
 
