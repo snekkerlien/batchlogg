@@ -10,7 +10,7 @@ export default async function LoginPage() {
   } = await supabase.auth.getUser();
 
   if (user) {
-    redirect("/dashboard");
+    redirect("https://batchlogg.vercel.app/dashboard");
   }
 
   return (
