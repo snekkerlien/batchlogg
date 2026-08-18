@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
-// Typer for kar og batch
+// Typer
 type Kar = {
   id: number;
   user_id: string;
@@ -27,9 +27,11 @@ export default function DashboardPage() {
   const [kar, setKar] = useState<Kar[]>([]);
   const [aktiveKar, setAktiveKar] = useState<Set<number>>(new Set());
 
+  // ---------------------------
+  // HENT DATA
+  // ---------------------------
   useEffect(() => {
     async function init() {
-      // 1: sjekk session client-side
       const { data: sessionData } = await supabase.auth.getSession();
 
       if (!sessionData.session) {
@@ -40,13 +42,14 @@ export default function DashboardPage() {
       const safeUser = sessionData.session.user;
       setUser(safeUser);
 
-      // 2: hent kar
+      // Hent kar
       let { data: karData } = await supabase
         .from("kar")
         .select("*")
         .eq("user_id", safeUser.id)
         .order("id");
 
+      // Hvis ingen kar → lag Kar 1
       if (!karData || karData.length === 0) {
         await supabase.from("kar").insert({
           user_id: safeUser.id,
@@ -64,7 +67,7 @@ export default function DashboardPage() {
 
       setKar(karData as Kar[]);
 
-      // 3: hent aktive batches
+      // Hent aktive batches
       const { data: batches } = await supabase
         .from("Batches")
         .select("*")
@@ -83,6 +86,33 @@ export default function DashboardPage() {
     init();
   }, []);
 
+  // ---------------------------
+  // LEGG TIL NYTT KAR (CLIENT)
+  // ---------------------------
+  async function addKarClient() {
+    if (!user) return;
+
+    const { count } = await supabase
+      .from("kar")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id);
+
+    const safeCount = count ?? 0;
+
+    if (safeCount >= 9) return;
+
+    await supabase.from("kar").insert({
+      user_id: user.id,
+      navn: `Kar ${safeCount + 1}`
+    });
+
+    // Oppdater UI
+    window.location.reload();
+  }
+
+  // ---------------------------
+  // LOADING
+  // ---------------------------
   if (loading) {
     return (
       <main className="min-h-screen bg-black text-white flex items-center justify-center">
@@ -91,6 +121,9 @@ export default function DashboardPage() {
     );
   }
 
+  // ---------------------------
+  // UI
+  // ---------------------------
   return (
     <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
       <div className="max-w-xl w-full text-center">
@@ -148,6 +181,16 @@ export default function DashboardPage() {
               </a>
             );
           })}
+
+          {/* + knapp */}
+          {kar.length < 9 && (
+            <button
+              onClick={addKarClient}
+              className="border border-white/10 rounded-xl p-6 bg-white/5 hover:bg-white/10 transition flex flex-col items-center justify-center text-4xl font-bold text-green-300"
+            >
+              +
+            </button>
+          )}
         </div>
 
         <p className="text-sm opacity-40 mt-12">
