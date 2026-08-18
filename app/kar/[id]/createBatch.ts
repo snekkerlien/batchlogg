@@ -4,12 +4,24 @@ import { createClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 
 export async function createBatch(formData: FormData) {
+  // Klient som kan hente session
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!   // ← FIX
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // 1. Finn siste batchnummer
+  // Hent session
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session) {
+    throw new Error("Ingen session – bruker ikke innlogget.");
+  }
+
+  const userId = session.user.id;
+
+  // Finn siste batchnummer
   const { data: last } = await supabase
     .from("Batches")
     .select("batchnummer")
@@ -17,11 +29,10 @@ export async function createBatch(formData: FormData) {
     .limit(1)
     .maybeSingle();
 
-  // 2. Generer neste nummer
   const nextNumber = last ? Number(last.batchnummer) + 1 : 1;
   const formattedBatchnummer = String(nextNumber).padStart(4, "0");
 
-  // 3. Hent felter fra formData
+  // Hent felter
   const kar = Number(formData.get("kar"));
   const name = formData.get("name");
   const volume_l = Number(formData.get("volume_l"));
@@ -30,10 +41,11 @@ export async function createBatch(formData: FormData) {
   const kode = formData.get("kode");
   const oppskrift = formData.get("oppskrift");
 
-  // 4. Sett inn ny batch
+  // Sett inn batch MED user_id
   const { error } = await supabase.from("Batches").insert({
     batchnummer: formattedBatchnummer,
     aktivt_kar: kar,
+    user_id: userId,            // ← FIX
     name,
     volume_l,
     startdato,
@@ -47,7 +59,6 @@ export async function createBatch(formData: FormData) {
     throw new Error("Insert failed: " + error.message);
   }
 
-  // 5. Oppdater siden
   revalidatePath(`/kar/${kar}`);
 
   return { kar };
