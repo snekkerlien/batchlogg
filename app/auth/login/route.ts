@@ -16,8 +16,8 @@ export async function POST(req: Request) {
   });
 
   if (error) {
-    return NextResponse.redirect("/login?error=1");
+    return NextResponse.redirect("https://batchlogg.vercel.app/login?error=1");
   }
 
-  return NextResponse.redirect("/dashboard");
+  return NextResponse.redirect("https://batchlogg.vercel.app/dashboard");
 }
