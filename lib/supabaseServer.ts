@@ -2,12 +2,11 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/auth-helpers-nextjs";
 
 export async function supabaseServer() {
-  // Next.js 16: cookies() returnerer en Promise → må await'es
   const cookieStore = await cookies();
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!, // ⭐ DENNE ER NY
     {
       cookies: {
         get(name: string) {
