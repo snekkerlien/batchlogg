@@ -2,19 +2,24 @@
 
 import { supabaseServer } from "../../lib/supabaseServer";
 
-export async function createProfile(userId: string, username: string) {
+export async function signupAction(formData: FormData) {
   const supabase = await supabaseServer();
 
-  const { error } = await supabase
-    .from("public_profiles")
-    .insert({
-      id: userId,
-      username,
-    });
+  const username = formData.get("username") as string;
+  const password = formData.get("password") as string;
+
+  const fakeEmail = `${username}@fake.local`;
+
+  // Registrer bruker
+  const { data, error } = await supabase.auth.signUp({
+    email: fakeEmail,
+    password,
+  });
 
   if (error) {
     throw new Error(error.message);
   }
 
+  // Triggeren lager profil automatisk
   return true;
 }
