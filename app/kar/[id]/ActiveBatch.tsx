@@ -13,63 +13,35 @@ type Batch = {
   batchstorrelse: string;
   og: string;
   fg: string;
+  name?: string;
+  volume_l?: number;
+  kode?: string;
+  oppskrift?: string;
 };
 
-export default function ActiveBatch({ batchnummer }: { batchnummer: string }) {
-  const [batch, setBatch] = useState<Batch | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function loadBatch() {
-      // batchnummer kommer inn som string, men vi formatterer det uansett
-      const formattedBatch = String(batchnummer).padStart(4, "0");
-
-      const { data, error } = await supabase
-        .from("Batches")
-        .select("*")
-        .eq("batchnummer", formattedBatch)
-        .maybeSingle();
-
-      if (!error && data) {
-        setBatch(data as Batch);
-      }
-
-      setLoading(false);
-    }
-
-    loadBatch();
-  }, [batchnummer]);
-
-  if (loading) {
-    return (
-      <div className="p-4 bg-zinc-900 rounded-lg border border-white/10">
-        <p className="text-white">Laster batch...</p>
-      </div>
-    );
-  }
-
-  if (!batch) {
-    return (
-      <div className="p-4 bg-zinc-900 rounded-lg border border-white/10">
-        <p className="text-red-400">Fant ingen aktiv batch.</p>
-      </div>
-    );
-  }
+export default function ActiveBatch({ batch }: { batch: Batch }) {
+  // batch kommer ferdig fra KarPage, så vi trenger ikke hente den på nytt
+  const formattedBatch = String(batch.batchnummer).padStart(4, "0");
 
   return (
     <div className="p-4 bg-zinc-900 rounded-lg border border-white/10 space-y-4">
       <h2 className="text-xl font-semibold">Aktiv batch</h2>
 
       <div className="space-y-1">
-        <p><strong>Batchnummer:</strong> {String(batch.batchnummer).padStart(4, "0")}</p>
+        <p><strong>Batchnummer:</strong> {formattedBatch}</p>
         <p><strong>Status:</strong> {batch.status}</p>
         <p><strong>Startdato:</strong> {batch.startdato}</p>
         <p><strong>Batchstørrelse:</strong> {batch.batchstorrelse}</p>
         <p><strong>OG:</strong> {batch.og}</p>
         <p><strong>FG:</strong> {batch.fg}</p>
+
+        {batch.name && <p><strong>Navn:</strong> {batch.name}</p>}
+        {batch.volume_l && <p><strong>Volum:</strong> {batch.volume_l} L</p>}
+        {batch.kode && <p><strong>Kode:</strong> {batch.kode}</p>}
+        {batch.oppskrift && <p><strong>Oppskrift:</strong> {batch.oppskrift}</p>}
       </div>
 
-      <DeleteModal batchnummer={String(batch.batchnummer).padStart(4, "0")} />
+      <DeleteModal batchnummer={formattedBatch} />
     </div>
   );
 }
