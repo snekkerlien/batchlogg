@@ -1,43 +1,76 @@
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+"use client";
 
-import { notFound } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
 import ActiveBatch from "./ActiveBatch";
 import RegisterBatchForm from "./RegisterBatchForm";
 
-type Props = {
-  params: Promise<{ id: string }>;
-};
+export default function KarPage({ params }) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [kar, setKar] = useState(null);
+  const [batch, setBatch] = useState(null);
 
-export default async function KarPage(props: Props) {
-  const { id } = await props.params;
-  const karId = Number(id);
+  const karId = Number(params.id);
 
-  if (isNaN(karId) || karId < 1 || karId > 6) {
-    notFound();
+  useEffect(() => {
+    async function init() {
+      // Sjekk session
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        router.push("/login");
+        return;
+      }
+
+      const user = sessionData.session.user;
+
+      // Finn karet i databasen
+      const { data: karData } = await supabase
+        .from("kar")
+        .select("*")
+        .eq("id", karId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!karData) {
+        router.push("/dashboard");
+        return;
+      }
+
+      setKar(karData);
+
+      // Finn aktiv batch
+      const { data: batchData } = await supabase
+        .from("Batches")
+        .select("*")
+        .eq("aktivt_kar", karId)
+        .eq("user_id", user.id)
+        .eq("status", "Aktiv")
+        .maybeSingle();
+
+      setBatch(batchData);
+
+      setLoading(false);
+    }
+
+    init();
+  }, [karId]);
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-black text-white flex items-center justify-center">
+        <p>Laster...</p>
+      </main>
+    );
   }
-
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-
-  // Sjekk om karet har en aktiv batch
-  const { data: batch } = await supabase
-    .from("Batches")
-    .select("*")
-    .eq("aktivt_kar", karId)
-    .eq("status", "Aktiv")
-    .maybeSingle();
 
   const ledig = !batch;
 
   return (
     <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
       <div className="max-w-xl w-full">
-        <h1 className="text-4xl font-bold mb-6 text-center">Kar {karId}</h1>
+        <h1 className="text-4xl font-bold mb-6 text-center">{kar.navn}</h1>
 
         {ledig ? (
           <div className="border border-white/10 rounded-xl p-8 bg-white/5">
@@ -56,7 +89,7 @@ export default async function KarPage(props: Props) {
             <RegisterBatchForm karId={karId} />
 
             <a
-              href="/"
+              href="/dashboard"
               className="mt-6 block text-center px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold transition"
             >
               ← Tilbake
@@ -68,7 +101,6 @@ export default async function KarPage(props: Props) {
               Aktiv batch
             </h2>
 
-            {/* ActiveBatch henter batchen selv basert på batchnummer */}
             <ActiveBatch batchnummer={batch.batchnummer} />
           </div>
         )}
