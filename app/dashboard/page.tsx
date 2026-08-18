@@ -152,6 +152,17 @@ export default function DashboardPage() {
           Se alle profiler →
         </a>
 
+        {/* Logg ut */}
+        <button
+          onClick={async () => {
+            await supabase.auth.signOut();
+            router.push("/login");
+          }}
+          className="inline-block mb-6 px-6 py-3 bg-red-600 hover:bg-red-700 border border-red-800 rounded-lg font-semibold"
+        >
+          Logg ut
+        </button>
+
         <h1 className="text-4xl font-bold mb-6">Batchlogg</h1>
 
         <p className="opacity-80 mb-8">
