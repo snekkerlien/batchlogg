@@ -146,7 +146,8 @@ export default function DashboardPage() {
           Oversikt over alle kar og deres status.
         </p>
 
-        <div className="grid grid-cols-3 gap-6 justify-items-center justify-center">
+        {/* DYNAMISK GRID SOM ALLTID ER SYMMETRISK */}
+        <div className="grid grid-flow-col auto-cols-max gap-6 justify-center">
           {kar.map((k) => {
             const aktiv = aktiveKar.has(k.id);
 
