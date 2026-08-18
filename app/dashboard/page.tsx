@@ -6,16 +6,29 @@ export default async function DashboardPage() {
     cache: "no-store",
   });
 
+  // Hvis API feiler → redirect til login
+  if (!sessionRes.ok) {
+    redirect("https://batchlogg.vercel.app/auth/login");
+  }
+
   const { user } = await sessionRes.json();
 
+  // Hvis ingen bruker → redirect til login
   if (!user) {
-    redirect("/login");
+    redirect("https://batchlogg.vercel.app/auth/login");
   }
 
   // Hent kar via API
-  const karRes = await fetch(`https://batchlogg.vercel.app/api/kar?user=${user.id}`, {
-    cache: "no-store",
-  });
+  const karRes = await fetch(
+    `https://batchlogg.vercel.app/api/kar?user=${user.id}`,
+    {
+      cache: "no-store",
+    }
+  );
+
+  if (!karRes.ok) {
+    redirect("https://batchlogg.vercel.app/auth/login");
+  }
 
   const kar = await karRes.json();
 
