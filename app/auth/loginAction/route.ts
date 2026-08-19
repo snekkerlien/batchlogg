@@ -4,6 +4,13 @@ import { NextResponse } from "next/server";
 import { createRouteHandlerClient } from "../../../lib/supabase/supabaseServerFinal";
 
 export async function POST(req: Request) {
+  console.log("loginAction triggered");
+
+  // TESTRESPONS – sjekk om route fungerer i det hele tatt
+  return new Response("OK", { status: 200 });
+
+  // Hvis denne fungerer, kan vi aktivere resten igjen:
+  /*
   console.log("SUPABASE_URL", process.env.SUPABASE_URL);
   console.log("SUPABASE_ANON_KEY", process.env.SUPABASE_ANON_KEY?.slice(0, 10));
 
@@ -19,15 +26,11 @@ export async function POST(req: Request) {
     password,
   });
 
-  // -----------------------------
-  // LOGIN FAILED
-  // -----------------------------
   if (error) {
     console.error("LOGIN ERROR", error);
 
     const res = new NextResponse(null, { status: 302 });
 
-    // copy Set-Cookie headers correctly
     responseHeaders.forEach((value, key) => {
       res.headers.set(key, value);
     });
@@ -40,12 +43,8 @@ export async function POST(req: Request) {
     return res;
   }
 
-  // -----------------------------
-  // LOGIN SUCCESS
-  // -----------------------------
   const res = new NextResponse(null, { status: 302 });
 
-  // copy Set-Cookie headers correctly
   responseHeaders.forEach((value, key) => {
     res.headers.set(key, value);
   });
@@ -53,4 +52,5 @@ export async function POST(req: Request) {
   res.headers.set("Location", "https://batchlogg.vercel.app/dashboard");
 
   return res;
+  */
 }
