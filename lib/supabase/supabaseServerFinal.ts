@@ -27,13 +27,13 @@ export function createRouteHandlerClient(req: Request) {
           return getCookieValue(header, name);
         },
         set(name: string, value: string, options: any) {
-          responseHeaders.append(
+          responseHeaders.set(
             "Set-Cookie",
             `${name}=${value}; Path=/; HttpOnly; SameSite=Lax`
           );
         },
         remove(name: string, options: any) {
-          responseHeaders.append(
+          responseHeaders.set(
             "Set-Cookie",
             `${name}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`
           );
