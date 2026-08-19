@@ -4,15 +4,7 @@ import { NextResponse } from "next/server";
 import { createRouteHandlerClient } from "../../../lib/supabase/supabaseServerFinal";
 
 export async function POST(req: Request) {
-  console.log("loginAction triggered");
-
-  // TESTRESPONS – sjekk om route fungerer i det hele tatt
-  return new Response("OK", { status: 200 });
-
-  // Hvis denne fungerer, kan vi aktivere resten igjen:
-  /*
-  console.log("SUPABASE_URL", process.env.SUPABASE_URL);
-  console.log("SUPABASE_ANON_KEY", process.env.SUPABASE_ANON_KEY?.slice(0, 10));
+  console.log("loginAction: START");
 
   const { supabase, responseHeaders } = createRouteHandlerClient(req);
   const form = await req.formData();
@@ -21,17 +13,33 @@ export async function POST(req: Request) {
   const password = form.get("password") as string;
   const email = `${username}@example.com`;
 
-  const { error } = await supabase.auth.signInWithPassword({
+  console.log("loginAction: username =", username);
+  console.log("loginAction: email =", email);
+
+  // -----------------------------
+  // TRY LOGIN
+  // -----------------------------
+  const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
+  console.log("loginAction: supabase response =", {
+    data,
+    error,
+  });
+
+  // -----------------------------
+  // LOGIN FAILED
+  // -----------------------------
   if (error) {
-    console.error("LOGIN ERROR", error);
+    console.log("loginAction: LOGIN FAILED");
 
-    const res = new NextResponse(null, { status: 302 });
+    const res = new NextResponse("LOGIN FAILED", { status: 302 });
 
+    // copy Set-Cookie headers
     responseHeaders.forEach((value, key) => {
+      console.log("loginAction: copying cookie", key, value);
       res.headers.set(key, value);
     });
 
@@ -40,17 +48,27 @@ export async function POST(req: Request) {
       "https://batchlogg.vercel.app/auth/login?error=1"
     );
 
+    console.log("loginAction: redirecting to /auth/login?error=1");
+
     return res;
   }
 
-  const res = new NextResponse(null, { status: 302 });
+  // -----------------------------
+  // LOGIN SUCCESS
+  // -----------------------------
+  console.log("loginAction: LOGIN SUCCESS");
 
+  const res = new NextResponse("LOGIN OK", { status: 302 });
+
+  // copy Set-Cookie headers
   responseHeaders.forEach((value, key) => {
+    console.log("loginAction: copying cookie", key, value);
     res.headers.set(key, value);
   });
 
   res.headers.set("Location", "https://batchlogg.vercel.app/dashboard");
 
+  console.log("loginAction: redirecting to /dashboard");
+
   return res;
-  */
 }
