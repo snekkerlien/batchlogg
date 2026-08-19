@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "../../../lib/supabaseClient";
-
+import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
 import { useParams } from "next/navigation";
 
 type Kar = {
@@ -34,7 +33,8 @@ export default function ProfilePage() {
 
   useEffect(() => {
     async function load() {
-      const { data: profile } = await supabase
+      // Hent brukernavn
+      const { data: profile } = await supabaseBrowser
         .from("public_profiles")
         .select("username")
         .eq("id", userId)
@@ -42,7 +42,8 @@ export default function ProfilePage() {
 
       setUsername(profile?.username ?? "Ukjent bruker");
 
-      const { data: karData } = await supabase
+      // Hent kar
+      const { data: karData } = await supabaseBrowser
         .from("kar")
         .select("*")
         .eq("user_id", userId)
@@ -50,7 +51,8 @@ export default function ProfilePage() {
 
       setKar((karData as Kar[]) || []);
 
-      const { data: batchData } = await supabase
+      // Hent batcher
+      const { data: batchData } = await supabaseBrowser
         .from("Batches")
         .select("*")
         .eq("user_id", userId)
@@ -58,6 +60,7 @@ export default function ProfilePage() {
 
       setBatches((batchData as Batch[]) || []);
 
+      // Finn aktive kar
       const aktivSet = new Set(
         (batchData as Batch[] | null)
           ?.filter((b) => b.status === "Aktiv")

@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "../../lib/supabaseClient";
-
+import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
 
 type Profile = {
   id: string;
@@ -15,7 +14,7 @@ export default function ProfilesPage() {
 
   useEffect(() => {
     async function load() {
-      const { data } = await supabase
+      const { data } = await supabaseBrowser
         .from("public_profiles")
         .select("id, username")
         .order("username", { ascending: true });

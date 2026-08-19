@@ -1,7 +1,9 @@
-import { createServerActionClient } from "../../../lib/supabaseServerAction";
+import { NextResponse } from "next/server";
+import { createServerClient } from "../../../lib/supabase/supabaseServer";
 
 export async function GET(req: Request) {
-  const supabase = await createServerActionClient();
+  const supabase = await createServerClient();
+
   const url = new URL(req.url);
   const userId = url.searchParams.get("user");
 
@@ -11,5 +13,5 @@ export async function GET(req: Request) {
     .eq("user_id", userId)
     .order("created_at");
 
-  return Response.json(data ?? []);
+  return NextResponse.json(data ?? []);
 }
