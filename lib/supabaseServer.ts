@@ -1,24 +1,31 @@
-import { cookies } from "next/headers";
-import { createServerClient as createSupabaseClient } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 
-export async function createServerClient() {
-  const cookieStore = await cookies(); // hos deg er cookies() async
+export function createRouteHandlerClient(req: Request) {
+  let responseHeaders = new Headers();
 
-  return createSupabaseClient(
+  const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         get(name: string) {
-          return cookieStore.get(name)?.value;
+          return req.headers.get("cookie") ?? "";
         },
         set(name: string, value: string, options: any) {
-          cookieStore.set(name, value, options); // FUNKSJON-signatur
+          responseHeaders.append(
+            "Set-Cookie",
+            `${name}=${value}; Path=/; HttpOnly; SameSite=Lax`
+          );
         },
         remove(name: string, options: any) {
-          cookieStore.set(name, "", options); // FUNKSJON-signatur
+          responseHeaders.append(
+            "Set-Cookie",
+            `${name}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`
+          );
         },
       },
     }
   );
+
+  return { supabase, responseHeaders };
 }

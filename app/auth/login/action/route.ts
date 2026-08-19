@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "../../../../lib/supabaseServer";
+import { createRouteHandlerClient } from "../../../../lib/supabaseServer";
 
 export async function POST(req: Request) {
-  const supabase = await createServerClient();
+  const { supabase, responseHeaders } = createRouteHandlerClient(req);
   const form = await req.formData();
 
   const username = form.get("username") as string;
@@ -15,8 +15,20 @@ export async function POST(req: Request) {
   });
 
   if (error) {
-    return NextResponse.redirect("https://batchlogg.vercel.app/auth/login?error=1");
+    return new NextResponse(null, {
+      status: 302,
+      headers: {
+        ...responseHeaders,
+        Location: "https://batchlogg.vercel.app/auth/login?error=1",
+      },
+    });
   }
 
-  return NextResponse.redirect("https://batchlogg.vercel.app/dashboard");
+  return new NextResponse(null, {
+    status: 302,
+    headers: {
+      ...responseHeaders,
+      Location: "https://batchlogg.vercel.app/dashboard",
+    },
+  });
 }
