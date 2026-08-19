@@ -36,6 +36,14 @@ export default function SignupPage() {
         onSubmit={handleSubmit}
         className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-sm border border-white/10 space-y-4"
       >
+        {/* HOME-KNAPP */}
+        <a
+          href="/"
+          className="block text-center text-sm text-blue-300 hover:text-blue-200 mb-2"
+        >
+          🏠 Tilbake til forsiden
+        </a>
+
         <h2 className="text-2xl font-bold text-center">Registrer ny konto</h2>
 
         <input
