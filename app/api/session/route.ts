@@ -1,11 +1,12 @@
-import { createServerActionClient } from "../../../lib/supabaseServerAction";
+import { NextResponse } from "next/server";
+import { createRouteHandlerClient } from "../../../lib/supabaseServer";
 
-export async function GET() {
-  const supabase = await createServerActionClient();
+export async function GET(req: Request) {
+  const { supabase } = createRouteHandlerClient(req);
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  return Response.json({ user });
+  return NextResponse.json({ user });
 }
