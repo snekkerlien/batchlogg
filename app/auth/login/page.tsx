@@ -37,7 +37,7 @@ export default function LoginPage() {
           href="/auth/signup"
           className="block text-center text-sm text-blue-400 hover:text-blue-300 mt-4"
         >
-          Registrer ny kontoooooo
+          Registrer ny konto
         </a>
       </form>
     </main>
