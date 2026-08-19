@@ -9,7 +9,10 @@ export const metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="no">
-      <body className="bg-black text-white min-h-screen">
+      <body
+        className="text-white min-h-screen bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: "url('/background.png')" }}
+      >
         {children}
       </body>
     </html>
