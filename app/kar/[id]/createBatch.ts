@@ -1,6 +1,6 @@
 "use server";
 
-import { createServerClient } from "../../../lib/supabaseServer";
+import { createServerClient } from "../../../lib/supabaseServerNew";
 import { revalidatePath } from "next/cache";
 
 export async function createBatch(formData: FormData) {
