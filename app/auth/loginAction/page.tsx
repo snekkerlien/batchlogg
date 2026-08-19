@@ -4,7 +4,7 @@ export default function LoginPage() {
   return (
     <main className="flex items-center justify-center h-screen bg-zinc-900 text-white">
       <form
-        action="/auth/login/action"
+        action="/auth/loginAction"
         method="post"
         className="bg-zinc-800 p-6 rounded-xl w-80 space-y-4"
       >
@@ -34,7 +34,7 @@ export default function LoginPage() {
         </button>
 
         <a
-          href="/auth/signup"
+          href="/auth/signupAction"
           className="block text-center text-sm text-blue-400 hover:text-blue-300 mt-4"
         >
           Registrer ny konto

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createRouteHandlerClient } from "../../../../lib/supabase/supabaseServerFinal";
+import { createRouteHandlerClient } from "../../../lib/supabase/supabaseServerFinal";
 
 export async function POST(req: Request) {
   const { supabase, responseHeaders } = createRouteHandlerClient(req);
@@ -9,7 +9,7 @@ export async function POST(req: Request) {
   const password = form.get("password") as string;
   const email = `${username}@example.com`;
 
-  const { error } = await supabase.auth.signUp({
+  const { error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
       status: 302,
       headers: {
         ...responseHeaders,
-        Location: "https://batchlogg.vercel.app/auth/signup?error=1",
+        Location: "https://batchlogg.vercel.app/auth/login?error=1",
       },
     });
   }
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     status: 302,
     headers: {
       ...responseHeaders,
-      Location: "https://batchlogg.vercel.app/auth/login",
+      Location: "https://batchlogg.vercel.app/dashboard",
     },
   });
 }
