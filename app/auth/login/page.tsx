@@ -34,7 +34,7 @@ export default function LoginPage() {
         </button>
 
         <a
-          href="/auth/signupAction"
+          href="/auth/signup"
           className="block text-center text-sm text-blue-400 hover:text-blue-300 mt-4"
         >
           Registrer ny konto
