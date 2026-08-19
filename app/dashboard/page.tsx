@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createServerClient } from "../../lib/supabase/supabaseServerFinal";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const supabase = await createServerClient();
