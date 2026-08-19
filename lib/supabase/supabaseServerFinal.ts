@@ -8,7 +8,6 @@ import { createServerClient as createSupabaseClient } from "@supabase/ssr";
 export function createRouteHandlerClient(req: Request) {
   let responseHeaders = new Headers();
 
-  // Riktig cookie-parser
   const getCookieValue = (cookieHeader: string | null, name: string) => {
     if (!cookieHeader) return undefined;
     const cookies = cookieHeader.split(";").map((c) => c.trim());
@@ -17,8 +16,8 @@ export function createRouteHandlerClient(req: Request) {
   };
 
   const supabase = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_ANON_KEY!,
     {
       cookies: {
         get(name: string) {
@@ -52,8 +51,8 @@ export async function createServerClient() {
   const cookieStore = await cookies();
 
   return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_ANON_KEY!,
     {
       cookies: {
         get(name: string) {
