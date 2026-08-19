@@ -1,32 +1,33 @@
 import { redirect } from "next/navigation";
+import { createServerClient } from "../../lib/supabase/supabaseServerFinal";
+
+export const runtime = "nodejs";
 
 export default async function DashboardPage() {
-  const sessionRes = await fetch("https://batchlogg.vercel.app/api/session", {
-    cache: "no-store",
-  });
+  const supabase = await createServerClient();
 
-  if (!sessionRes.ok) {
-    redirect("https://batchlogg.vercel.app/auth/login");
+  // Hent session direkte fra Supabase
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session || !session.user) {
+    redirect("/auth/login");
   }
 
-  const { user } = await sessionRes.json();
+  const user = session.user;
 
-  if (!user) {
-    redirect("https://batchlogg.vercel.app/auth/login");
+  // Hent kar direkte via API, men MED cookies
+  const { data: kar, error } = await supabase
+    .from("kar")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at");
+
+  if (error) {
+    console.error("KAR ERROR", error);
+    redirect("/auth/login");
   }
-
-  const karRes = await fetch(
-    `https://batchlogg.vercel.app/api/kar?user=${user.id}`,
-    {
-      cache: "no-store",
-    }
-  );
-
-  if (!karRes.ok) {
-    redirect("https://batchlogg.vercel.app/auth/login");
-  }
-
-  const kar = await karRes.json();
 
   return (
     <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
