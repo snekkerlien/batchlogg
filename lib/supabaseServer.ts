@@ -4,10 +4,17 @@ import { createServerClient as createSupabaseClient } from "@supabase/ssr";
 /**
  * ROUTE HANDLER CLIENT
  * Brukes i: app/.../route.ts
- * Krever Request + setter cookies på Response
  */
 export function createRouteHandlerClient(req: Request) {
   let responseHeaders = new Headers();
+
+  // Riktig cookie-parser
+  const getCookieValue = (cookieHeader: string | null, name: string) => {
+    if (!cookieHeader) return undefined;
+    const cookies = cookieHeader.split(";").map((c) => c.trim());
+    const match = cookies.find((c) => c.startsWith(`${name}=`));
+    return match ? match.split("=")[1] : undefined;
+  };
 
   const supabase = createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,7 +22,8 @@ export function createRouteHandlerClient(req: Request) {
     {
       cookies: {
         get(name: string) {
-          return req.headers.get("cookie") ?? "";
+          const header = req.headers.get("cookie");
+          return getCookieValue(header, name);
         },
         set(name: string, value: string, options: any) {
           responseHeaders.append(
@@ -38,8 +46,7 @@ export function createRouteHandlerClient(req: Request) {
 
 /**
  * SERVER ACTION CLIENT
- * Brukes i: "use server" funksjoner (f.eks createBatch.ts)
- * Bruker next/headers cookies() som er muterbar i server actions
+ * Brukes i: "use server" funksjoner
  */
 export async function createServerClient() {
   const cookieStore = await cookies();
