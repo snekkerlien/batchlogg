@@ -16,6 +16,18 @@ export default async function DashboardPage() {
     redirect("/auth/login");
   }
 
+  // Hent brukernavn fra profiles-tabellen
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("username")
+    .eq("id", user.id)
+    .single();
+
+  if (profileError) {
+    console.error("PROFILE ERROR", profileError);
+    redirect("/auth/login");
+  }
+
   const welcomeText = "Velkommen tilbake til bryggeriet, kompis 🍻";
 
   // Hent kar for innlogget bruker
@@ -43,7 +55,7 @@ export default async function DashboardPage() {
       <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-4xl border border-white/10 text-center">
 
         <h1 className="text-2xl font-bold mb-4">
-          Logget inn som {user.id}
+          Logget inn som {profile?.username}
         </h1>
 
         <p className="opacity-80 mb-8 text-lg">
