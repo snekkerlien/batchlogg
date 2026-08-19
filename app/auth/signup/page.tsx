@@ -23,27 +23,27 @@ export default function SignupPage() {
 
     const validationError = validatePassword(password);
     if (validationError) {
-      e.preventDefault(); // stopper submit
+      e.preventDefault();
       setError(validationError);
     }
   }
 
   return (
-    <main className="flex items-center justify-center h-screen bg-zinc-900 text-white">
+    <main className="min-h-screen flex items-center justify-center px-6">
       <form
         action="/auth/signupAction"
         method="post"
         onSubmit={handleSubmit}
-        className="bg-zinc-800 p-6 rounded-xl w-80 space-y-4"
+        className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-sm border border-white/10 space-y-4"
       >
-        <h2 className="text-xl font-semibold text-center">Registrer ny konto</h2>
+        <h2 className="text-2xl font-bold text-center">Registrer ny konto</h2>
 
         <input
           type="text"
           name="username"
           placeholder="Brukernavn"
           required
-          className="w-full p-2 rounded bg-zinc-700"
+          className="w-full px-4 py-3 rounded-lg bg-black/40 border border-white/20"
         />
 
         <input
@@ -51,7 +51,7 @@ export default function SignupPage() {
           name="password"
           placeholder="Passord"
           required
-          className="w-full p-2 rounded bg-zinc-700"
+          className="w-full px-4 py-3 rounded-lg bg-black/40 border border-white/20"
         />
 
         {error && (
@@ -60,14 +60,14 @@ export default function SignupPage() {
 
         <button
           type="submit"
-          className="w-full bg-green-600 hover:bg-green-700 p-2 rounded font-semibold"
+          className="w-full bg-green-600 hover:bg-green-700 p-3 rounded-lg font-semibold"
         >
           Registrer
         </button>
 
         <a
           href="/auth/login"
-          className="block text-center text-sm text-blue-400 hover:text-blue-300 mt-4"
+          className="block text-center text-sm text-blue-300 hover:text-blue-200 mt-2"
         >
           Allerede bruker? Logg inn
         </a>

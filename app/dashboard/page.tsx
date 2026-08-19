@@ -17,7 +17,7 @@ export default async function DashboardPage() {
 
   const user = session.user;
 
-  // Hent kar direkte via API, men MED cookies
+  // Hent kar direkte via Supabase
   const { data: kar, error } = await supabase
     .from("kar")
     .select("*")
@@ -30,8 +30,8 @@ export default async function DashboardPage() {
   }
 
   return (
-    <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
-      <div className="w-full max-w-6xl mx-auto text-center">
+    <main className="min-h-screen flex flex-col items-center justify-center px-6">
+      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-4xl border border-white/10 text-center">
 
         <form action="/logout" method="post">
           <button

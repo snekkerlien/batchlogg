@@ -23,7 +23,6 @@ export default function KarPage() {
   const router = useRouter();
   const params = useParams();
 
-  // UUID fra URL
   const karId = params.id as string;
 
   const [loading, setLoading] = useState(true);
@@ -33,7 +32,6 @@ export default function KarPage() {
 
   useEffect(() => {
     async function init() {
-      // Hent session fra Supabase
       const { data: sessionData } = await supabaseBrowser.auth.getSession();
 
       if (!sessionData.session) {
@@ -43,7 +41,6 @@ export default function KarPage() {
 
       const user = sessionData.session.user;
 
-      // Hent kar med UUID
       const { data: karData } = await supabaseBrowser
         .from("kar")
         .select("*")
@@ -58,7 +55,6 @@ export default function KarPage() {
       setKar(karData);
       setIsOwner(karData.user_id === user.id);
 
-      // Hent aktiv batch
       const { data: batchData } = await supabaseBrowser
         .from("Batches")
         .select("*")
@@ -75,8 +71,10 @@ export default function KarPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-black text-white flex items-center justify-center">
-        <p>Laster...</p>
+      <main className="min-h-screen flex items-center justify-center px-6">
+        <div className="bg-black/60 backdrop-blur-md p-6 rounded-xl border border-white/10 text-white">
+          Laster...
+        </div>
       </main>
     );
   }
@@ -84,36 +82,38 @@ export default function KarPage() {
   const ledig = !batch;
 
   return (
-    <main className="min-h-screen bg-black text-white flex flex-col items-center px-6 py-12">
+    <main className="min-h-screen flex flex-col items-center px-6 py-12">
+      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-2xl border border-white/10 text-white">
 
-      {/* Hjem-knapp */}
-      <a
-        href="/dashboard"
-        className="block mb-4 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold w-fit"
-      >
-        🏠 Hjem
-      </a>
+        {/* Hjem-knapp */}
+        <a
+          href="/dashboard"
+          className="block mb-4 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold w-fit"
+        >
+          🏠 Hjem
+        </a>
 
-      {/* Logg ut */}
-      <LogoutButton />
+        {/* Logg ut */}
+        <LogoutButton />
 
-      {/* Tilbake-knapp */}
-      <button
-        onClick={() => window.history.back()}
-        className="block mb-8 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold w-fit"
-      >
-        ← Tilbake
-      </button>
+        {/* Tilbake-knapp */}
+        <button
+          onClick={() => window.history.back()}
+          className="block mb-8 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold w-fit"
+        >
+          ← Tilbake
+        </button>
 
-      {/* Aktiv batch */}
-      {batch && <ActiveBatch batch={batch} />}
+        {/* Aktiv batch */}
+        {batch && <ActiveBatch batch={batch} />}
 
-      {/* Ledig kar */}
-      {ledig && isOwner && <RegisterBatchForm karId={karId} />}
+        {/* Ledig kar */}
+        {ledig && isOwner && <RegisterBatchForm karId={karId} />}
 
-      {!ledig && !isOwner && (
-        <p className="text-gray-400 mt-4">Dette karet er i bruk.</p>
-      )}
+        {!ledig && !isOwner && (
+          <p className="text-gray-300 mt-4">Dette karet er i bruk.</p>
+        )}
+      </div>
     </main>
   );
 }
