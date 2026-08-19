@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createRouteHandlerClient } from "../../../../lib/supabaseServerNew";
+import { createRouteHandlerClient } from "../../../../lib/supabase/supabaseServerNew";
 
 export async function POST(req: Request) {
   const { supabase, responseHeaders } = createRouteHandlerClient(req);
