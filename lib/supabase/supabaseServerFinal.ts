@@ -1,5 +1,6 @@
 export const runtime = "nodejs";
 
+import { cookies } from "next/headers";
 import { createServerClient as createSupabaseClient } from "@supabase/ssr";
 
 /**
@@ -11,8 +12,8 @@ export function createRouteHandlerClient(req: Request) {
   const cookieHeader = req.headers.get("cookie") ?? "";
 
   const getCookieValue = (name: string) => {
-    const parts = cookieHeader.split(";").map((c: string) => c.trim());
-    const match = parts.find((c: string) => c.startsWith(`${name}=`));
+    const parts = cookieHeader.split(";").map((c) => c.trim());
+    const match = parts.find((c) => c.startsWith(`${name}=`));
     return match ? match.split("=")[1] : undefined;
   };
 
@@ -25,13 +26,13 @@ export function createRouteHandlerClient(req: Request) {
           return getCookieValue(name);
         },
         set(name: string, value: string) {
-          responseHeaders.set(
+          responseHeaders.append(
             "Set-Cookie",
             `${name}=${value}; Path=/; HttpOnly; SameSite=Lax`
           );
         },
         remove(name: string) {
-          responseHeaders.set(
+          responseHeaders.append(
             "Set-Cookie",
             `${name}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`
           );
@@ -47,15 +48,7 @@ export function createRouteHandlerClient(req: Request) {
  * SERVER ACTION CLIENT — Next.js 16 safe
  */
 export async function createServerClient() {
-  // Next.js 16: server actions har globalThis.request tilgjengelig
-  const req = (globalThis as any).request;
-  const cookieHeader = req?.headers?.get("cookie") ?? "";
-
-  const getCookieValue = (name: string) => {
-    const parts = cookieHeader.split(";").map((c: string) => c.trim());
-    const match = parts.find((c: string) => c.startsWith(`${name}=`));
-    return match ? match.split("=")[1] : undefined;
-  };
+  const cookieStore = await cookies(); // ← MÅ awaites i Next.js 16
 
   return createSupabaseClient(
     process.env.SUPABASE_URL!,
@@ -63,10 +56,14 @@ export async function createServerClient() {
     {
       cookies: {
         get(name: string) {
-          return getCookieValue(name);
+          return cookieStore.get(name)?.value;
         },
-        set() {},
-        remove() {},
+        set(name: string, value: string, options: any) {
+          cookieStore.set(name, value, options);
+        },
+        remove(name: string, options: any) {
+          cookieStore.set(name, "", options);
+        },
       },
     }
   );
