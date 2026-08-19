@@ -13,7 +13,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         className="text-white min-h-screen bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: "url('/background.png')" }}
       >
-        {children}
+        {/* Mørk overlay som lar bakgrunnen vises */}
+        <div className="min-h-screen bg-black/40">
+          {children}
+        </div>
       </body>
     </html>
   );
