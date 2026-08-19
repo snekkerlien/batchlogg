@@ -1,7 +1,7 @@
 export default function Home() {
   return (
-    <div className="flex items-center justify-center h-screen bg-zinc-900">
-      <div className="text-center space-y-4">
+    <div className="flex items-center justify-center h-screen">
+      <div className="text-center space-y-4 bg-black/40 p-8 rounded-xl">
         <h1 className="text-3xl font-bold text-white">Batchlogg</h1>
 
         <a
