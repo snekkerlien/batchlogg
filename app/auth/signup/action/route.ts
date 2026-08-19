@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { createServerActionClient } from "../../../../lib/supabaseServerAction";
+import { createServerClient } from "../../../../lib/supabaseServer";
 
 export async function POST(req: Request) {
-  const supabase = await createServerActionClient();
+  const supabase = await createServerClient();
   const form = await req.formData();
 
   const username = form.get("username") as string;
@@ -15,12 +15,8 @@ export async function POST(req: Request) {
   });
 
   if (error) {
-    return NextResponse.redirect(
-      "https://batchlogg.vercel.app/auth/signup?error=1"
-    );
+    return NextResponse.redirect("https://batchlogg.vercel.app/auth/signup?error=1");
   }
 
-  return NextResponse.redirect(
-    "https://batchlogg.vercel.app/auth/login"
-  );
+  return NextResponse.redirect("https://batchlogg.vercel.app/auth/login");
 }
