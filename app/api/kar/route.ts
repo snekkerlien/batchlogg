@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "../../../lib/supabase/supabaseServerFinal";
+import { createRouteHandlerClient } from "../../../lib/supabase/supabaseServerFinal";
 
 export async function GET(req: Request) {
-  const supabase = createServerClient();
+  const { supabase } = createRouteHandlerClient(req);
 
   const url = new URL(req.url);
   const userId = url.searchParams.get("user");

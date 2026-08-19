@@ -4,7 +4,7 @@ import { createServerClient } from "../../lib/supabase/supabaseServerFinal";
 export const runtime = "nodejs";
 
 export default async function DashboardPage() {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
 
   const {
     data: { session },
@@ -16,7 +16,6 @@ export default async function DashboardPage() {
 
   const user = session.user;
 
-  // Bare en kul velkomsttekst
   const welcomeText = "Velkommen tilbake til bryggeriet, kompis 🍻";
 
   const { data: kar, error } = await supabase
