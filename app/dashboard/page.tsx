@@ -1,46 +1,37 @@
 import { redirect } from "next/navigation";
-import { createServerClient } from "../../lib/supabase/supabaseServerFinal";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const supabase = await createServerClient();
+  // Hent session via route handler (stabilt)
+  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/session`, {
+    cache: "no-store",
+  });
 
-  // Hent ekte bruker fra Auth-serveren (sikkert)
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user } = await res.json();
 
   if (!user) {
     redirect("/auth/login");
   }
 
-  // Hent brukernavn fra profiles-tabellen
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("username")
-    .eq("id", user.id)
-    .single();
+  // Hent brukernavn
+  const profileRes = await fetch(
+    `${process.env.NEXT_PUBLIC_BASE_URL}/api/profiles/${user.id}`,
+    { cache: "no-store" }
+  );
 
-  if (profileError) {
-    console.error("PROFILE ERROR", profileError);
-    redirect("/auth/login");
-  }
+  const { username } = await profileRes.json();
+
+  // Hent kar
+  const karRes = await fetch(
+    `${process.env.NEXT_PUBLIC_BASE_URL}/api/kar?user_id=${user.id}`,
+    { cache: "no-store" }
+  );
+
+  const kar = await karRes.json();
 
   const welcomeText = "Velkommen tilbake til bryggeriet, kompis 🍻";
-
-  // Hent kar for innlogget bruker
-  const { data: kar, error } = await supabase
-    .from("kar")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("created_at");
-
-  if (error) {
-    console.error("KAR ERROR", error);
-    redirect("/auth/login");
-  }
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-6">
@@ -55,7 +46,7 @@ export default async function DashboardPage() {
       <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-4xl border border-white/10 text-center">
 
         <h1 className="text-2xl font-bold mb-4">
-          Logget inn som {profile?.username}
+          Logget inn som {username}
         </h1>
 
         <p className="opacity-80 mb-8 text-lg">

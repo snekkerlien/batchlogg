@@ -24,10 +24,7 @@ export async function POST(req: Request) {
     password,
   });
 
-  console.log("loginAction: supabase response =", {
-    data,
-    error,
-  });
+  console.log("loginAction: supabase response =", { data, error });
 
   // -----------------------------
   // LOGIN FAILED
@@ -35,18 +32,14 @@ export async function POST(req: Request) {
   if (error) {
     console.log("loginAction: LOGIN FAILED");
 
-    const res = new NextResponse("LOGIN FAILED", { status: 302 });
+    const res = new NextResponse(null, { status: 302 });
 
     // copy Set-Cookie headers
     responseHeaders.forEach((value, key) => {
-      console.log("loginAction: copying cookie", key, value);
       res.headers.set(key, value);
     });
 
-    res.headers.set(
-      "Location",
-      "https://batchlogg.vercel.app/auth/login?error=1"
-    );
+    res.headers.set("Location", "/auth/login?error=1");
 
     console.log("loginAction: redirecting to /auth/login?error=1");
 
@@ -58,15 +51,14 @@ export async function POST(req: Request) {
   // -----------------------------
   console.log("loginAction: LOGIN SUCCESS");
 
-  const res = new NextResponse("LOGIN OK", { status: 302 });
+  const res = new NextResponse(null, { status: 302 });
 
   // copy Set-Cookie headers
   responseHeaders.forEach((value, key) => {
-    console.log("loginAction: copying cookie", key, value);
     res.headers.set(key, value);
   });
 
-  res.headers.set("Location", "https://batchlogg.vercel.app/dashboard");
+  res.headers.set("Location", "/dashboard");
 
   console.log("loginAction: redirecting to /dashboard");
 
