@@ -10,8 +10,8 @@ export function createRouteHandlerClient(req: Request) {
 
   const getCookieValue = (cookieHeader: string | null, name: string) => {
     if (!cookieHeader) return undefined;
-    const cookies = cookieHeader.split(";").map((c) => c.trim());
-    const match = cookies.find((c) => c.startsWith(`${name}=`));
+    const parts = cookieHeader.split(";").map((c) => c.trim());
+    const match = parts.find((c) => c.startsWith(`${name}=`));
     return match ? match.split("=")[1] : undefined;
   };
 
