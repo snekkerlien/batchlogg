@@ -48,7 +48,7 @@ export function createRouteHandlerClient(req: Request) {
  * SERVER ACTION CLIENT — Next.js 16 safe
  */
 export async function createServerClient() {
-  const cookieStore = await cookies(); // ← MÅ awaites i Next.js 16
+  const cookieStore = await cookies(); // ← MÅ awaites
 
   return createSupabaseClient(
     process.env.SUPABASE_URL!,
