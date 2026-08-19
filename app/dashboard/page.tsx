@@ -7,18 +7,18 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   const supabase = await createServerClient();
 
+  // Hent ekte bruker fra Auth-serveren (sikkert)
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session || !session.user) {
+  if (!user) {
     redirect("/auth/login");
   }
 
-  const user = session.user;
-
   const welcomeText = "Velkommen tilbake til bryggeriet, kompis 🍻";
 
+  // Hent kar for innlogget bruker
   const { data: kar, error } = await supabase
     .from("kar")
     .select("*")
@@ -58,7 +58,7 @@ export default async function DashboardPage() {
         </a>
 
         <div className="grid grid-cols-3 gap-4 justify-items-center max-w-[420px] mx-auto">
-          {kar.map((k: any) => (
+          {kar?.map((k: any) => (
             <a
               key={k.id}
               href={`/kar/${k.id}`}
