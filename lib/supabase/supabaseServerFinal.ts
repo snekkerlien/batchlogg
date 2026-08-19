@@ -1,19 +1,18 @@
 export const runtime = "nodejs";
 
-import { cookies } from "next/headers";
 import { createServerClient as createSupabaseClient } from "@supabase/ssr";
 
 /**
  * ROUTE HANDLER CLIENT
- * Brukes i: app/.../route.ts
  */
 export function createRouteHandlerClient(req: Request) {
   let responseHeaders = new Headers();
 
-  const getCookieValue = (cookieHeader: string | null, name: string) => {
-    if (!cookieHeader) return undefined;
-    const parts = cookieHeader.split(";").map((c) => c.trim());
-    const match = parts.find((c) => c.startsWith(`${name}=`));
+  const cookieHeader = req.headers.get("cookie") ?? "";
+
+  const getCookieValue = (name: string) => {
+    const parts = cookieHeader.split(";").map((c: string) => c.trim());
+    const match = parts.find((c: string) => c.startsWith(`${name}=`));
     return match ? match.split("=")[1] : undefined;
   };
 
@@ -23,16 +22,15 @@ export function createRouteHandlerClient(req: Request) {
     {
       cookies: {
         get(name: string) {
-          const header = req.headers.get("cookie");
-          return getCookieValue(header, name);
+          return getCookieValue(name);
         },
-        set(name: string, value: string, options: any) {
+        set(name: string, value: string) {
           responseHeaders.set(
             "Set-Cookie",
             `${name}=${value}; Path=/; HttpOnly; SameSite=Lax`
           );
         },
-        remove(name: string, options: any) {
+        remove(name: string) {
           responseHeaders.set(
             "Set-Cookie",
             `${name}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`
@@ -46,11 +44,18 @@ export function createRouteHandlerClient(req: Request) {
 }
 
 /**
- * SERVER ACTION CLIENT
- * Brukes i: "use server" funksjoner
+ * SERVER ACTION CLIENT — Next.js 16 safe
  */
 export async function createServerClient() {
-  const cookieStore = await cookies();
+  // Next.js 16: server actions har globalThis.request tilgjengelig
+  const req = (globalThis as any).request;
+  const cookieHeader = req?.headers?.get("cookie") ?? "";
+
+  const getCookieValue = (name: string) => {
+    const parts = cookieHeader.split(";").map((c: string) => c.trim());
+    const match = parts.find((c: string) => c.startsWith(`${name}=`));
+    return match ? match.split("=")[1] : undefined;
+  };
 
   return createSupabaseClient(
     process.env.SUPABASE_URL!,
@@ -58,14 +63,10 @@ export async function createServerClient() {
     {
       cookies: {
         get(name: string) {
-          return cookieStore.get(name)?.value;
+          return getCookieValue(name);
         },
-        set(name: string, value: string, options: any) {
-          cookieStore.set(name, value, options);
-        },
-        remove(name: string, options: any) {
-          cookieStore.set(name, "", options);
-        },
+        set() {},
+        remove() {},
       },
     }
   );

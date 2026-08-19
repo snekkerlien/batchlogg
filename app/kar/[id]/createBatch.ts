@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 
 export async function createBatch(formData: FormData) {
   // Supabase server-klient (må await'es)
-  const supabase = await createServerClient();
+  const supabase = createServerClient();
 
   // Hent session
   const {

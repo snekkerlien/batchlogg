@@ -4,9 +4,8 @@ import { createServerClient } from "../../lib/supabase/supabaseServerFinal";
 export const runtime = "nodejs";
 
 export default async function DashboardPage() {
-  const supabase = await createServerClient();
+  const supabase = createServerClient();
 
-  // Hent session
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -17,21 +16,9 @@ export default async function DashboardPage() {
 
   const user = session.user;
 
-  // Sjekk om brukeren har vært her før
-  const cookieStore = await import("next/headers").then((m) => m.cookies());
-  const visited = cookieStore.get("visited_dashboard")?.value === "true";
+  // Bare en kul velkomsttekst
+  const welcomeText = "Velkommen tilbake til bryggeriet, kompis 🍻";
 
-  // Sett cookie hvis første besøk
-  if (!visited) {
-    cookieStore.set("visited_dashboard", "true", {
-      path: "/",
-      maxAge: 60 * 60 * 24 * 365, // 1 år
-    });
-  }
-
-  const welcomeText = visited ? "Velkommen tilbake" : "Velkommen til oss";
-
-  // Hent kar
   const { data: kar, error } = await supabase
     .from("kar")
     .select("*")
@@ -45,7 +32,6 @@ export default async function DashboardPage() {
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-6">
-      {/* Logg ut-knapp øverst til høyre */}
       <div className="absolute top-4 right-4">
         <form action="/logout" method="post">
           <button className="px-4 py-2 bg-red-600 hover:bg-red-700 border border-red-800 rounded-lg font-semibold">
@@ -56,17 +42,14 @@ export default async function DashboardPage() {
 
       <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-4xl border border-white/10 text-center">
 
-        {/* Logget inn som */}
         <h1 className="text-2xl font-bold mb-4">
           Logget inn som {user.id}
         </h1>
 
-        {/* Velkomsttekst */}
         <p className="opacity-80 mb-8 text-lg">
           {welcomeText}
         </p>
 
-        {/* Knapp til profiles */}
         <a
           href="/profiles"
           className="inline-block mb-8 px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
@@ -74,7 +57,6 @@ export default async function DashboardPage() {
           Se andre bryggere
         </a>
 
-        {/* Kar-grid */}
         <div className="grid grid-cols-3 gap-4 justify-items-center max-w-[420px] mx-auto">
           {kar.map((k: any) => (
             <a
