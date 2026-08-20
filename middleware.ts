@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { createMiddlewareClient } from "./lib/supabase/supabaseServerFinal";
 
-// Sider som skal være åpne
 const publicRoutes = [
   "/auth/login",
   "/auth/signup",
@@ -10,19 +10,19 @@ const publicRoutes = [
   "/auth/logout",
 ];
 
-// Sider som krever innlogging
 const protectedRoutes = [
   "/dashboard",
   "/kar",
   "/account",
 ];
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
+  const res = NextResponse.next();
   const { pathname } = req.nextUrl;
 
   // Tillat public routes
   if (publicRoutes.some((route) => pathname.startsWith(route))) {
-    return NextResponse.next();
+    return res;
   }
 
   // Sjekk om siden er beskyttet
@@ -31,23 +31,24 @@ export function middleware(req: NextRequest) {
   );
 
   if (!isProtected) {
-    return NextResponse.next();
+    return res;
   }
 
-  // Supabase SSR cookies (Edge-kompatibelt)
-  const access = req.cookies.get("sb-access-token")?.value;
-  const refresh = req.cookies.get("sb-refresh-token")?.value;
+  // Supabase Edge-middleware
+  const supabase = createMiddlewareClient({ req, res });
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
   // Ingen session → redirect
-  if (!access || !refresh) {
+  if (!session) {
     return NextResponse.redirect(new URL("/auth/login", req.url));
   }
 
   // Session finnes → tillat tilgang
-  return NextResponse.next();
+  return res;
 }
 
-// Middleware skal kjøre på alle ruter
 export const config = {
   matcher: ["/:path*"],
 };
