@@ -19,8 +19,11 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<number[]>([]);
 
-  function toggleSelect(id: number) {
+  function toggleSelect(id: number, index: number) {
     if (!selectMode) return;
+
+    // Kar 1 kan ikke velges
+    if (index === 0) return;
 
     setSelected((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
@@ -119,16 +122,23 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
         >
           {kar.map((k, index) => {
             const isSelected = selected.includes(k.id);
+            const isLocked = index === 0; // Kar 1
 
             return (
               <div
                 key={k.id}
-                onClick={() => toggleSelect(k.id)}
+                onClick={() => toggleSelect(k.id, index)}
                 className={`
-                  relative border border-white/10 rounded-xl p-6 transition flex flex-col items-center justify-center
+                  relative border rounded-xl p-6 transition flex flex-col items-center justify-center
                   w-40 h-40 md:w-28 md:h-28
                   ${selectMode ? "cursor-pointer" : ""}
-                  ${isSelected ? "bg-green-900/40 border-green-400" : "bg-white/5 hover:bg-white/10"}
+                  ${
+                    isLocked
+                      ? "bg-white/10 border-white/20 opacity-70 cursor-not-allowed"
+                      : isSelected
+                      ? "bg-green-900/40 border-green-400"
+                      : "bg-white/5 hover:bg-white/10 border-white/10"
+                  }
                 `}
               >
                 <span className="absolute top-[10px] text-xl font-bold text-green-300 md:text-lg">
