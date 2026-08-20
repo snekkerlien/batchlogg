@@ -43,7 +43,7 @@ export default async function DashboardPage() {
     .select(`
       id,
       created_at,
-      Batches (status)
+      batches (status)
     `)
     .eq("user_id", user.id)
     .order("created_at");
@@ -54,7 +54,7 @@ export default async function DashboardPage() {
   const kar = (karRaw ?? []).map((k: any) => ({
     id: k.id,
     created_at: k.created_at,
-    status: (k.Batches?.[0]?.status === "Aktiv" ? "Aktiv" : "Ledig") as
+    status: (k.batches?.[0]?.status === "Aktiv" ? "Aktiv" : "Ledig") as
       "Aktiv" | "Ledig",
   }));
 
