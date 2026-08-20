@@ -3,16 +3,17 @@ import { createRouteHandlerClient } from "../../../lib/supabase/supabaseServerFi
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   const { supabase } = createRouteHandlerClient(request);
 
-  const userId = params.id;
+  // params is a Promise in Next.js 16
+  const { id } = await context.params;
 
   const { data, error } = await supabase
     .from("profiles")
     .select("username")
-    .eq("id", userId)
+    .eq("id", id)
     .single();
 
   if (error) {
