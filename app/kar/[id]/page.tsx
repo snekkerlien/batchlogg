@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createServerClient } from "@supabase/ssr";
-import ActiveBatch from "./ActiveBatch";
+import { ActiveBatch } from "./ActiveBatch";
 import RegisterBatchForm from "./RegisterBatchForm";
 
 export const dynamic = "force-dynamic";
@@ -65,7 +65,7 @@ export default async function KarPage() {
       <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-2xl border border-white/10 text-white">
 
         {/* Aktiv batch */}
-        {batch && <ActiveBatch batch={batch} />}
+        {batch && <ActiveBatch karId={karId!} />}
 
         {/* Ledig kar */}
         {!batch && isOwner && <RegisterBatchForm karId={karId!} />}

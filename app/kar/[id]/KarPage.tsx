@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
 import { useAuth } from "../../providers/useAuth";
-import ActiveBatch from "./ActiveBatch";
+import { ActiveBatch } from "./ActiveBatch";
 import RegisterBatchForm from "./RegisterBatchForm";
 import Link from "next/link";
 
@@ -110,7 +110,7 @@ export default function KarPage() {
         </button>
 
         {/* Aktiv batch */}
-        {batch && <ActiveBatch batch={batch} />}
+        {batch && <ActiveBatch karId={karId} />}
 
         {/* Ledig kar */}
         {ledig && isOwner && <RegisterBatchForm karId={karId} />}
