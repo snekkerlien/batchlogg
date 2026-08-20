@@ -23,7 +23,6 @@ function LogoutButton() {
 export default function KarPage() {
   const router = useRouter();
   const params = useParams();
-
   const karId = params.id as string;
 
   const [loading, setLoading] = useState(true);
@@ -33,6 +32,7 @@ export default function KarPage() {
 
   useEffect(() => {
     async function init() {
+      // 🔥 CLIENT-SIDE SESSION CHECK (trygg mot prefetch)
       const { data: sessionData } = await supabaseBrowser.auth.getSession();
 
       if (!sessionData.session) {
@@ -42,13 +42,14 @@ export default function KarPage() {
 
       const user = sessionData.session.user;
 
-      const { data: karData } = await supabaseBrowser
+      // Hent kar-info
+      const { data: karData, error: karError } = await supabaseBrowser
         .from("kar")
         .select("*")
         .eq("id", karId)
         .maybeSingle();
 
-      if (!karData) {
+      if (karError || !karData) {
         router.replace("/dashboard");
         return;
       }
@@ -56,6 +57,7 @@ export default function KarPage() {
       setKar(karData);
       setIsOwner(karData.user_id === user.id);
 
+      // Hent aktiv batch
       const { data: batchData } = await supabaseBrowser
         .from("Batches")
         .select("*")
@@ -89,6 +91,7 @@ export default function KarPage() {
         {/* Hjem-knapp */}
         <Link
           href="/dashboard"
+          prefetch={false}
           className="block mb-4 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold w-fit"
         >
           🏠 Hjem
