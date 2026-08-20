@@ -18,12 +18,8 @@ export async function POST(req: Request) {
   // SERVER-SIDE PASSWORD VALIDATION
   // -----------------------------
   function validatePassword(pw: string) {
-    if (pw.length < 8) {
-      return "too_short";
-    }
-    if (!/[A-Z]/.test(pw)) {
-      return "no_uppercase";
-    }
+    if (pw.length < 8) return "too_short";
+    if (!/[A-Z]/.test(pw)) return "no_uppercase";
     return null;
   }
 
@@ -43,7 +39,7 @@ export async function POST(req: Request) {
   // -----------------------------
   // SUPABASE SIGNUP
   // -----------------------------
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
   });
@@ -61,13 +57,52 @@ export async function POST(req: Request) {
   }
 
   // -----------------------------
-  // SUCCESS → REDIRECT TO LOGIN
+  // CREATE PROFILE
   // -----------------------------
-  return new NextResponse(null, {
-    status: 302,
-    headers: {
-      ...responseHeaders,
-      Location: "https://batchlogg.vercel.app/auth/login",
-    },
+  if (data.user) {
+    await supabase.from("profiles").insert({
+      id: data.user.id,
+      username,
+    });
+  }
+
+  // -----------------------------
+  // FETCH SESSION (Supabase does NOT auto-login on signUp)
+  // -----------------------------
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session) {
+    // fallback: logg inn manuelt
+    const { error: loginError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (loginError) {
+      console.error("AUTO-LOGIN FAILED", loginError);
+
+      return new NextResponse(null, {
+        status: 302,
+        headers: {
+          ...responseHeaders,
+          Location: "https://batchlogg.vercel.app/auth/login?error=autologin",
+        },
+      });
+    }
+  }
+
+  // -----------------------------
+  // SUCCESS → DIRECT TO DASHBOARD
+  // -----------------------------
+  const res = new NextResponse(null, { status: 302 });
+
+  responseHeaders.forEach((value, key) => {
+    res.headers.set(key, value);
   });
+
+  res.headers.set("Location", "https://batchlogg.vercel.app/dashboard");
+
+  return res;
 }
