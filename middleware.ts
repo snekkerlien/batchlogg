@@ -8,7 +8,7 @@ const protectedRoutes = [
   "/account",
 ];
 
-// Sider som skal være åpne (viktig for login/signup)
+// Sider som skal være åpne (login, signup, actions)
 const publicRoutes = [
   "/auth/login",
   "/auth/signup",
@@ -20,7 +20,7 @@ const publicRoutes = [
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Tillat alle public routes (login, signup, actions)
+  // Tillat alle public routes
   if (publicRoutes.some((route) => pathname.startsWith(route))) {
     return NextResponse.next();
   }
@@ -35,23 +35,18 @@ export function middleware(req: NextRequest) {
   }
 
   // Sjekk Supabase session-cookie
-  const supabaseSession = req.cookies.get("sb-access-token");
+  const accessToken = req.cookies.get("sb-access-token")?.value;
 
   // Ingen session → redirect til login
-  if (!supabaseSession) {
-    const loginUrl = new URL("/auth/login", req.url);
-    return NextResponse.redirect(loginUrl);
+  if (!accessToken) {
+    return NextResponse.redirect(new URL("/auth/login", req.url));
   }
 
   // Session finnes → tillat tilgang
   return NextResponse.next();
 }
 
-// Middleware skal KUN kjøre på sider som krever auth
+// Middleware skal kjøre på ALLE ruter
 export const config = {
-  matcher: [
-    "/dashboard/:path*",
-    "/kar/:path*",
-    "/account/:path*",
-  ],
+  matcher: ["/:path*"],
 };
