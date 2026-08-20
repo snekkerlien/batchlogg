@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { createRouteHandlerClient } from "../../../lib/supabase/supabaseServerFinal";
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, context: { params: { id: string } }) {
   const { supabase } = createRouteHandlerClient(req);
 
-  const userId = params.id;
+  const userId = context.params.id;
 
   const { data, error } = await supabase
     .from("profiles")
