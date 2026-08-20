@@ -16,11 +16,14 @@ export default function ProfilesPage() {
 
   useEffect(() => {
     async function load() {
-      // HENT FRA public_profiles (den du faktisk har data i)
-      const { data } = await supabaseBrowser
+      const { data, error } = await supabaseBrowser
         .from("public.profiles")
         .select("id, username")
         .order("username", { ascending: true });
+
+      if (error) {
+        console.error("Feil ved henting av profiler:", error);
+      }
 
       setProfiles((data as Profile[]) || []);
       setLoading(false);
