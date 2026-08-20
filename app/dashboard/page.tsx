@@ -6,8 +6,9 @@ import DashboardClient from "./DashboardClient";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const cookieStore = await cookies();
+  const cookieStore = cookies();
 
+  // ✔ Supabase server-klient uten ulovlig cookie-modifikasjon
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -16,28 +17,30 @@ export default async function DashboardPage() {
         get(name: string) {
           return cookieStore.get(name)?.value;
         },
-        set(name: string, value: string, options: any) {
-          cookieStore.set({ name, value, ...options });
-        },
-        remove(name: string, options: any) {
-          cookieStore.delete({ name, ...options });
-        },
+        // ❗ Ikke skriv cookies i server components
+        set() {},
+        remove() {},
       },
     }
   );
 
+  // ✔ Trygg server-side session check
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) redirect("/auth/login");
+  if (!user) {
+    redirect("/auth/login");
+  }
 
+  // ✔ Hent profil
   const { data: profile } = await supabase
     .from("profiles")
     .select("username")
     .eq("id", user.id)
     .single();
 
+  // ✔ Hent kar
   const { data: kar } = await supabase
     .from("kar")
     .select("id, created_at")
