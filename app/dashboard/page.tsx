@@ -25,7 +25,6 @@ export default async function DashboardPage() {
     }
   );
 
-  // Session
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -34,14 +33,12 @@ export default async function DashboardPage() {
     redirect("/auth/login");
   }
 
-  // Username
   const { data: profile } = await supabase
     .from("profiles")
     .select("username")
     .eq("id", user.id)
     .single();
 
-  // Kar
   const { data: kar } = await supabase
     .from("kar")
     .select("id, created_at")
@@ -90,9 +87,9 @@ export default async function DashboardPage() {
         <div
           className={`
             grid
-            grid-cols-1        /* <-- Mobil: 1 kolonne */
+            grid-cols-1        /* <-- Mobil: alltid 1 per rad */
             ${pcCols}          /* <-- PC: dynamisk 2 eller 3 */
-            gap-6              /* <-- Litt større spacing på mobil */
+            gap-6
             md:gap-4
             mx-auto
             max-w-[36rem]
@@ -104,7 +101,6 @@ export default async function DashboardPage() {
               key={k.id}
               className="relative border border-white/10 rounded-xl p-6 bg-white/5 hover:bg-white/10 transition flex flex-col items-center justify-center w-40 h-40 md:w-28 md:h-28"
             >
-              {/* SLETT-KNAPP — kun hvis mer enn 1 kar og ikke Kar 1 */}
               {karCount > 1 && index > 0 && (
                 <form
                   action="/kar/delete"
