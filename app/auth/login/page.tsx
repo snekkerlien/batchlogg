@@ -1,7 +1,7 @@
-"use client";
-
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -18,7 +18,7 @@ export default function LoginPage() {
     return null;
   }
 
-  // Redirect hvis allerede innlogget (må være i useEffect)
+  // Redirect hvis allerede innlogget
   useEffect(() => {
     if (user) {
       router.replace("/dashboard");
