@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import Link from "next/link";
 
 type KarType = {
@@ -15,13 +14,6 @@ type DashboardClientProps = {
 };
 
 export default function DashboardClient({ username, kar }: DashboardClientProps) {
-  const router = useRouter();
-
-  // 🔥 Disable ALL Next.js automatic prefetching
-  useEffect(() => {
-    router.prefetch = () => {};
-  }, [router]);
-
   const karCount = kar.length;
   const hasPlus = karCount < 12;
 
@@ -186,10 +178,8 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
               </div>
             );
 
-            // I selectMode skal ALLE kar være divs (ikke klikkbare links)
             if (selectMode) return karBox;
 
-            // Utenfor selectMode skal ALLE kar være klikkbare – inkludert kar 1
             return (
               <Link key={k.id} href={`/kar/${k.id}`} prefetch={false}>
                 {karBox}
