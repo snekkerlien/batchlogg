@@ -18,22 +18,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadSession() {
-      const { data } = await supabaseBrowser.auth.getSession();
-      setUser(data.session?.user ?? null);
+    let mounted = true;
+
+    async function syncSession() {
+      // Hent fersk session direkte fra Supabase
+      const { data, error } = await supabaseBrowser.auth.getSession();
+
+      if (!mounted) return;
+
+      // Hvis session mangler → sett user = null
+      if (error || !data.session) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
+      // Hvis session finnes → sett user
+      setUser(data.session.user);
       setLoading(false);
     }
 
-    loadSession();
+    syncSession();
 
     // Lytt på endringer i session
     const { data: listener } = supabaseBrowser.auth.onAuthStateChange(
       (_event, session) => {
+        if (!mounted) return;
         setUser(session?.user ?? null);
       }
     );
 
     return () => {
+      mounted = false;
       listener.subscription.unsubscribe();
     };
   }, []);
