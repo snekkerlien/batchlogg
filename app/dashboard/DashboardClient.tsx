@@ -49,12 +49,6 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
   // Totalt antall elementer i grid (kar + pluss-knapp hvis synlig)
   const totalItems = karCount + (hasPlus && !selectMode ? 1 : 0);
 
-  // Dynamisk grid basert på totalt antall elementer
-  const gridCols =
-    totalItems === 1
-      ? "grid-cols-1 md:grid-cols-1"
-      : "grid-cols-2 md:grid-cols-3";
-
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-6">
 
@@ -138,13 +132,15 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
         {/* GRID */}
         <div
           className={`
-            grid
-            ${gridCols}
-            gap-6
-            md:gap-4
+            ${
+              totalItems === 2
+                ? "grid grid-flow-col auto-cols-max justify-center gap-6"
+                : totalItems === 1
+                ? "grid grid-cols-1 justify-center gap-6"
+                : "grid grid-cols-2 md:grid-cols-3 gap-6 md:gap-4"
+            }
             mx-auto
             max-w-[36rem]
-            place-items-center
           `}
         >
           {kar.map((k, index) => {
