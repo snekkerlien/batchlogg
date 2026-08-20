@@ -16,6 +16,7 @@ export async function POST(req: Request) {
   console.log("signupAction: username =", username);
   console.log("signupAction: email =", email);
 
+  // Passordvalidering
   function validatePassword(pw: string) {
     if (pw.length < 8) return "too_short";
     if (!/[A-Z]/.test(pw)) return "no_uppercase";
@@ -25,9 +26,10 @@ export async function POST(req: Request) {
   const pwError = validatePassword(password);
   if (pwError) {
     console.error("SIGNUP ERROR:", pwError);
-    return NextResponse.redirect(`/auth/signup?error=${pwError}`);
+    return NextResponse.redirect(new URL(`/auth/signup?error=${pwError}`, req.url));
   }
 
+  // Supabase signUp
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -37,9 +39,10 @@ export async function POST(req: Request) {
 
   if (error) {
     console.error("SIGNUP ERROR", error);
-    return NextResponse.redirect("/auth/signup?error=supabase");
+    return NextResponse.redirect(new URL("/auth/signup?error=supabase", req.url));
   }
 
+  // Opprett profil
   if (data.user) {
     await supabase.from("profiles").insert({
       id: data.user.id,
@@ -47,6 +50,7 @@ export async function POST(req: Request) {
     });
   }
 
+  // Sjekk session (Supabase auto‑logger ikke inn etter signUp)
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -67,5 +71,4 @@ export async function POST(req: Request) {
 
   console.log("signupAction: SUCCESS → redirect to /dashboard");
   return NextResponse.redirect(new URL("/dashboard", req.url));
-
 }
