@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 type KarType = {
   id: number;
@@ -23,7 +24,7 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
   function toggleSelect(id: number, index: number) {
     if (!selectMode) return;
 
-    // Kar 1 kan ikke velges
+    // Kar 1 kan ikke velges – men kun i selectMode
     if (index === 0) return;
 
     setSelected((prev) =>
@@ -46,7 +47,6 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
     window.location.reload();
   }
 
-  // Totalt antall elementer i grid (kar + pluss-knapp hvis synlig)
   const totalItems = karCount + (hasPlus && !selectMode ? 1 : 0);
 
   return (
@@ -63,12 +63,12 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
 
         {menuOpen && (
           <div className="mt-2 bg-black/80 border border-white/20 rounded-lg p-4 text-right backdrop-blur-md">
-            <a
+            <Link
               href="/account"
               className="block mb-3 text-white hover:text-green-300 font-semibold"
             >
               Min konto
-            </a>
+            </Link>
 
             <form action="/logout" method="post">
               <button className="text-red-400 hover:text-red-300 font-semibold">
@@ -89,12 +89,12 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
           Velkommen tilbake til bryggeriet, kompis 🍻
         </p>
 
-        <a
+        <Link
           href="/profiles"
           className="inline-block mb-8 px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
         >
           Se andre bryggere
-        </a>
+        </Link>
 
         {/* SELECT MODE BUTTONS */}
         <div className="mb-6 flex gap-4 justify-center">
@@ -145,9 +145,11 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
         >
           {kar.map((k, index) => {
             const isSelected = selected.includes(k.id);
-            const isLocked = index === 0;
 
-            return (
+            // Kar 1 er kun låst i selectMode
+            const isLocked = selectMode && index === 0;
+
+            const karBox = (
               <div
                 key={k.id}
                 onClick={() => toggleSelect(k.id, index)}
@@ -172,6 +174,16 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
                   Ledig
                 </span>
               </div>
+            );
+
+            // I selectMode skal ALLE kar være divs (ikke klikkbare links)
+            if (selectMode) return karBox;
+
+            // Utenfor selectMode skal ALLE kar være klikkbare – inkludert kar 1
+            return (
+              <Link key={k.id} href={`/kar/${k.id}`}>
+                {karBox}
+              </Link>
             );
           })}
 

@@ -1,6 +1,27 @@
+"use client";
+
+import { useEffect } from "react";
+import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
+import { useRouter } from "next/navigation";
+
 export const dynamic = "force-dynamic";
 
 export default function LoginPage() {
+  const router = useRouter();
+
+  // Hvis bruker allerede er innlogget → redirect til dashboard
+  useEffect(() => {
+    async function checkSession() {
+      const { data: { user } } = await supabaseBrowser.auth.getUser();
+
+      if (user) {
+        router.replace("/dashboard");
+      }
+    }
+
+    checkSession();
+  }, []);
+
   return (
     <main className="min-h-screen flex items-center justify-center px-6">
       <form

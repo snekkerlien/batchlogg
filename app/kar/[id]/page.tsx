@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
 import ActiveBatch from "./ActiveBatch";
 import RegisterBatchForm from "./RegisterBatchForm";
+import Link from "next/link";
 
 function LogoutButton() {
   return (
@@ -35,7 +36,7 @@ export default function KarPage() {
       const { data: sessionData } = await supabaseBrowser.auth.getSession();
 
       if (!sessionData.session) {
-        router.push("/auth/login");
+        router.replace("/auth/login");
         return;
       }
 
@@ -48,7 +49,7 @@ export default function KarPage() {
         .maybeSingle();
 
       if (!karData) {
-        router.push("/dashboard");
+        router.replace("/dashboard");
         return;
       }
 
@@ -86,12 +87,12 @@ export default function KarPage() {
       <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-2xl border border-white/10 text-white">
 
         {/* Hjem-knapp */}
-        <a
+        <Link
           href="/dashboard"
           className="block mb-4 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold w-fit"
         >
           🏠 Hjem
-        </a>
+        </Link>
 
         {/* Logg ut */}
         <LogoutButton />
