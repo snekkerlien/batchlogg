@@ -61,7 +61,6 @@ export default async function DashboardPage() {
       </div>
 
       <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-4xl border border-white/10 text-center">
-
         <h1 className="text-2xl font-bold mb-4">
           Logget inn som {username}
         </h1>
@@ -78,11 +77,11 @@ export default async function DashboardPage() {
         </a>
 
         {/* --- KAR GRID --- */}
-        <div className="grid grid-cols-[repeat(3,minmax(7rem,1fr))] gap-4 justify-center items-center mx-auto max-w-[28rem]">
+        <div className="grid grid-cols-3 gap-4 mx-auto max-w-[28rem] place-items-center">
           {kar?.map((k: any, index: number) => (
             <div
               key={k.id}
-              className="relative border border-white/10 rounded-xl p-4 bg-white/5 hover:bg-white/10 transition flex flex-col items-center w-28 h-28"
+              className="relative border border-white/10 rounded-xl p-4 bg-white/5 hover:bg-white/10 transition flex flex-col items-center justify-center w-28 h-28"
             >
               {/* SLETT-KNAPP — kun hvis mer enn 1 kar og ikke Kar 1 */}
               {kar.length > 1 && index > 0 && (
