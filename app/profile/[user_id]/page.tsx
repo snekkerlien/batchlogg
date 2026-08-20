@@ -33,9 +33,9 @@ export default function ProfilePage() {
 
   useEffect(() => {
     async function load() {
-      // Hent brukernavn
+      // Hent brukernavn fra riktig tabell: profiles
       const { data: profile } = await supabaseBrowser
-        .from("public_profiles")
+        .from("profiles")
         .select("username")
         .eq("id", userId)
         .maybeSingle();
