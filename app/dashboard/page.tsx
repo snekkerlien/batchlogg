@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createServerClient } from "@supabase/ssr";
@@ -46,11 +49,37 @@ export default async function DashboardPage() {
     .order("created_at");
 
   const username = profile?.username ?? "Ukjent";
-
   const karCount = kar?.length ?? 0;
-
-  // Maks 12 kar
   const hasPlus = karCount < 12;
+
+  // --- CLIENT STATE ---
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<number[]>([]);
+
+  function toggleSelect(id: number) {
+    if (!selectMode) return;
+
+    setSelected((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
+
+  async function deleteSelected() {
+    if (selected.length === 0) return;
+
+    await fetch("/kar/delete-multiple", {
+      method: "POST",
+      body: JSON.stringify({ ids: selected }),
+      headers: { "Content-Type": "application/json" },
+    });
+
+    // Avslutt valg-modus automatisk
+    setSelectMode(false);
+    setSelected([]);
+
+    // Reload dashboard
+    window.location.reload();
+  }
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-6">
@@ -79,12 +108,45 @@ export default async function DashboardPage() {
           Se andre bryggere
         </a>
 
+        {/* --- SELECT MODE BUTTONS --- */}
+        <div className="mb-6 flex gap-4 justify-center">
+          {!selectMode && (
+            <button
+              onClick={() => setSelectMode(true)}
+              className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
+            >
+              Velg kar
+            </button>
+          )}
+
+          {selectMode && (
+            <>
+              <button
+                onClick={deleteSelected}
+                className="px-6 py-3 bg-red-600 hover:bg-red-700 border border-red-800 rounded-lg font-semibold"
+              >
+                Slett valgte kar ({selected.length})
+              </button>
+
+              <button
+                onClick={() => {
+                  setSelectMode(false);
+                  setSelected([]);
+                }}
+                className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
+              >
+                Avslutt valg
+              </button>
+            </>
+          )}
+        </div>
+
         {/* --- KAR GRID --- */}
         <div
           className={`
             grid
-            grid-cols-2        /* Mobil: 2 kolonner */
-            md:grid-cols-3     /* PC: 3 kolonner */
+            grid-cols-2
+            md:grid-cols-3
             gap-6
             md:gap-4
             mx-auto
@@ -92,39 +154,34 @@ export default async function DashboardPage() {
             place-items-center
           `}
         >
-          {kar?.map((k: any, index: number) => (
-            <div
-              key={k.id}
-              className="relative border border-white/10 rounded-xl p-6 bg-white/5 hover:bg-white/10 transition flex flex-col items-center justify-center w-40 h-40 md:w-28 md:h-28"
-            >
-              {/* SLETT-KNAPP — kun hvis mer enn 1 kar og ikke Kar 1 */}
-              {karCount > 1 && index > 0 && (
-                <form
-                  action="/kar/delete"
-                  method="post"
-                  className="absolute top-1 right-2"
-                >
-                  <input type="hidden" name="kar_id" value={k.id} />
-                  <button className="text-red-400 hover:text-red-300 text-xl font-bold">
-                    ×
-                  </button>
-                </form>
-              )}
+          {kar?.map((k: any, index: number) => {
+            const isSelected = selected.includes(k.id);
 
-              <a href={`/kar/${k.id}`} className="flex flex-col items-center">
-                <span className="absolute top-[10px] text-xl font-bold text-green-300 md:text-lg">
-                  Kar {index + 1}
-                </span>
+            return (
+              <div
+                key={k.id}
+                onClick={() => toggleSelect(k.id)}
+                className={`
+                  relative border border-white/10 rounded-xl p-6 transition flex flex-col items-center justify-center
+                  w-40 h-40 md:w-28 md:h-28
+                  ${selectMode ? "cursor-pointer" : ""}
+                  ${isSelected ? "bg-green-900/40 border-green-400" : "bg-white/5 hover:bg-white/10"}
+                `}
+              >
+                <a href={`/kar/${k.id}`} className="flex flex-col items-center pointer-events-none">
+                  <span className="absolute top-[10px] text-xl font-bold text-green-300 md:text-lg">
+                    Kar {index + 1}
+                  </span>
 
-                <span className="text-zinc-300 mt-12 text-lg md:text-base">
-                  Ledig
-                </span>
-              </a>
-            </div>
-          ))}
+                  <span className="text-zinc-300 mt-12 text-lg md:text-base">
+                    Ledig
+                  </span>
+                </a>
+              </div>
+            );
+          })}
 
-          {/* PLUSS-KNAPP — vises kun hvis < 12 kar */}
-          {hasPlus && (
+          {hasPlus && !selectMode && (
             <form action="/kar/add" method="post">
               <button
                 className="border border-white/10 rounded-xl p-6 bg-white/5 hover:bg-white/10 transition flex flex-col items-center justify-center w-40 h-40 md:w-28 md:h-28 text-5xl md:text-4xl font-bold text-green-300"
