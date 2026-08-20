@@ -16,17 +16,36 @@ export default function ProfilesPage() {
 
   useEffect(() => {
     async function load() {
-      const { data, error } = await supabaseBrowser
-        .from("public.profiles")
+      console.log("🔍 Starter henting av profiler...");
+      console.log("🔍 Query: from('profiles').select('id, username').order('username')");
+
+      const { data, error, status, statusText } = await supabaseBrowser
+        .from("profiles")
         .select("id, username")
         .order("username", { ascending: true });
 
+      console.log("📡 Supabase respons:");
+      console.log("   ➤ data:", data);
+      console.log("   ➤ error:", error);
+      console.log("   ➤ status:", status);
+      console.log("   ➤ statusText:", statusText);
+
+      if (!error && data === null) {
+        console.log("⚠️ data === null → Tabell finnes ikke, RLS blokkerer, eller feil schema.");
+      }
+
+      if (Array.isArray(data) && data.length === 0) {
+        console.log("⚠️ data er en tom array → Tabell finnes, men ingen rader returneres.");
+      }
+
       if (error) {
-        console.error("Feil ved henting av profiler:", error);
+        console.error("❌ Feil ved henting av profiler:", error);
       }
 
       setProfiles((data as Profile[]) || []);
       setLoading(false);
+
+      console.log("✅ Ferdig med henting. profiles state:", profiles);
     }
 
     load();
