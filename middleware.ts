@@ -34,11 +34,12 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Sjekk Supabase session-cookie
+  // Supabase SSR bruker disse cookie-navnene:
   const accessToken = req.cookies.get("sb-access-token")?.value;
+  const refreshToken = req.cookies.get("sb-refresh-token")?.value;
 
   // Ingen session → redirect til login
-  if (!accessToken) {
+  if (!accessToken || !refreshToken) {
     return NextResponse.redirect(new URL("/auth/login", req.url));
   }
 
