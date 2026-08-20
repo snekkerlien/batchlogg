@@ -17,13 +17,19 @@ export default function LoginPage() {
     return null;
   }
 
-  // Redirect hvis allerede innlogget
+  // Redirect hvis allerede innlogget (må være i useEffect)
+  useEffect(() => {
+    if (user) {
+      router.replace("/dashboard");
+    }
+  }, [user, router]);
+
+  // Hvis user finnes, ikke render login-siden
   if (user) {
-    router.replace("/dashboard");
     return null;
   }
 
-  // Les ?error=1 uten useSearchParams
+  // Les ?error=1
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
@@ -40,7 +46,6 @@ export default function LoginPage() {
         method="post"
         className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-sm border border-white/10 space-y-4"
       >
-        {/* HOME-KNAPP */}
         <Link
           href="/"
           prefetch={false}
@@ -51,7 +56,6 @@ export default function LoginPage() {
 
         <h2 className="text-2xl font-bold text-center">Logg inn</h2>
 
-        {/* FEILMELDING */}
         {errorMsg && (
           <p className="text-red-400 text-center font-semibold">
             {errorMsg}
