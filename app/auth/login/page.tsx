@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../providers/useAuth";
 import Link from "next/link";
 
@@ -9,7 +9,10 @@ export const dynamic = "force-dynamic";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading } = useAuth();
+
+  const [errorMsg, setErrorMsg] = useState("");
 
   // Hvis bruker allerede er innlogget → redirect til dashboard
   useEffect(() => {
@@ -17,6 +20,14 @@ export default function LoginPage() {
       router.replace("/dashboard");
     }
   }, [loading, user, router]);
+
+  // Les ?error=1 fra URL
+  useEffect(() => {
+    const err = searchParams.get("error");
+    if (err === "1") {
+      setErrorMsg("Feil brukernavn eller passord.");
+    }
+  }, [searchParams]);
 
   return (
     <main className="min-h-screen flex items-center justify-center px-6">
@@ -35,6 +46,13 @@ export default function LoginPage() {
         </Link>
 
         <h2 className="text-2xl font-bold text-center">Logg inn</h2>
+
+        {/* 🔥 FEILMELDING */}
+        {errorMsg && (
+          <p className="text-red-400 text-center font-semibold">
+            {errorMsg}
+          </p>
+        )}
 
         <input
           type="text"
