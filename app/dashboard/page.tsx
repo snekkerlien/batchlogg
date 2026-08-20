@@ -61,6 +61,7 @@ export default async function DashboardPage() {
       </div>
 
       <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-4xl border border-white/10 text-center">
+
         <h1 className="text-2xl font-bold mb-4">
           Logget inn som {username}
         </h1>
@@ -77,7 +78,15 @@ export default async function DashboardPage() {
         </a>
 
         {/* --- KAR GRID --- */}
-        <div className="grid grid-cols-3 gap-4 mx-auto max-w-[28rem] place-items-center">
+        <div className="
+          grid 
+          grid-cols-2           /* Mobil: 2 kolonner */
+          md:grid-cols-3        /* PC/Tablet: 3 kolonner */
+          gap-4 
+          mx-auto 
+          max-w-[28rem] 
+          place-items-center    /* Sentrerer innhold i cellene */
+        ">
           {kar?.map((k: any, index: number) => (
             <div
               key={k.id}
