@@ -51,8 +51,6 @@ export default async function DashboardPage() {
   const username = profile?.username ?? "Ukjent";
 
   // Dynamisk kolonnevalg:
-  // Mindre enn 3 elementer → 2 kolonner på PC
-  // 3 eller flere → 3 kolonner på PC
   const pcCols = kar && kar.length < 3 ? "md:grid-cols-2" : "md:grid-cols-3";
 
   return (
@@ -85,12 +83,12 @@ export default async function DashboardPage() {
         {/* --- KAR GRID --- */}
         <div
           className={`
-            grid 
+            grid
             grid-cols-2
             ${pcCols}
-            gap-4 
-            mx-auto 
-            max-w-[28rem] 
+            gap-4
+            mx-auto
+            max-w-[32rem]   /* <-- ØKT slik at 3 bokser får plass på én linje */
             place-items-center
           `}
         >
