@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
 
 type Profile = {
@@ -28,51 +29,55 @@ export default function ProfilesPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-black text-white flex items-center justify-center">
+      <main className="min-h-screen flex items-center justify-center px-6 bg-black text-white">
         <p>Laster profiler…</p>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-black text-white px-6 py-12">
-      {/* Hjem-knapp */}
-      <a
-        href="/dashboard"
-        className="block mb-4 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold w-fit"
-      >
-        🏠 Hjem
-      </a>
+    <main className="min-h-screen flex flex-col items-center justify-center px-6">
 
       {/* Tilbake-knapp */}
-      <button
-        onClick={() => window.history.back()}
-        className="block mb-8 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold w-fit"
-      >
-        ← Tilbake
-      </button>
-
-      <h1 className="text-4xl font-bold mb-6 text-center">Profiler</h1>
-
-      <p className="opacity-80 text-center mb-10">
-        Velg en bruker for å se deres kar og aktive batches.
-      </p>
-
-      <div className="max-w-xl mx-auto space-y-4">
-        {profiles.map((p) => (
-          <a
-            key={p.id}
-            href={`/profile/${p.id}`}
-            className="block border border-white/10 bg-white/5 hover:bg-white/10 transition rounded-xl p-4 font-semibold text-center"
-          >
-            {p.username || "Ukjent bruker"}
-          </a>
-        ))}
+      <div className="absolute top-4 left-4">
+        <Link
+          href="/dashboard"
+          className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
+        >
+          ← Tilbake
+        </Link>
       </div>
 
-      <p className="text-sm opacity-40 mt-12 text-center">
-        © {new Date().getFullYear()} Fiklebrygg.
-      </p>
+      {/* Container */}
+      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10 text-center">
+
+        <h1 className="text-4xl font-bold mb-6">Profiler</h1>
+
+        <p className="opacity-80 mb-10 text-lg">
+          Velg en bruker for å se deres kar og aktive batches.
+        </p>
+
+        {/* LISTE OVER BRUKERE */}
+        <div className="max-w-xl mx-auto space-y-4">
+          {profiles.length > 0 ? (
+            profiles.map((p) => (
+              <Link
+                key={p.id}
+                href={`/profile/${p.id}`}
+                className="block border border-white/10 bg-white/5 hover:bg-white/10 transition rounded-xl p-4 font-semibold text-center"
+              >
+                {p.username || "Ukjent bruker"}
+              </Link>
+            ))
+          ) : (
+            <p className="opacity-60">Ingen brukere funnet.</p>
+          )}
+        </div>
+
+        <p className="text-sm opacity-40 mt-12">
+          © {new Date().getFullYear()} Fiklebrygg AS.
+        </p>
+      </div>
     </main>
   );
 }
