@@ -1,14 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// Sider som krever innlogging
-const protectedRoutes = [
-  "/dashboard",
-  "/kar",
-  "/account",
-];
-
-// Sider som skal være åpne (login, signup, actions)
+// Sider som skal være åpne
 const publicRoutes = [
   "/auth/login",
   "/auth/signup",
@@ -17,10 +10,17 @@ const publicRoutes = [
   "/auth/logout",
 ];
 
+// Sider som krever innlogging
+const protectedRoutes = [
+  "/dashboard",
+  "/kar",
+  "/account",
+];
+
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Tillat alle public routes
+  // Tillat public routes
   if (publicRoutes.some((route) => pathname.startsWith(route))) {
     return NextResponse.next();
   }
@@ -34,12 +34,12 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Supabase SSR bruker disse cookie-navnene:
-  const accessToken = req.cookies.get("sb-access-token")?.value;
-  const refreshToken = req.cookies.get("sb-refresh-token")?.value;
+  // Supabase SSR cookies (Edge-kompatibelt)
+  const access = req.cookies.get("sb-access-token")?.value;
+  const refresh = req.cookies.get("sb-refresh-token")?.value;
 
-  // Ingen session → redirect til login
-  if (!accessToken || !refreshToken) {
+  // Ingen session → redirect
+  if (!access || !refresh) {
     return NextResponse.redirect(new URL("/auth/login", req.url));
   }
 
@@ -47,7 +47,7 @@ export function middleware(req: NextRequest) {
   return NextResponse.next();
 }
 
-// Middleware skal kjøre på ALLE ruter
+// Middleware skal kjøre på alle ruter
 export const config = {
   matcher: ["/:path*"],
 };

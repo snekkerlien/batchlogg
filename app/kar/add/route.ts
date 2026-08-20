@@ -1,19 +1,18 @@
+export const runtime = "edge";
+
 import { NextResponse } from "next/server";
 import { createRouteHandlerClient } from "../../../lib/supabase/supabaseServerFinal";
 
-export async function POST(req: Request) {
-  const { supabase, responseHeaders } = createRouteHandlerClient(req);
+export async function POST() {
+  const { supabase } = createRouteHandlerClient();
 
-  // Hent session (riktig metode i route handlers)
+  // Hent session
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
   if (!session || !session.user) {
-    const res = new NextResponse(null, { status: 302 });
-    responseHeaders.forEach((value, key) => res.headers.set(key, value));
-    res.headers.set("Location", "/auth/login");
-    return res;
+    return NextResponse.redirect("/auth/login");
   }
 
   const user = session.user;
@@ -23,15 +22,5 @@ export async function POST(req: Request) {
     user_id: user.id,
   });
 
-  // Redirect tilbake til dashboard (relative URL)
-  const res = new NextResponse(null, { status: 302 });
-
-  // Sett cookies riktig
-  responseHeaders.forEach((value, key) => {
-    res.headers.set(key, value);
-  });
-
-  res.headers.set("Location", "/dashboard");
-
-  return res;
+  return NextResponse.redirect("/dashboard");
 }

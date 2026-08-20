@@ -6,7 +6,7 @@ import { createRouteHandlerClient } from "../../../lib/supabase/supabaseServerFi
 export async function POST(req: Request) {
   console.log("loginAction: START");
 
-  const { supabase, responseHeaders } = createRouteHandlerClient(req);
+  const { supabase } = createRouteHandlerClient();
   const form = await req.formData();
 
   const username = form.get("username") as string;
@@ -16,9 +16,6 @@ export async function POST(req: Request) {
   console.log("loginAction: username =", username);
   console.log("loginAction: email =", email);
 
-  // -----------------------------
-  // TRY LOGIN
-  // -----------------------------
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -26,29 +23,11 @@ export async function POST(req: Request) {
 
   console.log("loginAction: supabase response =", { data, error });
 
-  // -----------------------------
-  // PREPARE RESPONSE
-  // -----------------------------
-  const res = new NextResponse(null, { status: 302 });
-
-  // Copy Set-Cookie headers from Supabase SSR
-  responseHeaders.forEach((value, key) => {
-    res.headers.append(key, value);
-  });
-
-  // -----------------------------
-  // LOGIN FAILED
-  // -----------------------------
   if (error) {
     console.log("loginAction: LOGIN FAILED");
-    res.headers.set("Location", "/auth/login?error=1");
-    return res;
+    return NextResponse.redirect("/auth/login?error=1");
   }
 
-  // -----------------------------
-  // LOGIN SUCCESS
-  // -----------------------------
   console.log("loginAction: LOGIN SUCCESS");
-  res.headers.set("Location", "/dashboard");
-  return res;
+  return NextResponse.redirect("/dashboard");
 }

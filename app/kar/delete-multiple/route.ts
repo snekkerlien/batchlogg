@@ -1,22 +1,18 @@
+export const runtime = "edge";
+
 import { NextResponse } from "next/server";
 import { createRouteHandlerClient } from "../../../lib/supabase/supabaseServerFinal";
 
 export async function POST(req: Request) {
-  const { supabase, responseHeaders } = createRouteHandlerClient(req);
+  const { supabase } = createRouteHandlerClient();
 
-  // Hent session (riktig metode i route handlers)
+  // Hent session
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
   if (!session || !session.user) {
-    const res = new NextResponse(
-      JSON.stringify({ error: "Not logged in" }),
-      { status: 401 }
-    );
-
-    responseHeaders.forEach((value, key) => res.headers.set(key, value));
-    return res;
+    return NextResponse.json({ error: "Not logged in" }, { status: 401 });
   }
 
   const user = session.user;
@@ -40,12 +36,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Returner suksess + sett cookies riktig
-  const res = NextResponse.json({ success: true });
-
-  responseHeaders.forEach((value, key) => {
-    res.headers.set(key, value);
-  });
-
-  return res;
+  return NextResponse.json({ success: true });
 }

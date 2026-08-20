@@ -1,66 +1,61 @@
-export const runtime = "nodejs";
+export const runtime = "edge";
 
-import { createServerClient as createSupabaseClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
 
 /**
  * ROUTE HANDLER CLIENT
  * Brukes i: route.ts filer (loginAction, signupAction, logout)
  */
-export function createRouteHandlerClient(req: Request) {
-  let responseHeaders = new Headers();
+export function createRouteHandlerClient() {
+  const cookieStore = cookies();
 
-  const cookieHeader = req.headers.get("cookie") ?? "";
-
-  const getCookieValue = (name: string) => {
-    const parts = cookieHeader.split(";").map((c: string) => c.trim());
-    const match = parts.find((c: string) => c.startsWith(`${name}=`));
-    return match ? match.split("=")[1] : undefined;
-  };
-
-  const supabase = createSupabaseClient(
+  const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return getCookieValue(name);
+        getAll() {
+          return cookieStore.getAll().map((c) => ({
+            name: c.name,
+            value: c.value,
+          }));
         },
-        set(name: string, value: string) {
-          responseHeaders.append(
-            "Set-Cookie",
-            `${name}=${value}; Path=/; HttpOnly; SameSite=Lax`
-          );
-        },
-        remove(name: string) {
-          responseHeaders.append(
-            "Set-Cookie",
-            `${name}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`
-          );
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
         },
       },
     }
   );
 
-  return { supabase, responseHeaders };
+  return { supabase };
 }
 
 /**
  * SERVER ACTION CLIENT
  * Brukes i: "use server" funksjoner
  */
-export async function createServerClient() {
-  const cookieStore = await import("next/headers").then((m) => m.cookies());
+export function createServerActionClient() {
+  const cookieStore = cookies();
 
-  return createSupabaseClient(
+  return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
+        getAll() {
+          return cookieStore.getAll().map((c) => ({
+            name: c.name,
+            value: c.value,
+          }));
         },
-        set() {},
-        remove() {},
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
+        },
       },
     }
   );

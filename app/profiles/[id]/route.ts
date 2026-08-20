@@ -5,7 +5,7 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const { supabase } = createRouteHandlerClient(request);
+  const { supabase } = createRouteHandlerClient();
 
   // params is a Promise in Next.js 16
   const { id } = await context.params;

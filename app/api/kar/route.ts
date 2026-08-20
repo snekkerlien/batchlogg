@@ -5,7 +5,7 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<any> }
 ) {
-  const { supabase } = createRouteHandlerClient(request);
+  const { supabase } = createRouteHandlerClient();
 
   const url = new URL(request.url);
   const userId = url.searchParams.get("user");

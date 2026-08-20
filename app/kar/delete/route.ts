@@ -1,20 +1,24 @@
+export const runtime = "edge";
+
 import { NextResponse } from "next/server";
 import { createRouteHandlerClient } from "../../../lib/supabase/supabaseServerFinal";
 
 export async function POST(req: Request) {
-  const { supabase, responseHeaders } = createRouteHandlerClient(req);
+  const { supabase } = createRouteHandlerClient();
   const form = await req.formData();
 
   const karId = form.get("kar_id") as string;
 
   // Hent session
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  if (!user) {
-    return NextResponse.redirect("https://batchlogg.vercel.app/auth/login");
+  if (!session || !session.user) {
+    return NextResponse.redirect("/auth/login");
   }
+
+  const user = session.user;
 
   // Slett karet (kun hvis det tilhører brukeren)
   await supabase
@@ -23,17 +27,5 @@ export async function POST(req: Request) {
     .eq("id", karId)
     .eq("user_id", user.id);
 
-  // Redirect tilbake til dashboard
-  const res = new NextResponse(null, {
-    status: 302,
-    headers: {
-      Location: "https://batchlogg.vercel.app/dashboard",
-    },
-  });
-
-  responseHeaders.forEach((value, key) => {
-    res.headers.set(key, value);
-  });
-
-  return res;
+  return NextResponse.redirect("/dashboard");
 }

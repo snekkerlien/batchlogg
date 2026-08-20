@@ -6,7 +6,7 @@ import { createRouteHandlerClient } from "../../../lib/supabase/supabaseServerFi
 export async function POST(req: Request) {
   console.log("signupAction: START");
 
-  const { supabase, responseHeaders } = createRouteHandlerClient(req);
+  const { supabase } = createRouteHandlerClient();
   const form = await req.formData();
 
   const username = form.get("username") as string;
@@ -16,9 +16,6 @@ export async function POST(req: Request) {
   console.log("signupAction: username =", username);
   console.log("signupAction: email =", email);
 
-  // -----------------------------
-  // PASSWORD VALIDATION
-  // -----------------------------
   function validatePassword(pw: string) {
     if (pw.length < 8) return "too_short";
     if (!/[A-Z]/.test(pw)) return "no_uppercase";
@@ -27,18 +24,10 @@ export async function POST(req: Request) {
 
   const pwError = validatePassword(password);
   if (pwError) {
-    console.error("SIGNUP ERROR: Weak password:", pwError);
-
-    const res = new NextResponse(null, { status: 302 });
-    responseHeaders.forEach((value, key) => res.headers.set(key, value));
-    res.headers.set("Location", `/auth/signup?error=${pwError}`);
-
-    return res;
+    console.error("SIGNUP ERROR:", pwError);
+    return NextResponse.redirect(`/auth/signup?error=${pwError}`);
   }
 
-  // -----------------------------
-  // SUPABASE SIGNUP
-  // -----------------------------
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -48,17 +37,9 @@ export async function POST(req: Request) {
 
   if (error) {
     console.error("SIGNUP ERROR", error);
-
-    const res = new NextResponse(null, { status: 302 });
-    responseHeaders.forEach((value, key) => res.headers.set(key, value));
-    res.headers.set("Location", "/auth/signup?error=supabase");
-
-    return res;
+    return NextResponse.redirect("/auth/signup?error=supabase");
   }
 
-  // -----------------------------
-  // CREATE PROFILE
-  // -----------------------------
   if (data.user) {
     await supabase.from("profiles").insert({
       id: data.user.id,
@@ -66,9 +47,6 @@ export async function POST(req: Request) {
     });
   }
 
-  // -----------------------------
-  // AUTO-LOGIN (Supabase does NOT auto-login on signUp)
-  // -----------------------------
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -83,23 +61,10 @@ export async function POST(req: Request) {
 
     if (loginError) {
       console.error("AUTO-LOGIN FAILED", loginError);
-
-      const res = new NextResponse(null, { status: 302 });
-      responseHeaders.forEach((value, key) => res.headers.set(key, value));
-      res.headers.append("Location", "/auth/login?error=autologin");
-
-      return res;
+      return NextResponse.redirect("/auth/login?error=autologin");
     }
   }
 
-  // -----------------------------
-  // SUCCESS → REDIRECT TO DASHBOARD
-  // -----------------------------
   console.log("signupAction: SUCCESS → redirect to /dashboard");
-
-  const res = new NextResponse(null, { status: 302 });
-  responseHeaders.forEach((value, key) => res.headers.set(key, value));
-  res.headers.append("Location", "/dashboard");
-
-  return res;
+  return NextResponse.redirect("/dashboard");
 }
