@@ -1,27 +1,15 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { createServerClient } from "@supabase/ssr";
+import { createServerActionClient } from "../../lib/supabase/supabaseServerFinal";
 import DashboardClient from "./DashboardClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const cookieStore = await cookies();
+  const cookieStore = cookies();
 
-  // Supabase server-klient (leser cookies, skriver ikke)
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set() {},
-        remove() {},
-      },
-    }
-  );
+  // Supabase server-klient (Edge-kompatibel)
+  const supabase = createServerActionClient();
 
   // Hent session
   const {
