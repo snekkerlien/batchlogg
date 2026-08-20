@@ -5,9 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 type KarType = {
-  id: number;
+  id: string;                // UUID fra Supabase
   created_at: string;
-  status: "Aktiv" | "Ledig"; // 🔥 Nytt felt fra DashboardPage
+  status: "Aktiv" | "Ledig";
 };
 
 type DashboardClientProps = {
@@ -22,12 +22,12 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
   const hasPlus = karCount < 12;
 
   const [selectMode, setSelectMode] = useState(false);
-  const [selected, setSelected] = useState<number[]>([]);
+  const [selected, setSelected] = useState<string[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const menuRef = useRef<HTMLDivElement | null>(null);
 
-  // 🔥 Close-on-outside-click
+  // Lukk meny ved klikk utenfor
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -44,9 +44,9 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [menuOpen]);
 
-  function toggleSelect(id: number, index: number) {
+  function toggleSelect(id: string, index: number) {
     if (!selectMode) return;
-    if (index === 0) return;
+    if (index === 0) return; // Kar 1 kan ikke slettes
 
     setSelected((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
@@ -65,7 +65,7 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
     setSelectMode(false);
     setSelected([]);
 
-    router.refresh(); // 🔥 Raskere enn reload()
+    router.refresh(); // Oppdater dashboard uten full reload
   }
 
   const totalItems = karCount + (hasPlus && !selectMode ? 1 : 0);
@@ -190,7 +190,6 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
                   Kar {index + 1}
                 </span>
 
-                {/* 🔥 Aktiv / Ledig status */}
                 <span className="text-zinc-300 mt-12 text-lg md:text-base">
                   {k.status === "Aktiv" ? "Aktiv batch" : "Ledig"}
                 </span>

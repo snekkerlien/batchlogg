@@ -64,6 +64,31 @@ export function createServerActionClient() {
 }
 
 /**
+ * SERVER COMPONENT CLIENT
+ * Brukes i: server-komponenter (f.eks dashboard/page.tsx)
+ */
+export function createServerComponentClient() {
+  const cookieStore = cookies();
+
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll().map((c) => ({
+            name: c.name,
+            value: c.value,
+          }));
+        },
+        // Server components skal ikke skrive cookies
+        setAll() {},
+      },
+    }
+  );
+}
+
+/**
  * MIDDLEWARE CLIENT
  * Brukes i: middleware.ts
  * Edge-kompatibel Supabase session-håndtering
