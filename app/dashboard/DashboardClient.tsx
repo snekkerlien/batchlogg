@@ -22,7 +22,8 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
   function toggleSelect(id: number, index: number) {
     if (!selectMode) return;
 
-    if (index === 0) return; // Kar 1 låst
+    // Kar 1 kan ikke velges
+    if (index === 0) return;
 
     setSelected((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
@@ -44,9 +45,12 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
     window.location.reload();
   }
 
-  // ⭐ Dynamisk grid basert på antall kar
+  // Totalt antall elementer i grid (kar + pluss-knapp hvis synlig)
+  const totalItems = karCount + (hasPlus && !selectMode ? 1 : 0);
+
+  // Dynamisk grid basert på totalt antall elementer
   const gridCols =
-    karCount === 1
+    totalItems === 1
       ? "grid-cols-1 md:grid-cols-1"
       : "grid-cols-2 md:grid-cols-3";
 
