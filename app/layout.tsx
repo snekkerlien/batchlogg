@@ -1,14 +1,22 @@
-export default function Background({ children }: { children: React.ReactNode }) {
+import "./globals.css";
+import type { ReactNode } from "react";
+import Background from "./Background";
+
+export const metadata = {
+  title: "Batchlogg",
+  description: "Oversikt over gjæringskar og batcher",
+};
+
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <div
-      className="min-h-screen bg-cover bg-center bg-no-repeat"
-      style={{
-        backgroundImage: "url('/background.png')",
-      }}
-    >
-      <div className="min-h-screen bg-black/40">
-        {children}
-      </div>
-    </div>
+    <html lang="no">
+      <body className="min-h-screen bg-black text-white antialiased">
+        <Background>
+          <main className="min-h-screen">
+            {children}
+          </main>
+        </Background>
+      </body>
+    </html>
   );
 }
