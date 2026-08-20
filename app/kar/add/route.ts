@@ -3,7 +3,7 @@ export const runtime = "edge";
 import { NextResponse } from "next/server";
 import { createRouteHandlerClient } from "../../../lib/supabase/supabaseServerFinal";
 
-export async function POST() {
+export async function POST(req: Request) {
   const { supabase } = createRouteHandlerClient();
 
   // Hent session
@@ -12,7 +12,7 @@ export async function POST() {
   } = await supabase.auth.getSession();
 
   if (!session || !session.user) {
-    return NextResponse.redirect("/auth/login");
+    return NextResponse.redirect(new URL("/auth/login", req.url));
   }
 
   const user = session.user;
@@ -22,5 +22,5 @@ export async function POST() {
     user_id: user.id,
   });
 
-  NextResponse.redirect(new URL("/path", req.url));
+  return NextResponse.redirect(new URL("/dashboard", req.url));
 }

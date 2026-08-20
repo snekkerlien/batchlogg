@@ -15,17 +15,17 @@ export async function POST(req: Request) {
   } = await supabase.auth.getSession();
 
   if (!session || !session.user) {
-    return NextResponse.redirect("/auth/login");
+    return NextResponse.redirect(new URL("/auth/login", req.url));
   }
 
   const user = session.user;
 
-  // Slett karet (kun hvis det tilhører brukeren)
+  // Slett karet
   await supabase
     .from("kar")
     .delete()
     .eq("id", karId)
     .eq("user_id", user.id);
 
-  return NextResponse.redirect("/dashboard");
+  return NextResponse.redirect(new URL("/dashboard", req.url));
 }
