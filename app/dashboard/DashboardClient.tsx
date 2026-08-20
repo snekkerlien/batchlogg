@@ -181,7 +181,7 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
 
             // Utenfor selectMode skal ALLE kar være klikkbare – inkludert kar 1
             return (
-              <Link key={k.id} href={`/kar/${k.id}`}>
+              <Link key={k.id} href={`/kar/${k.id}`} prefetch={false}>
                 {karBox}
               </Link>
             );
