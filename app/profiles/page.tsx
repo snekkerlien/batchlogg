@@ -16,9 +16,9 @@ export default function ProfilesPage() {
 
   useEffect(() => {
     async function load() {
-      // HENT FRA "profiles" (ikke public_profiles)
+      // HENT FRA public_profiles (den du faktisk har data i)
       const { data } = await supabaseBrowser
-        .from("profiles")
+        .from("public_profiles")
         .select("id, username")
         .order("username", { ascending: true });
 
