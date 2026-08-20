@@ -86,7 +86,7 @@ export async function POST(req: Request) {
 
       const res = new NextResponse(null, { status: 302 });
       responseHeaders.forEach((value, key) => res.headers.set(key, value));
-      res.headers.set("Location", "/auth/login?error=autologin");
+      res.headers.append("Location", "/auth/login?error=autologin");
 
       return res;
     }
@@ -99,7 +99,7 @@ export async function POST(req: Request) {
 
   const res = new NextResponse(null, { status: 302 });
   responseHeaders.forEach((value, key) => res.headers.set(key, value));
-  res.headers.set("Location", "/dashboard");
+  res.headers.append("Location", "/dashboard");
 
   return res;
 }

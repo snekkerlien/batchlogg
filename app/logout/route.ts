@@ -18,7 +18,7 @@ export async function POST(req: Request) {
   });
 
   // Redirect
-  res.headers.set("Location", "/auth/login");
+  res.headers.append("Location", "/auth/login");
 
   return res;
 }

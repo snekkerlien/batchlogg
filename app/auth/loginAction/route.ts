@@ -33,7 +33,7 @@ export async function POST(req: Request) {
 
   // Copy Set-Cookie headers from Supabase SSR
   responseHeaders.forEach((value, key) => {
-    res.headers.set(key, value);
+    res.headers.append(key, value);
   });
 
   // -----------------------------
