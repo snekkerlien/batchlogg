@@ -5,7 +5,6 @@ import { createServerClient } from "@supabase/ssr";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  // Next.js 16: cookies() er async → må await’es
   const cookieStore = await cookies();
 
   const supabase = createServerClient(
@@ -15,6 +14,12 @@ export default async function DashboardPage() {
       cookies: {
         get(name: string) {
           return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options: any) {
+          cookieStore.set({ name, value, ...options });
+        },
+        remove(name: string, options: any) {
+          cookieStore.delete({ name, ...options });
         },
       },
     }
@@ -44,7 +49,6 @@ export default async function DashboardPage() {
     .order("created_at");
 
   const username = profile?.username ?? "Ukjent";
-  const welcomeText = "Velkommen tilbake til bryggeriet, kompis 🍻";
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-6">
@@ -63,7 +67,7 @@ export default async function DashboardPage() {
         </h1>
 
         <p className="opacity-80 mb-8 text-lg">
-          {welcomeText}
+          Velkommen tilbake til bryggeriet, kompis 🍻
         </p>
 
         <a
