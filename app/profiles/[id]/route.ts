@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { createRouteHandlerClient } from "../../../lib/supabase/supabaseServerFinal";
 
-export async function GET(req: Request, context: { params: { id: string } }) {
-  const { supabase } = createRouteHandlerClient(req);
+export async function GET(request: NextRequest, context: { params: { id: string } }) {
+  const { supabase } = createRouteHandlerClient(request);
 
   const userId = context.params.id;
 
