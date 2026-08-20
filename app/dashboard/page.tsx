@@ -6,7 +6,7 @@ import DashboardClient from "./DashboardClient";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
 
   // ✔ Supabase server-klient uten ulovlig cookie-modifikasjon
   const supabase = createServerClient(

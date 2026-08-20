@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { ReactNode } from "react";
 import Background from "./Background";
+import { AuthProvider } from "./providers/AuthProvider";
 
 export const metadata = {
   title: "Batchlogg",
@@ -11,11 +12,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="no">
       <body className="min-h-screen bg-black text-white antialiased">
-        <Background>
-          <main className="min-h-screen">
-            {children}
-          </main>
-        </Background>
+        <AuthProvider>
+          <Background>
+            <main className="min-h-screen">
+              {children}
+            </main>
+          </Background>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
+import { useAuth } from "../../providers/useAuth";
 import ActiveBatch from "./ActiveBatch";
 import RegisterBatchForm from "./RegisterBatchForm";
 import Link from "next/link";
@@ -25,23 +26,25 @@ export default function KarPage() {
   const params = useParams();
   const karId = params.id as string;
 
+  // 🔥 Global session fra AuthProvider
+  const { user, loading: authLoading } = useAuth();
+
   const [loading, setLoading] = useState(true);
   const [kar, setKar] = useState<any>(null);
   const [batch, setBatch] = useState<any>(null);
   const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => {
-    async function init() {
-      // 🔥 CLIENT-SIDE SESSION CHECK (trygg mot prefetch)
-      const { data: sessionData } = await supabaseBrowser.auth.getSession();
+    // Vent til AuthProvider er ferdig
+    if (authLoading) return;
 
-      if (!sessionData.session) {
-        router.replace("/auth/login");
-        return;
-      }
+    // Ingen session → redirect
+    if (!user) {
+      router.replace("/auth/login");
+      return;
+    }
 
-      const user = sessionData.session.user;
-
+    async function loadKar() {
       // Hent kar-info
       const { data: karData, error: karError } = await supabaseBrowser
         .from("kar")
@@ -69,10 +72,10 @@ export default function KarPage() {
       setLoading(false);
     }
 
-    init();
-  }, [karId, router]);
+    loadKar();
+  }, [authLoading, user, karId, router]);
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <main className="min-h-screen flex items-center justify-center px-6">
         <div className="bg-black/60 backdrop-blur-md p-6 rounded-xl border border-white/10 text-white">
