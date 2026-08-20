@@ -1,36 +1,46 @@
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
-  // Finn korrekt base URL i produksjon
-  const h = await headers();
-  const host = h.get("host");
-  const protocol = h.get("x-forwarded-proto") ?? "https";
-  const baseUrl = `${protocol}://${host}`;
-
-  // Hent session
-  const res = await fetch(`${baseUrl}/auth/session`, { cache: "no-store" });
-  const { user } = await res.json();
+// Server action som henter alt før render
+async function loadDashboardData() {
+  // Session
+  const sessionRes = await fetch("/auth/session", { cache: "no-store" });
+  const { user } = await sessionRes.json();
 
   if (!user) {
-    redirect("/auth/login");
+    return { redirectToLogin: true };
   }
 
-  // Hent brukernavn
-  const profileRes = await fetch(`${baseUrl}/api/profiles/${user.id}`, {
+  // Username
+  const profileRes = await fetch(`/api/profiles/${user.id}`, {
     cache: "no-store",
   });
   const { username } = await profileRes.json();
 
-  // Hent kar
-  const karRes = await fetch(`${baseUrl}/api/kar?user=${user.id}`, {
+  // Kar
+  const karRes = await fetch(`/api/kar?user=${user.id}`, {
     cache: "no-store",
   });
   const kar = await karRes.json();
 
+  return {
+    redirectToLogin: false,
+    user,
+    username,
+    kar,
+  };
+}
+
+export default async function DashboardPage() {
+  const data = await loadDashboardData();
+
+  if (data.redirectToLogin) {
+    redirect("/auth/login");
+  }
+
+  const { username, kar } = data;
   const welcomeText = "Velkommen tilbake til bryggeriet, kompis 🍻";
 
   return (
