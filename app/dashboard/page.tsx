@@ -4,11 +4,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  // Hent session via route handler (stabilt)
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/session`, {
-    cache: "no-store",
-  });
-
+  // Hent session via relative path (stabilt)
+  const res = await fetch("/auth/session", { cache: "no-store" });
   const { user } = await res.json();
 
   if (!user) {
@@ -16,19 +13,15 @@ export default async function DashboardPage() {
   }
 
   // Hent brukernavn
-  const profileRes = await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_URL}/api/profiles/${user.id}`,
-    { cache: "no-store" }
-  );
-
+  const profileRes = await fetch(`/api/profiles/${user.id}`, {
+    cache: "no-store",
+  });
   const { username } = await profileRes.json();
 
   // Hent kar
-  const karRes = await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_URL}/api/kar?user_id=${user.id}`,
-    { cache: "no-store" }
-  );
-
+  const karRes = await fetch(`/api/kar?user=${user.id}`, {
+    cache: "no-store",
+  });
   const kar = await karRes.json();
 
   const welcomeText = "Velkommen tilbake til bryggeriet, kompis 🍻";
