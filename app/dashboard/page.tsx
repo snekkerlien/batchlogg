@@ -50,10 +50,15 @@ export default async function DashboardPage() {
 
   const username = profile?.username ?? "Ukjent";
 
+  // Hvor mange elementer havner i gridet totalt (kar + pluss)?
+  const karCount = kar?.length ?? 0;
+  const hasPlus = karCount < 9;
+  const totalItems = karCount + (hasPlus ? 1 : 0);
+
   // PC:
-  // Mindre enn 3 elementer → 2 kolonner
-  // 3 eller flere → 3 kolonner
-  const pcCols = kar && kar.length < 3 ? "md:grid-cols-2" : "md:grid-cols-3";
+  // 1–2 elementer → 2 kolonner
+  // 3+ elementer → 3 kolonner
+  const pcCols = totalItems <= 2 ? "md:grid-cols-2" : "md:grid-cols-3";
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-6">
@@ -86,12 +91,12 @@ export default async function DashboardPage() {
         <div
           className={`
             grid
-            grid-cols-3        /* <-- Mobil: 3 kolonner */
-            ${pcCols}          /* <-- PC: dynamisk 2 eller 3 */
+            grid-cols-2        /* Mobil: 2 kolonner (kan endres til 3 om du vil) */
+            ${pcCols}          /* PC: dynamisk basert på totalItems */
             gap-4
             md:gap-2
             mx-auto
-            max-w-[36rem]
+            max-w-[32rem]
             place-items-center
           `}
         >
@@ -100,7 +105,8 @@ export default async function DashboardPage() {
               key={k.id}
               className="relative border border-white/10 rounded-xl p-4 bg-white/5 hover:bg-white/10 transition flex flex-col items-center justify-center w-28 h-28"
             >
-              {kar.length > 1 && index > 0 && (
+              {/* SLETT-KNAPP — kun hvis mer enn 1 kar og ikke Kar 1 */}
+              {karCount > 1 && index > 0 && (
                 <form
                   action="/kar/delete"
                   method="post"
@@ -123,7 +129,8 @@ export default async function DashboardPage() {
             </div>
           ))}
 
-          {kar && kar.length < 9 && (
+          {/* PLUSS-KNAPP — vises kun hvis < 9 kar */}
+          {hasPlus && (
             <form action="/kar/add" method="post">
               <button
                 className="border border-white/10 rounded-xl p-4 bg-white/5 hover:bg-white/10 transition flex flex-col items-center justify-center w-28 h-28 text-4xl font-bold text-green-300"
