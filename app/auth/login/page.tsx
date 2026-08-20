@@ -12,14 +12,18 @@ export default function LoginPage() {
   const { user, loading } = useAuth();
   const [errorMsg, setErrorMsg] = useState("");
 
-  // Redirect hvis allerede innlogget
-  useEffect(() => {
-    if (!loading && user) {
-      router.replace("/dashboard");
-    }
-  }, [loading, user, router]);
+  // Ikke vis login-siden mens auth lastes
+  if (loading) {
+    return null;
+  }
 
-  // Les ?error=1 uten useSearchParams (unngår Suspense‑krav)
+  // Redirect hvis allerede innlogget
+  if (user) {
+    router.replace("/dashboard");
+    return null;
+  }
+
+  // Les ?error=1 uten useSearchParams
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
