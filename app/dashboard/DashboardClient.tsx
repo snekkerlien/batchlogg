@@ -18,6 +18,7 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
 
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<number[]>([]);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   function toggleSelect(id: number, index: number) {
     if (!selectMode) return;
@@ -56,12 +57,32 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-6">
-      <div className="absolute top-4 right-4">
-        <form action="/logout" method="post">
-          <button className="px-4 py-2 bg-red-600 hover:bg-red-700 border border-red-800 rounded-lg font-semibold">
-            Logg ut
-          </button>
-        </form>
+
+      {/* --- MENY KNAPP --- */}
+      <div className="absolute top-4 right-4 z-50">
+        <button
+          onClick={() => setMenuOpen(!menuOpen)}
+          className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
+        >
+          ☰
+        </button>
+
+        {menuOpen && (
+          <div className="mt-2 bg-black/80 border border-white/20 rounded-lg p-4 text-right backdrop-blur-md">
+            <a
+              href="/account"
+              className="block mb-3 text-white hover:text-green-300 font-semibold"
+            >
+              Min konto
+            </a>
+
+            <form action="/logout" method="post">
+              <button className="text-red-400 hover:text-red-300 font-semibold">
+                Logg ut
+              </button>
+            </form>
+          </div>
+        )}
       </div>
 
       <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-4xl border border-white/10 text-center">
