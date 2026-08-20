@@ -71,7 +71,7 @@ export default function ProfilesPage() {
       </div>
 
       <p className="text-sm opacity-40 mt-12 text-center">
-        © {new Date().getFullYear()} Fiklebrygg. Brukeroversikt.
+        © {new Date().getFullYear()} Fiklebrygg.
       </p>
     </main>
   );
