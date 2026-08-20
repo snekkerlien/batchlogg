@@ -44,7 +44,7 @@ export default async function DashboardPage() {
   // Kar
   const { data: kar } = await supabase
     .from("kar")
-    .select("*")
+    .select("id, created_at")
     .eq("user_id", user.id)
     .order("created_at");
 
@@ -78,14 +78,14 @@ export default async function DashboardPage() {
         </a>
 
         <div className="grid grid-cols-3 gap-4 justify-items-center max-w-[420px] mx-auto">
-          {kar?.map((k: any) => (
+          {kar?.map((k: any, index: number) => (
             <a
               key={k.id}
               href={`/kar/${k.id}`}
               className="relative border border-white/10 rounded-xl p-4 bg-white/5 hover:bg-white/10 transition flex flex-col items-center w-28 h-28"
             >
               <span className="absolute top-[10px] text-lg font-bold text-green-300">
-                {k.navn.replace("Kar ", "")}
+                Kar {index + 1}
               </span>
 
               <span className="text-zinc-400 mt-10">Ledig</span>
