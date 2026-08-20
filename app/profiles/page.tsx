@@ -18,7 +18,7 @@ export default function ProfilesPage() {
     async function load() {
       // HENT FRA public_profiles (den du faktisk har data i)
       const { data } = await supabaseBrowser
-        .from("public_profiles")
+        .from("public.profiles")
         .select("id, username")
         .order("username", { ascending: true });
 
