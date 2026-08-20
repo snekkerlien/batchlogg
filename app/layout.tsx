@@ -1,3 +1,4 @@
+// @ts-expect-error CSS is handled by Next.js, but may not have a TypeScript declaration.
 import "./globals.css";
 import type { ReactNode } from "react";
 import ClientLayout from "./ClientLayout";
