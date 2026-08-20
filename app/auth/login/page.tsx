@@ -1,9 +1,7 @@
 export const dynamic = "force-dynamic";
 
+import LoginClient from "./LoginClient";
+
 export default function Page() {
-  return (
-    <main>
-      <h1>Login</h1>
-    </main>
-  );
+  return <LoginClient />;
 }

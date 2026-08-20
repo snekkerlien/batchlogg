@@ -3,7 +3,6 @@
 import { ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Toaster } from "react-hot-toast";
-import Background from "./Background";
 import { AuthProvider } from "./providers/AuthProvider";
 
 export default function ClientLayout({ children }: { children: ReactNode }) {
@@ -20,20 +19,18 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
         }}
       />
 
-      <Background>
-        <AnimatePresence mode="wait">
-          <motion.main
-            key={Math.random()}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.25, ease: "easeOut" }}
-            className="min-h-screen relative z-10"
-          >
-            {children}
-          </motion.main>
-        </AnimatePresence>
-      </Background>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={Math.random()}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.25, ease: "easeOut" }}
+          className="relative z-10"
+        >
+          {children}
+        </motion.div>
+      </AnimatePresence>
     </AuthProvider>
   );
 }
