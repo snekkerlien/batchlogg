@@ -3,7 +3,7 @@ import { createRouteHandlerClient } from "../../../lib/supabase/supabaseServerFi
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: {} }
+  context: { params: Promise<any> }
 ) {
   const { supabase } = createRouteHandlerClient(request);
 
