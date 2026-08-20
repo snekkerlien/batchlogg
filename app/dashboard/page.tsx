@@ -50,6 +50,11 @@ export default async function DashboardPage() {
 
   const username = profile?.username ?? "Ukjent";
 
+  // Dynamisk kolonnevalg:
+  // Mindre enn 3 elementer → 2 kolonner på PC
+  // 3 eller flere → 3 kolonner på PC
+  const pcCols = kar && kar.length < 3 ? "md:grid-cols-2" : "md:grid-cols-3";
+
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-6">
       <div className="absolute top-4 right-4">
@@ -78,15 +83,17 @@ export default async function DashboardPage() {
         </a>
 
         {/* --- KAR GRID --- */}
-        <div className="
-          grid 
-          grid-cols-2           /* Mobil: 2 kolonner */
-          md:grid-cols-3        /* PC/Tablet: 3 kolonner */
-          gap-4 
-          mx-auto 
-          max-w-[28rem] 
-          place-items-center    /* Sentrerer innhold i cellene */
-        ">
+        <div
+          className={`
+            grid 
+            grid-cols-2
+            ${pcCols}
+            gap-4 
+            mx-auto 
+            max-w-[28rem] 
+            place-items-center
+          `}
+        >
           {kar?.map((k: any, index: number) => (
             <div
               key={k.id}
