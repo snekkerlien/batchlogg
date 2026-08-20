@@ -50,7 +50,6 @@ export default async function DashboardPage() {
 
   const username = profile?.username ?? "Ukjent";
 
-  // Hvor mange elementer havner i gridet totalt (kar + pluss)?
   const karCount = kar?.length ?? 0;
   const hasPlus = karCount < 9;
   const totalItems = karCount + (hasPlus ? 1 : 0);
@@ -91,19 +90,19 @@ export default async function DashboardPage() {
         <div
           className={`
             grid
-            grid-cols-2        /* Mobil: 2 kolonner (kan endres til 3 om du vil) */
-            ${pcCols}          /* PC: dynamisk basert på totalItems */
-            gap-4
-            md:gap-2
+            grid-cols-1        /* <-- Mobil: 1 kolonne */
+            ${pcCols}          /* <-- PC: dynamisk 2 eller 3 */
+            gap-6              /* <-- Litt større spacing på mobil */
+            md:gap-4
             mx-auto
-            max-w-[32rem]
+            max-w-[36rem]
             place-items-center
           `}
         >
           {kar?.map((k: any, index: number) => (
             <div
               key={k.id}
-              className="relative border border-white/10 rounded-xl p-4 bg-white/5 hover:bg-white/10 transition flex flex-col items-center justify-center w-28 h-28"
+              className="relative border border-white/10 rounded-xl p-6 bg-white/5 hover:bg-white/10 transition flex flex-col items-center justify-center w-40 h-40 md:w-28 md:h-28"
             >
               {/* SLETT-KNAPP — kun hvis mer enn 1 kar og ikke Kar 1 */}
               {karCount > 1 && index > 0 && (
@@ -120,20 +119,21 @@ export default async function DashboardPage() {
               )}
 
               <a href={`/kar/${k.id}`} className="flex flex-col items-center">
-                <span className="absolute top-[10px] text-lg font-bold text-green-300">
+                <span className="absolute top-[10px] text-xl font-bold text-green-300 md:text-lg">
                   Kar {index + 1}
                 </span>
 
-                <span className="text-zinc-400 mt-10">Ledig</span>
+                <span className="text-zinc-300 mt-12 text-lg md:text-base">
+                  Ledig
+                </span>
               </a>
             </div>
           ))}
 
-          {/* PLUSS-KNAPP — vises kun hvis < 9 kar */}
           {hasPlus && (
             <form action="/kar/add" method="post">
               <button
-                className="border border-white/10 rounded-xl p-4 bg-white/5 hover:bg-white/10 transition flex flex-col items-center justify-center w-28 h-28 text-4xl font-bold text-green-300"
+                className="border border-white/10 rounded-xl p-6 bg-white/5 hover:bg-white/10 transition flex flex-col items-center justify-center w-40 h-40 md:w-28 md:h-28 text-5xl md:text-4xl font-bold text-green-300"
               >
                 +
               </button>
