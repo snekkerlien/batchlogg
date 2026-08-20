@@ -25,6 +25,7 @@ export default async function DashboardPage() {
     }
   );
 
+  // Session
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -33,12 +34,14 @@ export default async function DashboardPage() {
     redirect("/auth/login");
   }
 
+  // Username
   const { data: profile } = await supabase
     .from("profiles")
     .select("username")
     .eq("id", user.id)
     .single();
 
+  // Kar
   const { data: kar } = await supabase
     .from("kar")
     .select("id, created_at")
@@ -47,6 +50,9 @@ export default async function DashboardPage() {
 
   const username = profile?.username ?? "Ukjent";
 
+  // PC:
+  // Mindre enn 3 elementer → 2 kolonner
+  // 3 eller flere → 3 kolonner
   const pcCols = kar && kar.length < 3 ? "md:grid-cols-2" : "md:grid-cols-3";
 
   return (
@@ -80,11 +86,12 @@ export default async function DashboardPage() {
         <div
           className={`
             grid
-            grid-cols-2
-            ${pcCols}
+            grid-cols-3        /* <-- Mobil: 3 kolonner */
+            ${pcCols}          /* <-- PC: dynamisk 2 eller 3 */
             gap-4
+            md:gap-2
             mx-auto
-            max-w-[36rem]   /* <-- ENDRET fra 32rem til 36rem */
+            max-w-[36rem]
             place-items-center
           `}
         >
