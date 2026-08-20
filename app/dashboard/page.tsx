@@ -78,29 +78,46 @@ export default async function DashboardPage() {
         </a>
 
         {/* --- KAR GRID --- */}
-        <div className="grid grid-cols-3 gap-4 justify-center items-center mx-auto">
+        <div className="grid grid-cols-[repeat(3,minmax(7rem,1fr))] gap-4 justify-center items-center mx-auto max-w-[28rem]">
           {kar?.map((k: any, index: number) => (
-            <a
+            <div
               key={k.id}
-              href={`/kar/${k.id}`}
               className="relative border border-white/10 rounded-xl p-4 bg-white/5 hover:bg-white/10 transition flex flex-col items-center w-28 h-28"
             >
-              <span className="absolute top-[10px] text-lg font-bold text-green-300">
-                Kar {index + 1}
-              </span>
+              {/* SLETT-KNAPP — kun hvis mer enn 1 kar og ikke Kar 1 */}
+              {kar.length > 1 && index > 0 && (
+                <form
+                  action="/kar/delete"
+                  method="post"
+                  className="absolute top-1 right-2"
+                >
+                  <input type="hidden" name="kar_id" value={k.id} />
+                  <button className="text-red-400 hover:text-red-300 text-xl font-bold">
+                    ×
+                  </button>
+                </form>
+              )}
 
-              <span className="text-zinc-400 mt-10">Ledig</span>
-            </a>
+              <a href={`/kar/${k.id}`} className="flex flex-col items-center">
+                <span className="absolute top-[10px] text-lg font-bold text-green-300">
+                  Kar {index + 1}
+                </span>
+
+                <span className="text-zinc-400 mt-10">Ledig</span>
+              </a>
+            </div>
           ))}
 
-          {/* PLUSS-KNAPP */}
-          <form action="/kar/add" method="post">
-            <button
-              className="border border-white/10 rounded-xl p-4 bg-white/5 hover:bg-white/10 transition flex flex-col items-center justify-center w-28 h-28 text-4xl font-bold text-green-300"
-            >
-              +
-            </button>
-          </form>
+          {/* PLUSS-KNAPP — vises kun hvis < 9 kar */}
+          {kar && kar.length < 9 && (
+            <form action="/kar/add" method="post">
+              <button
+                className="border border-white/10 rounded-xl p-4 bg-white/5 hover:bg-white/10 transition flex flex-col items-center justify-center w-28 h-28 text-4xl font-bold text-green-300"
+              >
+                +
+              </button>
+            </form>
+          )}
         </div>
 
         <p className="text-sm opacity-40 mt-12">
