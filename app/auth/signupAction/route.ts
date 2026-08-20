@@ -61,10 +61,11 @@ export async function POST(req: Request) {
 
     if (loginError) {
       console.error("AUTO-LOGIN FAILED", loginError);
-      return NextResponse.redirect("/auth/login?error=autologin");
+      return NextResponse.redirect(new URL("/auth/login?error=1", req.url));
     }
   }
 
   console.log("signupAction: SUCCESS → redirect to /dashboard");
-  return NextResponse.redirect("/dashboard");
+  return NextResponse.redirect(new URL("/dashboard", req.url));
+
 }

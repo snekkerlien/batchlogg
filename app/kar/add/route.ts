@@ -22,5 +22,5 @@ export async function POST() {
     user_id: user.id,
   });
 
-  return NextResponse.redirect("/dashboard");
+  NextResponse.redirect(new URL("/path", req.url));
 }

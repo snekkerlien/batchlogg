@@ -25,9 +25,9 @@ export async function POST(req: Request) {
 
   if (error) {
     console.log("loginAction: LOGIN FAILED");
-    return NextResponse.redirect("/auth/login?error=1");
+    return NextResponse.redirect(new URL("/auth/login?error=1", req.url));
   }
 
   console.log("loginAction: LOGIN SUCCESS");
-  return NextResponse.redirect("/dashboard");
+  return NextResponse.redirect(new URL("/dashboard", req.url));
 }
