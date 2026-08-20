@@ -3,41 +3,12 @@ import { redirect } from "next/navigation";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Server action som henter alt før render
-async function loadDashboardData() {
-  // Session
-  const sessionRes = await fetch("/auth/session", { cache: "no-store" });
-  const { user } = await sessionRes.json();
-
-  if (!user) {
-    return { redirectToLogin: true };
-  }
-
-  // Username
-  const profileRes = await fetch(`/api/profiles/${user.id}`, {
-    cache: "no-store",
-  });
-  const { username } = await profileRes.json();
-
-  // Kar
-  const karRes = await fetch(`/api/kar?user=${user.id}`, {
-    cache: "no-store",
-  });
-  const kar = await karRes.json();
-
-  return {
-    redirectToLogin: false,
-    user,
-    username,
-    kar,
-  };
-}
-
 export default async function DashboardPage() {
-  const data = await loadDashboardData();
+  const res = await fetch("/api/dashboard", { cache: "no-store" });
+  const data = await res.json();
 
-  if (data.redirectToLogin) {
-    redirect("/auth/login");
+  if (data.redirect) {
+    redirect(data.redirect);
   }
 
   const { username, kar } = data;
@@ -87,7 +58,7 @@ export default async function DashboardPage() {
         </div>
 
         <p className="text-sm opacity-40 mt-12">
-          © {new Date().getFullYear()} Fiklebrygg.
+          © {new Date().getFullYear()} Fiklebrygg. Alle rettigheters reservert.
         </p>
       </div>
     </main>
