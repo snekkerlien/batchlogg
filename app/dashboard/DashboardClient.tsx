@@ -22,8 +22,7 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
   function toggleSelect(id: number, index: number) {
     if (!selectMode) return;
 
-    // Kar 1 kan ikke velges
-    if (index === 0) return;
+    if (index === 0) return; // Kar 1 låst
 
     setSelected((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
@@ -39,13 +38,17 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
       headers: { "Content-Type": "application/json" },
     });
 
-    // Automatisk ut av valg-modus
     setSelectMode(false);
     setSelected([]);
 
-    // Reload dashboard
     window.location.reload();
   }
+
+  // ⭐ Dynamisk grid basert på antall kar
+  const gridCols =
+    karCount === 1
+      ? "grid-cols-1 md:grid-cols-1"
+      : "grid-cols-2 md:grid-cols-3";
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-6">
@@ -111,8 +114,7 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
         <div
           className={`
             grid
-            grid-cols-2
-            md:grid-cols-3
+            ${gridCols}
             gap-6
             md:gap-4
             mx-auto
@@ -122,7 +124,7 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
         >
           {kar.map((k, index) => {
             const isSelected = selected.includes(k.id);
-            const isLocked = index === 0; // Kar 1
+            const isLocked = index === 0;
 
             return (
               <div
