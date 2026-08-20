@@ -1,57 +1,70 @@
-"use client";
+"use server";
 
-import DeleteModal from "./DeleteModal";
+import { createServerActionClient } from "../../../lib/supabase/supabaseServerFinal";
+import { revalidatePath } from "next/cache";
 
-type Batch = {
-  id: number;
-  user_id: string;
-  batchnummer: string;
-  status: string;
-  startdato: string;
-  batchstorrelse: string;
-  og: string;
-  fg: string;
-  name?: string;
-  volume_l?: number;
-  kode?: string;
-  oppskrift?: string;
-};
+export async function createBatch(formData: FormData) {
+  const supabase = createServerActionClient();
 
-export default function ActiveBatch({ batch }: { batch: Batch }) {
-  // Formatert batchnummer (0001, 0002, osv.)
-  const formattedBatch = String(batch.batchnummer).padStart(4, "0");
+  // Hent bruker fra Supabase Auth
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  return (
-    <div className="p-4 bg-zinc-900 rounded-lg border border-white/10 space-y-4">
-      <h2 className="text-xl font-semibold">Aktiv batch</h2>
+  if (!user) {
+    throw new Error("Ingen session – bruker ikke innlogget.");
+  }
 
-      <div className="space-y-1">
-        <p><strong>Batchnummer:</strong> {formattedBatch}</p>
-        <p><strong>Status:</strong> {batch.status}</p>
-        <p><strong>Startdato:</strong> {batch.startdato}</p>
-        <p><strong>Batchstørrelse:</strong> {batch.batchstorrelse}</p>
-        <p><strong>OG:</strong> {batch.og}</p>
-        <p><strong>FG:</strong> {batch.fg}</p>
+  const userId = user.id;
+  const karId = formData.get("kar") as string;
 
-        {batch.name && (
-          <p><strong>Navn:</strong> {batch.name}</p>
-        )}
+  if (!karId) {
+    throw new Error("Kar-ID mangler.");
+  }
 
-        {batch.volume_l && (
-          <p><strong>Volum:</strong> {batch.volume_l} L</p>
-        )}
+  // Finn siste batchnummer
+  const { data: last } = await supabase
+    .from("Batches")
+    .select("batchnummer")
+    .order("batchnummer", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-        {batch.kode && (
-          <p><strong>Kode:</strong> {batch.kode}</p>
-        )}
+  const nextNumber = last ? Number(last.batchnummer) + 1 : 1;
+  const formattedBatchnummer = String(nextNumber).padStart(4, "0");
 
-        {batch.oppskrift && (
-          <p><strong>Oppskrift:</strong> {batch.oppskrift}</p>
-        )}
-      </div>
+  // Hent felter fra formData
+  const name = formData.get("name") as string;
+  const volume_l = Number(formData.get("volume_l"));
+  const startdato = formData.get("startdato") as string;
+  const og = Number(formData.get("og"));
+  const kode = formData.get("kode") as string;
+  const oppskrift = formData.get("oppskrift") as string;
 
-      {/* Slettemodal */}
-      <DeleteModal batchnummer={formattedBatch} />
-    </div>
-  );
+  if (!name || !volume_l || !startdato || !og || !kode) {
+    throw new Error("Mangler obligatoriske felter.");
+  }
+
+  // Sett inn batch
+  const { error } = await supabase.from("Batches").insert({
+    batchnummer: formattedBatchnummer,
+    aktivt_kar: karId,
+    user_id: userId,
+    name,
+    volume_l,
+    startdato,
+    og,
+    kode,
+    oppskrift,
+    status: "Aktiv",
+  });
+
+  if (error) {
+    throw new Error("Insert failed: " + error.message);
+  }
+
+  // Revalidate KarPage
+  revalidatePath(`/kar/${karId}`);
+
+  return { kar: karId };
 }
