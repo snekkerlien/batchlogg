@@ -138,7 +138,7 @@ export default async function DashboardPage() {
         </div>
 
         <p className="text-sm opacity-40 mt-12">
-          © {new Date().getFullYear()} Fiklebrygg.
+          © {new Date().getFullYear()} Fiklebrygg AS.
         </p>
       </div>
     </main>
