@@ -12,11 +12,13 @@ type Profile = {
 export default function ProfilesPage() {
   const [loading, setLoading] = useState(true);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     async function load() {
+      // HENT FRA "profiles" (ikke public_profiles)
       const { data } = await supabaseBrowser
-        .from("public_profiles")
+        .from("profiles")
         .select("id, username")
         .order("username", { ascending: true });
 
@@ -38,14 +40,31 @@ export default function ProfilesPage() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-6">
 
-      {/* Tilbake-knapp */}
-      <div className="absolute top-4 left-4">
-        <Link
-          href="/dashboard"
+      {/* --- MENY KNAPP (samme som dashboard) --- */}
+      <div className="absolute top-4 right-4 z-50">
+        <button
+          onClick={() => setMenuOpen(!menuOpen)}
           className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
         >
-          ← Tilbake
-        </Link>
+          ☰
+        </button>
+
+        {menuOpen && (
+          <div className="mt-2 bg-black/80 border border-white/20 rounded-lg p-4 text-right backdrop-blur-md">
+            <Link
+              href="/account"
+              className="block mb-3 text-white hover:text-green-300 font-semibold"
+            >
+              Min konto
+            </Link>
+
+            <form action="/logout" method="post">
+              <button className="text-red-400 hover:text-red-300 font-semibold">
+                Logg ut
+              </button>
+            </form>
+          </div>
+        )}
       </div>
 
       {/* Container */}
