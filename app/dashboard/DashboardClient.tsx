@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 type KarType = {
@@ -14,6 +15,13 @@ type DashboardClientProps = {
 };
 
 export default function DashboardClient({ username, kar }: DashboardClientProps) {
+  const router = useRouter();
+
+  // 🔥 Disable ALL Next.js automatic prefetching
+  useEffect(() => {
+    router.prefetch = () => {};
+  }, [router]);
+
   const karCount = kar.length;
   const hasPlus = karCount < 12;
 
@@ -66,6 +74,7 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
             <Link
               href="/account"
               className="block mb-3 text-white hover:text-green-300 font-semibold"
+              prefetch={false}
             >
               Min konto
             </Link>
@@ -92,6 +101,7 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
         <Link
           href="/profiles"
           className="inline-block mb-8 px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
+          prefetch={false}
         >
           Se andre bryggere
         </Link>
