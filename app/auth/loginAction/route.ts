@@ -25,7 +25,9 @@ export async function POST(req: Request) {
 
   if (error) {
     console.log("loginAction: LOGIN FAILED");
-    return NextResponse.redirect(new URL("/auth/login?error=1", req.url));
+    const url = new URL("/auth/login", req.url);
+    url.searchParams.set("error", "1");
+    return NextResponse.redirect(url);
   }
 
   console.log("loginAction: LOGIN SUCCESS");
