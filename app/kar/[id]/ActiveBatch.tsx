@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import DeleteModal from "./DeleteModal";
 
 type Batch = {
@@ -19,7 +18,7 @@ type Batch = {
 };
 
 export default function ActiveBatch({ batch }: { batch: Batch }) {
-  // batch kommer ferdig fra KarPage, så vi trenger ikke hente den på nytt
+  // Formatert batchnummer (0001, 0002, osv.)
   const formattedBatch = String(batch.batchnummer).padStart(4, "0");
 
   return (
@@ -34,12 +33,24 @@ export default function ActiveBatch({ batch }: { batch: Batch }) {
         <p><strong>OG:</strong> {batch.og}</p>
         <p><strong>FG:</strong> {batch.fg}</p>
 
-        {batch.name && <p><strong>Navn:</strong> {batch.name}</p>}
-        {batch.volume_l && <p><strong>Volum:</strong> {batch.volume_l} L</p>}
-        {batch.kode && <p><strong>Kode:</strong> {batch.kode}</p>}
-        {batch.oppskrift && <p><strong>Oppskrift:</strong> {batch.oppskrift}</p>}
+        {batch.name && (
+          <p><strong>Navn:</strong> {batch.name}</p>
+        )}
+
+        {batch.volume_l && (
+          <p><strong>Volum:</strong> {batch.volume_l} L</p>
+        )}
+
+        {batch.kode && (
+          <p><strong>Kode:</strong> {batch.kode}</p>
+        )}
+
+        {batch.oppskrift && (
+          <p><strong>Oppskrift:</strong> {batch.oppskrift}</p>
+        )}
       </div>
 
+      {/* Slettemodal */}
       <DeleteModal batchnummer={formattedBatch} />
     </div>
   );

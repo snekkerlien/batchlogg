@@ -4,6 +4,7 @@ import { createServerClient as createSupabaseClient } from "@supabase/ssr";
 
 /**
  * ROUTE HANDLER CLIENT
+ * Brukes i: route.ts filer (loginAction, signupAction, logout)
  */
 export function createRouteHandlerClient(req: Request) {
   let responseHeaders = new Headers();
@@ -17,8 +18,8 @@ export function createRouteHandlerClient(req: Request) {
   };
 
   const supabase = createSupabaseClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         get(name: string) {
@@ -44,40 +45,22 @@ export function createRouteHandlerClient(req: Request) {
 }
 
 /**
- * SERVER ACTION CLIENT — Cookie fallback (stabil)
+ * SERVER ACTION CLIENT
+ * Brukes i: "use server" funksjoner
  */
 export async function createServerClient() {
-  const req = (globalThis as any).request;
-  const resHeaders = (globalThis as any).responseHeaders ?? new Headers();
-
-  const cookieHeader = req?.headers?.get("cookie") ?? "";
-
-  const getCookieValue = (name: string) => {
-    const parts = cookieHeader.split(";").map((c: string) => c.trim());
-    const match = parts.find((c: string) => c.startsWith(`${name}=`));
-    return match ? match.split("=")[1] : undefined;
-  };
+  const cookieStore = await import("next/headers").then((m) => m.cookies());
 
   return createSupabaseClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         get(name: string) {
-          return getCookieValue(name);
+          return cookieStore.get(name)?.value;
         },
-        set(name: string, value: string) {
-          resHeaders.append(
-            "Set-Cookie",
-            `${name}=${value}; Path=/; HttpOnly; SameSite=Lax`
-          );
-        },
-        remove(name: string) {
-          resHeaders.append(
-            "Set-Cookie",
-            `${name}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`
-          );
-        },
+        set() {},
+        remove() {},
       },
     }
   );

@@ -1,26 +1,22 @@
 "use client";
 
 import { useEffect } from "react";
-import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
 import { useRouter } from "next/navigation";
+import { useAuth } from "../../providers/useAuth";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { user, loading } = useAuth();
 
   // Hvis bruker allerede er innlogget → redirect til dashboard
   useEffect(() => {
-    async function checkSession() {
-      const { data: { user } } = await supabaseBrowser.auth.getUser();
-
-      if (user) {
-        router.replace("/dashboard");
-      }
+    if (!loading && user) {
+      router.replace("/dashboard");
     }
-
-    checkSession();
-  }, []);
+  }, [loading, user, router]);
 
   return (
     <main className="min-h-screen flex items-center justify-center px-6">
@@ -30,12 +26,13 @@ export default function LoginPage() {
         className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-sm border border-white/10 space-y-4"
       >
         {/* HOME-KNAPP */}
-        <a
+        <Link
           href="/"
+          prefetch={false}
           className="block text-center text-sm text-blue-300 hover:text-blue-200 mb-2"
         >
           🏠 Tilbake til forsiden
-        </a>
+        </Link>
 
         <h2 className="text-2xl font-bold text-center">Logg inn</h2>
 
@@ -62,12 +59,13 @@ export default function LoginPage() {
           Logg inn
         </button>
 
-        <a
+        <Link
           href="/auth/signup"
+          prefetch={false}
           className="block text-center text-sm text-blue-300 hover:text-blue-200 mt-2"
         >
           Registrer ny konto
-        </a>
+        </Link>
       </form>
     </main>
   );

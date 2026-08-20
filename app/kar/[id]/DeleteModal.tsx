@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
+import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
 
 export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
+  const router = useRouter();
+
   const [open, setOpen] = useState(false);
   const [kode, setKode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -14,14 +17,9 @@ export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
     setLoading(true);
     setErrorMsg("");
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-
     const formattedBatch = String(batchnummer).padStart(4, "0");
 
-    const { error, count } = await supabase
+    const { error, count } = await supabaseBrowser
       .from("Batches")
       .delete({ count: "exact" })
       .eq("batchnummer", formattedBatch)
@@ -43,7 +41,7 @@ export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
 
     // Sletting OK
     setOpen(false);
-    window.location.reload();
+    router.refresh(); // 🔥 Raskere og riktig i App Router
   }
 
   return (

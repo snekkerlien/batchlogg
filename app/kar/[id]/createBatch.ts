@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 export async function createBatch(formData: FormData) {
   const supabase = await createServerClient();
 
-  // Hent ekte bruker fra Supabase Auth-serveren
+  // Hent bruker fra Supabase Auth
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -17,6 +17,10 @@ export async function createBatch(formData: FormData) {
 
   const userId = user.id;
   const karId = formData.get("kar") as string;
+
+  if (!karId) {
+    throw new Error("Kar-ID mangler.");
+  }
 
   // Finn siste batchnummer
   const { data: last } = await supabase
@@ -37,6 +41,10 @@ export async function createBatch(formData: FormData) {
   const kode = formData.get("kode") as string;
   const oppskrift = formData.get("oppskrift") as string;
 
+  if (!name || !volume_l || !startdato || !og || !kode) {
+    throw new Error("Mangler obligatoriske felter.");
+  }
+
   // Sett inn batch
   const { error } = await supabase.from("Batches").insert({
     batchnummer: formattedBatchnummer,
@@ -55,7 +63,7 @@ export async function createBatch(formData: FormData) {
     throw new Error("Insert failed: " + error.message);
   }
 
-  // Oppdater siden
+  // Revalidate KarPage
   revalidatePath(`/kar/${karId}`);
 
   return { kar: karId };

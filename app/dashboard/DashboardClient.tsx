@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 type KarType = {
   id: number;
   created_at: string;
+  status: "Aktiv" | "Ledig"; // 🔥 Nytt felt fra DashboardPage
 };
 
 type DashboardClientProps = {
@@ -14,6 +16,8 @@ type DashboardClientProps = {
 };
 
 export default function DashboardClient({ username, kar }: DashboardClientProps) {
+  const router = useRouter();
+
   const karCount = kar.length;
   const hasPlus = karCount < 12;
 
@@ -21,10 +25,27 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
   const [selected, setSelected] = useState<number[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
 
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  // 🔥 Close-on-outside-click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+
+    if (menuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [menuOpen]);
+
   function toggleSelect(id: number, index: number) {
     if (!selectMode) return;
-
-    // Kar 1 kan ikke velges – men kun i selectMode
     if (index === 0) return;
 
     setSelected((prev) =>
@@ -44,7 +65,7 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
     setSelectMode(false);
     setSelected([]);
 
-    window.location.reload();
+    router.refresh(); // 🔥 Raskere enn reload()
   }
 
   const totalItems = karCount + (hasPlus && !selectMode ? 1 : 0);
@@ -53,7 +74,7 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
     <main className="min-h-screen flex flex-col items-center justify-center px-6">
 
       {/* --- MENY KNAPP --- */}
-      <div className="absolute top-4 right-4 z-50">
+      <div className="absolute top-4 right-4 z-50" ref={menuRef}>
         <button
           onClick={() => setMenuOpen(!menuOpen)}
           className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
@@ -147,13 +168,10 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
         >
           {kar.map((k, index) => {
             const isSelected = selected.includes(k.id);
-
-            // Kar 1 er kun låst i selectMode
             const isLocked = selectMode && index === 0;
 
             const karBox = (
               <div
-                key={k.id}
                 onClick={() => toggleSelect(k.id, index)}
                 className={`
                   relative border rounded-xl p-6 transition flex flex-col items-center justify-center
@@ -172,13 +190,16 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
                   Kar {index + 1}
                 </span>
 
+                {/* 🔥 Aktiv / Ledig status */}
                 <span className="text-zinc-300 mt-12 text-lg md:text-base">
-                  Ledig
+                  {k.status === "Aktiv" ? "Aktiv batch" : "Ledig"}
                 </span>
               </div>
             );
 
-            if (selectMode) return karBox;
+            if (selectMode) {
+              return <div key={k.id}>{karBox}</div>;
+            }
 
             return (
               <Link key={k.id} href={`/kar/${k.id}`} prefetch={false}>

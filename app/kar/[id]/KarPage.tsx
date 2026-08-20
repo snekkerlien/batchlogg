@@ -26,7 +26,7 @@ export default function KarPage() {
   const params = useParams();
   const karId = params.id as string;
 
-  // 🔥 Global session fra AuthProvider
+  // Global session fra AuthProvider
   const { user, loading: authLoading } = useAuth();
 
   const [loading, setLoading] = useState(true);
@@ -35,10 +35,8 @@ export default function KarPage() {
   const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => {
-    // Vent til AuthProvider er ferdig
     if (authLoading) return;
 
-    // Ingen session → redirect
     if (!user) {
       router.replace("/auth/login");
       return;
@@ -105,7 +103,7 @@ export default function KarPage() {
 
         {/* Tilbake-knapp */}
         <button
-          onClick={() => window.history.back()}
+          onClick={() => router.back()}
           className="block mb-8 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold w-fit"
         >
           ← Tilbake

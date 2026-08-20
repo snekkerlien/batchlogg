@@ -47,12 +47,11 @@ export function middleware(req: NextRequest) {
   return NextResponse.next();
 }
 
-// Middleware skal kjøre på auth-ruter også (for whitelist)
+// Middleware skal KUN kjøre på sider som krever auth
 export const config = {
   matcher: [
     "/dashboard/:path*",
     "/kar/:path*",
     "/account/:path*",
-    "/auth/:path*",
   ],
 };

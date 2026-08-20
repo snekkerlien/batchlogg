@@ -4,31 +4,34 @@ import { createRouteHandlerClient } from "../../../lib/supabase/supabaseServerFi
 export async function POST(req: Request) {
   const { supabase, responseHeaders } = createRouteHandlerClient(req);
 
-  // Hent session
+  // Hent session (riktig metode i route handlers)
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  if (!user) {
-    return NextResponse.redirect("https://batchlogg.vercel.app/auth/login");
+  if (!session || !session.user) {
+    const res = new NextResponse(null, { status: 302 });
+    responseHeaders.forEach((value, key) => res.headers.set(key, value));
+    res.headers.set("Location", "/auth/login");
+    return res;
   }
+
+  const user = session.user;
 
   // Opprett nytt kar
   await supabase.from("kar").insert({
     user_id: user.id,
   });
 
-  // Redirect tilbake til dashboard
-  const res = new NextResponse(null, {
-    status: 302,
-    headers: {
-      Location: "https://batchlogg.vercel.app/dashboard",
-    },
-  });
+  // Redirect tilbake til dashboard (relative URL)
+  const res = new NextResponse(null, { status: 302 });
 
+  // Sett cookies riktig
   responseHeaders.forEach((value, key) => {
     res.headers.set(key, value);
   });
+
+  res.headers.set("Location", "/dashboard");
 
   return res;
 }

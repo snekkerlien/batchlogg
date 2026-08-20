@@ -4,8 +4,7 @@ import { NextResponse } from "next/server";
 import { createRouteHandlerClient } from "../../../lib/supabase/supabaseServerFinal";
 
 export async function POST(req: Request) {
-  console.log("SUPABASE_URL", process.env.SUPABASE_URL);
-  console.log("SUPABASE_ANON_KEY", process.env.SUPABASE_ANON_KEY?.slice(0, 10));
+  console.log("signupAction: START");
 
   const { supabase, responseHeaders } = createRouteHandlerClient(req);
   const form = await req.formData();
@@ -14,8 +13,11 @@ export async function POST(req: Request) {
   const password = form.get("password") as string;
   const email = `${username}@example.com`;
 
+  console.log("signupAction: username =", username);
+  console.log("signupAction: email =", email);
+
   // -----------------------------
-  // SERVER-SIDE PASSWORD VALIDATION
+  // PASSWORD VALIDATION
   // -----------------------------
   function validatePassword(pw: string) {
     if (pw.length < 8) return "too_short";
@@ -27,13 +29,11 @@ export async function POST(req: Request) {
   if (pwError) {
     console.error("SIGNUP ERROR: Weak password:", pwError);
 
-    return new NextResponse(null, {
-      status: 302,
-      headers: {
-        ...responseHeaders,
-        Location: `https://batchlogg.vercel.app/auth/signup?error=${pwError}`,
-      },
-    });
+    const res = new NextResponse(null, { status: 302 });
+    responseHeaders.forEach((value, key) => res.headers.set(key, value));
+    res.headers.set("Location", `/auth/signup?error=${pwError}`);
+
+    return res;
   }
 
   // -----------------------------
@@ -44,16 +44,16 @@ export async function POST(req: Request) {
     password,
   });
 
+  console.log("signupAction: supabase response =", { data, error });
+
   if (error) {
     console.error("SIGNUP ERROR", error);
 
-    return new NextResponse(null, {
-      status: 302,
-      headers: {
-        ...responseHeaders,
-        Location: "https://batchlogg.vercel.app/auth/signup?error=supabase",
-      },
-    });
+    const res = new NextResponse(null, { status: 302 });
+    responseHeaders.forEach((value, key) => res.headers.set(key, value));
+    res.headers.set("Location", "/auth/signup?error=supabase");
+
+    return res;
   }
 
   // -----------------------------
@@ -67,14 +67,15 @@ export async function POST(req: Request) {
   }
 
   // -----------------------------
-  // FETCH SESSION (Supabase does NOT auto-login on signUp)
+  // AUTO-LOGIN (Supabase does NOT auto-login on signUp)
   // -----------------------------
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
   if (!session) {
-    // fallback: logg inn manuelt
+    console.log("signupAction: no session → auto-login");
+
     const { error: loginError } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -83,26 +84,22 @@ export async function POST(req: Request) {
     if (loginError) {
       console.error("AUTO-LOGIN FAILED", loginError);
 
-      return new NextResponse(null, {
-        status: 302,
-        headers: {
-          ...responseHeaders,
-          Location: "https://batchlogg.vercel.app/auth/login?error=autologin",
-        },
-      });
+      const res = new NextResponse(null, { status: 302 });
+      responseHeaders.forEach((value, key) => res.headers.set(key, value));
+      res.headers.set("Location", "/auth/login?error=autologin");
+
+      return res;
     }
   }
 
   // -----------------------------
-  // SUCCESS → DIRECT TO DASHBOARD
+  // SUCCESS → REDIRECT TO DASHBOARD
   // -----------------------------
+  console.log("signupAction: SUCCESS → redirect to /dashboard");
+
   const res = new NextResponse(null, { status: 302 });
-
-  responseHeaders.forEach((value, key) => {
-    res.headers.set(key, value);
-  });
-
-  res.headers.set("Location", "https://batchlogg.vercel.app/dashboard");
+  responseHeaders.forEach((value, key) => res.headers.set(key, value));
+  res.headers.set("Location", "/dashboard");
 
   return res;
 }

@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 
 type Kar = {
   id: number;
@@ -23,6 +24,7 @@ type Batch = {
 
 export default function ProfilePage() {
   const params = useParams();
+  const router = useRouter();
   const userId = String(params.user_id);
 
   const [loading, setLoading] = useState(true);
@@ -30,10 +32,30 @@ export default function ProfilePage() {
   const [kar, setKar] = useState<Kar[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [aktiveKar, setAktiveKar] = useState<Set<number>>(new Set());
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  // 🔥 Close-on-outside-click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+
+    if (menuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [menuOpen]);
 
   useEffect(() => {
     async function load() {
-      // Hent brukernavn fra riktig tabell: profiles
+      // Hent brukernavn
       const { data: profile } = await supabaseBrowser
         .from("profiles")
         .select("username")
@@ -86,17 +108,46 @@ export default function ProfilePage() {
   return (
     <main className="min-h-screen bg-black text-white px-6 py-12">
 
+      {/* --- MENY KNAPP --- */}
+      <div className="absolute top-4 right-4 z-50" ref={menuRef}>
+        <button
+          onClick={() => setMenuOpen(!menuOpen)}
+          className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
+        >
+          ☰
+        </button>
+
+        {menuOpen && (
+          <div className="mt-2 bg-black/80 border border-white/20 rounded-lg p-4 text-right backdrop-blur-md">
+            <Link
+              href="/account"
+              prefetch={false}
+              className="block mb-3 text-white hover:text-green-300 font-semibold"
+            >
+              Min konto
+            </Link>
+
+            <form action="/logout" method="post">
+              <button className="text-red-400 hover:text-red-300 font-semibold">
+                Logg ut
+              </button>
+            </form>
+          </div>
+        )}
+      </div>
+
       {/* Hjem-knapp */}
-      <a
+      <Link
         href="/dashboard"
+        prefetch={false}
         className="block mb-4 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold w-fit"
       >
         🏠 Hjem
-      </a>
+      </Link>
 
       {/* Tilbake-knapp */}
       <button
-        onClick={() => window.history.back()}
+        onClick={() => router.back()}
         className="block mb-8 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold w-fit"
       >
         ← Tilbake
@@ -126,8 +177,9 @@ export default function ProfilePage() {
                 <div className="absolute inset-0 pointer-events-none bubble-animation"></div>
               )}
 
-              <a
+              <Link
                 href={`/kar/${k.id}`}
+                prefetch={false}
                 className="flex flex-col items-center mb-2 relative"
               >
                 <svg
@@ -151,7 +203,7 @@ export default function ProfilePage() {
                 <span className="absolute top-[10px] text-lg font-bold text-green-300">
                   {k.navn.replace("Kar ", "")}
                 </span>
-              </a>
+              </Link>
 
               {aktiv ? (
                 <span className="text-green-400 font-semibold">
@@ -181,12 +233,13 @@ export default function ProfilePage() {
             <p className="opacity-70">Volum: {b.volume_l} L</p>
             <p className="opacity-70">Startet: {b.startdato}</p>
 
-            <a
+            <Link
               href={`/kar/${b.aktivt_kar}`}
+              prefetch={false}
               className="mt-4 inline-block px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg border border-white/20 font-semibold"
             >
               Gå til kar →
-            </a>
+            </Link>
           </div>
         ))}
       </div>

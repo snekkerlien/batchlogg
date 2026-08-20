@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
 
@@ -13,6 +13,25 @@ export default function ProfilesPage() {
   const [loading, setLoading] = useState(true);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  // 🔥 Close-on-outside-click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+
+    if (menuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [menuOpen]);
 
   useEffect(() => {
     async function load() {
@@ -42,8 +61,8 @@ export default function ProfilesPage() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-6">
 
-      {/* --- MENY KNAPP (samme som dashboard) --- */}
-      <div className="absolute top-4 right-4 z-50">
+      {/* --- MENY KNAPP --- */}
+      <div className="absolute top-4 right-4 z-50" ref={menuRef}>
         <button
           onClick={() => setMenuOpen(!menuOpen)}
           className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
@@ -55,6 +74,7 @@ export default function ProfilesPage() {
           <div className="mt-2 bg-black/80 border border-white/20 rounded-lg p-4 text-right backdrop-blur-md">
             <Link
               href="/account"
+              prefetch={false}
               className="block mb-3 text-white hover:text-green-300 font-semibold"
             >
               Min konto
@@ -85,6 +105,7 @@ export default function ProfilesPage() {
               <Link
                 key={p.id}
                 href={`/profile/${p.id}`}
+                prefetch={false}
                 className="block border border-white/10 bg-white/5 hover:bg-white/10 transition rounded-xl p-4 font-semibold text-center"
               >
                 {p.username || "Ukjent bruker"}
