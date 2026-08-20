@@ -25,7 +25,6 @@ export default async function DashboardPage() {
     }
   );
 
-  // Session
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -34,14 +33,12 @@ export default async function DashboardPage() {
     redirect("/auth/login");
   }
 
-  // Username
   const { data: profile } = await supabase
     .from("profiles")
     .select("username")
     .eq("id", user.id)
     .single();
 
-  // Kar
   const { data: kar } = await supabase
     .from("kar")
     .select("id, created_at")
@@ -50,7 +47,6 @@ export default async function DashboardPage() {
 
   const username = profile?.username ?? "Ukjent";
 
-  // Dynamisk kolonnevalg:
   const pcCols = kar && kar.length < 3 ? "md:grid-cols-2" : "md:grid-cols-3";
 
   return (
@@ -88,7 +84,7 @@ export default async function DashboardPage() {
             ${pcCols}
             gap-4
             mx-auto
-            max-w-[32rem]   /* <-- ØKT slik at 3 bokser får plass på én linje */
+            max-w-[36rem]   /* <-- ENDRET fra 32rem til 36rem */
             place-items-center
           `}
         >
@@ -97,7 +93,6 @@ export default async function DashboardPage() {
               key={k.id}
               className="relative border border-white/10 rounded-xl p-4 bg-white/5 hover:bg-white/10 transition flex flex-col items-center justify-center w-28 h-28"
             >
-              {/* SLETT-KNAPP — kun hvis mer enn 1 kar og ikke Kar 1 */}
               {kar.length > 1 && index > 0 && (
                 <form
                   action="/kar/delete"
@@ -121,7 +116,6 @@ export default async function DashboardPage() {
             </div>
           ))}
 
-          {/* PLUSS-KNAPP — vises kun hvis < 9 kar */}
           {kar && kar.length < 9 && (
             <form action="/kar/add" method="post">
               <button
