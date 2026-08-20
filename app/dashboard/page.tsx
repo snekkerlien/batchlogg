@@ -11,25 +11,21 @@ export default async function DashboardPage() {
   const cookieStore = cookies();
   console.log("🐛 DEBUG: Incoming cookies =", cookieStore.getAll());
 
-  // Supabase server-klient (Edge-kompatibel)
   const supabase = createServerComponentClient();
 
-  // Hent session
+  // Hent verifisert user
   const {
-    data: { session },
-    error: sessionError,
-  } = await supabase.auth.getSession();
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
 
-  console.log("🐛 DEBUG: session =", session);
-  console.log("🐛 DEBUG: sessionError =", sessionError);
+  console.log("🐛 DEBUG: getUser() user =", user);
+  console.log("🐛 DEBUG: getUser() error =", userError);
 
-  if (!session) {
-    console.log("❌ DEBUG: Ingen session → redirect til login");
+  if (!user) {
+    console.log("❌ DEBUG: Ingen verifisert user → redirect til login");
     redirect("/auth/login");
   }
-
-  const user = session.user;
-  console.log("👤 DEBUG: user.id =", user.id);
 
   // Hent profil
   const { data: profile, error: profileError } = await supabase
@@ -41,15 +37,13 @@ export default async function DashboardPage() {
   console.log("🐛 DEBUG: profile =", profile);
   console.log("🐛 DEBUG: profileError =", profileError);
 
-  // Hent kar + aktiv batch-status
+  // Hent kar
   const { data: karRaw, error: karError } = await supabase
     .from("kar")
     .select(`
       id,
       created_at,
-      Batches (
-        status
-      )
+      Batches (status)
     `)
     .eq("user_id", user.id)
     .order("created_at");
@@ -57,7 +51,6 @@ export default async function DashboardPage() {
   console.log("📦 DEBUG: karRaw =", karRaw);
   console.log("⚠️ DEBUG: karError =", karError);
 
-  // Map til format DashboardClient forventer
   const kar = (karRaw ?? []).map((k: any) => ({
     id: k.id,
     created_at: k.created_at,
