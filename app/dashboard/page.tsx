@@ -1,11 +1,18 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  // Hent session via relative path (stabilt)
-  const res = await fetch("/auth/session", { cache: "no-store" });
+  // Finn korrekt base URL i produksjon
+  const h = await headers();
+  const host = h.get("host");
+  const protocol = h.get("x-forwarded-proto") ?? "https";
+  const baseUrl = `${protocol}://${host}`;
+
+  // Hent session
+  const res = await fetch(`${baseUrl}/auth/session`, { cache: "no-store" });
   const { user } = await res.json();
 
   if (!user) {
@@ -13,13 +20,13 @@ export default async function DashboardPage() {
   }
 
   // Hent brukernavn
-  const profileRes = await fetch(`/api/profiles/${user.id}`, {
+  const profileRes = await fetch(`${baseUrl}/api/profiles/${user.id}`, {
     cache: "no-store",
   });
   const { username } = await profileRes.json();
 
   // Hent kar
-  const karRes = await fetch(`/api/kar?user=${user.id}`, {
+  const karRes = await fetch(`${baseUrl}/api/kar?user=${user.id}`, {
     cache: "no-store",
   });
   const kar = await karRes.json();
