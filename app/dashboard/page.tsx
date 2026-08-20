@@ -78,7 +78,7 @@ export default async function DashboardPage() {
         </a>
 
         {/* --- KAR GRID --- */}
-        <div className="grid grid-cols-3 gap-4 justify-center items-center max-w-[420px] mx-auto">
+        <div className="grid grid-cols-3 gap-4 justify-center items-center mx-auto">
           {kar?.map((k: any, index: number) => (
             <a
               key={k.id}
