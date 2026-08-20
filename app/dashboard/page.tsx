@@ -48,13 +48,9 @@ export default async function DashboardPage() {
   const username = profile?.username ?? "Ukjent";
 
   const karCount = kar?.length ?? 0;
-  const hasPlus = karCount < 9;
-  const totalItems = karCount + (hasPlus ? 1 : 0);
 
-  // PC:
-  // 1–2 elementer → 2 kolonner
-  // 3+ elementer → 3 kolonner
-  const pcCols = totalItems <= 2 ? "md:grid-cols-2" : "md:grid-cols-3";
+  // Maks 12 kar
+  const hasPlus = karCount < 12;
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-6">
@@ -87,8 +83,8 @@ export default async function DashboardPage() {
         <div
           className={`
             grid
-            grid-cols-1        /* <-- Mobil: alltid 1 per rad */
-            ${pcCols}          /* <-- PC: dynamisk 2 eller 3 */
+            grid-cols-2        /* Mobil: 2 kolonner */
+            md:grid-cols-3     /* PC: 3 kolonner */
             gap-6
             md:gap-4
             mx-auto
@@ -101,6 +97,7 @@ export default async function DashboardPage() {
               key={k.id}
               className="relative border border-white/10 rounded-xl p-6 bg-white/5 hover:bg-white/10 transition flex flex-col items-center justify-center w-40 h-40 md:w-28 md:h-28"
             >
+              {/* SLETT-KNAPP — kun hvis mer enn 1 kar og ikke Kar 1 */}
               {karCount > 1 && index > 0 && (
                 <form
                   action="/kar/delete"
@@ -126,6 +123,7 @@ export default async function DashboardPage() {
             </div>
           ))}
 
+          {/* PLUSS-KNAPP — vises kun hvis < 12 kar */}
           {hasPlus && (
             <form action="/kar/add" method="post">
               <button
