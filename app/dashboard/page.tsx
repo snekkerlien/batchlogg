@@ -77,7 +77,8 @@ export default async function DashboardPage() {
           Se andre bryggere
         </a>
 
-        <div className="grid grid-cols-3 gap-4 justify-items-center max-w-[420px] mx-auto">
+        {/* --- KAR GRID --- */}
+        <div className="grid grid-cols-3 gap-4 justify-center items-center max-w-[420px] mx-auto">
           {kar?.map((k: any, index: number) => (
             <a
               key={k.id}
@@ -91,6 +92,15 @@ export default async function DashboardPage() {
               <span className="text-zinc-400 mt-10">Ledig</span>
             </a>
           ))}
+
+          {/* PLUSS-KNAPP */}
+          <form action="/kar/add" method="post">
+            <button
+              className="border border-white/10 rounded-xl p-4 bg-white/5 hover:bg-white/10 transition flex flex-col items-center justify-center w-28 h-28 text-4xl font-bold text-green-300"
+            >
+              +
+            </button>
+          </form>
         </div>
 
         <p className="text-sm opacity-40 mt-12">
