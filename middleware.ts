@@ -8,37 +8,51 @@ const protectedRoutes = [
   "/account",
 ];
 
+// Sider som skal være åpne (viktig for login/signup)
+const publicRoutes = [
+  "/auth/login",
+  "/auth/signup",
+  "/auth/loginAction",
+  "/auth/signupAction",
+  "/auth/logout",
+];
+
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Sjekk om brukeren prøver å gå til en beskyttet side
+  // Tillat alle public routes (login, signup, actions)
+  if (publicRoutes.some((route) => pathname.startsWith(route))) {
+    return NextResponse.next();
+  }
+
+  // Sjekk om siden er beskyttet
   const isProtected = protectedRoutes.some((route) =>
     pathname.startsWith(route)
   );
 
   if (!isProtected) {
-    // Ikke beskytt auth-sider eller offentlige sider
     return NextResponse.next();
   }
 
-  // Hent Supabase-session-cookie
+  // Sjekk Supabase session-cookie
   const supabaseSession = req.cookies.get("sb-access-token");
 
-  // Hvis ingen session → redirect til login
+  // Ingen session → redirect til login
   if (!supabaseSession) {
     const loginUrl = new URL("/auth/login", req.url);
     return NextResponse.redirect(loginUrl);
   }
 
-  // Hvis session finnes → tillat tilgang
+  // Session finnes → tillat tilgang
   return NextResponse.next();
 }
 
-// Middleware skal kjøre på alle ruter
+// Middleware skal kjøre på auth-ruter også (for whitelist)
 export const config = {
   matcher: [
     "/dashboard/:path*",
     "/kar/:path*",
     "/account/:path*",
+    "/auth/:path*",
   ],
 };
