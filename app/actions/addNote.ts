@@ -6,7 +6,7 @@ export async function addNote(formData: FormData) {
   console.log("=== addNote START ===");
 
   // Bruk SSR-klienten (leser cookies automatisk)
-  const { supabase } = supabaseServer();
+  const { supabase } = await supabaseServer();
 
   const batchId = formData.get("batch_id")?.toString();
   const note = formData.get("note")?.toString() ?? "";

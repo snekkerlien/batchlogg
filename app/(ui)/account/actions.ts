@@ -8,7 +8,7 @@ export async function changeUsername(formData: FormData) {
   console.log("=== changeUsername START ===");
 
   // Bruk SSR-klienten (leser cookies automatisk)
-  const { supabase } = supabaseServer();
+  const { supabase } = await supabaseServer();
 
   const newUsername = formData.get("newUsername")?.toString() ?? "";
   const password = formData.get("password")?.toString() ?? "";

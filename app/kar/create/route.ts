@@ -6,7 +6,7 @@ import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
 export async function POST() {
   console.log("=== /kar/create START ===");
 
-  const { supabase } = supabaseServer();
+  const { supabase } = await supabaseServer();
 
   const {
     data: { user },

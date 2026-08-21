@@ -9,7 +9,7 @@ export default async function ProfilesPage() {
   console.log("=== /profiles START ===");
 
   // Bruk SSR-klienten – den leser cookies selv
-  const { supabase } = supabaseServer();
+  const { supabase } = await supabaseServer();
 
   console.log("[/profiles] Henter bruker via cookies...");
 

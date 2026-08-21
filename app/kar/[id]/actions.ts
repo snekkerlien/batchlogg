@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 // 1. KANSELLER BATCH
 // ---------------------------------------------------------
 export async function cancelBatch(formData: FormData) {
-  const { supabase } = supabaseServer(); // riktig destructuring
+  const { supabase } = await supabaseServer(); // riktig destructuring
 
   const batchId = formData.get("batch_id") as string;
   const karId = formData.get("kar_id") as string;
@@ -39,7 +39,7 @@ export async function cancelBatch(formData: FormData) {
 // 2. OVERFØR TIL SEKUNDÆR
 // ---------------------------------------------------------
 export async function moveToSecondary(formData: FormData) {
-  const { supabase } = supabaseServer();
+  const { supabase } = await supabaseServer();
 
   const batchId = formData.get("batch_id") as string;
   const karId = formData.get("kar_id") as string;
@@ -66,7 +66,7 @@ export async function moveToSecondary(formData: FormData) {
 // 3. AVSLUTT BATCH
 // ---------------------------------------------------------
 export async function finishBatch(formData: FormData) {
-  const { supabase } = supabaseServer();
+  const { supabase } = await supabaseServer();
 
   const batchId = formData.get("batch_id") as string;
   const karId = formData.get("kar_id") as string;

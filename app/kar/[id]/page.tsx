@@ -9,7 +9,7 @@ export default async function KarPage({ params }: { params: { id: string } }) {
   console.log("=== /kar/[id] START ===");
 
   // Bruk SSR-klienten riktig
-  const { supabase } = supabaseServer();
+  const { supabase } = await supabaseServer();
 
   // Hent bruker fra cookies (ikke Authorization-header, ikke manuelt token)
   const {
