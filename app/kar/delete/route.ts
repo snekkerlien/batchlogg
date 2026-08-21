@@ -8,7 +8,7 @@ export async function POST(req: Request) {
   const karId = form.get("kar_id")?.toString() ?? "";
 
   // Opprett server-klient
-  const supabase = supabaseServer();
+  const { supabase } = supabaseServer(); // riktig destructuring
 
   // Hent innlogget bruker
   const {

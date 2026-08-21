@@ -7,12 +7,13 @@ import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
 export default async function NewKarPage() {
   console.log("=== /kar/new START ===");
 
-  const supabase = supabaseServer(); // ← viktig
+  // RIKTIG: destructure supabase-klienten
+  const { supabase } = supabaseServer();
 
   // Hent bruker
   const {
     data: { user },
-    error: userError
+    error: userError,
   } = await supabase.auth.getUser();
 
   console.log("User:", user);
