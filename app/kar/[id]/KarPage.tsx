@@ -91,6 +91,10 @@ export default function KarPage() {
     const file = e.target.files?.[0];
     if (!file || !batch) return;
 
+    console.log("FILE:", file);
+    console.log("SIZE:", file.size);
+    console.log("TYPE:", file.type);
+
     setUploading(true);
     setImagePreview(URL.createObjectURL(file));
 
@@ -115,7 +119,7 @@ export default function KarPage() {
   }
 
   async function addNote() {
-    if (uploading) return; // ← KRITISK FIX
+    if (uploading) return; // CRITICAL FIX
     if (!batch) return;
     if (!newNote.trim() && !imageUrl) return;
 
@@ -169,6 +173,7 @@ export default function KarPage() {
       {/* MENY */}
       <div className="absolute top-4 right-4 z-50">
         <button
+          type="button"
           onClick={() => setMenuOpen(!menuOpen)}
           className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-white"
         >
@@ -192,6 +197,7 @@ export default function KarPage() {
             </a>
 
             <button
+              type="button"
               onClick={async () => {
                 await supabaseBrowser.auth.signOut();
                 router.replace("/auth/login");
@@ -235,6 +241,7 @@ export default function KarPage() {
               </div>
 
               <button
+                type="button"
                 onClick={addNote}
                 disabled={uploading}
                 className={`flex items-center justify-center w-[150px] h-[48px] rounded-lg font-semibold text-white text-center ${
@@ -246,7 +253,9 @@ export default function KarPage() {
                 {uploading ? "Laster..." : "Legg til notat"}
               </button>
 
-              <label className="flex items-center justify-center w-[150px] h-[48px] bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold text-white text-center cursor-pointer">
+              <label
+                className="flex items-center justify-center w-[150px] h-[48px] bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold text-white text-center cursor-pointer"
+              >
                 {uploading ? "Laster..." : "Last opp bilde"}
                 <input
                   type="file"
@@ -271,6 +280,7 @@ export default function KarPage() {
                   {/* 3-prikk meny */}
                   <div className="absolute top-3 right-3">
                     <button
+                      type="button"
                       onClick={() =>
                         setOpenMenuId(openMenuId === n.id ? null : n.id)
                       }
@@ -282,6 +292,7 @@ export default function KarPage() {
                     {openMenuId === n.id && (
                       <div className="absolute right-0 mt-2 bg-black/80 border border-white/20 rounded-lg p-2 w-32 text-sm">
                         <button
+                          type="button"
                           onClick={() => alert("Redigering kommer senere 🙂")}
                           className="block w-full text-left text-white hover:text-green-300 py-1"
                         >
@@ -289,6 +300,7 @@ export default function KarPage() {
                         </button>
 
                         <button
+                          type="button"
                           onClick={() =>
                             n.note_type === "image" && n.image_url
                               ? deleteImage(n.id, n.image_url)
