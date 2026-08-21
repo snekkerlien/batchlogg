@@ -21,7 +21,7 @@ export default function Home() {
       setSession(session);
 
       if (session) {
-        // Hent profil
+        // Hent profil via API (JWT-modell)
         const token = session.access_token;
         const res = await fetch("/api/profile", {
           headers: { Authorization: `Bearer ${token}` },
@@ -39,8 +39,14 @@ export default function Home() {
     load();
   }, []);
 
+  // RIKTIG LOGOUT SOM OPPDATERER LANDINGSSIDEN
   async function logout() {
     await supabaseBrowser.auth.signOut();
+
+    // Tving SSR til å lese nye cookies
+    router.refresh();
+
+    // Sikrer at vi havner på landingssiden
     router.replace("/");
   }
 

@@ -2,53 +2,28 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-import { cookies } from "next/headers";
 import { supabaseServer } from "../../lib/supabase/supabaseServerFinal";
 import Link from "next/link";
 
 export default async function ProfilesPage() {
   console.log("=== /profiles START ===");
 
-  // Hent token fra Supabase-cookie
-  const cookieStore = cookies();
-  const cookieToken = cookieStore.get("sb-cvwydrbrxbvezyhvtfma-auth-token")?.value;
-
-  let token: string | null = null;
-
-  if (cookieToken) {
-    try {
-      const parsed = JSON.parse(Buffer.from(cookieToken.replace("base64-", ""), "base64").toString());
-      token = parsed.access_token;
-    } catch (err) {
-      console.log("[/profiles] Klarte ikke å parse cookie-token:", err);
-    }
-  }
-
-  console.log("[/profiles] Token fra cookie:", token);
-
-  if (!token) {
-    console.log("[/profiles] Ingen token → ikke innlogget");
-    return (
-      <main className="min-h-screen flex items-center justify-center text-white">
-        <h1 className="text-2xl font-bold">Du må være innlogget</h1>
-      </main>
-    );
-  }
-
+  // Bruk SSR-klienten – den leser cookies selv
   const { supabase } = supabaseServer();
 
-  console.log("[/profiles] Henter bruker via JWT...");
+  console.log("[/profiles] Henter bruker via cookies...");
 
   const {
     data: { user },
     error: userError,
-  } = await supabase.auth.getUser(token);
+  } = await supabase.auth.getUser();
 
   console.log("[/profiles] User:", user);
   console.log("[/profiles] UserError:", userError);
 
   if (!user) {
     console.log("[/profiles] Ingen bruker → ikke innlogget");
+    console.log("=== /profiles END ===");
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
         <h1 className="text-2xl font-bold">Du må være innlogget</h1>
@@ -67,6 +42,7 @@ export default async function ProfilesPage() {
   console.log("[/profiles] ProfilesError:", profilesError);
 
   if (profilesError) {
+    console.log("=== /profiles END === (feil)");
     return (
       <main className="min-h-screen flex items-center justify-center text-red-400">
         <h1 className="text-2xl font-bold">

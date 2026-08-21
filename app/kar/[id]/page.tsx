@@ -2,39 +2,20 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-import { headers } from "next/headers";
 import * as Actions from "./actions";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 
 export default async function KarPage({ params }: { params: { id: string } }) {
   console.log("=== /kar/[id] START ===");
 
-  // Hent Authorization-header manuelt
-  const headerStore = headers();
-  const authHeader = headerStore.get("Authorization") ?? "";
-  const token = authHeader.startsWith("Bearer ")
-    ? authHeader.slice("Bearer ".length)
-    : "";
-
-  console.log("[/kar/[id]] Token:", token);
-
-  if (!token) {
-    console.log("[/kar/[id]] Ingen token → ikke innlogget");
-    return (
-      <main className="min-h-screen flex items-center justify-center text-white">
-        <h1 className="text-2xl font-bold">Du må være innlogget</h1>
-      </main>
-    );
-  }
-
+  // Bruk SSR-klienten riktig
   const { supabase } = supabaseServer();
 
-  console.log("[/kar/[id]] Henter bruker via JWT...");
-
+  // Hent bruker fra cookies (ikke Authorization-header, ikke manuelt token)
   const {
     data: { user },
     error: userError,
-  } = await supabase.auth.getUser(token);
+  } = await supabase.auth.getUser();
 
   console.log("[/kar/[id]] User:", user);
   console.log("[/kar/[id]] UserError:", userError);

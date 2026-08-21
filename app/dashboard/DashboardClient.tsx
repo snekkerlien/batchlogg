@@ -52,6 +52,7 @@ export default function DashboardClient() {
       // HENT PROFIL
       const profileRes = await fetch("/api/profile", {
         headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
 
       if (!profileRes.ok) {
@@ -65,6 +66,7 @@ export default function DashboardClient() {
       // HENT KAR
       const karRes = await fetch(`/api/kar?user=${session.user.id}`, {
         headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
 
       if (!karRes.ok) {
@@ -99,7 +101,7 @@ export default function DashboardClient() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [menuOpen]);
 
-  // CREATE KAR
+  // CREATE KAR — FIXED VERSION
   async function createKar() {
     const {
       data: { session },
@@ -112,9 +114,7 @@ export default function DashboardClient() {
 
     const res = await fetch("/kar/create", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-      },
+      credentials: "include",   // ⭐ CRITICAL FIX ⭐
     });
 
     if (res.ok) {
