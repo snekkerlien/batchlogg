@@ -7,7 +7,7 @@ export async function GET() {
   console.log("=== /auth/session START ===");
 
   // Bruk SSR-klienten (leser cookies automatisk)
-  const { supabase } = await supabaseServer();
+  const { supabase } = supabaseServer();
 
   console.log("[/auth/session] Henter bruker via cookies...");
 

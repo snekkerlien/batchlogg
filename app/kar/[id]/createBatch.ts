@@ -4,7 +4,7 @@ import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
 import { revalidatePath } from "next/cache";
 
 export async function createBatch(formData: FormData) {
-  const { supabase } = await supabaseServer(); // riktig destructuring
+  const { supabase } = supabaseServer(); // riktig destructuring
 
   // Hent bruker
   const {

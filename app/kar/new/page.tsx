@@ -8,7 +8,7 @@ export default async function NewKarPage() {
   console.log("=== /kar/new START ===");
 
   // RIKTIG: destructure supabase-klienten
-  const { supabase } = await supabaseServer();
+  const { supabase } = supabaseServer();
 
   // Hent bruker
   const {

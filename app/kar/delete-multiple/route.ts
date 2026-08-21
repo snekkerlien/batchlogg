@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
 
 export async function POST(req: Request) {
-  const { supabase } = await supabaseServer(); // riktig destructuring
+  const { supabase } = supabaseServer(); // riktig destructuring
 
   const {
     data: { user },

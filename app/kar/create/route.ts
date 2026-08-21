@@ -3,10 +3,10 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
 
-export async function POST() {
+export async function POST(req: Request) {
   console.log("=== /kar/create START ===");
 
-  const { supabase } = await supabaseServer();
+  const { supabase } = supabaseServer();
 
   const {
     data: { user },

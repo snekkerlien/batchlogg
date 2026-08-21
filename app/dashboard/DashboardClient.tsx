@@ -6,7 +6,7 @@ import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
 import { getNextMotd } from "../../lib/motd/motdList";
 
 interface KarType {
-  id: number;
+  id: string;          // UUID fra Supabase
   nummer: number;
   user_id: string;
   created_at: string;
@@ -35,53 +35,72 @@ export default function DashboardClient() {
     setMotd(getNextMotd());
   }, []);
 
-  // LOAD DATA
-  useEffect(() => {
-    async function load() {
-      const {
-        data: { session },
-      } = await supabaseBrowser.auth.getSession();
+  // HENT TOKEN MED FALLBACK
+  async function getToken() {
+    const {
+      data: { session },
+    } = await supabaseBrowser.auth.getSession();
 
-      if (!session) {
-        router.replace("/");
-        return;
-      }
+    let token = session?.access_token;
 
-      const token = session.access_token;
+    // Fallback: hent token fra cookie hvis client-session mangler
+    if (!token) {
+      const cookieToken = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("sb-access-token="))
+        ?.split("=")[1];
 
-      // HENT PROFIL
-      const profileRes = await fetch("/api/profile", {
-        headers: { Authorization: `Bearer ${token}` },
-        credentials: "include",
-      });
-
-      if (!profileRes.ok) {
-        router.replace("/");
-        return;
-      }
-
-      const profileJson = await profileRes.json();
-      setUsername(profileJson.username ?? "Ukjent");
-
-      // HENT KAR
-      const karRes = await fetch(`/api/kar?user=${session.user.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-        credentials: "include",
-      });
-
-      if (!karRes.ok) {
-        router.replace("/");
-        return;
-      }
-
-      const karJson = await karRes.json();
-      const sorted = [...karJson].sort((a, b) => a.nummer - b.nummer);
-
-      setKar(sorted);
-      setLoading(false);
+      token = cookieToken;
     }
 
-    load();
+    return token;
+  }
+
+  // Felles loader som kan brukes både ved mount og etter createKar
+  async function loadDashboardData() {
+    const token = await getToken();
+
+    if (!token) {
+      console.log("Fant ingen token → redirect");
+      router.replace("/");
+      return;
+    }
+
+    // HENT PROFIL
+    const profileRes = await fetch("/api/profile", {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+    });
+
+    if (!profileRes.ok) {
+      router.replace("/");
+      return;
+    }
+
+    const profileJson = await profileRes.json();
+    setUsername(profileJson.username ?? "Ukjent");
+
+    // HENT KAR — bruker token, ikke query-param
+    const karRes = await fetch("/api/kar", {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+    });
+
+    if (!karRes.ok) {
+      router.replace("/");
+      return;
+    }
+
+    const karJson: KarType[] = await karRes.json();
+    const sorted = [...karJson].sort((a, b) => a.nummer - b.nummer);
+
+    setKar(sorted);
+    setLoading(false);
+  }
+
+  // LOAD DATA VED MOUNT
+  useEffect(() => {
+    loadDashboardData();
   }, [router]);
 
   // MENY CLICK OUTSIDE
@@ -101,24 +120,22 @@ export default function DashboardClient() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [menuOpen]);
 
-  // CREATE KAR — FIXED VERSION
+  // CREATE KAR — nå oppdaterer vi dashboardet direkte etter POST
   async function createKar() {
-    const {
-      data: { session },
-    } = await supabaseBrowser.auth.getSession();
+    const token = await getToken();
 
-    if (!session) {
+    if (!token) {
       router.replace("/");
       return;
     }
 
     const res = await fetch("/kar/create", {
       method: "POST",
-      credentials: "include",   // ⭐ CRITICAL FIX ⭐
+      credentials: "include",
     });
 
     if (res.ok) {
-      router.refresh();
+      await loadDashboardData();
     }
   }
 

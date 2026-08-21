@@ -10,29 +10,20 @@ export default function LoginClient() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
 
-  // Sjekk session fra browser (JWT)
   useEffect(() => {
     async function checkSession() {
-      const {
-        data: { session },
-      } = await supabaseBrowser.auth.getSession();
-
-      if (session) {
-        router.replace("/dashboard");
-        return;
-      }
-
+      // Bare sjekk – ikke redirect
+      await supabaseBrowser.auth.getSession();
       setLoading(false);
     }
 
     checkSession();
-  }, [router]);
+  }, []);
 
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
     const form = new FormData(e.currentTarget);
-
     const username = form.get("username")?.toString() ?? "";
     const password = form.get("password")?.toString() ?? "";
     const email = `${username}@example.com`;
@@ -50,60 +41,27 @@ export default function LoginClient() {
     router.replace("/dashboard");
   }
 
-  if (loading) {
-    return null;
-  }
+  if (loading) return null;
 
   return (
     <main className="min-h-screen flex items-center justify-center px-6">
-      <form
-        onSubmit={handleLogin}
-        className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-sm border border-white/10 space-y-4"
-      >
-        <Link
-          href="/"
-          prefetch={false}
-          className="block text-center text-sm text-blue-300 hover:text-blue-200 mb-2"
-        >
+      <form onSubmit={handleLogin} className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-sm border border-white/10 space-y-4">
+        <Link href="/" prefetch={false} className="block text-center text-sm text-blue-300 hover:text-blue-200 mb-2">
           🏠 Tilbake til forsiden
         </Link>
 
         <h2 className="text-2xl font-bold text-center">Logg inn</h2>
 
-        {errorMsg && (
-          <p className="text-red-400 text-center font-semibold">
-            {errorMsg}
-          </p>
-        )}
+        {errorMsg && <p className="text-red-400 text-center font-semibold">{errorMsg}</p>}
 
-        <input
-          type="text"
-          name="username"
-          placeholder="Brukernavn"
-          required
-          className="w-full px-4 py-3 rounded-lg bg-black/40 border border-white/20"
-        />
+        <input type="text" name="username" placeholder="Brukernavn" required className="w-full px-4 py-3 rounded-lg bg-black/40 border border-white/20" />
+        <input type="password" name="password" placeholder="Passord" required className="w-full px-4 py-3 rounded-lg bg-black/40 border border-white/20" />
 
-        <input
-          type="password"
-          name="password"
-          placeholder="Passord"
-          required
-          className="w-full px-4 py-3 rounded-lg bg-black/40 border border-white/20"
-        />
-
-        <button
-          type="submit"
-          className="w-full bg-blue-600 hover:bg-blue-700 p-3 rounded-lg font-semibold"
-        >
+        <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 p-3 rounded-lg font-semibold">
           Logg inn
         </button>
 
-        <Link
-          href="/auth/signup"
-          prefetch={false}
-          className="block text-center text-sm text-blue-300 hover:text-blue-200 mt-2"
-        >
+        <Link href="/auth/signup" prefetch={false} className="block text-center text-sm text-blue-300 hover:text-blue-200 mt-2">
           Registrer ny konto
         </Link>
       </form>
