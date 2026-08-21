@@ -15,14 +15,7 @@ export default function UploadComponent({ onUpload }: UploadProps) {
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-
-    console.log("UPLOAD COMPONENT FILE:", file);
-    console.log("SIZE:", file?.size);
-    console.log("TYPE:", file?.type);
-
-    if (file) {
-      onUpload(file);
-    }
+    if (file) onUpload(file);
   }
 
   return (

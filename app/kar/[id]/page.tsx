@@ -1,17 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
 import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
 import { useAuth } from "../../providers/useAuth";
 import { ActiveBatch } from "./ActiveBatch";
 import KarClient from "./KarClient";
-import Link from "next/link";
-
 import UploadComponent from "../../components/UploadComponent";
-
 import { deleteImageServer } from "./deleteImage";
 import { deleteNoteServer } from "./deleteNoteServer";
+import Link from "next/link";
 
 type Note = {
   id: string;
@@ -21,10 +18,8 @@ type Note = {
   created_at: string;
 };
 
-export default function KarPage() {
-  const router = useRouter();
-  const params = useParams();
-  const karId = params.id as string;
+export default function Page({ params }: { params: { id: string } }) {
+  const karId = params.id;
 
   const { user, loading: authLoading } = useAuth();
 
@@ -46,7 +41,6 @@ export default function KarPage() {
     if (authLoading) return;
 
     if (!user) {
-      router.replace("/auth/login");
       return;
     }
 
@@ -65,7 +59,6 @@ export default function KarPage() {
         .maybeSingle();
 
       if (!karData) {
-        router.replace("/dashboard");
         return;
       }
 
@@ -87,12 +80,10 @@ export default function KarPage() {
     }
 
     loadKar();
-  }, [authLoading, user, karId, router]);
+  }, [authLoading, user, karId]);
 
   async function handleUpload(file: File) {
     if (!file || !batch) return;
-
-    console.log("HANDLEUPLOAD FILE:", file);
 
     setUploading(true);
     setImagePreview(URL.createObjectURL(file));
@@ -199,7 +190,6 @@ export default function KarPage() {
               type="button"
               onClick={async () => {
                 await supabaseBrowser.auth.signOut();
-                router.replace("/auth/login");
               }}
               className="text-red-400 hover:text-red-300 font-semibold"
             >
@@ -252,7 +242,6 @@ export default function KarPage() {
                 {uploading ? "Laster..." : "Legg til notat"}
               </button>
 
-              {/* UPLOAD COMPONENT */}
               <UploadComponent onUpload={handleUpload} />
             </div>
 
@@ -267,7 +256,6 @@ export default function KarPage() {
                   key={n.id}
                   className="p-4 bg-white/10 border border-white/20 rounded-xl relative"
                 >
-                  {/* 3-prikk meny */}
                   <div className="absolute top-3 right-3">
                     <button
                       type="button"
