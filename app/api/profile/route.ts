@@ -1,14 +1,9 @@
-import { NextResponse, NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 export async function GET(request: NextRequest) {
-  const url = new URL(request.url);
-  const userId = url.searchParams.get("user");
-
-  // Hent JWT-token fra Authorization-header
   const token = request.headers.get("Authorization")?.replace("Bearer ", "");
 
-  // Lag en Supabase-klient som bruker tokenet
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -21,15 +16,25 @@ export async function GET(request: NextRequest) {
     }
   );
 
-  const { data, error } = await supabase
-    .from("kar")
-    .select("*")
-    .eq("user_id", userId)
-    .order("created_at");
+  // Hent bruker fra token
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (!user) {
+    return NextResponse.json({ username: null });
   }
 
-  return NextResponse.json(data ?? []);
+  // Hent profil
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("username")
+    .eq("id", user.id)
+    .single();
+
+  if (error) {
+    return NextResponse.json({ username: null });
+  }
+
+  return NextResponse.json({ username: data?.username ?? null });
 }

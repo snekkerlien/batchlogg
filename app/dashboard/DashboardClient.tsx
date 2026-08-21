@@ -2,27 +2,72 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
 
 interface KarType {
   id: number;
-  nummer: number;          // ekte nummer
-  displayNummer: number;   // UI-nummer
+  nummer: number;
+  displayNummer: number;
   user_id: string;
   created_at: string;
   status: "Aktiv" | "Ledig";
 }
 
-interface DashboardClientProps {
-  username: string;
-  kar: KarType[];
-}
-
-export default function DashboardClient({ username, kar }: DashboardClientProps) {
+export default function DashboardClient() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [username, setUsername] = useState("");
+  const [kar, setKar] = useState<KarType[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedKars, setSelectedKars] = useState<number[]>([]);
   const menuRef = useRef<HTMLDivElement | null>(null);
-  const router = useRouter();
+
+  // Fetch data from API using client-side session
+  useEffect(() => {
+    async function loadData() {
+      const {
+        data: { session },
+      } = await supabaseBrowser.auth.getSession();
+
+      if (!session) {
+        router.replace("/auth/login");
+        return;
+      }
+
+      const token = session.access_token;
+
+      // Fetch profile
+      const profileRes = await fetch("/api/profile", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!profileRes.ok) {
+        router.replace("/auth/login");
+        return;
+      }
+
+      const profileJson = await profileRes.json();
+      setUsername(profileJson.username ?? "Ukjent");
+
+      // Fetch kar
+      const karRes = await fetch("/api/kar?user=" + session.user.id, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!karRes.ok) {
+        router.replace("/auth/login");
+        return;
+      }
+
+      const karJson = await karRes.json();
+      setKar(karJson);
+
+      setLoading(false);
+    }
+
+    loadData();
+  }, [router]);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -41,14 +86,12 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [menuOpen]);
 
-  // Toggle selection
   function toggleSelect(id: number) {
     setSelectedKars((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   }
 
-  // Delete selected
   async function deleteSelected() {
     if (selectedKars.length === 0) return;
 
@@ -65,10 +108,22 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
     }
   }
 
-  // Create new kar
   async function createKar() {
     await fetch("/kar/create", { method: "POST" });
     router.refresh();
+  }
+
+  async function logout() {
+    await supabaseBrowser.auth.signOut();
+    router.replace("/auth/login");
+  }
+
+  if (loading) {
+    return (
+      <div className="text-center text-white mt-20 text-xl">
+        Laster dashboard…
+      </div>
+    );
   }
 
   return (
@@ -92,11 +147,12 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
               Min konto
             </a>
 
-            <form action="/logout" method="post">
-              <button className="text-red-400 hover:text-red-300 font-semibold">
-                Logg ut
-              </button>
-            </form>
+            <button
+              onClick={logout}
+              className="text-red-400 hover:text-red-300 font-semibold"
+            >
+              Logg ut
+            </button>
           </div>
         )}
       </div>
@@ -132,7 +188,7 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
 
           <div className="flex flex-wrap justify-center gap-6">
             {kar.map((k) => {
-              const isLocked = k.nummer === 1; // Kar 1 låst
+              const isLocked = k.nummer === 1;
 
               return (
                 <button
@@ -217,7 +273,6 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
               </a>
             ))}
 
-            {/* Nytt kar – vises kun hvis bruker har mindre enn 12 kar */}
             {kar.length < 12 && (
               <button
                 onClick={createKar}

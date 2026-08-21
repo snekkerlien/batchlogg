@@ -8,8 +8,11 @@ import { ActiveBatch } from "./ActiveBatch";
 import KarClient from "./KarClient";
 import Link from "next/link";
 
+import { deleteImageServer } from "./deleteImage";
+import { deleteNoteServer } from "./deleteNoteServer";
+
 type Note = {
-  id?: string;
+  id: string;
   note: string | null;
   note_type: "text" | "image";
   image_url?: string | null;
@@ -28,15 +31,14 @@ export default function KarPage() {
   const [batch, setBatch] = useState<any>(null);
   const [isOwner, setIsOwner] = useState(false);
 
-  // Logg / notater
   const [notes, setNotes] = useState<Note[]>([]);
   const [newNote, setNewNote] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
-  // Meny
   const [menuOpen, setMenuOpen] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -90,20 +92,13 @@ export default function KarPage() {
     if (!file || !batch) return;
 
     setUploading(true);
-
-    // Preview
     setImagePreview(URL.createObjectURL(file));
 
     const fileName = `${batch.id}-${Date.now()}`;
 
     const { error: uploadError } = await supabaseBrowser.storage
       .from("batch-images")
-      .upload(fileName, file, {
-        upsert: false,
-        metadata: {
-          owner: user.id,
-        },
-      });
+      .upload(fileName, file);
 
     if (uploadError) {
       console.error("UPLOAD ERROR:", uploadError);
@@ -120,6 +115,7 @@ export default function KarPage() {
   }
 
   async function addNote() {
+    if (uploading) return; // ← KRITISK FIX
     if (!batch) return;
     if (!newNote.trim() && !imageUrl) return;
 
@@ -138,11 +134,7 @@ export default function KarPage() {
       .single();
 
     if (!error && inserted) {
-      setNotes([
-        inserted as Note,
-        ...notes,
-      ]);
-
+      setNotes([inserted as Note, ...notes]);
       setNewNote("");
       setImagePreview(null);
       setImageUrl(null);
@@ -150,28 +142,12 @@ export default function KarPage() {
   }
 
   async function deleteImage(noteId: string, imageUrl: string) {
-    // Fjern fra Storage
-    const path = imageUrl.split("/").pop()!;
+    await deleteImageServer(noteId, imageUrl, karId);
+    setNotes(notes.filter((n) => n.id !== noteId));
+  }
 
-    const { error: storageError } = await supabaseBrowser.storage
-      .from("batch-images")
-      .remove([path]);
-
-    if (storageError) {
-      console.error("STORAGE DELETE ERROR:", storageError);
-    }
-
-    // Fjern notat fra DB
-    const { error: noteError } = await supabaseBrowser
-      .from("batch_notes")
-      .delete()
-      .eq("id", noteId);
-
-    if (noteError) {
-      console.error("NOTE DELETE ERROR:", noteError);
-    }
-
-    // Fjern fra UI
+  async function deleteNote(noteId: string) {
+    await deleteNoteServer(noteId, karId);
     setNotes(notes.filter((n) => n.id !== noteId));
   }
 
@@ -232,7 +208,9 @@ export default function KarPage() {
 
         {batch && <ActiveBatch karId={karId} batch={batch} />}
         {ledig && isOwner && <KarClient kar={kar} />}
-        {!ledig && !isOwner && <p className="text-gray-300 mt-4">Dette karet er i bruk.</p>}
+        {!ledig && !isOwner && (
+          <p className="text-gray-300 mt-4">Dette karet er i bruk.</p>
+        )}
 
         {!ledig && isOwner && (
           <div className="mt-10">
@@ -240,7 +218,6 @@ export default function KarPage() {
 
             {/* Notat + bilde */}
             <div className="mb-6 flex gap-4 items-start">
-
               <div className="w-full">
                 <textarea
                   value={newNote}
@@ -259,9 +236,14 @@ export default function KarPage() {
 
               <button
                 onClick={addNote}
-                className="flex items-center justify-center w-[150px] h-[48px] bg-green-600 hover:bg-green-700 rounded-lg font-semibold text-white text-center"
+                disabled={uploading}
+                className={`flex items-center justify-center w-[150px] h-[48px] rounded-lg font-semibold text-white text-center ${
+                  uploading
+                    ? "bg-gray-600 cursor-not-allowed"
+                    : "bg-green-600 hover:bg-green-700"
+                }`}
               >
-                Legg til notat
+                {uploading ? "Laster..." : "Legg til notat"}
               </button>
 
               <label className="flex items-center justify-center w-[150px] h-[48px] bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold text-white text-center cursor-pointer">
@@ -282,7 +264,44 @@ export default function KarPage() {
               )}
 
               {notes.map((n) => (
-                <div key={n.id ?? n.created_at} className="p-4 bg-white/10 border border-white/20 rounded-xl">
+                <div
+                  key={n.id}
+                  className="p-4 bg-white/10 border border-white/20 rounded-xl relative"
+                >
+                  {/* 3-prikk meny */}
+                  <div className="absolute top-3 right-3">
+                    <button
+                      onClick={() =>
+                        setOpenMenuId(openMenuId === n.id ? null : n.id)
+                      }
+                      className="text-white opacity-70 hover:opacity-100"
+                    >
+                      ⋮
+                    </button>
+
+                    {openMenuId === n.id && (
+                      <div className="absolute right-0 mt-2 bg-black/80 border border-white/20 rounded-lg p-2 w-32 text-sm">
+                        <button
+                          onClick={() => alert("Redigering kommer senere 🙂")}
+                          className="block w-full text-left text-white hover:text-green-300 py-1"
+                        >
+                          Endre
+                        </button>
+
+                        <button
+                          onClick={() =>
+                            n.note_type === "image" && n.image_url
+                              ? deleteImage(n.id, n.image_url)
+                              : deleteNote(n.id)
+                          }
+                          className="block w-full text-left text-red-400 hover:text-red-300 py-1"
+                        >
+                          Slett
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
                   <p className="text-sm opacity-60">
                     {new Date(n.created_at).toLocaleDateString("no-NO")}
                   </p>
@@ -293,15 +312,6 @@ export default function KarPage() {
 
                       {n.note && (
                         <p className="mt-2 whitespace-pre-line">{n.note}</p>
-                      )}
-
-                      {n.id && (
-                        <button
-                          onClick={() => deleteImage(n.id!, n.image_url!)}
-                          className="mt-2 px-3 py-1 bg-red-600 hover:bg-red-700 rounded-lg text-white text-sm"
-                        >
-                          Slett bilde
-                        </button>
                       )}
                     </>
                   )}
