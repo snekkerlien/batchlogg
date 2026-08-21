@@ -1,16 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import { changeUsername } from "./actions";
 
-// Client-side Supabase (for UI only)
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
 export default function AccountPage() {
+  const router = useRouter();
+
+  const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
 
@@ -20,26 +18,30 @@ export default function AccountPage() {
   const [newUsername, setNewUsername] = useState("");
   const [usernameStatus, setUsernameStatus] = useState<null | "ok" | "taken">(null);
 
-  // Hent bruker + profil
+  // Hent session + bruker + profil
   useEffect(() => {
     async function load() {
       const {
-        data: { user },
-      } = await supabase.auth.getUser();
+        data: { session },
+      } = await supabaseBrowser.auth.getSession();
+
+      if (!session) {
+        router.replace("/auth/login");
+        return;
+      }
+
+      const user = session.user;
       setUser(user);
 
-      if (user) {
-        const { data } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .single();
-        setProfile(data);
-      }
+      const res = await fetch("/api/profile");
+      const data = await res.json();
+
+      setProfile(data);
+      setLoading(false);
     }
 
     load();
-  }, []);
+  }, [router]);
 
   // Sjekk om brukernavn er ledig
   useEffect(() => {
@@ -57,7 +59,7 @@ export default function AccountPage() {
     return () => clearTimeout(check);
   }, [newUsername]);
 
-  if (!user || !profile) {
+  if (loading) {
     return (
       <main className="text-white text-center mt-20">
         Laster konto…
@@ -95,11 +97,15 @@ export default function AccountPage() {
       </div>
 
       {/* LOGG UT */}
-      <form action="/logout" method="post" className="mt-10 text-center">
-        <button className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold">
-          Logg ut
-        </button>
-      </form>
+      <button
+        onClick={async () => {
+          await supabaseBrowser.auth.signOut();
+          router.replace("/auth/login");
+        }}
+        className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold w-full"
+      >
+        Logg ut
+      </button>
 
       {/* MODAL: NYTT BRUKERNAVN */}
       {showUsernameModal && (

@@ -2,6 +2,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+import { headers } from "next/headers";
 import { supabaseServer } from "../../../../../lib/supabase/supabaseServerFinal";
 import Link from "next/link";
 
@@ -10,12 +11,34 @@ export default async function KarDetailPage({
 }: {
   params: { id: string; karId: string };
 }) {
-  const supabase = supabaseServer();
+  console.log("=== /profiles/[id]/kar/[karId] START ===");
 
-  // Hent innlogget bruker
+  const headerStore = headers();
+  const authHeader = headerStore.get("Authorization") ?? "";
+  const token = authHeader.startsWith("Bearer ")
+    ? authHeader.slice("Bearer ".length)
+    : "";
+
+  console.log("[KarDetail] Token:", token);
+
+  if (!token) {
+    console.log("[KarDetail] Ingen token → ikke innlogget");
+    return (
+      <main className="min-h-screen flex items-center justify-center text-white">
+        <h1 className="text-2xl font-bold">Du må være innlogget</h1>
+      </main>
+    );
+  }
+
+  const { supabase } = supabaseServer();
+
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+    error: userError,
+  } = await supabase.auth.getUser(token);
+
+  console.log("[KarDetail] User:", user);
+  console.log("[KarDetail] UserError:", userError);
 
   if (!user) {
     return (
@@ -25,13 +48,15 @@ export default async function KarDetailPage({
     );
   }
 
-  // Hent kar
-  const { data: kar } = await supabase
+  const { data: kar, error: karError } = await supabase
     .from("kar")
     .select("*")
     .eq("id", params.karId)
     .eq("user_id", params.id)
     .single();
+
+  console.log("[KarDetail] Kar:", kar);
+  console.log("[KarDetail] KarError:", karError);
 
   if (!kar) {
     return (
@@ -41,21 +66,24 @@ export default async function KarDetailPage({
     );
   }
 
-  // Hent batches
-  const { data: batches } = await supabase
+  const { data: batches, error: batchesError } = await supabase
     .from("batches")
     .select("*")
     .eq("aktivt_kar", kar.id)
     .eq("user_id", params.id);
 
+  console.log("[KarDetail] Batches:", batches);
+  console.log("[KarDetail] BatchesError:", batchesError);
+
   const activeBatch = batches?.find((b) => b.status === "Aktiv");
   const now = Date.now();
+
+  console.log("=== /profiles/[id]/kar/[karId] END ===");
 
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
       <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10 relative">
 
-        {/* Tilbake-knapp */}
         <div className="absolute top-4 left-4">
           <Link
             href={`/profiles/${params.id}`}
@@ -73,7 +101,6 @@ export default async function KarDetailPage({
           Dette er en lesemodus. Du kan se informasjon, men ikke endre noe.
         </p>
 
-        {/* KARSTATUS */}
         <div className="mb-10 p-4 bg-white/5 border border-white/10 rounded-xl">
           <h2 className="text-2xl font-semibold mb-4">Karstatus</h2>
 
@@ -93,7 +120,9 @@ export default async function KarDetailPage({
               const diffMs = now - started;
               const hours = Math.floor(diffMs / 1000 / 60 / 60);
               const days = Math.floor(hours / 24);
-              const startDate = new Date(activeBatch.created_at).toLocaleDateString("no-NO");
+              const startDate = new Date(
+                activeBatch.created_at
+              ).toLocaleDateString("no-NO");
 
               return (
                 <>
@@ -132,7 +161,9 @@ export default async function KarDetailPage({
             const diffMs = now - lastActiveTime;
             const hours = Math.floor(diffMs / 1000 / 60 / 60);
             const days = Math.floor(hours / 24);
-            const lastDate = new Date(lastBatch.created_at).toLocaleDateString("no-NO");
+            const lastDate = new Date(
+              lastBatch.created_at
+            ).toLocaleDateString("no-NO");
 
             return (
               <>
@@ -152,7 +183,6 @@ export default async function KarDetailPage({
           })()}
         </div>
 
-        {/* AKTIV BATCH */}
         {activeBatch ? (
           <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
             <h2 className="text-2xl font-semibold mb-4">Aktiv batch</h2>

@@ -2,20 +2,31 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "../../providers/useAuth";
 import Link from "next/link";
 import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
 
 export default function LoginClient() {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
 
+  // Sjekk session fra browser (JWT)
   useEffect(() => {
-    if (!loading && user) {
-      router.replace("/dashboard");
+    async function checkSession() {
+      const {
+        data: { session },
+      } = await supabaseBrowser.auth.getSession();
+
+      if (session) {
+        router.replace("/dashboard");
+        return;
+      }
+
+      setLoading(false);
     }
-  }, [loading, user, router]);
+
+    checkSession();
+  }, [router]);
 
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -39,7 +50,7 @@ export default function LoginClient() {
     router.replace("/dashboard");
   }
 
-  if (loading || user) {
+  if (loading) {
     return null;
   }
 

@@ -1,19 +1,25 @@
 export const runtime = "nodejs";
-import * as Actions from "./actions";
-import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
-
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+import { headers } from "next/headers";
+import * as Actions from "./actions";
+import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
+
 export default async function KarPage({ params }: { params: { id: string } }) {
-  const supabase = supabaseServer();
+  console.log("=== /kar/[id] START ===");
 
-  // Hent bruker
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Hent Authorization-header manuelt
+  const headerStore = headers();
+  const authHeader = headerStore.get("Authorization") ?? "";
+  const token = authHeader.startsWith("Bearer ")
+    ? authHeader.slice("Bearer ".length)
+    : "";
 
-  if (!user) {
+  console.log("[/kar/[id]] Token:", token);
+
+  if (!token) {
+    console.log("[/kar/[id]] Ingen token → ikke innlogget");
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
         <h1 className="text-2xl font-bold">Du må være innlogget</h1>
@@ -21,12 +27,37 @@ export default async function KarPage({ params }: { params: { id: string } }) {
     );
   }
 
-  // Hent kar
-  const { data: kar } = await supabase
+  const { supabase } = supabaseServer();
+
+  console.log("[/kar/[id]] Henter bruker via JWT...");
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser(token);
+
+  console.log("[/kar/[id]] User:", user);
+  console.log("[/kar/[id]] UserError:", userError);
+
+  if (!user) {
+    console.log("[/kar/[id]] Ingen bruker → ikke innlogget");
+    return (
+      <main className="min-h-screen flex items-center justify-center text-white">
+        <h1 className="text-2xl font-bold">Du må være innlogget</h1>
+      </main>
+    );
+  }
+
+  console.log("[/kar/[id]] Henter kar:", params.id);
+
+  const { data: kar, error: karError } = await supabase
     .from("kar")
     .select("*")
     .eq("id", params.id)
     .single();
+
+  console.log("[/kar/[id]] Kar:", kar);
+  console.log("[/kar/[id]] KarError:", karError);
 
   if (!kar) {
     return (
@@ -36,14 +67,20 @@ export default async function KarPage({ params }: { params: { id: string } }) {
     );
   }
 
-  // Hent batch som står i dette karet
-  const { data: batch } = await supabase
+  console.log("[/kar/[id]] Henter batch...");
+
+  const { data: batch, error: batchError } = await supabase
     .from("batches")
     .select("*")
     .eq("aktivt_kar", kar.id)
     .single();
 
+  console.log("[/kar/[id]] Batch:", batch);
+  console.log("[/kar/[id]] BatchError:", batchError);
+
   const hasBatch = !!batch;
+
+  console.log("=== /kar/[id] END ===");
 
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
@@ -86,25 +123,22 @@ export default async function KarPage({ params }: { params: { id: string } }) {
 
               {batch.secondary_startdate && (
                 <p className="opacity-80 mt-2">
-                  Sekundær siden: {new Date(batch.secondary_startdate).toLocaleDateString()}
+                  Sekundær siden:{" "}
+                  {new Date(batch.secondary_startdate).toLocaleDateString()}
                 </p>
               )}
             </div>
 
             {/* HANDLINGER */}
             <div className="flex flex-col gap-4">
-
-              {/* KANSELLER */}
               <form action={Actions.cancelBatch}>
                 <input type="hidden" name="batch_id" value={batch.id} />
                 <input type="hidden" name="kar_id" value={kar.id} />
-
                 <button className="w-full px-4 py-3 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg font-semibold">
                   Kanseller batch
                 </button>
               </form>
 
-              {/* SEKUNDÆR */}
               <details className="bg-white/5 border border-white/10 rounded-lg p-4">
                 <summary className="cursor-pointer font-semibold text-green-300">
                   Overfør til sekundær
@@ -132,7 +166,6 @@ export default async function KarPage({ params }: { params: { id: string } }) {
                 </form>
               </details>
 
-              {/* AVSLUTT BATCH */}
               <details className="bg-white/5 border border-white/10 rounded-lg p-4">
                 <summary className="cursor-pointer font-semibold text-green-300">
                   Avslutt batch

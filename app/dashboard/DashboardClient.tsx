@@ -15,89 +15,74 @@ interface KarType {
 
 export default function DashboardClient() {
   const router = useRouter();
+
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState("");
   const [kar, setKar] = useState<KarType[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [motd, setMotd] = useState("");
+
   const menuRef = useRef<HTMLDivElement | null>(null);
 
-  // LOGOUT FUNKSJON (manglet)
+  // LOGOUT
   async function logout() {
-    console.log("[Dashboard] Logger ut...");
     await supabaseBrowser.auth.signOut();
-    router.replace("/auth/login");
+    router.replace("/");
   }
 
   // MOTD
   useEffect(() => {
-    const msg = getNextMotd();
-    console.log("[Dashboard] MOTD valgt:", msg);
-    setMotd(msg);
+    setMotd(getNextMotd());
   }, []);
 
   // LOAD DATA
   useEffect(() => {
-    async function loadData() {
-      console.log("[Dashboard] Henter session...");
+    async function load() {
       const {
         data: { session },
       } = await supabaseBrowser.auth.getSession();
 
-      console.log("[Dashboard] Session:", session);
-
       if (!session) {
-        console.log("[Dashboard] Ingen session → redirect til login");
-        router.replace("/auth/login");
+        router.replace("/");
         return;
       }
 
       const token = session.access_token;
 
-      console.log("[Dashboard] Henter profil...");
+      // HENT PROFIL
       const profileRes = await fetch("/api/profile", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      console.log("[Dashboard] Profil-respons:", profileRes.status);
-
       if (!profileRes.ok) {
-        console.log("[Dashboard] Profil-respons ikke OK → redirect til login");
-        router.replace("/auth/login");
+        router.replace("/");
         return;
       }
 
       const profileJson = await profileRes.json();
-      console.log("[Dashboard] Profil-data:", profileJson);
-
       setUsername(profileJson.username ?? "Ukjent");
 
-      console.log("[Dashboard] Henter kar...");
-      const karRes = await fetch("/api/kar?user=" + session.user.id, {
+      // HENT KAR
+      const karRes = await fetch(`/api/kar?user=${session.user.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      console.log("[Dashboard] Kar-respons:", karRes.status);
-
       if (!karRes.ok) {
-        console.log("[Dashboard] Kar-respons ikke OK → redirect til login");
-        router.replace("/auth/login");
+        router.replace("/");
         return;
       }
 
       const karJson = await karRes.json();
-      console.log("[Dashboard] Kar-data:", karJson);
-
       const sorted = [...karJson].sort((a, b) => a.nummer - b.nummer);
 
       setKar(sorted);
       setLoading(false);
     }
 
-    loadData();
+    load();
   }, [router]);
 
-  // MENU CLICK OUTSIDE
+  // MENY CLICK OUTSIDE
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -116,26 +101,24 @@ export default function DashboardClient() {
 
   // CREATE KAR
   async function createKar() {
-    console.log("[Dashboard] Pluss-knapp trykket → sender POST til /kar/create");
+    const {
+      data: { session },
+    } = await supabaseBrowser.auth.getSession();
 
-    try {
-      const res = await fetch("/kar/create", {
-        method: "POST",
-      });
+    if (!session) {
+      router.replace("/");
+      return;
+    }
 
-      console.log("[Dashboard] /kar/create respons:", res.status);
+    const res = await fetch("/kar/create", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    });
 
-      const json = await res.json().catch(() => null);
-      console.log("[Dashboard] /kar/create JSON:", json);
-
-      if (res.ok) {
-        console.log("[Dashboard] Nytt kar opprettet → refresher dashboard");
-        router.refresh();
-      } else {
-        console.log("[Dashboard] Feil ved oppretting av kar:", json);
-      }
-    } catch (err) {
-      console.log("[Dashboard] FEIL ved fetch /kar/create:", err);
+    if (res.ok) {
+      router.refresh();
     }
   }
 

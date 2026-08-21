@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
 
 export default function SignupClient() {
+  const router = useRouter();
   const [error, setError] = useState("");
 
   function validatePassword(password: string) {
@@ -15,22 +18,69 @@ export default function SignupClient() {
     return "";
   }
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    const form = e.currentTarget;
-    const password = form.password.value;
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError("");
+
+    const form = new FormData(e.currentTarget);
+    const username = form.get("username")?.toString() ?? "";
+    const password = form.get("password")?.toString() ?? "";
+    const email = `${username}@example.com`;
 
     const validationError = validatePassword(password);
     if (validationError) {
-      e.preventDefault();
       setError(validationError);
+      return;
     }
+
+    console.log("[Signup] Prøver signUp:", email);
+
+    const { data, error: signupError } = await supabaseBrowser.auth.signUp({
+      email,
+      password,
+    });
+
+    console.log("[Signup] Resultat:", { data, signupError });
+
+    if (signupError) {
+      setError("Kunne ikke opprette konto.");
+      return;
+    }
+
+    if (!data.user) {
+      setError("Kunne ikke opprette bruker.");
+      return;
+    }
+
+    // Opprett profil via API
+    await fetch("/api/profile/create", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        id: data.user.id,
+        username,
+      }),
+    });
+
+    // Logg inn automatisk
+    const { error: loginError } = await supabaseBrowser.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (loginError) {
+      setError("Kunne ikke logge inn etter registrering.");
+      return;
+    }
+
+    router.replace("/dashboard");
   }
 
   return (
     <main className="min-h-screen flex items-center justify-center px-6">
       <form
-        action="/auth/signupAction"
-        method="post"
         onSubmit={handleSubmit}
         className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-sm border border-white/10 space-y-4"
       >

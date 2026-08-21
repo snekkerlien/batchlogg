@@ -4,11 +4,24 @@ import { supabaseServer } from "../../lib/supabase/supabaseServerFinal";
 import { revalidatePath } from "next/cache";
 
 export async function addNote(batchId: string, note: string, imageUrl?: string) {
-  const supabase = supabaseServer();
+  console.log("=== addNote START ===");
+
+  const { supabase, token } = supabaseServer();
+
+  console.log("[addNote] Token:", token);
+
+  if (!token) {
+    console.log("[addNote] Ingen token → avbryter");
+    return;
+  }
 
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+    error: userError,
+  } = await supabase.auth.getUser(token);
+
+  console.log("[addNote] User:", user);
+  console.log("[addNote] UserError:", userError);
 
   if (!user) return;
 
@@ -20,5 +33,9 @@ export async function addNote(batchId: string, note: string, imageUrl?: string) 
     note_type: imageUrl ? "image" : "text",
   });
 
+  console.log("[addNote] Insert OK");
+
   revalidatePath(`/profiles/${user.id}/kar`);
+
+  console.log("=== addNote END ===");
 }

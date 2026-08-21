@@ -1,7 +1,7 @@
 import { supabaseServer } from "../../../../../lib/supabase/supabaseServerFinal";
 
 export default async function Logg({ batchId }: { batchId: string }) {
-  const supabase = supabaseServer();
+  const { supabase } = supabaseServer();
 
   const { data: notes } = await supabase
     .from("batch_notes")

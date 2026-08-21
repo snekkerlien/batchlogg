@@ -3,21 +3,24 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
 
-export async function POST(req: Request) {
+export async function POST() {
   console.log("=== /kar/create START ===");
 
-  // Opprett supabase-server-klient (viktig!)
-  const supabase = supabaseServer();
+  const { supabase, token } = supabaseServer();
 
-  // Hent JWT-token fra Authorization-header
-  const authHeader = req.headers.get("Authorization");
-  console.log("[/kar/create] Authorization header:", authHeader);
+  console.log("[/kar/create] Token mottatt:", token);
 
-  // Hent bruker fra Supabase (via cookies + token)
+  if (!token) {
+    console.log("[/kar/create] Ingen token → 401");
+    return NextResponse.json({ error: "Missing token" }, { status: 401 });
+  }
+
+  console.log("[/kar/create] Henter bruker via JWT...");
+
   const {
     data: { user },
     error: userError,
-  } = await supabase.auth.getUser();
+  } = await supabase.auth.getUser(token);
 
   console.log("[/kar/create] User:", user);
   console.log("[/kar/create] UserError:", userError);
@@ -27,7 +30,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Not logged in" }, { status: 401 });
   }
 
-  // Finn eksisterende kar
   console.log("[/kar/create] Henter eksisterende kar for bruker:", user.id);
 
   const { data: existing, error: existingError } = await supabase
@@ -40,11 +42,9 @@ export async function POST(req: Request) {
   console.log("[/kar/create] Existing kar:", existing);
   console.log("[/kar/create] ExistingError:", existingError);
 
-  // Beregn neste nummer
   const nextNummer = existing?.[0]?.nummer + 1 || 1;
   console.log("[/kar/create] Neste nummer:", nextNummer);
 
-  // Opprett nytt kar
   console.log("[/kar/create] Oppretter nytt kar...");
 
   const { data, error } = await supabase

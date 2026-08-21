@@ -1,18 +1,24 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+import { headers } from "next/headers";
 import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
 import Link from "next/link";
 
 export default async function ProfileDetailPage({ params }: { params: { id: string } }) {
-  const supabase = supabaseServer();
+  console.log("=== /profiles/[id] START ===");
 
-  // Hent innlogget bruker
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Hent Authorization-header manuelt
+  const headerStore = headers();
+  const authHeader = headerStore.get("Authorization") ?? "";
+  const token = authHeader.startsWith("Bearer ")
+    ? authHeader.slice("Bearer ".length)
+    : "";
 
-  if (!user) {
+  console.log("[/profiles/[id]] Token:", token);
+
+  if (!token) {
+    console.log("[/profiles/[id]] Ingen token → ikke innlogget");
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
         <h1 className="text-2xl font-bold">Du må være innlogget</h1>
@@ -20,12 +26,37 @@ export default async function ProfileDetailPage({ params }: { params: { id: stri
     );
   }
 
-  // Hent profil for valgt bruker
-  const { data: profile } = await supabase
+  const { supabase } = supabaseServer();
+
+  console.log("[/profiles/[id]] Henter bruker via JWT...");
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser(token);
+
+  console.log("[/profiles/[id]] User:", user);
+  console.log("[/profiles/[id]] UserError:", userError);
+
+  if (!user) {
+    console.log("[/profiles/[id]] Ingen bruker → ikke innlogget");
+    return (
+      <main className="min-h-screen flex items-center justify-center text-white">
+        <h1 className="text-2xl font-bold">Du må være innlogget</h1>
+      </main>
+    );
+  }
+
+  console.log("[/profiles/[id]] Henter profil...");
+
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", params.id)
     .single();
+
+  console.log("[/profiles/[id]] Profile:", profile);
+  console.log("[/profiles/[id]] ProfileError:", profileError);
 
   if (!profile) {
     return (
@@ -35,20 +66,23 @@ export default async function ProfileDetailPage({ params }: { params: { id: stri
     );
   }
 
-  // Hent kar for valgt bruker
+  console.log("[/profiles/[id]] Henter kar...");
+
   const { data: karRaw } = await supabase
     .from("kar")
     .select("*")
     .eq("user_id", params.id)
     .order("nummer");
 
-  // Hent batches for valgt bruker
+  console.log("[/profiles/[id]] Henter batches...");
+
   const { data: batchesRaw } = await supabase
     .from("batches")
     .select("*")
     .eq("user_id", params.id);
 
-  // Hent offentlige oppskrifter
+  console.log("[/profiles/[id]] Henter oppskrifter...");
+
   const { data: recipesRaw } = await supabase
     .from("recipes")
     .select("*")
@@ -56,7 +90,6 @@ export default async function ProfileDetailPage({ params }: { params: { id: stri
     .eq("is_public", true)
     .order("created_at", { ascending: false });
 
-  // Map kar + finn aktiv batch
   const kar = (karRaw ?? []).map((k: any) => {
     const activeBatch = batchesRaw?.find(
       (b: any) => b.aktivt_kar === k.id && b.status === "Aktiv"
@@ -66,15 +99,16 @@ export default async function ProfileDetailPage({ params }: { params: { id: stri
       id: k.id,
       nummer: k.nummer,
       created_at: k.created_at,
-      status: activeBatch ? ("Aktiv" as const) : ("Ledig" as const),
+      status: activeBatch ? "Aktiv" : "Ledig",
     };
   });
+
+  console.log("=== /profiles/[id] END ===");
 
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
       <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10 relative">
 
-        {/* Tilbake-knapp */}
         <div className="absolute top-4 left-4">
           <Link
             href="/profiles"
@@ -84,7 +118,6 @@ export default async function ProfileDetailPage({ params }: { params: { id: stri
           </Link>
         </div>
 
-        {/* Konto-knapp */}
         <div className="absolute top-4 right-4">
           <Link
             href="/account"
@@ -102,7 +135,6 @@ export default async function ProfileDetailPage({ params }: { params: { id: stri
           Oversikt over brukerens kar, aktive batches og offentlige oppskrifter.
         </p>
 
-        {/* KARLISTE */}
         <h2 className="text-2xl font-semibold mb-4 text-center">Kar</h2>
 
         <div className="flex flex-wrap justify-center gap-6 mb-12">
@@ -133,7 +165,6 @@ export default async function ProfileDetailPage({ params }: { params: { id: stri
           )}
         </div>
 
-        {/* OFFENTLIGE OPPSKRIFTER */}
         <h2 className="text-2xl font-semibold mb-4 text-center">
           Offentlige oppskrifter
         </h2>
