@@ -4,44 +4,49 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../providers/useAuth";
 import Link from "next/link";
+import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
 
 export default function LoginClient() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const [errorMsg, setErrorMsg] = useState("");
 
-  // Redirect hvis allerede innlogget
   useEffect(() => {
     if (!loading && user) {
       router.replace("/dashboard");
     }
   }, [loading, user, router]);
 
-  // Les ?error=1
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("error") === "1") {
-        setErrorMsg("Feil brukernavn eller passord.");
-      }
-    }
-  }, []);
+  async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
 
-  // Ikke vis login-siden mens auth lastes
-  if (loading) {
-    return null;
+    const form = new FormData(e.currentTarget);
+
+    const username = form.get("username")?.toString() ?? "";
+    const password = form.get("password")?.toString() ?? "";
+    const email = `${username}@example.com`;
+
+    const { data, error } = await supabaseBrowser.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      setErrorMsg("Feil brukernavn eller passord.");
+      return;
+    }
+
+    router.replace("/dashboard");
   }
 
-  // Hvis user finnes, ikke render login-siden (redirect skjer i useEffect)
-  if (user) {
+  if (loading || user) {
     return null;
   }
 
   return (
     <main className="min-h-screen flex items-center justify-center px-6">
       <form
-        action="/auth/loginAction"
-        method="post"
+        onSubmit={handleLogin}
         className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-sm border border-white/10 space-y-4"
       >
         <Link

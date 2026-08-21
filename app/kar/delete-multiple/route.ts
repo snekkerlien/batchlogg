@@ -1,23 +1,17 @@
 export const runtime = "edge";
 
 import { NextResponse } from "next/server";
-import { createRouteHandlerClient } from "../../../lib/supabase/supabaseServerFinal";
+import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
 
 export async function POST(req: Request) {
-  const { supabase } = createRouteHandlerClient();
-
-  // Hent session
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabaseServer.auth.getUser();
 
-  if (!session || !session.user) {
+  if (!user) {
     return NextResponse.json({ error: "Not logged in" }, { status: 401 });
   }
 
-  const user = session.user;
-
-  // Hent body
   const body = await req.json();
   const ids: number[] = body.ids ?? [];
 
@@ -25,8 +19,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "No IDs provided" }, { status: 400 });
   }
 
-  // Slett kar som tilhører brukeren
-  const { error } = await supabase
+  const { error } = await supabaseServer
     .from("kar")
     .delete()
     .in("id", ids)
