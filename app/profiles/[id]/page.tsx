@@ -26,7 +26,7 @@ export default async function ProfileDetailPage({ params }: { params: { id: stri
     );
   }
 
-  const { supabase } = supabaseServer();
+  const { supabase } = await supabaseServer();
 
   console.log("[/profiles/[id]] Henter bruker via JWT...");
 

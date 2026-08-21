@@ -30,7 +30,7 @@ export default async function KarDetailPage({
     );
   }
 
-  const { supabase } = supabaseServer();
+  const { supabase } = await supabaseServer();
 
   const {
     data: { user },

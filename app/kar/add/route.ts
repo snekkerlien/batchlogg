@@ -5,7 +5,7 @@ import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
 
 export async function POST(req: Request) {
   // Opprett server-klient som leser cookies
-  const { supabase } = supabaseServer(); // riktig destructuring
+  const { supabase } = await supabaseServer(); // riktig destructuring
 
   // Hent innlogget bruker
   const {
