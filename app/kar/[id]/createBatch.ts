@@ -1,10 +1,10 @@
 "use server";
 
-import { createServerActionClient } from "../../../lib/supabase/supabaseServerFinal";
+import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
 import { revalidatePath } from "next/cache";
 
 export async function createBatch(formData: FormData) {
-  const supabase = await createServerActionClient();
+  const supabase = await supabaseServer;
 
   // Hent bruker
   const {
