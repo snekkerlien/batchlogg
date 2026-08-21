@@ -4,7 +4,7 @@ import { supabaseServer } from "../../lib/supabase/supabaseServerFinal";
 import { revalidatePath } from "next/cache";
 
 export async function addNote(batchId: string, note: string, imageUrl?: string) {
-  const supabase = supabaseServer;
+  const supabase = supabaseServer();
 
   const {
     data: { user },

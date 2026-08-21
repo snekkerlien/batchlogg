@@ -1,3 +1,4 @@
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -5,7 +6,7 @@ import { supabaseServer } from "../../lib/supabase/supabaseServerFinal";
 import Link from "next/link";
 
 export default async function ProfilesPage() {
-  const supabase = supabaseServer;
+  const supabase = supabaseServer();
 
   const {
     data: { user },

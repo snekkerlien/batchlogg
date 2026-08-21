@@ -4,9 +4,11 @@ import { NextResponse } from "next/server";
 import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
 
 export async function POST(req: Request) {
+  const supabase = supabaseServer();
+
   const {
     data: { user },
-  } = await supabaseServer.auth.getUser();
+  } = await supabase.auth.getUser();
 
   if (!user) {
     return NextResponse.json({ error: "Not logged in" }, { status: 401 });
@@ -19,7 +21,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "No IDs provided" }, { status: 400 });
   }
 
-  const { error } = await supabaseServer
+  const { error } = await supabase
     .from("kar")
     .delete()
     .in("id", ids)

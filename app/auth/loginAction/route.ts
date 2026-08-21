@@ -1,10 +1,12 @@
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
 
 export async function POST(req: Request) {
   console.log("loginAction: START");
+
+  const supabase = supabaseServer(); // ← RIKTIG
 
   const form = await req.formData();
 
@@ -15,7 +17,7 @@ export async function POST(req: Request) {
   console.log("loginAction: username =", username);
   console.log("loginAction: email =", email);
 
-  const { data, error } = await supabaseServer.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });

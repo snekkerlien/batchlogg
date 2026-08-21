@@ -4,15 +4,20 @@ import { NextResponse } from "next/server";
 import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
 
 export async function POST(req: Request) {
+  // Opprett server-klient som leser cookies
+  const supabase = supabaseServer();
+
+  // Hent innlogget bruker
   const {
     data: { user },
-  } = await supabaseServer.auth.getUser();
+  } = await supabase.auth.getUser();
 
   if (!user) {
     return NextResponse.redirect(new URL("/auth/login", req.url));
   }
 
-  await supabaseServer.from("kar").insert({
+  // Opprett nytt kar
+  await supabase.from("kar").insert({
     user_id: user.id,
   });
 

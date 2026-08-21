@@ -5,7 +5,7 @@ import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
 import Link from "next/link";
 
 export default async function ProfileDetailPage({ params }: { params: { id: string } }) {
-  const supabase = supabaseServer;
+  const supabase = supabaseServer();
 
   // Hent innlogget bruker
   const {
@@ -47,6 +47,14 @@ export default async function ProfileDetailPage({ params }: { params: { id: stri
     .from("batches")
     .select("*")
     .eq("user_id", params.id);
+
+  // Hent offentlige oppskrifter
+  const { data: recipesRaw } = await supabase
+    .from("recipes")
+    .select("*")
+    .eq("user_id", params.id)
+    .eq("is_public", true)
+    .order("created_at", { ascending: false });
 
   // Map kar + finn aktiv batch
   const kar = (karRaw ?? []).map((k: any) => {
@@ -91,13 +99,13 @@ export default async function ProfileDetailPage({ params }: { params: { id: stri
         </h1>
 
         <p className="opacity-80 text-center mb-10">
-          Oversikt over brukerens kar og aktive batches.
+          Oversikt over brukerens kar, aktive batches og offentlige oppskrifter.
         </p>
 
         {/* KARLISTE */}
         <h2 className="text-2xl font-semibold mb-4 text-center">Kar</h2>
 
-        <div className="flex flex-wrap justify-center gap-6">
+        <div className="flex flex-wrap justify-center gap-6 mb-12">
           {kar.length > 0 ? (
             kar.map((k) => (
               <Link
@@ -122,6 +130,44 @@ export default async function ProfileDetailPage({ params }: { params: { id: stri
             ))
           ) : (
             <p className="opacity-60 text-center">Ingen kar funnet.</p>
+          )}
+        </div>
+
+        {/* OFFENTLIGE OPPSKRIFTER */}
+        <h2 className="text-2xl font-semibold mb-4 text-center">
+          Offentlige oppskrifter
+        </h2>
+
+        <div className="space-y-4">
+          {recipesRaw && recipesRaw.length > 0 ? (
+            recipesRaw.map((r: any) => (
+              <div
+                key={r.id}
+                className="p-4 bg-white/10 border border-white/20 rounded-xl"
+              >
+                <h3 className="text-xl font-bold text-green-300 mb-2">
+                  {r.name}
+                </h3>
+
+                <p className="text-sm opacity-80">
+                  OG: {r.og} — FG: {r.fg} — ABV: {r.abv.toFixed(1)}%
+                </p>
+
+                <p className="text-sm opacity-80 mt-1">
+                  Volum: {r.volume} L
+                </p>
+
+                {r.notes && (
+                  <p className="mt-3 whitespace-pre-line opacity-90">
+                    {r.notes}
+                  </p>
+                )}
+              </div>
+            ))
+          ) : (
+            <p className="opacity-60 text-center">
+              Ingen offentlige oppskrifter.
+            </p>
           )}
         </div>
 

@@ -1,319 +1,178 @@
-"use client";
+export const runtime = "nodejs";
+import * as Actions from "./actions";
+import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 
-import { useEffect, useState } from "react";
-import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
-import { useAuth } from "../../providers/useAuth";
-import { ActiveBatch } from "./ActiveBatch";
-import KarClient from "./KarClient";
-import UploadComponent from "../../components/UploadComponent";
-import { deleteImageServer } from "./deleteImage";
-import { deleteNoteServer } from "./deleteNoteServer";
-import Link from "next/link";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-type Note = {
-  id: string;
-  note: string | null;
-  note_type: "text" | "image";
-  image_url?: string | null;
-  created_at: string;
-};
+export default async function KarPage({ params }: { params: { id: string } }) {
+  const supabase = supabaseServer();
 
-export default function Page({ params }: { params: { id: string } }) {
-  const karId = params.id;
+  // Hent bruker
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const { user, loading: authLoading } = useAuth();
-
-  const [loading, setLoading] = useState(true);
-  const [kar, setKar] = useState<any>(null);
-  const [batch, setBatch] = useState<any>(null);
-  const [isOwner, setIsOwner] = useState(false);
-
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [newNote, setNewNote] = useState("");
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (authLoading) return;
-
-    if (!user) {
-      return;
-    }
-
-    async function loadKar() {
-      const { data: karData } = await supabaseBrowser
-        .from("kar")
-        .select("*")
-        .eq("id", karId)
-        .maybeSingle();
-
-      const { data: batchData } = await supabaseBrowser
-        .from("batches")
-        .select("*")
-        .eq("aktivt_kar", karId)
-        .eq("status", "Aktiv")
-        .maybeSingle();
-
-      if (!karData) {
-        return;
-      }
-
-      setKar(karData);
-      setIsOwner(karData.user_id === user.id);
-      setBatch(batchData);
-
-      if (batchData) {
-        const { data: notesData } = await supabaseBrowser
-          .from("batch_notes")
-          .select("id, note, note_type, image_url, created_at")
-          .eq("batch_id", batchData.id)
-          .order("created_at", { ascending: false });
-
-        setNotes((notesData || []) as Note[]);
-      }
-
-      setLoading(false);
-    }
-
-    loadKar();
-  }, [authLoading, user, karId]);
-
-  async function handleUpload(file: File) {
-    if (!file || !batch) return;
-
-    setUploading(true);
-    setImagePreview(URL.createObjectURL(file));
-
-    const fileName = `${batch.id}-${Date.now()}`;
-
-    const { error: uploadError } = await supabaseBrowser.storage
-      .from("batch-images")
-      .upload(fileName, file);
-
-    if (uploadError) {
-      console.error("UPLOAD ERROR:", uploadError);
-      setUploading(false);
-      return;
-    }
-
-    const { data: urlData } = supabaseBrowser.storage
-      .from("batch-images")
-      .getPublicUrl(fileName);
-
-    setImageUrl(urlData.publicUrl);
-    setUploading(false);
-  }
-
-  async function addNote() {
-    if (uploading) return;
-    if (!batch) return;
-    if (!newNote.trim() && !imageUrl) return;
-
-    const noteText = newNote.trim() !== "" ? newNote : null;
-
-    const { data: inserted, error } = await supabaseBrowser
-      .from("batch_notes")
-      .insert({
-        batch_id: batch.id,
-        user_id: user.id,
-        note: noteText,
-        note_type: imageUrl ? "image" : "text",
-        image_url: imageUrl || null,
-      })
-      .select("id, note, note_type, image_url, created_at")
-      .single();
-
-    if (!error && inserted) {
-      setNotes([inserted as Note, ...notes]);
-      setNewNote("");
-      setImagePreview(null);
-      setImageUrl(null);
-    }
-  }
-
-  async function deleteImage(noteId: string, imageUrl: string) {
-    await deleteImageServer(noteId, imageUrl, karId);
-    setNotes(notes.filter((n) => n.id !== noteId));
-  }
-
-  async function deleteNote(noteId: string) {
-    await deleteNoteServer(noteId, karId);
-    setNotes(notes.filter((n) => n.id !== noteId));
-  }
-
-  if (authLoading || loading) {
+  if (!user) {
     return (
-      <main className="min-h-screen flex items-center justify-center px-6">
-        <div className="bg-black/60 backdrop-blur-md p-6 rounded-xl border border-white/10 text-white">
-          Laster...
-        </div>
+      <main className="min-h-screen flex items-center justify-center text-white">
+        <h1 className="text-2xl font-bold">Du må være innlogget</h1>
       </main>
     );
   }
 
-  const ledig = !batch;
+  // Hent kar
+  const { data: kar } = await supabase
+    .from("kar")
+    .select("*")
+    .eq("id", params.id)
+    .single();
+
+  if (!kar) {
+    return (
+      <main className="min-h-screen flex items-center justify-center text-white">
+        <h1 className="text-2xl font-bold">Kar ikke funnet</h1>
+      </main>
+    );
+  }
+
+  // Hent batch som står i dette karet
+  const { data: batch } = await supabase
+    .from("batches")
+    .select("*")
+    .eq("aktivt_kar", kar.id)
+    .single();
+
+  const hasBatch = !!batch;
 
   return (
-    <main className="min-h-screen flex flex-col items-center px-6 py-12 relative">
+    <main className="min-h-screen px-6 py-12 text-white flex justify-center">
+      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10 relative">
 
-      {/* MENY */}
-      <div className="absolute top-4 right-4 z-50">
-        <button
-          type="button"
-          onClick={() => setMenuOpen(!menuOpen)}
-          className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-white"
-        >
-          ☰
-        </button>
+        {/* Tilbake */}
+        <div className="absolute top-4 left-4">
+          <a
+            href="/dashboard"
+            className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
+          >
+            ← Tilbake
+          </a>
+        </div>
 
-        {menuOpen && (
-          <div className="mt-2 bg-black/80 border border-white/20 rounded-lg p-4 text-right backdrop-blur-md">
-            <Link
-              href="/dashboard"
-              className="block mb-3 text-white hover:text-green-300 font-semibold"
-            >
-              🏠 Hjem
-            </Link>
+        <h1 className="text-4xl font-bold mb-6 text-center">
+          Kar {kar.displayNummer}
+        </h1>
 
-            <a
-              href="/account"
-              className="block mb-3 text-white hover:text-green-300 font-semibold"
-            >
-              Min konto
-            </a>
-
-            <button
-              type="button"
-              onClick={async () => {
-                await supabaseBrowser.auth.signOut();
-              }}
-              className="text-red-400 hover:text-red-300 font-semibold"
-            >
-              Logg ut
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-2xl border border-white/10 text-white">
-
-        {batch && <ActiveBatch karId={karId} batch={batch} />}
-        {ledig && isOwner && <KarClient kar={kar} />}
-        {!ledig && !isOwner && (
-          <p className="text-gray-300 mt-4">Dette karet er i bruk.</p>
+        {!hasBatch && (
+          <p className="text-center opacity-70 mb-10">
+            Dette karet er ledig.
+          </p>
         )}
 
-        {!ledig && isOwner && (
-          <div className="mt-10">
-            <h2 className="text-2xl font-semibold mb-4">Logg / Notater</h2>
+        {hasBatch && (
+          <>
+            <h2 className="text-2xl font-semibold mb-4 text-center">
+              Aktiv batch
+            </h2>
 
-            {/* Notat + bilde */}
-            <div className="mb-6 flex gap-4 items-start">
-              <div className="w-full">
-                <textarea
-                  value={newNote}
-                  onChange={(e) => setNewNote(e.target.value)}
-                  placeholder="Skriv et notat..."
-                  className="w-full p-3 rounded-lg bg-white/10 border border-white/20"
-                />
+            <div className="p-4 bg-white/10 border border-white/20 rounded-xl mb-10">
+              <h3 className="text-xl font-bold text-green-300 mb-2">
+                {batch.name}
+              </h3>
 
-                {imagePreview && (
-                  <img
-                    src={imagePreview}
-                    className="rounded-lg mt-3 border border-white/20"
-                  />
-                )}
-              </div>
+              <p className="opacity-80">OG: {batch.og}</p>
+              <p className="opacity-80">Volum: {batch.volume_l} L</p>
+              <p className="opacity-80">Status: {batch.status}</p>
 
-              <button
-                type="button"
-                onClick={addNote}
-                disabled={uploading}
-                className={`flex items-center justify-center w-[150px] h-[48px] rounded-lg font-semibold text-white text-center ${
-                  uploading
-                    ? "bg-gray-600 cursor-not-allowed"
-                    : "bg-green-600 hover:bg-green-700"
-                }`}
-              >
-                {uploading ? "Laster..." : "Legg til notat"}
-              </button>
-
-              <UploadComponent onUpload={handleUpload} />
-            </div>
-
-            {/* Liste */}
-            <div className="space-y-4">
-              {notes.length === 0 && (
-                <p className="opacity-60">Ingen notater enda.</p>
+              {batch.secondary_startdate && (
+                <p className="opacity-80 mt-2">
+                  Sekundær siden: {new Date(batch.secondary_startdate).toLocaleDateString()}
+                </p>
               )}
-
-              {notes.map((n) => (
-                <div
-                  key={n.id}
-                  className="p-4 bg-white/10 border border-white/20 rounded-xl relative"
-                >
-                  <div className="absolute top-3 right-3">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setOpenMenuId(openMenuId === n.id ? null : n.id)
-                      }
-                      className="text-white opacity-70 hover:opacity-100"
-                    >
-                      ⋮
-                    </button>
-
-                    {openMenuId === n.id && (
-                      <div className="absolute right-0 mt-2 bg-black/80 border border-white/20 rounded-lg p-2 w-32 text-sm">
-                        <button
-                          type="button"
-                          onClick={() => alert("Redigering kommer senere 🙂")}
-                          className="block w-full text-left text-white hover:text-green-300 py-1"
-                        >
-                          Endre
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            n.note_type === "image" && n.image_url
-                              ? deleteImage(n.id, n.image_url)
-                              : deleteNote(n.id)
-                          }
-                          className="block w-full text-left text-red-400 hover:text-red-300 py-1"
-                        >
-                          Slett
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  <p className="text-sm opacity-60">
-                    {new Date(n.created_at).toLocaleDateString("no-NO")}
-                  </p>
-
-                  {n.note_type === "image" && n.image_url && (
-                    <>
-                      <img src={n.image_url} className="rounded-lg mt-2" />
-
-                      {n.note && (
-                        <p className="mt-2 whitespace-pre-line">{n.note}</p>
-                      )}
-                    </>
-                  )}
-
-                  {n.note_type === "text" && n.note && (
-                    <p className="mt-2 whitespace-pre-line">{n.note}</p>
-                  )}
-                </div>
-              ))}
             </div>
-          </div>
+
+            {/* HANDLINGER */}
+            <div className="flex flex-col gap-4">
+
+              {/* KANSELLER */}
+              <form action={Actions.cancelBatch}>
+                <input type="hidden" name="batch_id" value={batch.id} />
+                <input type="hidden" name="kar_id" value={kar.id} />
+
+                <button className="w-full px-4 py-3 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg font-semibold">
+                  Kanseller batch
+                </button>
+              </form>
+
+              {/* SEKUNDÆR */}
+              <details className="bg-white/5 border border-white/10 rounded-lg p-4">
+                <summary className="cursor-pointer font-semibold text-green-300">
+                  Overfør til sekundær
+                </summary>
+
+                <form action={Actions.moveToSecondary} className="mt-4 flex flex-col gap-4">
+                  <input type="hidden" name="batch_id" value={batch.id} />
+                  <input type="hidden" name="kar_id" value={kar.id} />
+
+                  <textarea
+                    name="secondary_additions"
+                    placeholder="Tilsetninger"
+                    className="p-3 rounded bg-black/40 border border-white/20"
+                  />
+
+                  <textarea
+                    name="secondary_notes"
+                    placeholder="Notater"
+                    className="p-3 rounded bg-black/40 border border-white/20"
+                  />
+
+                  <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
+                    Overfør til sekundær
+                  </button>
+                </form>
+              </details>
+
+              {/* AVSLUTT BATCH */}
+              <details className="bg-white/5 border border-white/10 rounded-lg p-4">
+                <summary className="cursor-pointer font-semibold text-green-300">
+                  Avslutt batch
+                </summary>
+
+                <form action={Actions.finishBatch} className="mt-4 flex flex-col gap-4">
+                  <input type="hidden" name="batch_id" value={batch.id} />
+                  <input type="hidden" name="kar_id" value={kar.id} />
+
+                  <input
+                    name="fg"
+                    type="number"
+                    step="0.001"
+                    placeholder="FG (Final Gravity)"
+                    className="p-3 rounded bg-black/40 border border-white/20"
+                  />
+
+                  <textarea
+                    name="finished_notes"
+                    placeholder="Avslutningsnotat"
+                    className="p-3 rounded bg-black/40 border border-white/20"
+                  />
+
+                  <label className="flex items-center gap-3">
+                    <input type="checkbox" name="save_as_recipe" />
+                    Lagre som oppskrift
+                  </label>
+
+                  <button className="px-4 py-3 bg-blue-700 hover:bg-blue-600 border border-blue-500 rounded-lg font-semibold">
+                    Avslutt batch
+                  </button>
+                </form>
+              </details>
+            </div>
+          </>
         )}
+
+        <p className="text-sm opacity-40 mt-12 text-center">
+          © {new Date().getFullYear()} Fiklebrygg AS.
+        </p>
       </div>
     </main>
   );

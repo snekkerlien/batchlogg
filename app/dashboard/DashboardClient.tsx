@@ -3,11 +3,11 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
+import { getNextMotd } from "../../lib/motd/motdList";
 
 interface KarType {
   id: number;
   nummer: number;
-  displayNummer: number;
   user_id: string;
   created_at: string;
   status: "Aktiv" | "Ledig";
@@ -19,57 +19,85 @@ export default function DashboardClient() {
   const [username, setUsername] = useState("");
   const [kar, setKar] = useState<KarType[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [selectMode, setSelectMode] = useState(false);
-  const [selectedKars, setSelectedKars] = useState<number[]>([]);
+  const [motd, setMotd] = useState("");
   const menuRef = useRef<HTMLDivElement | null>(null);
 
-  // Fetch data from API using client-side session
+  // LOGOUT FUNKSJON (manglet)
+  async function logout() {
+    console.log("[Dashboard] Logger ut...");
+    await supabaseBrowser.auth.signOut();
+    router.replace("/auth/login");
+  }
+
+  // MOTD
+  useEffect(() => {
+    const msg = getNextMotd();
+    console.log("[Dashboard] MOTD valgt:", msg);
+    setMotd(msg);
+  }, []);
+
+  // LOAD DATA
   useEffect(() => {
     async function loadData() {
+      console.log("[Dashboard] Henter session...");
       const {
         data: { session },
       } = await supabaseBrowser.auth.getSession();
 
+      console.log("[Dashboard] Session:", session);
+
       if (!session) {
+        console.log("[Dashboard] Ingen session → redirect til login");
         router.replace("/auth/login");
         return;
       }
 
       const token = session.access_token;
 
-      // Fetch profile
+      console.log("[Dashboard] Henter profil...");
       const profileRes = await fetch("/api/profile", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
+      console.log("[Dashboard] Profil-respons:", profileRes.status);
+
       if (!profileRes.ok) {
+        console.log("[Dashboard] Profil-respons ikke OK → redirect til login");
         router.replace("/auth/login");
         return;
       }
 
       const profileJson = await profileRes.json();
+      console.log("[Dashboard] Profil-data:", profileJson);
+
       setUsername(profileJson.username ?? "Ukjent");
 
-      // Fetch kar
+      console.log("[Dashboard] Henter kar...");
       const karRes = await fetch("/api/kar?user=" + session.user.id, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
+      console.log("[Dashboard] Kar-respons:", karRes.status);
+
       if (!karRes.ok) {
+        console.log("[Dashboard] Kar-respons ikke OK → redirect til login");
         router.replace("/auth/login");
         return;
       }
 
       const karJson = await karRes.json();
-      setKar(karJson);
+      console.log("[Dashboard] Kar-data:", karJson);
 
+      const sorted = [...karJson].sort((a, b) => a.nummer - b.nummer);
+
+      setKar(sorted);
       setLoading(false);
     }
 
     loadData();
   }, [router]);
 
-  // Close menu when clicking outside
+  // MENU CLICK OUTSIDE
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -86,36 +114,29 @@ export default function DashboardClient() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [menuOpen]);
 
-  function toggleSelect(id: number) {
-    setSelectedKars((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-  }
-
-  async function deleteSelected() {
-    if (selectedKars.length === 0) return;
-
-    const res = await fetch("/kar/delete-multiple", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids: selectedKars }),
-    });
-
-    if (res.ok) {
-      setSelectMode(false);
-      setSelectedKars([]);
-      router.refresh();
-    }
-  }
-
+  // CREATE KAR
   async function createKar() {
-    await fetch("/kar/create", { method: "POST" });
-    router.refresh();
-  }
+    console.log("[Dashboard] Pluss-knapp trykket → sender POST til /kar/create");
 
-  async function logout() {
-    await supabaseBrowser.auth.signOut();
-    router.replace("/auth/login");
+    try {
+      const res = await fetch("/kar/create", {
+        method: "POST",
+      });
+
+      console.log("[Dashboard] /kar/create respons:", res.status);
+
+      const json = await res.json().catch(() => null);
+      console.log("[Dashboard] /kar/create JSON:", json);
+
+      if (res.ok) {
+        console.log("[Dashboard] Nytt kar opprettet → refresher dashboard");
+        router.refresh();
+      } else {
+        console.log("[Dashboard] Feil ved oppretting av kar:", json);
+      }
+    } catch (err) {
+      console.log("[Dashboard] FEIL ved fetch /kar/create:", err);
+    }
   }
 
   if (loading) {
@@ -129,7 +150,7 @@ export default function DashboardClient() {
   return (
     <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl border border-white/10 max-w-3xl mx-auto mt-16 relative">
 
-      {/* --- MENY KNAPP --- */}
+      {/* MENY */}
       <div className="absolute top-4 right-4 z-50" ref={menuRef}>
         <button
           onClick={() => setMenuOpen(!menuOpen)}
@@ -140,11 +161,19 @@ export default function DashboardClient() {
 
         {menuOpen && (
           <div className="mt-2 bg-black/80 border border-white/20 rounded-lg p-4 text-right backdrop-blur-md">
+
             <a
               href="/account"
               className="block mb-3 text-white hover:text-green-300 font-semibold"
             >
               Min konto
+            </a>
+
+            <a
+              href="/recipes"
+              className="block mb-3 text-white hover:text-green-300 font-semibold"
+            >
+              Mine oppskrifter
             </a>
 
             <button
@@ -157,13 +186,8 @@ export default function DashboardClient() {
         )}
       </div>
 
-      {/* --- HEADER --- */}
-      <h1 className="text-3xl font-bold mb-6 text-center">
-        Logget inn som {username}
-      </h1>
-
-      {/* --- KNAPPER --- */}
-      <div className="flex justify-center gap-4 mb-10">
+      {/* KNAPPER ØVERST */}
+      <div className="flex justify-center gap-4 mb-10 mt-4">
         <a
           href="/profiles"
           className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
@@ -171,120 +195,85 @@ export default function DashboardClient() {
           Se andre bryggere
         </a>
 
-        <button
-          onClick={() => setSelectMode(true)}
+        <a
+          href="/recipes"
           className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
         >
-          Velg kar
-        </button>
+          Mine oppskrifter
+        </a>
       </div>
 
-      {/* --- SELECT MODE UI --- */}
-      {selectMode && (
-        <div className="mb-10 p-4 bg-black/40 border border-white/10 rounded-xl">
-          <h3 className="text-xl font-semibold mb-4 text-center">
-            Velg kar for sletting
-          </h3>
+      {/* HEADER */}
+      <h1 className="text-3xl font-bold mb-2 text-center">
+        Logget inn som {username}
+      </h1>
 
-          <div className="flex flex-wrap justify-center gap-6">
-            {kar.map((k) => {
-              const isLocked = k.nummer === 1;
+      {/* MOTD */}
+      <p className="text-center text-zinc-300 mb-6 italic">
+        {motd}
+      </p>
 
-              return (
-                <button
-                  key={k.id}
-                  onClick={() => {
-                    if (!isLocked) toggleSelect(k.id);
-                  }}
-                  disabled={isLocked}
-                  className={`border rounded-xl p-4 w-32 h-32 flex flex-col items-center justify-center transition
-                    ${
-                      isLocked
-                        ? "bg-gray-700/40 border-gray-600 cursor-not-allowed opacity-60"
-                        : selectedKars.includes(k.id)
-                        ? "bg-red-600/40 border-red-500"
-                        : "bg-white/5 border-white/10 hover:bg-white/10"
-                    }`}
-                >
-                  <span className="text-lg font-bold text-green-300">
-                    Kar {k.displayNummer}
-                  </span>
+      {/* KAROVERSIKT */}
+      <h2 className="text-2xl font-semibold mb-4 text-center">
+        Karoversikt
+      </h2>
 
-                  <span
-                    className={`mt-2 ${
-                      isLocked ? "text-gray-400" : "text-zinc-400"
-                    }`}
-                  >
-                    {isLocked ? "Låst" : k.status}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+      <div className="flex flex-wrap justify-center gap-6">
 
-          <div className="flex justify-center gap-4 mt-6">
-            <button
-              onClick={deleteSelected}
-              className="px-4 py-2 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg font-semibold"
-            >
-              Slett valgte
-            </button>
-
-            <button
-              onClick={() => {
-                setSelectMode(false);
-                setSelectedKars([]);
-              }}
-              className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
-            >
-              Avbryt
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* --- KAROVERSIKT (normal mode) --- */}
-      {!selectMode && (
-        <>
-          <h2 className="text-2xl font-semibold mb-4 text-center">
-            Karoversikt
-          </h2>
-
-          <div className="flex flex-wrap justify-center gap-6">
-            {kar.map((k) => (
-              <a
-                key={k.id}
-                href={`/kar/${k.id}`}
-                className="border border-white/10 rounded-xl p-4 bg-white/5 w-32 h-32 flex flex-col items-center justify-center hover:bg-white/10 transition"
-              >
-                <span className="text-lg font-bold text-green-300">
-                  Kar {k.displayNummer}
-                </span>
-
+        {/* KAR-KNAPPER */}
+        {kar.map((k, index) => (
+          <a
+            key={k.id}
+            href={`/kar/${k.id}`}
+            className="relative border border-white/10 rounded-xl p-4 bg-white/5 w-32 h-32 flex flex-col items-center justify-center hover:bg-white/10 transition overflow-hidden"
+          >
+            {/* CO2 BOBLER */}
+            <div className="bubble-container">
+              {[...Array(12)].map((_, i) => (
                 <span
-                  className={
-                    k.status === "Aktiv"
-                      ? "text-green-400 font-semibold mt-2"
-                      : "text-zinc-400 mt-2"
-                  }
-                >
-                  {k.status}
-                </span>
-              </a>
-            ))}
+                  key={i}
+                  className="bubble"
+                  style={{
+                    left: `${Math.random() * 100}%`,
+                    animationDuration: `${2 + Math.random() * 3}s`,
+                    animationDelay: `${Math.random() * 2}s`,
+                    width: `${4 + Math.random() * 6}px`,
+                    height: `${4 + Math.random() * 6}px`,
+                  }}
+                />
+              ))}
+            </div>
 
-            {kar.length < 12 && (
-              <button
-                onClick={createKar}
-                className="border border-white/10 rounded-xl p-4 bg-white/5 w-32 h-32 flex flex-col items-center justify-center hover:bg-white/10 transition"
-              >
-                <span className="text-3xl font-bold text-green-300">+</span>
-                <span className="text-zinc-400 mt-2">Nytt kar</span>
-              </button>
-            )}
-          </div>
-        </>
-      )}
+            <span className="text-lg font-bold text-green-300 relative z-10">
+              Kar {index + 1}
+            </span>
+
+            <span
+              className={
+                k.status === "Aktiv"
+                  ? "text-green-400 font-semibold mt-2 relative z-10"
+                  : "text-zinc-400 mt-2 relative z-10"
+              }
+            >
+              {k.status}
+            </span>
+          </a>
+        ))}
+
+        {/* PLUSS-KNAPP */}
+        <button
+          onClick={createKar}
+          className="border border-white/10 bg-white/5 hover:bg-white/10 rounded-xl p-4 w-32 h-32 flex items-center justify-center text-white text-3xl font-bold"
+        >
+          +
+        </button>
+
+      </div>
+
+      {/* COPYRIGHT */}
+      <p className="text-sm opacity-40 mt-12 text-center">
+        © {new Date().getFullYear()} Fiklebrygg AS.
+      </p>
     </div>
   );
 }

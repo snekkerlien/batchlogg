@@ -1,10 +1,13 @@
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 import { redirect } from "next/navigation";
 import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
 
 export default async function NewKarPage() {
   console.log("=== /kar/new START ===");
 
-  const supabase = supabaseServer;
+  const supabase = supabaseServer(); // ← viktig
 
   // Hent bruker
   const {
@@ -50,7 +53,6 @@ export default async function NewKarPage() {
 
   console.log("Kar opprettet OK. Redirecter til dashboard...");
 
-  // Send bruker tilbake til dashboard
   redirect("/dashboard");
 
   console.log("=== /kar/new END ===");

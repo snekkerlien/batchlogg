@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
-import { changeUsername } from "./actions"; // server action import
+import { changeUsername } from "./actions";
 
-// Supabase client-side
+// Client-side Supabase (for UI only)
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!

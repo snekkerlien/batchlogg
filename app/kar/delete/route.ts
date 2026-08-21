@@ -7,15 +7,20 @@ export async function POST(req: Request) {
   const form = await req.formData();
   const karId = form.get("kar_id")?.toString() ?? "";
 
+  // Opprett server-klient
+  const supabase = supabaseServer();
+
+  // Hent innlogget bruker
   const {
     data: { user },
-  } = await supabaseServer.auth.getUser();
+  } = await supabase.auth.getUser();
 
   if (!user) {
     return NextResponse.redirect(new URL("/auth/login", req.url));
   }
 
-  await supabaseServer
+  // Slett kar
+  await supabase
     .from("kar")
     .delete()
     .eq("id", karId)
