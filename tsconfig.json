@@ -1,11 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -16,19 +12,11 @@
     "resolveJsonModule": true,
     "jsx": "preserve",
     "incremental": true,
-    "types": [
-      "node"
-    ],
+    "types": ["node"],
     "moduleDetection": "force",
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
+    "plugins": [{ "name": "next" }],
     "isolatedModules": true,
 
-    /* ⭐⭐ DETTE ER DET SOM FIKSER IMPORTEN ⭐⭐ */
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./*"]
     }
@@ -41,8 +29,5 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-
-  "exclude": [
-    "node_modules"
-  ]
+  "exclude": ["node_modules"]
 }
