@@ -7,16 +7,26 @@ import { redirect } from "next/navigation";
 // 1. KANSELLER BATCH
 // ---------------------------------------------------------
 export async function cancelBatch(formData: FormData) {
-  const supabase = supabaseServer();
+  const { supabase } = supabaseServer(); // riktig destructuring
 
   const batchId = formData.get("batch_id") as string;
   const karId = formData.get("kar_id") as string;
 
   if (!batchId || !karId) return;
 
-  await supabase.from("batch_notes").delete().eq("batch_id", batchId);
-  await supabase.from("batches").delete().eq("id", batchId);
+  // Slett notater
+  await supabase
+    .from("batch_notes")
+    .delete()
+    .eq("batch_id", batchId);
 
+  // Slett batch
+  await supabase
+    .from("batches")
+    .delete()
+    .eq("id", batchId);
+
+  // Sett kar til ledig
   await supabase
     .from("kar")
     .update({ status: "Ledig" })
@@ -29,7 +39,7 @@ export async function cancelBatch(formData: FormData) {
 // 2. OVERFØR TIL SEKUNDÆR
 // ---------------------------------------------------------
 export async function moveToSecondary(formData: FormData) {
-  const supabase = supabaseServer();
+  const { supabase } = supabaseServer();
 
   const batchId = formData.get("batch_id") as string;
   const karId = formData.get("kar_id") as string;
@@ -56,7 +66,7 @@ export async function moveToSecondary(formData: FormData) {
 // 3. AVSLUTT BATCH
 // ---------------------------------------------------------
 export async function finishBatch(formData: FormData) {
-  const supabase = supabaseServer();
+  const { supabase } = supabaseServer();
 
   const batchId = formData.get("batch_id") as string;
   const karId = formData.get("kar_id") as string;
@@ -70,13 +80,14 @@ export async function finishBatch(formData: FormData) {
     karId,
     fgRaw,
     notes,
-    saveRecipe
+    saveRecipe,
   });
 
   if (!batchId || !karId) return;
 
   const fg = parseFloat(fgRaw);
 
+  // Hent batch
   const { data: batch } = await supabase
     .from("batches")
     .select("*")
@@ -85,8 +96,10 @@ export async function finishBatch(formData: FormData) {
 
   if (!batch) throw new Error("Batch not found");
 
+  // ABV-formel
   const abv = (batch.og - fg) * 131.25;
 
+  // Oppdater batch
   await supabase
     .from("batches")
     .update({
@@ -99,6 +112,7 @@ export async function finishBatch(formData: FormData) {
     })
     .eq("id", batchId);
 
+  // Lagre oppskrift hvis valgt
   if (saveRecipe) {
     await supabase.from("recipes").insert({
       user_id: batch.user_id,
