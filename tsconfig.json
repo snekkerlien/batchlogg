@@ -25,8 +25,15 @@
         "name": "next"
       }
     ],
-    "isolatedModules": true
+    "isolatedModules": true,
+
+    /* ⭐⭐ DETTE ER DET SOM FIKSER IMPORTEN ⭐⭐ */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"]
+    }
   },
+
   "include": [
     "next-env.d.ts",
     "**/*.ts",
@@ -34,6 +41,7 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
+
   "exclude": [
     "node_modules"
   ]

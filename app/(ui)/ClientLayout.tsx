@@ -3,7 +3,7 @@
 import { ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Toaster } from "react-hot-toast";
-import { AuthProvider } from "./providers/AuthProvider";
+import { AuthProvider } from "../providers/AuthProvider";
 
 export default function ClientLayout({ children }: { children: ReactNode }) {
   return (

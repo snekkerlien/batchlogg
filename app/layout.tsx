@@ -1,6 +1,6 @@
 import "./globals.css";
 import type { ReactNode } from "react";
-import ClientLayout from "./ClientLayout";
+import ClientLayout from "./(ui)/ClientLayout";
 import Background from "./Background";
 
 export default function RootLayout({ children }: { children: ReactNode }) {

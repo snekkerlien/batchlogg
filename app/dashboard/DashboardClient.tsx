@@ -1,33 +1,29 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import Link from "next/link";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
-type KarType = {
-  id: string;                // UUID fra Supabase
+interface KarType {
+  id: number;
+  nummer: number;          // ekte nummer
+  displayNummer: number;   // visningsnummer
+  user_id: string;
   created_at: string;
   status: "Aktiv" | "Ledig";
-};
+}
 
-type DashboardClientProps = {
+interface DashboardClientProps {
   username: string;
   kar: KarType[];
-};
+}
 
 export default function DashboardClient({ username, kar }: DashboardClientProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
 
-  const karCount = kar.length;
-  const hasPlus = karCount < 12;
-
-  const [selectMode, setSelectMode] = useState(false);
-  const [selected, setSelected] = useState<string[]>([]);
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  const menuRef = useRef<HTMLDivElement | null>(null);
-
-  // Lukk meny ved klikk utenfor
+  // Close menu when clicking outside
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -44,36 +40,10 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [menuOpen]);
 
-  function toggleSelect(id: string, index: number) {
-    if (!selectMode) return;
-    if (index === 0) return; // Kar 1 kan ikke slettes
-
-    setSelected((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-  }
-
-  async function deleteSelected() {
-    if (selected.length === 0) return;
-
-    await fetch("/kar/delete-multiple", {
-      method: "POST",
-      body: JSON.stringify({ ids: selected }),
-      headers: { "Content-Type": "application/json" },
-    });
-
-    setSelectMode(false);
-    setSelected([]);
-
-    router.refresh(); // Oppdater dashboard uten full reload
-  }
-
-  const totalItems = karCount + (hasPlus && !selectMode ? 1 : 0);
-
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center px-6">
+    <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl border border-white/10 max-w-3xl mx-auto mt-16 relative">
 
-      {/* --- MENY KNAPP --- */}
+      {/* --- MENY KNAPP ØVERST TIL HØYRE --- */}
       <div className="absolute top-4 right-4 z-50" ref={menuRef}>
         <button
           onClick={() => setMenuOpen(!menuOpen)}
@@ -86,8 +56,8 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
           <div className="mt-2 bg-black/80 border border-white/20 rounded-lg p-4 text-right backdrop-blur-md">
             <Link
               href="/account"
-              className="block mb-3 text-white hover:text-green-300 font-semibold"
               prefetch={false}
+              className="block mb-3 text-white hover:text-green-300 font-semibold"
             >
               Min konto
             </Link>
@@ -101,127 +71,68 @@ export default function DashboardClient({ username, kar }: DashboardClientProps)
         )}
       </div>
 
-      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-4xl border border-white/10 text-center">
+      {/* --- HEADER --- */}
+      <h1 className="text-3xl font-bold mb-6 text-center">
+        Logget inn som {username}
+      </h1>
 
-        <h1 className="text-2xl font-bold mb-4">
-          Logget inn som {username}
-        </h1>
-
-        <p className="opacity-80 mb-8 text-lg">
-          Velkommen tilbake til bryggeriet, kompis 🍻
-        </p>
-
+      {/* --- KNAPPER --- */}
+      <div className="flex justify-center gap-4 mb-10">
         <Link
           href="/profiles"
-          className="inline-block mb-8 px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
-          prefetch={false}
+          className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
         >
           Se andre bryggere
         </Link>
 
-        {/* SELECT MODE BUTTONS */}
-        <div className="mb-6 flex gap-4 justify-center">
-          {!selectMode && (
-            <button
-              onClick={() => setSelectMode(true)}
-              className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
-            >
-              Velg kar
-            </button>
-          )}
-
-          {selectMode && (
-            <>
-              <button
-                onClick={deleteSelected}
-                className="px-6 py-3 bg-red-600 hover:bg-red-700 border border-red-800 rounded-lg font-semibold"
-              >
-                Slett valgte kar ({selected.length})
-              </button>
-
-              <button
-                onClick={() => {
-                  setSelectMode(false);
-                  setSelected([]);
-                }}
-                className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
-              >
-                Avslutt valg
-              </button>
-            </>
-          )}
-        </div>
-
-        {/* GRID */}
-        <div
-          className={`
-            ${
-              totalItems === 2
-                ? "grid grid-flow-col auto-cols-max justify-center gap-6"
-                : totalItems === 1
-                ? "grid grid-cols-1 justify-center gap-6"
-                : "grid grid-cols-2 md:grid-cols-3 gap-6 md:gap-4"
-            }
-            mx-auto
-            max-w-[36rem]
-          `}
+        <Link
+          href="/kar"
+          className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
         >
-          {kar.map((k, index) => {
-            const isSelected = selected.includes(k.id);
-            const isLocked = selectMode && index === 0;
-
-            const karBox = (
-              <div
-                onClick={() => toggleSelect(k.id, index)}
-                className={`
-                  relative border rounded-xl p-6 transition flex flex-col items-center justify-center
-                  w-40 h-40 md:w-28 md:h-28
-                  ${selectMode ? "cursor-pointer" : ""}
-                  ${
-                    isLocked
-                      ? "bg-white/10 border-white/20 opacity-70 cursor-not-allowed"
-                      : isSelected
-                      ? "bg-green-900/40 border-green-400"
-                      : "bg-white/5 hover:bg-white/10 border-white/10"
-                  }
-                `}
-              >
-                <span className="absolute top-[10px] text-xl font-bold text-green-300 md:text-lg">
-                  Kar {index + 1}
-                </span>
-
-                <span className="text-zinc-300 mt-12 text-lg md:text-base">
-                  {k.status === "Aktiv" ? "Aktiv batch" : "Ledig"}
-                </span>
-              </div>
-            );
-
-            if (selectMode) {
-              return <div key={k.id}>{karBox}</div>;
-            }
-
-            return (
-              <Link key={k.id} href={`/kar/${k.id}`} prefetch={false}>
-                {karBox}
-              </Link>
-            );
-          })}
-
-          {hasPlus && !selectMode && (
-            <form action="/kar/add" method="post">
-              <button
-                className="border border-white/10 rounded-xl p-6 bg-white/5 hover:bg-white/10 transition flex flex-col items-center justify-center w-40 h-40 md:w-28 md:h-28 text-5xl md:text-4xl font-bold text-green-300"
-              >
-                +
-              </button>
-            </form>
-          )}
-        </div>
-
-        <p className="text-sm opacity-40 mt-12">
-          © {new Date().getFullYear()} Fiklebrygg AS.
-        </p>
+          Velg kar
+        </Link>
       </div>
-    </main>
+
+      {/* --- KAROVERSIKT --- */}
+      <h2 className="text-2xl font-semibold mb-4 text-center">
+        Karoversikt
+      </h2>
+
+      <div className="flex flex-wrap justify-center gap-6">
+        {kar.map((k) => (
+          <Link
+            key={k.id}
+            href={`/kar/${k.id}`}
+            className="border border-white/10 rounded-xl p-4 bg-white/5 w-32 h-32 flex flex-col items-center justify-center hover:bg-white/10 transition"
+          >
+            <span className="text-lg font-bold text-green-300">
+              Kar {k.displayNummer}
+            </span>
+
+            <span
+              className={
+                k.status === "Aktiv"
+                  ? "text-green-400 font-semibold mt-2"
+                  : "text-zinc-400 mt-2"
+              }
+            >
+              {k.status}
+            </span>
+          </Link>
+        ))}
+
+        {/* Nytt kar */}
+        <button
+          onClick={() => {
+            router.push("/kar/new");
+            router.refresh();
+          }}
+          className="border border-white/10 rounded-xl p-4 bg-white/5 w-32 h-32 flex flex-col items-center justify-center hover:bg-white/10 transition"
+        >
+          <span className="text-3xl font-bold text-green-300">+</span>
+          <span className="text-zinc-400 mt-2">Nytt kar</span>
+        </button>
+      </div>
+    </div>
   );
 }

@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 export async function createBatch(formData: FormData) {
   const supabase = await createServerActionClient();
 
-  // Hent bruker fra Supabase Auth
+  // Hent bruker
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -16,15 +16,17 @@ export async function createBatch(formData: FormData) {
   }
 
   const userId = user.id;
+
+  // Hent kar-ID (UUID)
   const karId = formData.get("kar") as string;
 
-  if (!karId) {
-    throw new Error("Kar-ID mangler.");
+  if (!karId || typeof karId !== "string") {
+    throw new Error("Kar-ID mangler eller er ugyldig.");
   }
 
-  // Finn siste batchnummer
+  // Finn neste batchnummer
   const { data: last } = await supabase
-    .from("Batches")
+    .from("batches")
     .select("batchnummer")
     .order("batchnummer", { ascending: false })
     .limit(1)
@@ -33,28 +35,26 @@ export async function createBatch(formData: FormData) {
   const nextNumber = last ? Number(last.batchnummer) + 1 : 1;
   const formattedBatchnummer = String(nextNumber).padStart(4, "0");
 
-  // Hent felter fra formData
+  // Hent felter
   const name = formData.get("name") as string;
   const volume_l = Number(formData.get("volume_l"));
   const startdato = formData.get("startdato") as string;
   const og = Number(formData.get("og"));
-  const kode = formData.get("kode") as string;
   const oppskrift = formData.get("oppskrift") as string;
 
-  if (!name || !volume_l || !startdato || !og || !kode) {
+  if (!name || !volume_l || !startdato || !og) {
     throw new Error("Mangler obligatoriske felter.");
   }
 
-  // Sett inn batch
-  const { error } = await supabase.from("Batches").insert({
+  // Sett inn batch (bruk UUID som aktivt_kar)
+  const { error } = await supabase.from("batches").insert({
     batchnummer: formattedBatchnummer,
-    aktivt_kar: karId,
+    aktivt_kar: karId,        // ← RIKTIG: UUID
     user_id: userId,
     name,
     volume_l,
     startdato,
     og,
-    kode,
     oppskrift,
     status: "Aktiv",
   });
@@ -63,8 +63,12 @@ export async function createBatch(formData: FormData) {
     throw new Error("Insert failed: " + error.message);
   }
 
-  // Revalidate KarPage
-  revalidatePath(`/kar/${karId}`);
+  // Oppdater kar-status (bruk UUID)
+  await supabase
+    .from("kar")
+    .update({ status: "Aktiv" })
+    .eq("id", karId);         // ← RIKTIG: UUID
 
-  return { kar: karId };
+  // Revalidate riktig path (UUID)
+  revalidatePath(`/kar/${karId}`);
 }

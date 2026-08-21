@@ -4,25 +4,34 @@ import { useRouter } from "next/navigation";
 import { createBatch } from "./createBatch";
 import { RecipeEditor } from "./RecipeEditor";
 
-export default function RegisterBatchForm({ karId }: { karId: string }) {
+type KarType = {
+  id: string;        // UUID
+  nummer: number;    // auto-increment INT
+  created_at: string;
+  status: string;
+};
+
+type KarClientProps = {
+  kar: KarType;
+};
+
+export default function KarClient({ kar }: KarClientProps) {
   const router = useRouter();
 
   return (
     <form
       action={async (formData) => {
-        // Sett riktig kar-id (uuid)
-        formData.set("kar", karId);
+        // Send UUID til server action
+        formData.set("kar", kar.id);
 
-        // Kall server action
         await createBatch(formData);
 
-        // Oppdater siden slik at KarPage henter batch på nytt
         router.refresh();
       }}
-      className="space-y-4"
+      className="space-y-4 text-white"
     >
-      {/* Skjult felt for kar-id */}
-      <input type="hidden" name="kar" value={karId} />
+      {/* Skjult felt for kar-ID (UUID) */}
+      <input type="hidden" name="kar" value={kar.id} />
 
       <div>
         <label className="block mb-1">Batchnavn</label>
@@ -36,7 +45,7 @@ export default function RegisterBatchForm({ karId }: { karId: string }) {
       </div>
 
       <div>
-        <label className="block mb-1">Batchstørrelse (liter)</label>
+        <label className="block mb-1">Volum (liter)</label>
         <input
           type="number"
           name="volume_l"
@@ -65,17 +74,6 @@ export default function RegisterBatchForm({ karId }: { karId: string }) {
           name="og"
           required
           placeholder="Skriv original gravity"
-          className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
-        />
-      </div>
-
-      <div>
-        <label className="block mb-1">Sikkerhetskode</label>
-        <input
-          type="text"
-          name="kode"
-          required
-          placeholder="Velg en kode for sletting/endring"
           className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
         />
       </div>

@@ -1,46 +1,36 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
+type ActiveBatchProps = {
+  karId: string;
+  batch: {
+    id: string;
+    batchnummer: string;
+    name: string;
+    volume_l: number;
+    startdato: string;
+    og: number;
+    oppskrift: string;
+    status: string;
+    created_at: string;
+    user_id: string;
+  };
+};
 
-export function ActiveBatch({ karId }: { karId: string }) {
-  const supabase = supabaseBrowser;
-  const [batch, setBatch] = useState<any>(null);
-
-  useEffect(() => {
-    async function load() {
-      const { data } = await supabase
-        .from("Batches")
-        .select("*")
-        .eq("aktivt_kar", karId)
-        .eq("status", "Aktiv")
-        .maybeSingle();
-
-      setBatch(data);
-    }
-
-    load();
-  }, [karId]);
-
-  if (!batch) {
-    return (
-      <div className="text-gray-400 italic">
-        Ingen aktiv batch i dette karet.
-      </div>
-    );
-  }
-
+export function ActiveBatch({ karId, batch }: ActiveBatchProps) {
   return (
-    <div className="p-4 border rounded bg-white shadow">
-      <h2 className="text-xl font-bold mb-2">Aktiv batch</h2>
+    <div className="p-4 bg-green-900/40 rounded-lg border border-green-600 text-white space-y-2">
+      <h2 className="text-xl font-bold">Aktiv batch</h2>
 
-      <p><strong>Navn:</strong> {batch.name}</p>
       <p><strong>Batchnummer:</strong> {batch.batchnummer}</p>
-      <p><strong>Startdato:</strong> {batch.startdato}</p>
+      <p><strong>Navn:</strong> {batch.name}</p>
       <p><strong>Volum:</strong> {batch.volume_l} L</p>
+      <p><strong>Startdato:</strong> {batch.startdato}</p>
       <p><strong>OG:</strong> {batch.og}</p>
-      <p><strong>Kode:</strong> {batch.kode}</p>
-      <p><strong>Oppskrift:</strong> {batch.oppskrift}</p>
+
+      <p className="whitespace-pre-wrap">
+        <strong>Oppskrift:</strong>{"\n"}
+        {batch.oppskrift}
+      </p>
     </div>
   );
 }

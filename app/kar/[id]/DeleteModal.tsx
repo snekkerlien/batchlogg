@@ -27,21 +27,18 @@ export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
 
     setLoading(false);
 
-    // Teknisk feil
     if (error) {
       setErrorMsg("En teknisk feil oppstod. Prøv igjen.");
       return;
     }
 
-    // Ingen rader slettet → feil kode
     if (count === 0) {
       setErrorMsg("Feil kode. Sjekk koden og prøv igjen.");
       return;
     }
 
-    // Sletting OK
     setOpen(false);
-    router.refresh(); // 🔥 Raskere og riktig i App Router
+    router.refresh();
   }
 
   return (

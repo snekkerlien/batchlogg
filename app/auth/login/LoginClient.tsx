@@ -10,30 +10,32 @@ export default function LoginClient() {
   const { user, loading } = useAuth();
   const [errorMsg, setErrorMsg] = useState("");
 
+  // Redirect hvis allerede innlogget
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace("/dashboard");
+    }
+  }, [loading, user, router]);
+
+  // Les ?error=1
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("error") === "1") {
+        setErrorMsg("Feil brukernavn eller passord.");
+      }
+    }
+  }, []);
+
   // Ikke vis login-siden mens auth lastes
   if (loading) {
     return null;
   }
 
-  // Redirect hvis allerede innlogget
-  useEffect(() => {
-    if (user) {
-      router.replace("/dashboard");
-    }
-  }, [user, router]);
-
-  // Hvis user finnes, ikke render login-siden
+  // Hvis user finnes, ikke render login-siden (redirect skjer i useEffect)
   if (user) {
     return null;
   }
-
-  // Les ?error=1
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("error") === "1") {
-      setErrorMsg("Feil brukernavn eller passord.");
-    }
-  }, []);
 
   return (
     <main className="min-h-screen flex items-center justify-center px-6">
