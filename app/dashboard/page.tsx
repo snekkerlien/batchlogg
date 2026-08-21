@@ -3,8 +3,8 @@ export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
 import { redirect } from "next/navigation";
-import { createServerComponentClient } from "../../../lib/supabase/supabaseServerFinal";
-import DashboardClient from "../../dashboard/DashboardClient";
+import { createServerComponentClient } from "../../lib/supabase/supabaseServerFinal";
+import DashboardClient from "./DashboardClient";
 
 export default async function DashboardPage() {
   const supabase = createServerComponentClient();

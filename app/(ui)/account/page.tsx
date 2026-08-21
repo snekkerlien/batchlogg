@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
+import { changeUsername } from "./actions"; // server action import
 
 // Supabase client-side
 const supabase = createClient(
@@ -18,40 +19,6 @@ export default function AccountPage() {
 
   const [newUsername, setNewUsername] = useState("");
   const [usernameStatus, setUsernameStatus] = useState<null | "ok" | "taken">(null);
-
-  async function handleUsernameChange(formData: FormData) {
-    const password = String(formData.get("password") ?? "");
-    const username = String(formData.get("newUsername") ?? "");
-
-    if (!user?.email) return;
-
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: user.email,
-      password,
-    });
-
-    if (signInError) {
-      alert("Feil passord");
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("profiles")
-      .update({ username })
-      .eq("id", user.id)
-      .select()
-      .single();
-
-    if (error) {
-      alert("Kunne ikke endre brukernavn");
-      return;
-    }
-
-    setProfile(data);
-    setShowPasswordModal(false);
-    setShowUsernameModal(false);
-    setNewUsername("");
-  }
 
   // Hent bruker + profil
   useEffect(() => {
@@ -181,7 +148,7 @@ export default function AccountPage() {
           <div className="bg-zinc-900 p-6 rounded-xl border border-white/10 w-96">
             <h2 className="text-xl font-bold mb-4">Bekreft med passord</h2>
 
-            <form action={handleUsernameChange} className="space-y-4">
+            <form action={changeUsername} className="space-y-4">
               <input type="hidden" name="newUsername" value={newUsername} />
 
               <input

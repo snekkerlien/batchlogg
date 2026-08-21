@@ -1,4 +1,4 @@
-import KarPage from "../../kar/[id]/KarPage";
+import KarPage from "./KarPage";
 
 export default function Page({ params }: { params: { id: string } }) {
   return (
