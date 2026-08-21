@@ -7,31 +7,29 @@ import { createClient } from "@supabase/supabase-js";
 export async function changeUsername(formData: FormData) {
   console.log("=== changeUsername START ===");
 
-  const { supabase, token } = supabaseServer();
-
-  console.log("[changeUsername] Token:", token);
-
-  if (!token) {
-    console.log("[changeUsername] Ingen token → redirect");
-    redirect("/auth/login");
-  }
+  // Bruk SSR-klienten (leser cookies automatisk)
+  const { supabase } = supabaseServer();
 
   const newUsername = formData.get("newUsername")?.toString() ?? "";
   const password = formData.get("password")?.toString() ?? "";
 
   console.log("[changeUsername] Nytt brukernavn:", newUsername);
 
+  // Hent bruker fra cookies
   const {
     data: { user },
     error: userError,
-  } = await supabase.auth.getUser(token);
+  } = await supabase.auth.getUser();
 
   console.log("[changeUsername] User:", user);
   console.log("[changeUsername] UserError:", userError);
 
-  if (!user) redirect("/auth/login");
+  if (!user) {
+    console.log("[changeUsername] Ingen bruker → redirect");
+    redirect("/auth/login");
+  }
 
-  // Verifiser passord via Supabase-klient (JWT)
+  // Verifiser passord via direkte Supabase-klient (JWT)
   const supabaseDirect = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -68,7 +66,7 @@ export async function changeUsername(formData: FormData) {
 
   console.log("[changeUsername] Brukernavn oppdatert");
 
-  // Logg ut ved å slette session i browseren (ikke server)
+  // Redirect til login for å oppdatere session
   redirect(
     "/auth/login?info=Brukernavn+oppdatert.+Logg+inn+med+det+nye+brukernavnet."
   );
