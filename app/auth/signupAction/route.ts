@@ -1,12 +1,11 @@
 export const runtime = "edge";
 
 import { NextResponse } from "next/server";
-import { createRouteHandlerClient } from "../../../lib/supabase/supabaseServerFinal";
+import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
 
 export async function POST(req: Request) {
   console.log("signupAction: START");
 
-  const { supabase } = createRouteHandlerClient();
   const form = await req.formData();
 
   const username = form.get("username") as string;
@@ -26,11 +25,13 @@ export async function POST(req: Request) {
   const pwError = validatePassword(password);
   if (pwError) {
     console.error("SIGNUP ERROR:", pwError);
-    return NextResponse.redirect(new URL(`/auth/signup?error=${pwError}`, req.url));
+    return NextResponse.redirect(
+      new URL(`/auth/signup?error=${pwError}`, req.url)
+    );
   }
 
-  // Supabase signUp
-  const { data, error } = await supabase.auth.signUp({
+  // Supabase signUp (supabase-js)
+  const { data, error } = await supabaseServer.auth.signUp({
     email,
     password,
   });
@@ -39,33 +40,37 @@ export async function POST(req: Request) {
 
   if (error) {
     console.error("SIGNUP ERROR", error);
-    return NextResponse.redirect(new URL("/auth/signup?error=supabase", req.url));
+    return NextResponse.redirect(
+      new URL("/auth/signup?error=supabase", req.url)
+    );
   }
 
   // Opprett profil
   if (data.user) {
-    await supabase.from("profiles").insert({
+    await supabaseServer.from("profiles").insert({
       id: data.user.id,
       username,
     });
   }
 
-  // Sjekk session (Supabase auto‑logger ikke inn etter signUp)
+  // Supabase-js logger ikke inn automatisk etter signUp
   const {
     data: { session },
-  } = await supabase.auth.getSession();
+  } = await supabaseServer.auth.getSession();
 
   if (!session) {
     console.log("signupAction: no session → auto-login");
 
-    const { error: loginError } = await supabase.auth.signInWithPassword({
+    const { error: loginError } = await supabaseServer.auth.signInWithPassword({
       email,
       password,
     });
 
     if (loginError) {
       console.error("AUTO-LOGIN FAILED", loginError);
-      return NextResponse.redirect(new URL("/auth/login?error=1", req.url));
+      return NextResponse.redirect(
+        new URL("/auth/login?error=1", req.url)
+      );
     }
   }
 

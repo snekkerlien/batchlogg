@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
-import { createServerComponentClient } from "../../../lib/supabase/supabaseServerFinal";
+import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
 
 export default async function NewKarPage() {
   console.log("=== /kar/new START ===");
 
-  const supabase = createServerComponentClient();
+  const supabase = supabaseServer;
 
   // Hent bruker
   const {

@@ -1,12 +1,11 @@
 export const runtime = "edge";
 
 import { NextResponse } from "next/server";
-import { createRouteHandlerClient } from "../../../lib/supabase/supabaseServerFinal";
+import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
 
 export async function POST(req: Request) {
   console.log("loginAction: START");
 
-  const { supabase } = createRouteHandlerClient();
   const form = await req.formData();
 
   const username = form.get("username") as string;
@@ -16,7 +15,7 @@ export async function POST(req: Request) {
   console.log("loginAction: username =", username);
   console.log("loginAction: email =", email);
 
-  const { data, error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabaseServer.auth.signInWithPassword({
     email,
     password,
   });

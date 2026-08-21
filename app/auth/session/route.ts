@@ -1,12 +1,11 @@
-import { createRouteHandlerClient } from "../../../lib/supabase/supabaseServerFinal";
+import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  const { supabase } = createRouteHandlerClient();
-
+  // Hent bruker fra JWT som kommer fra klienten
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await supabaseServer.auth.getUser();
 
   return NextResponse.json({ user });
 }

@@ -21,26 +21,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
 
     async function syncSession() {
-      // Hent fersk session direkte fra Supabase
       const { data, error } = await supabaseBrowser.auth.getSession();
 
       if (!mounted) return;
 
-      // Hvis session mangler → sett user = null
       if (error || !data.session) {
         setUser(null);
         setLoading(false);
         return;
       }
 
-      // Hvis session finnes → sett user
       setUser(data.session.user);
       setLoading(false);
     }
 
     syncSession();
 
-    // Lytt på endringer i session
     const { data: listener } = supabaseBrowser.auth.onAuthStateChange(
       (_event, session) => {
         if (!mounted) return;

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createMiddlewareClient } from "./lib/supabase/supabaseServerFinal";
 
 const publicRoutes = [
   "/auth/login",
@@ -16,37 +15,21 @@ const protectedRoutes = [
   "/account",
 ];
 
-export async function middleware(req: NextRequest) {
-  const res = NextResponse.next();
+export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Tillat public routes
   if (publicRoutes.some((route) => pathname.startsWith(route))) {
-    return res;
+    return NextResponse.next();
   }
 
-  // Sjekk om siden er beskyttet
-  const isProtected = protectedRoutes.some((route) =>
-    pathname.startsWith(route)
-  );
-
-  if (!isProtected) {
-    return res;
+  // Hvis siden er beskyttet, la AuthProvider håndtere auth
+  if (protectedRoutes.some((route) => pathname.startsWith(route))) {
+    return NextResponse.next();
   }
 
-  // Supabase Edge-middleware
-  const supabase = createMiddlewareClient({ req, res });
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  // Ingen session → redirect
-  if (!session) {
-    return NextResponse.redirect(new URL("/auth/login", req.url));
-  }
-
-  // Session finnes → tillat tilgang
-  return res;
+  // Alt annet → tillat
+  return NextResponse.next();
 }
 
 export const config = {
