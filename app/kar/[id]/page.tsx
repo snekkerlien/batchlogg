@@ -3,8 +3,15 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 import * as Actions from "./actions";
-import { createBatch } from "./createBatch";
-import { RecipeEditor } from "./RecipeEditor";
+import NextDynamic from "next/dynamic";
+
+const RecipeEditor = NextDynamic(
+  () => import("./RecipeEditor").then((mod) => mod.RecipeEditor),
+  {
+    ssr: false,
+  }
+);
+
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 
 export default async function KarPage({ params }: { params: { id: string } }) {
@@ -38,11 +45,29 @@ export default async function KarPage({ params }: { params: { id: string } }) {
 
   const isOwner = kar.user_id === user.id;
 
-  const { data: batch } = await supabase
+  // ---------------------------------------------------------
+  // 1. HENT AKTIV BATCH
+  // ---------------------------------------------------------
+  let { data: batch } = await supabase
     .from("batches")
     .select("*")
     .eq("aktivt_kar", kar.id)
     .single();
+
+  // ---------------------------------------------------------
+  // 2. HVIS INGEN AKTIV BATCH → HENT SISTE BATCH SOM VAR KNYTTET TIL KARET
+  // ---------------------------------------------------------
+  if (!batch) {
+    const { data: historyBatch } = await supabase
+      .from("batches")
+      .select("*")
+      .eq("user_id", kar.user_id)
+      .order("finished_date", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    batch = historyBatch;
+  }
 
   const hasBatch = !!batch;
 
@@ -77,10 +102,9 @@ export default async function KarPage({ params }: { params: { id: string } }) {
                   Start ny batch
                 </h2>
 
-                <form action={createBatch} className="flex flex-col gap-6">
+                <form action={Actions.createBatch} className="flex flex-col gap-6">
                   <input type="hidden" name="kar" value={kar.id} />
 
-                  {/* ⭐ Batchnavn */}
                   <div>
                     <label className="block mb-1 font-semibold">Batchnavn</label>
                     <input
@@ -91,7 +115,6 @@ export default async function KarPage({ params }: { params: { id: string } }) {
                     />
                   </div>
 
-                  {/* ⭐ Volum */}
                   <div>
                     <label className="block mb-1 font-semibold">Volum (L)</label>
                     <input
@@ -104,7 +127,6 @@ export default async function KarPage({ params }: { params: { id: string } }) {
                     />
                   </div>
 
-                  {/* ⭐ Startdato — med dagens dato */}
                   <div>
                     <label className="block mb-1 font-semibold">Startdato</label>
                     <input
@@ -116,7 +138,6 @@ export default async function KarPage({ params }: { params: { id: string } }) {
                     />
                   </div>
 
-                  {/* ⭐ OG */}
                   <div>
                     <label className="block mb-1 font-semibold">OG (Original Gravity)</label>
                     <input
@@ -129,7 +150,6 @@ export default async function KarPage({ params }: { params: { id: string } }) {
                     />
                   </div>
 
-                  {/* ⭐ RECIPE EDITOR */}
                   <RecipeEditor />
 
                   <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
@@ -141,11 +161,11 @@ export default async function KarPage({ params }: { params: { id: string } }) {
           </>
         )}
 
-        {/* AKTIV BATCH */}
+        {/* AKTIV ELLER HISTORISK BATCH */}
         {hasBatch && (
           <>
             <h2 className="text-2xl font-semibold mb-4 text-center">
-              Aktiv batch
+              {batch.status === "Aktiv" ? "Aktiv batch" : "Siste batch"}
             </h2>
 
             <div className="p-4 bg-white/10 border border-white/20 rounded-xl mb-10">
@@ -163,9 +183,25 @@ export default async function KarPage({ params }: { params: { id: string } }) {
                   {new Date(batch.secondary_startdate).toLocaleDateString()}
                 </p>
               )}
+
+              {batch.finished_date && (
+                <p className="opacity-80 mt-2">
+                  Avsluttet:{" "}
+                  {new Date(batch.finished_date).toLocaleDateString()}
+                </p>
+              )}
+
+              {batch.abv && (
+                <p className="opacity-80 mt-2">ABV: {batch.abv.toFixed(2)}%</p>
+              )}
+
+              {batch.finished_notes && (
+                <p className="opacity-80 mt-2">Notater: {batch.finished_notes}</p>
+              )}
             </div>
 
-            {isOwner && (
+            {/* Kun eier kan gjøre handlinger */}
+            {isOwner && batch.status === "Aktiv" && (
               <div className="flex flex-col gap-4">
                 <form action={Actions.cancelBatch}>
                   <input type="hidden" name="batch_id" value={batch.id} />

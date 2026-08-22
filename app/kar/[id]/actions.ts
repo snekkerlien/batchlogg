@@ -2,35 +2,79 @@
 
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+
+// ---------------------------------------------------------
+// 0. START NY BATCH
+// ---------------------------------------------------------
+export async function createBatch(formData: FormData) {
+  const { supabase } = supabaseServer();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("Ingen session – bruker ikke innlogget.");
+
+  const userId = user.id;
+  const karId = formData.get("kar") as string;
+
+  if (!karId) throw new Error("Kar-ID mangler.");
+
+  const { data: last } = await supabase
+    .from("batches")
+    .select("batchnummer")
+    .order("batchnummer", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const nextNumber = last ? Number(last.batchnummer) + 1 : 1;
+  const formattedBatchnummer = String(nextNumber).padStart(4, "0");
+
+  const name = formData.get("name") as string;
+  const volume_l = Number(formData.get("volume_l"));
+  const startdato = formData.get("startdato") as string;
+  const og = Number(formData.get("og"));
+  const oppskrift = formData.get("oppskrift") as string;
+
+  if (!name || !volume_l || !startdato || !og) {
+    throw new Error("Mangler obligatoriske felter.");
+  }
+
+  const { error } = await supabase.from("batches").insert({
+    batchnummer: formattedBatchnummer,
+    aktivt_kar: karId,
+    user_id: userId,
+    name,
+    volume_l,
+    startdato,
+    og,
+    oppskrift,
+    status: "Aktiv",
+  });
+
+  if (error) throw new Error("Insert failed: " + error.message);
+
+  await supabase.from("kar").update({ status: "Aktiv" }).eq("id", karId);
+
+  revalidatePath(`/kar/${karId}`);
+  redirect(`/kar/${karId}`);
+}
 
 // ---------------------------------------------------------
 // 1. KANSELLER BATCH
 // ---------------------------------------------------------
 export async function cancelBatch(formData: FormData) {
-  const { supabase } = await supabaseServer(); // riktig destructuring
+  const { supabase } = supabaseServer();
 
   const batchId = formData.get("batch_id") as string;
   const karId = formData.get("kar_id") as string;
 
   if (!batchId || !karId) return;
 
-  // Slett notater
-  await supabase
-    .from("batch_notes")
-    .delete()
-    .eq("batch_id", batchId);
-
-  // Slett batch
-  await supabase
-    .from("batches")
-    .delete()
-    .eq("id", batchId);
-
-  // Sett kar til ledig
-  await supabase
-    .from("kar")
-    .update({ status: "Ledig" })
-    .eq("id", karId);
+  await supabase.from("batch_notes").delete().eq("batch_id", batchId);
+  await supabase.from("batches").delete().eq("id", batchId);
+  await supabase.from("kar").update({ status: "Ledig" }).eq("id", karId);
 
   redirect(`/kar/${karId}`);
 }
@@ -39,7 +83,7 @@ export async function cancelBatch(formData: FormData) {
 // 2. OVERFØR TIL SEKUNDÆR
 // ---------------------------------------------------------
 export async function moveToSecondary(formData: FormData) {
-  const { supabase } = await supabaseServer();
+  const { supabase } = supabaseServer();
 
   const batchId = formData.get("batch_id") as string;
   const karId = formData.get("kar_id") as string;
@@ -66,7 +110,7 @@ export async function moveToSecondary(formData: FormData) {
 // 3. AVSLUTT BATCH
 // ---------------------------------------------------------
 export async function finishBatch(formData: FormData) {
-  const { supabase } = await supabaseServer();
+  const { supabase } = supabaseServer();
 
   const batchId = formData.get("batch_id") as string;
   const karId = formData.get("kar_id") as string;
@@ -75,19 +119,10 @@ export async function finishBatch(formData: FormData) {
   const notes = (formData.get("finished_notes") as string) || "";
   const saveRecipe = formData.get("save_as_recipe") === "on";
 
-  console.log("FINISH BATCH TRIGGERED", {
-    batchId,
-    karId,
-    fgRaw,
-    notes,
-    saveRecipe,
-  });
-
   if (!batchId || !karId) return;
 
   const fg = parseFloat(fgRaw);
 
-  // Hent batch
   const { data: batch } = await supabase
     .from("batches")
     .select("*")
@@ -96,13 +131,13 @@ export async function finishBatch(formData: FormData) {
 
   if (!batch) throw new Error("Batch not found");
 
-  // ABV-formel
   const abv = (batch.og - fg) * 131.25;
 
-  // Oppdater batch
+  // ⭐ VIKTIG: Fjern koblingen til karet
   await supabase
     .from("batches")
     .update({
+      aktivt_kar: null, // ← dette var det som manglet
       status: "Avsluttet",
       fg,
       abv,
@@ -112,7 +147,9 @@ export async function finishBatch(formData: FormData) {
     })
     .eq("id", batchId);
 
-  // Lagre oppskrift hvis valgt
+  // Sett karet til ledig
+  await supabase.from("kar").update({ status: "Ledig" }).eq("id", karId);
+
   if (saveRecipe) {
     await supabase.from("recipes").insert({
       user_id: batch.user_id,
