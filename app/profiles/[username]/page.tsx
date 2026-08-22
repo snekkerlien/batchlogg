@@ -1,45 +1,18 @@
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-import { headers } from "next/headers";
 import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
 import Link from "next/link";
 
-export default async function ProfileDetailPage({ params }: { params: { id: string } }) {
-  console.log("=== /profiles/[id] START ===");
-
-  // Hent Authorization-header manuelt
-  const headerStore = headers();
-  const authHeader = headerStore.get("Authorization") ?? "";
-  const token = authHeader.startsWith("Bearer ")
-    ? authHeader.slice("Bearer ".length)
-    : "";
-
-  console.log("[/profiles/[id]] Token:", token);
-
-  if (!token) {
-    console.log("[/profiles/[id]] Ingen token → ikke innlogget");
-    return (
-      <main className="min-h-screen flex items-center justify-center text-white">
-        <h1 className="text-2xl font-bold">Du må være innlogget</h1>
-      </main>
-    );
-  }
-
-  const { supabase } = await supabaseServer();
-
-  console.log("[/profiles/[id]] Henter bruker via JWT...");
+export default async function ProfileDetailPage({ params }: { params: { username: string } }) {
+  const { supabase } = supabaseServer();
 
   const {
     data: { user },
-    error: userError,
-  } = await supabase.auth.getUser(token);
-
-  console.log("[/profiles/[id]] User:", user);
-  console.log("[/profiles/[id]] UserError:", userError);
+  } = await supabase.auth.getUser();
 
   if (!user) {
-    console.log("[/profiles/[id]] Ingen bruker → ikke innlogget");
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
         <h1 className="text-2xl font-bold">Du må være innlogget</h1>
@@ -47,16 +20,12 @@ export default async function ProfileDetailPage({ params }: { params: { id: stri
     );
   }
 
-  console.log("[/profiles/[id]] Henter profil...");
-
-  const { data: profile, error: profileError } = await supabase
+  // Finn bruker via username
+  const { data: profile } = await supabase
     .from("profiles")
     .select("*")
-    .eq("id", params.id)
+    .eq("username", params.username)
     .single();
-
-  console.log("[/profiles/[id]] Profile:", profile);
-  console.log("[/profiles/[id]] ProfileError:", profileError);
 
   if (!profile) {
     return (
@@ -66,44 +35,46 @@ export default async function ProfileDetailPage({ params }: { params: { id: stri
     );
   }
 
-  console.log("[/profiles/[id]] Henter kar...");
+  const userId = profile.id;
 
+  // Hent kar
   const { data: karRaw } = await supabase
     .from("kar")
     .select("*")
-    .eq("user_id", params.id)
+    .eq("user_id", userId)
     .order("nummer");
 
-  console.log("[/profiles/[id]] Henter batches...");
-
+  // Hent batches
   const { data: batchesRaw } = await supabase
     .from("batches")
     .select("*")
-    .eq("user_id", params.id);
+    .eq("user_id", userId);
 
-  console.log("[/profiles/[id]] Henter oppskrifter...");
-
+  // Hent oppskrifter
   const { data: recipesRaw } = await supabase
     .from("recipes")
     .select("*")
-    .eq("user_id", params.id)
+    .eq("user_id", userId)
     .eq("is_public", true)
     .order("created_at", { ascending: false });
 
-  const kar = (karRaw ?? []).map((k: any) => {
-    const activeBatch = batchesRaw?.find(
-      (b: any) => b.aktivt_kar === k.id && b.status === "Aktiv"
-    );
+  // ⭐ Sett status + renummerer kar etter rekkefølge
+  const kar = (karRaw ?? []).map((k: any, index: number) => {
+    const batch = batchesRaw?.find((b: any) => b.aktivt_kar === k.id);
+
+    let status = "Ledig";
+    if (batch) {
+      if (batch.status === "Sekundær") status = "Sekundær";
+      else status = "Aktiv";
+    }
 
     return {
       id: k.id,
-      nummer: k.nummer,
+      nummer: index + 1,
       created_at: k.created_at,
-      status: activeBatch ? "Aktiv" : "Ledig",
+      status,
     };
   });
-
-  console.log("=== /profiles/[id] END ===");
 
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
@@ -142,7 +113,7 @@ export default async function ProfileDetailPage({ params }: { params: { id: stri
             kar.map((k) => (
               <Link
                 key={k.id}
-                href={`/profiles/${params.id}/kar/${k.id}`}
+                href={`/profiles/${params.username}/${k.id}`}
                 className="border border-white/10 rounded-xl p-4 bg-white/5 w-32 h-32 flex flex-col items-center justify-center hover:bg-white/10 transition"
               >
                 <span className="text-lg font-bold text-green-300">
@@ -153,6 +124,8 @@ export default async function ProfileDetailPage({ params }: { params: { id: stri
                   className={
                     k.status === "Aktiv"
                       ? "text-green-400 font-semibold mt-2"
+                      : k.status === "Sekundær"
+                      ? "text-yellow-400 font-semibold mt-2"
                       : "text-zinc-400 mt-2"
                   }
                 >

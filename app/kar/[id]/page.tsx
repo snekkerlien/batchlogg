@@ -3,25 +3,18 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 import * as Actions from "./actions";
+import { createBatch } from "./createBatch";
+import { RecipeEditor } from "./RecipeEditor";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 
 export default async function KarPage({ params }: { params: { id: string } }) {
-  console.log("=== /kar/[id] START ===");
-
-  // Bruk SSR-klienten riktig
   const { supabase } = supabaseServer();
 
-  // Hent bruker fra cookies (ikke Authorization-header, ikke manuelt token)
   const {
     data: { user },
-    error: userError,
   } = await supabase.auth.getUser();
 
-  console.log("[/kar/[id]] User:", user);
-  console.log("[/kar/[id]] UserError:", userError);
-
   if (!user) {
-    console.log("[/kar/[id]] Ingen bruker → ikke innlogget");
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
         <h1 className="text-2xl font-bold">Du må være innlogget</h1>
@@ -29,16 +22,11 @@ export default async function KarPage({ params }: { params: { id: string } }) {
     );
   }
 
-  console.log("[/kar/[id]] Henter kar:", params.id);
-
-  const { data: kar, error: karError } = await supabase
+  const { data: kar } = await supabase
     .from("kar")
     .select("*")
     .eq("id", params.id)
     .single();
-
-  console.log("[/kar/[id]] Kar:", kar);
-  console.log("[/kar/[id]] KarError:", karError);
 
   if (!kar) {
     return (
@@ -48,20 +36,15 @@ export default async function KarPage({ params }: { params: { id: string } }) {
     );
   }
 
-  console.log("[/kar/[id]] Henter batch...");
+  const isOwner = kar.user_id === user.id;
 
-  const { data: batch, error: batchError } = await supabase
+  const { data: batch } = await supabase
     .from("batches")
     .select("*")
     .eq("aktivt_kar", kar.id)
     .single();
 
-  console.log("[/kar/[id]] Batch:", batch);
-  console.log("[/kar/[id]] BatchError:", batchError);
-
   const hasBatch = !!batch;
-
-  console.log("=== /kar/[id] END ===");
 
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
@@ -81,12 +64,84 @@ export default async function KarPage({ params }: { params: { id: string } }) {
           Kar {kar.displayNummer}
         </h1>
 
+        {/* LEDIG KAR */}
         {!hasBatch && (
-          <p className="text-center opacity-70 mb-10">
-            Dette karet er ledig.
-          </p>
+          <>
+            <p className="text-center opacity-70 mb-10">
+              Dette karet er ledig.
+            </p>
+
+            {isOwner && (
+              <div className="p-4 bg-white/5 border border-white/10 rounded-xl mb-10">
+                <h2 className="text-2xl font-semibold mb-4 text-center">
+                  Start ny batch
+                </h2>
+
+                <form action={createBatch} className="flex flex-col gap-6">
+                  <input type="hidden" name="kar" value={kar.id} />
+
+                  {/* ⭐ Batchnavn */}
+                  <div>
+                    <label className="block mb-1 font-semibold">Batchnavn</label>
+                    <input
+                      name="name"
+                      placeholder="Batchnavn"
+                      className="w-full p-3 rounded bg-black/40 border border-white/20"
+                      required
+                    />
+                  </div>
+
+                  {/* ⭐ Volum */}
+                  <div>
+                    <label className="block mb-1 font-semibold">Volum (L)</label>
+                    <input
+                      name="volume_l"
+                      type="number"
+                      step="0.1"
+                      placeholder="Volum (L)"
+                      className="w-full p-3 rounded bg-black/40 border border-white/20"
+                      required
+                    />
+                  </div>
+
+                  {/* ⭐ Startdato — med dagens dato */}
+                  <div>
+                    <label className="block mb-1 font-semibold">Startdato</label>
+                    <input
+                      name="startdato"
+                      type="date"
+                      defaultValue={new Date().toISOString().split("T")[0]}
+                      className="w-full p-3 rounded bg-black/40 border border-white/20"
+                      required
+                    />
+                  </div>
+
+                  {/* ⭐ OG */}
+                  <div>
+                    <label className="block mb-1 font-semibold">OG (Original Gravity)</label>
+                    <input
+                      name="og"
+                      type="number"
+                      step="0.001"
+                      placeholder="OG"
+                      className="w-full p-3 rounded bg-black/40 border border-white/20"
+                      required
+                    />
+                  </div>
+
+                  {/* ⭐ RECIPE EDITOR */}
+                  <RecipeEditor />
+
+                  <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
+                    Start batch
+                  </button>
+                </form>
+              </div>
+            )}
+          </>
         )}
 
+        {/* AKTIV BATCH */}
         {hasBatch && (
           <>
             <h2 className="text-2xl font-semibold mb-4 text-center">
@@ -110,77 +165,78 @@ export default async function KarPage({ params }: { params: { id: string } }) {
               )}
             </div>
 
-            {/* HANDLINGER */}
-            <div className="flex flex-col gap-4">
-              <form action={Actions.cancelBatch}>
-                <input type="hidden" name="batch_id" value={batch.id} />
-                <input type="hidden" name="kar_id" value={kar.id} />
-                <button className="w-full px-4 py-3 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg font-semibold">
-                  Kanseller batch
-                </button>
-              </form>
-
-              <details className="bg-white/5 border border-white/10 rounded-lg p-4">
-                <summary className="cursor-pointer font-semibold text-green-300">
-                  Overfør til sekundær
-                </summary>
-
-                <form action={Actions.moveToSecondary} className="mt-4 flex flex-col gap-4">
+            {isOwner && (
+              <div className="flex flex-col gap-4">
+                <form action={Actions.cancelBatch}>
                   <input type="hidden" name="batch_id" value={batch.id} />
                   <input type="hidden" name="kar_id" value={kar.id} />
+                  <button className="w-full px-4 py-3 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg font-semibold">
+                    Kanseller batch
+                  </button>
+                </form>
 
-                  <textarea
-                    name="secondary_additions"
-                    placeholder="Tilsetninger"
-                    className="p-3 rounded bg-black/40 border border-white/20"
-                  />
-
-                  <textarea
-                    name="secondary_notes"
-                    placeholder="Notater"
-                    className="p-3 rounded bg-black/40 border border-white/20"
-                  />
-
-                  <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
+                <details className="bg-white/5 border border-white/10 rounded-lg p-4">
+                  <summary className="cursor-pointer font-semibold text-green-300">
                     Overfør til sekundær
-                  </button>
-                </form>
-              </details>
+                  </summary>
 
-              <details className="bg-white/5 border border-white/10 rounded-lg p-4">
-                <summary className="cursor-pointer font-semibold text-green-300">
-                  Avslutt batch
-                </summary>
+                  <form action={Actions.moveToSecondary} className="mt-4 flex flex-col gap-4">
+                    <input type="hidden" name="batch_id" value={batch.id} />
+                    <input type="hidden" name="kar_id" value={kar.id} />
 
-                <form action={Actions.finishBatch} className="mt-4 flex flex-col gap-4">
-                  <input type="hidden" name="batch_id" value={batch.id} />
-                  <input type="hidden" name="kar_id" value={kar.id} />
+                    <textarea
+                      name="secondary_additions"
+                      placeholder="Tilsetninger"
+                      className="p-3 rounded bg-black/40 border border-white/20"
+                    />
 
-                  <input
-                    name="fg"
-                    type="number"
-                    step="0.001"
-                    placeholder="FG (Final Gravity)"
-                    className="p-3 rounded bg-black/40 border border-white/20"
-                  />
+                    <textarea
+                      name="secondary_notes"
+                      placeholder="Notater"
+                      className="p-3 rounded bg-black/40 border border-white/20"
+                    />
 
-                  <textarea
-                    name="finished_notes"
-                    placeholder="Avslutningsnotat"
-                    className="p-3 rounded bg-black/40 border border-white/20"
-                  />
+                    <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
+                      Overfør til sekundær
+                    </button>
+                  </form>
+                </details>
 
-                  <label className="flex items-center gap-3">
-                    <input type="checkbox" name="save_as_recipe" />
-                    Lagre som oppskrift
-                  </label>
-
-                  <button className="px-4 py-3 bg-blue-700 hover:bg-blue-600 border border-blue-500 rounded-lg font-semibold">
+                <details className="bg-white/5 border border-white/10 rounded-lg p-4">
+                  <summary className="cursor-pointer font-semibold text-green-300">
                     Avslutt batch
-                  </button>
-                </form>
-              </details>
-            </div>
+                  </summary>
+
+                  <form action={Actions.finishBatch} className="mt-4 flex flex-col gap-4">
+                    <input type="hidden" name="batch_id" value={batch.id} />
+                    <input type="hidden" name="kar_id" value={kar.id} />
+
+                    <input
+                      name="fg"
+                      type="number"
+                      step="0.001"
+                      placeholder="FG (Final Gravity)"
+                      className="p-3 rounded bg-black/40 border border-white/20"
+                    />
+
+                    <textarea
+                      name="finished_notes"
+                      placeholder="Avslutningsnotat"
+                      className="p-3 rounded bg-black/40 border border-white/20"
+                    />
+
+                    <label className="flex items-center gap-3">
+                      <input type="checkbox" name="save_as_recipe" />
+                      Lagre som oppskrift
+                    </label>
+
+                    <button className="px-4 py-3 bg-blue-700 hover:bg-blue-600 border border-blue-500 rounded-lg font-semibold">
+                      Avslutt batch
+                    </button>
+                  </form>
+                </details>
+              </div>
+            )}
           </>
         )}
 

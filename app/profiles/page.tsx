@@ -92,7 +92,7 @@ export default async function ProfilesPage() {
             otherProfiles.map((p) => (
               <Link
                 key={p.id}
-                href={`/profiles/${p.id}`}
+                href={`/profiles/${p.username}`}   // ⭐ OPPDATERT: brukernavn i URL
                 className="block border border-white/10 bg-white/5 hover:bg-white/10 transition rounded-xl p-4 font-semibold text-center"
               >
                 {p.username || "Ukjent bruker"}

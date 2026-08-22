@@ -1,8 +1,10 @@
-import { supabaseServer } from "../../../../../lib/supabase/supabaseServerFinal";
+import { supabaseServer } from "../../../../lib/supabase/supabaseServerFinal";
 
 export default async function Logg({ batchId }: { batchId: string }) {
+  // ⭐ Bruk riktig serverklient med cookies
   const { supabase } = supabaseServer();
 
+  // ⭐ Hent notater for batchen (SELECT-policy må tillate public read)
   const { data: notes } = await supabase
     .from("batch_notes")
     .select("*")

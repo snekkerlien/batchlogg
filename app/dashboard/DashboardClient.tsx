@@ -1,6 +1,5 @@
 "use client";
 
-
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
@@ -11,7 +10,7 @@ interface KarType {
   nummer: number;
   user_id: string;
   created_at: string;
-  status: "Aktiv" | "Ledig";
+  status: "Aktiv" | "Ledig" | "Sekundær"; // ⭐ utvidet
 }
 
 export default function DashboardClient() {
@@ -23,9 +22,9 @@ export default function DashboardClient() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [motd, setMotd] = useState("");
 
-  // Multi-delete state
   const [selectMode, setSelectMode] = useState(false);
   const [selectedKars, setSelectedKars] = useState<string[]>([]);
+  const [fadeMessage, setFadeMessage] = useState("");
 
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -60,7 +59,7 @@ export default function DashboardClient() {
     return token;
   }
 
-  // LOAD DASHBOARD DATA
+  // ⭐ LOAD DASHBOARD DATA (med riktig status)
   async function loadDashboardData() {
     const token = await getToken();
 
@@ -96,17 +95,33 @@ export default function DashboardClient() {
       credentials: "include",
     });
 
-    if (!karRes.ok) {
-      router.replace("/");
-      return;
-    }
-
     const karJson: KarType[] = await karRes.json();
 
-    // ⭐ Vis kun kar som tilhører brukeren
-    const owned = karJson.filter(k => k.user_id === currentUserId);
+    const owned = karJson.filter((k) => k.user_id === currentUserId);
 
-    const sorted = [...owned].sort((a, b) => a.nummer - b.nummer);
+    // ⭐ Hent batches for status
+    const batchRes = await fetch("/api/batches", {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+    });
+
+    const batches = batchRes.ok ? await batchRes.json() : [];
+
+    // ⭐ Sett status basert på batch
+    const karWithStatus = owned.map((k) => {
+      const batch = batches.find((b: any) => b.aktivt_kar === k.id);
+
+      let status: "Ledig" | "Aktiv" | "Sekundær" = "Ledig";
+
+      if (batch) {
+        if (batch.status === "Sekundær") status = "Sekundær";
+        else status = "Aktiv";
+      }
+
+      return { ...k, status };
+    });
+
+    const sorted = [...karWithStatus].sort((a, b) => a.nummer - b.nummer);
 
     setKar(sorted);
     setLoading(false);
@@ -124,12 +139,14 @@ export default function DashboardClient() {
 
   // SELECT KAR
   function toggleKarSelection(id: string, nummer: number) {
-    if (nummer === 1) return; // Kar 1 kan ikke slettes
+    if (nummer === 1) {
+      setFadeMessage("Kan ikke slette kar 1");
+      setTimeout(() => setFadeMessage(""), 1500);
+      return;
+    }
 
     setSelectedKars((prev) =>
-      prev.includes(id)
-        ? prev.filter((k) => k !== id)
-        : [...prev, id]
+      prev.includes(id) ? prev.filter((k) => k !== id) : [...prev, id]
     );
   }
 
@@ -174,6 +191,17 @@ export default function DashboardClient() {
     }
   }
 
+  // CLICK OUTSIDE MENU
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   if (loading) {
     return (
       <div className="text-center text-white mt-20 text-xl">
@@ -184,6 +212,13 @@ export default function DashboardClient() {
 
   return (
     <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl border border-white/10 max-w-3xl mx-auto mt-16 relative">
+
+      {/* ⭐ FADE MESSAGE */}
+      {fadeMessage && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-600/80 text-white px-4 py-2 rounded-lg animate-fadeOut z-50">
+          {fadeMessage}
+        </div>
+      )}
 
       {/* MENY */}
       <div className="absolute top-4 right-4 z-50" ref={menuRef}>
@@ -293,12 +328,19 @@ export default function DashboardClient() {
             onClick={(e) => {
               if (selectMode) {
                 e.preventDefault();
-                if (k.nummer !== 1) toggleKarSelection(k.id, k.nummer);
+                if (k.nummer === 1) {
+                  setFadeMessage("Kan ikke slette kar 1");
+                  setTimeout(() => setFadeMessage(""), 1500);
+                } else {
+                  toggleKarSelection(k.id, k.nummer);
+                }
               }
             }}
-            className={`relative border border-white/10 rounded-xl p-4 bg-white/5 w-32 h-32 flex flex-col items-center justify-center hover:bg-white/10 transition overflow-hidden
+            className={`relative border border-white/10 rounded-xl p-4 bg-white/5 w-32 h-32 flex flex-col items-center justify-center transition overflow-hidden
+              ${selectMode ? "animate-fadeIn" : ""}
               ${selectMode && selectedKars.includes(k.id) ? "ring-4 ring-red-500" : ""}
-              ${selectMode && k.nummer === 1 ? "opacity-40 cursor-not-allowed" : ""}
+              ${selectMode && k.nummer === 1 ? "opacity-40 cursor-not-allowed pointer-events-none animate-shake" : ""}
+              hover:bg-white/10
             `}
           >
             <div className="bubble-container">
@@ -321,10 +363,13 @@ export default function DashboardClient() {
               Kar {index + 1}
             </span>
 
+            {/* ⭐ STATUS MED FARGER */}
             <span
               className={
                 k.status === "Aktiv"
                   ? "text-green-400 font-semibold mt-2 relative z-10"
+                  : k.status === "Sekundær"
+                  ? "text-yellow-400 font-semibold mt-2 relative z-10"
                   : "text-zinc-400 mt-2 relative z-10"
               }
             >
@@ -348,6 +393,40 @@ export default function DashboardClient() {
       <p className="text-sm opacity-40 mt-12 text-center">
         © {new Date().getFullYear()} Fiklebrygg AS.
       </p>
+
+      {/* ⭐ ANIMASJONER */}
+      <style jsx>{`
+        @keyframes shake {
+          0% { transform: translateX(0); }
+          20% { transform: translateX(-6px); }
+          40% { transform: translateX(6px); }
+          60% { transform: translateX(-4px); }
+          80% { transform: translateX(4px); }
+          100% { transform: translateX(0); }
+        }
+
+        .animate-shake {
+          animation: shake 0.4s ease-in-out;
+        }
+
+        @keyframes fadeOut {
+          0% { opacity: 1; }
+          100% { opacity: 0; }
+        }
+
+        .animate-fadeOut {
+          animation: fadeOut 1.5s forwards;
+        }
+
+        @keyframes fadeIn {
+          0% { opacity: 0; transform: scale(0.95); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+
+        .animate-fadeIn {
+          animation: fadeIn 0.4s ease-out;
+        }
+      `}</style>
     </div>
   );
 }

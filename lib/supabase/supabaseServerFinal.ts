@@ -12,8 +12,20 @@ export function supabaseServer() {
         get(name: string) {
           return cookieStore.get(name)?.value;
         },
-        set() {},       // ⭐ Må være tom i Edge runtime
-        remove() {},    // ⭐ Må være tom i Edge runtime
+        set(name: string, value: string, options: any) {
+          try {
+            cookieStore.set(name, value, options);
+          } catch (err) {
+            console.error("Cookie set error:", err);
+          }
+        },
+        remove(name: string, options: any) {
+          try {
+            cookieStore.set(name, "", options);
+          } catch (err) {
+            console.error("Cookie remove error:", err);
+          }
+        },
       },
     }
   );

@@ -16,7 +16,7 @@ function AutoTextarea({ value, onChange, placeholder }: any) {
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full p-2 rounded bg-zinc-800 border border-zinc-700 resize-none overflow-hidden"
+      className="w-full p-3 rounded bg-black/40 border border-white/20 resize-none overflow-hidden"
     />
   );
 }
@@ -40,7 +40,7 @@ ${notes}
   return (
     <div className="space-y-4">
       <div>
-        <label className="block mb-1">Ingredienser</label>
+        <label className="block mb-1 font-semibold">Ingredienser</label>
         <AutoTextarea
           value={ingredients}
           onChange={setIngredients}
@@ -49,7 +49,7 @@ ${notes}
       </div>
 
       <div>
-        <label className="block mb-1">Fremgangsmåte</label>
+        <label className="block mb-1 font-semibold">Fremgangsmåte</label>
         <AutoTextarea
           value={steps}
           onChange={setSteps}
@@ -58,7 +58,7 @@ ${notes}
       </div>
 
       <div>
-        <label className="block mb-1">Notater</label>
+        <label className="block mb-1 font-semibold">Notater</label>
         <AutoTextarea
           value={notes}
           onChange={setNotes}
@@ -66,7 +66,6 @@ ${notes}
         />
       </div>
 
-      {/* Hidden input som sendes til server action */}
       <input type="hidden" name="oppskrift" value={combined} />
     </div>
   );
