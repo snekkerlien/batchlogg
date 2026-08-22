@@ -21,6 +21,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Not logged in" }, { status: 401 });
   }
 
+  // Finn neste nummer (du bruker dette i databasen)
   const { data: existing } = await supabase
     .from("kar")
     .select("nummer")
@@ -30,11 +31,20 @@ export async function POST(req: Request) {
 
   const nextNummer = existing?.[0]?.nummer ? existing[0].nummer + 1 : 1;
 
+  // ⭐ NYTT: displayNummer basert på antall kar
+  const { data: allKars } = await supabase
+    .from("kar")
+    .select("id")
+    .eq("user_id", user.id);
+
+  const nextDisplayNummer = (allKars?.length ?? 0) + 1;
+
   const { data, error } = await supabase
     .from("kar")
     .insert({
       user_id: user.id,
       nummer: nextNummer,
+      displayNummer: nextDisplayNummer,   // ⭐ eneste endringen
       status: "Ledig",
     })
     .select()

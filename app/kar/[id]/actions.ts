@@ -3,6 +3,7 @@
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { createClient } from "@supabase/supabase-js";
 
 // ---------------------------------------------------------
 // 0. START NY BATCH
@@ -103,6 +104,9 @@ export async function moveToSecondary(formData: FormData) {
     })
     .eq("id", batchId);
 
+  // ⭐ ENESTE ENDRING: Karet skal IKKE bli "Ledig"
+  await supabase.from("kar").update({ status: "Sekundær" }).eq("id", karId);
+
   redirect(`/kar/${karId}`);
 }
 
@@ -133,11 +137,9 @@ export async function finishBatch(formData: FormData) {
 
   const abv = (batch.og - fg) * 131.25;
 
-  // ⭐ VIKTIG: Fjern koblingen til karet
   await supabase
     .from("batches")
     .update({
-      aktivt_kar: null, // ← dette var det som manglet
       status: "Avsluttet",
       fg,
       abv,
@@ -147,7 +149,6 @@ export async function finishBatch(formData: FormData) {
     })
     .eq("id", batchId);
 
-  // Sett karet til ledig
   await supabase.from("kar").update({ status: "Ledig" }).eq("id", karId);
 
   if (saveRecipe) {
@@ -167,4 +168,61 @@ export async function finishBatch(formData: FormData) {
   }
 
   redirect(`/kar/${karId}`);
+}
+
+// ---------------------------------------------------------
+// 4. LEGG TIL NOTAT / BILDE
+// ---------------------------------------------------------
+export async function addBatchNote(formData: FormData) {
+  const batch_id = formData.get("batch_id") as string;
+  const kar_id = formData.get("kar_id") as string;
+  const user_id = formData.get("user_id") as string;
+  const note = (formData.get("note") as string) || "";
+  const image = formData.get("image") as File | null;
+
+  if (!batch_id || !kar_id || !user_id) {
+    throw new Error("Batch-ID, Kar-ID eller User-ID mangler");
+  }
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  let image_url: string | null = null;
+
+  if (image) {
+    const fileName = `${batch_id}/${Date.now()}-${image.name}`;
+
+    const { error: uploadError } = await supabase
+      .storage
+      .from("batch-images")
+      .upload(fileName, image, {
+        contentType: image.type,
+      });
+
+    if (uploadError) {
+      console.error("IMAGE UPLOAD ERROR:", uploadError);
+      throw new Error("Kunne ikke laste opp bilde");
+    }
+
+    image_url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/batch-images/${fileName}`;
+  }
+
+  const { error: dbError } = await supabase
+    .from("batch_notes")
+    .insert({
+      batch_id,
+      user_id,
+      note: note.length > 0 ? note : null,
+      image_url,
+      note_type: image_url ? "image" : "text",
+    });
+
+  if (dbError) {
+    console.error("NOTE INSERT ERROR:", dbError);
+    throw new Error("Kunne ikke lagre notatet");
+  }
+
+  revalidatePath(`/kar/${kar_id}`);
 }

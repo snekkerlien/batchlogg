@@ -10,7 +10,7 @@ interface KarType {
   nummer: number;
   user_id: string;
   created_at: string;
-  status: "Aktiv" | "Ledig" | "Sekundær"; // ⭐ utvidet
+  status: "Aktiv" | "Ledig" | "Sekundær";
 }
 
 export default function DashboardClient() {
@@ -28,18 +28,15 @@ export default function DashboardClient() {
 
   const menuRef = useRef<HTMLDivElement | null>(null);
 
-  // LOGOUT
   async function logout() {
     await supabaseBrowser.auth.signOut();
     router.replace("/");
   }
 
-  // MOTD
   useEffect(() => {
     setMotd(getNextMotd());
   }, []);
 
-  // TOKEN MED FALLBACK
   async function getToken() {
     const {
       data: { session },
@@ -59,7 +56,6 @@ export default function DashboardClient() {
     return token;
   }
 
-  // ⭐ LOAD DASHBOARD DATA (med riktig status)
   async function loadDashboardData() {
     const token = await getToken();
 
@@ -68,7 +64,6 @@ export default function DashboardClient() {
       return;
     }
 
-    // Hent profil
     const profileRes = await fetch("/api/profile", {
       headers: { Authorization: `Bearer ${token}` },
       credentials: "include",
@@ -82,14 +77,12 @@ export default function DashboardClient() {
     const profileJson = await profileRes.json();
     setUsername(profileJson.username ?? "Ukjent");
 
-    // Hent session for user_id
     const {
       data: { session },
     } = await supabaseBrowser.auth.getSession();
 
     const currentUserId = session?.user?.id;
 
-    // Hent kar
     const karRes = await fetch("/api/kar", {
       headers: { Authorization: `Bearer ${token}` },
       credentials: "include",
@@ -99,7 +92,6 @@ export default function DashboardClient() {
 
     const owned = karJson.filter((k) => k.user_id === currentUserId);
 
-    // ⭐ Hent batches for status
     const batchRes = await fetch("/api/batches", {
       headers: { Authorization: `Bearer ${token}` },
       credentials: "include",
@@ -107,21 +99,36 @@ export default function DashboardClient() {
 
     const batches = batchRes.ok ? await batchRes.json() : [];
 
-    // ⭐ Sett status basert på batch
+    // ⭐ ENDRINGEN DU BA OM: bruk nyeste batch på karet
     const karWithStatus = owned.map((k) => {
-      const batch = batches.find((b: any) => b.aktivt_kar === k.id);
+      const batch = batches
+        .filter((b: any) => b.aktivt_kar === k.id)
+        .sort(
+          (a: any, b: any) =>
+            new Date(b.created_at).getTime() -
+            new Date(a.created_at).getTime()
+        )[0];
 
       let status: "Ledig" | "Aktiv" | "Sekundær" = "Ledig";
 
       if (batch) {
-        if (batch.status === "Sekundær") status = "Sekundær";
-        else status = "Aktiv";
+        if (batch.status === "Avsluttet") {
+          status = "Ledig";
+        } else if (batch.status === "Sekundær") {
+          status = "Sekundær";
+        } else {
+          status = "Aktiv";
+        }
       }
 
       return { ...k, status };
     });
 
-    const sorted = [...karWithStatus].sort((a, b) => a.nummer - b.nummer);
+    const sorted = [...karWithStatus].sort(
+      (a, b) =>
+        new Date(a.created_at).getTime() -
+        new Date(b.created_at).getTime()
+    );
 
     setKar(sorted);
     setLoading(false);
@@ -131,13 +138,11 @@ export default function DashboardClient() {
     loadDashboardData();
   }, [router]);
 
-  // SELECT MODE TOGGLE
   function toggleSelectMode() {
     setSelectMode(!selectMode);
     setSelectedKars([]);
   }
 
-  // SELECT KAR
   function toggleKarSelection(id: string, nummer: number) {
     if (nummer === 1) {
       setFadeMessage("Kan ikke slette kar 1");
@@ -150,7 +155,6 @@ export default function DashboardClient() {
     );
   }
 
-  // DELETE MULTIPLE
   async function deleteSelectedKars() {
     const token = await getToken();
 
@@ -170,7 +174,6 @@ export default function DashboardClient() {
     toggleSelectMode();
   }
 
-  // CREATE KAR
   async function createKar() {
     const token = await getToken();
 
@@ -191,7 +194,6 @@ export default function DashboardClient() {
     }
   }
 
-  // CLICK OUTSIDE MENU
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -213,7 +215,6 @@ export default function DashboardClient() {
   return (
     <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl border border-white/10 max-w-3xl mx-auto mt-16 relative">
 
-      {/* ⭐ FADE MESSAGE */}
       {fadeMessage && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-600/80 text-white px-4 py-2 rounded-lg animate-fadeOut z-50">
           {fadeMessage}
@@ -271,19 +272,23 @@ export default function DashboardClient() {
         >
           Mine oppskrifter
         </a>
+
+        <a
+          href="/batchhistorikk"
+          className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
+        >
+          Batch historikk
+        </a>
       </div>
 
-      {/* HEADER */}
       <h1 className="text-3xl font-bold mb-2 text-center">
         Logget inn som {username}
       </h1>
 
-      {/* MOTD */}
       <p className="text-center text-zinc-300 mb-6 italic">
         {motd}
       </p>
 
-      {/* SELECT MODE BUTTONS */}
       <div className="flex justify-center gap-4 mb-6">
         {!selectMode && (
           <button
@@ -314,7 +319,6 @@ export default function DashboardClient() {
         )}
       </div>
 
-      {/* KAROVERSIKT */}
       <h2 className="text-2xl font-semibold mb-4 text-center">
         Karoversikt
       </h2>
@@ -363,7 +367,6 @@ export default function DashboardClient() {
               Kar {index + 1}
             </span>
 
-            {/* ⭐ STATUS MED FARGER */}
             <span
               className={
                 k.status === "Aktiv"
@@ -378,7 +381,6 @@ export default function DashboardClient() {
           </a>
         ))}
 
-        {/* PLUSS-KNAPP — skjules ved 12 kar */}
         {kar.length < 12 && (
           <button
             onClick={createKar}
@@ -394,7 +396,6 @@ export default function DashboardClient() {
         © {new Date().getFullYear()} Fiklebrygg AS.
       </p>
 
-      {/* ⭐ ANIMASJONER */}
       <style jsx>{`
         @keyframes shake {
           0% { transform: translateX(0); }
