@@ -12,12 +12,8 @@ export function supabaseServer() {
         get(name: string) {
           return cookieStore.get(name)?.value;
         },
-        set(name: string, value: string, options: any) {
-          cookieStore.set(name, value, options);
-        },
-        remove(name: string, options: any) {
-          cookieStore.set(name, "", options);
-        },
+        set() {},       // ⭐ Må være tom i Edge runtime
+        remove() {},    // ⭐ Må være tom i Edge runtime
       },
     }
   );

@@ -1,31 +1,45 @@
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
 
 export async function POST(req: Request) {
-  const { supabase } = supabaseServer(); // riktig destructuring
+  console.log("=== DELETE MULTIPLE START ===");
+
+  const { supabase } = supabaseServer();
 
   const {
     data: { user },
+    error: userError
   } = await supabase.auth.getUser();
 
+  console.log("Bruker:", user);
+  console.log("UserError:", userError);
+
   if (!user) {
+    console.log("Ingen bruker funnet → 401");
     return NextResponse.json({ error: "Not logged in" }, { status: 401 });
   }
 
   const body = await req.json();
-  const ids: number[] = body.ids ?? [];
+  const ids: string[] = body.ids ?? [];
+
+  console.log("Mottatte IDs:", ids);
 
   if (!Array.isArray(ids) || ids.length === 0) {
+    console.log("Ingen IDs → 400");
     return NextResponse.json({ error: "No IDs provided" }, { status: 400 });
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("kar")
     .delete()
-    .in("id", ids)
-    .eq("user_id", user.id);
+    .in("id", ids);
+
+  console.log("Delete result:", data);
+  console.log("Delete error:", error);
+
+  console.log("=== DELETE MULTIPLE END ===");
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

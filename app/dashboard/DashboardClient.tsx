@@ -1,12 +1,13 @@
 "use client";
 
+
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
 import { getNextMotd } from "../../lib/motd/motdList";
 
 interface KarType {
-  id: string;          // UUID fra Supabase
+  id: string;
   nummer: number;
   user_id: string;
   created_at: string;
@@ -22,6 +23,10 @@ export default function DashboardClient() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [motd, setMotd] = useState("");
 
+  // Multi-delete state
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedKars, setSelectedKars] = useState<string[]>([]);
+
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   // LOGOUT
@@ -35,7 +40,7 @@ export default function DashboardClient() {
     setMotd(getNextMotd());
   }, []);
 
-  // HENT TOKEN MED FALLBACK
+  // TOKEN MED FALLBACK
   async function getToken() {
     const {
       data: { session },
@@ -43,7 +48,6 @@ export default function DashboardClient() {
 
     let token = session?.access_token;
 
-    // Fallback: hent token fra cookie hvis client-session mangler
     if (!token) {
       const cookieToken = document.cookie
         .split("; ")
@@ -56,17 +60,16 @@ export default function DashboardClient() {
     return token;
   }
 
-  // Felles loader som kan brukes både ved mount og etter createKar
+  // LOAD DASHBOARD DATA
   async function loadDashboardData() {
     const token = await getToken();
 
     if (!token) {
-      console.log("Fant ingen token → redirect");
       router.replace("/");
       return;
     }
 
-    // HENT PROFIL
+    // Hent profil
     const profileRes = await fetch("/api/profile", {
       headers: { Authorization: `Bearer ${token}` },
       credentials: "include",
@@ -80,7 +83,14 @@ export default function DashboardClient() {
     const profileJson = await profileRes.json();
     setUsername(profileJson.username ?? "Ukjent");
 
-    // HENT KAR — bruker token, ikke query-param
+    // Hent session for user_id
+    const {
+      data: { session },
+    } = await supabaseBrowser.auth.getSession();
+
+    const currentUserId = session?.user?.id;
+
+    // Hent kar
     const karRes = await fetch("/api/kar", {
       headers: { Authorization: `Bearer ${token}` },
       credentials: "include",
@@ -92,35 +102,58 @@ export default function DashboardClient() {
     }
 
     const karJson: KarType[] = await karRes.json();
-    const sorted = [...karJson].sort((a, b) => a.nummer - b.nummer);
+
+    // ⭐ Vis kun kar som tilhører brukeren
+    const owned = karJson.filter(k => k.user_id === currentUserId);
+
+    const sorted = [...owned].sort((a, b) => a.nummer - b.nummer);
 
     setKar(sorted);
     setLoading(false);
   }
 
-  // LOAD DATA VED MOUNT
   useEffect(() => {
     loadDashboardData();
   }, [router]);
 
-  // MENY CLICK OUTSIDE
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    }
+  // SELECT MODE TOGGLE
+  function toggleSelectMode() {
+    setSelectMode(!selectMode);
+    setSelectedKars([]);
+  }
 
-    if (menuOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    } else {
-      document.removeEventListener("mousedown", handleClickOutside);
-    }
+  // SELECT KAR
+  function toggleKarSelection(id: string, nummer: number) {
+    if (nummer === 1) return; // Kar 1 kan ikke slettes
 
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [menuOpen]);
+    setSelectedKars((prev) =>
+      prev.includes(id)
+        ? prev.filter((k) => k !== id)
+        : [...prev, id]
+    );
+  }
 
-  // CREATE KAR — nå oppdaterer vi dashboardet direkte etter POST
+  // DELETE MULTIPLE
+  async function deleteSelectedKars() {
+    const token = await getToken();
+
+    await fetch("/kar/delete-multiple", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: "include",
+      body: JSON.stringify({ ids: selectedKars }),
+    });
+
+    await supabaseBrowser.auth.refreshSession();
+    await supabaseBrowser.auth.getSession();
+    await loadDashboardData();
+    toggleSelectMode();
+  }
+
+  // CREATE KAR
   async function createKar() {
     const token = await getToken();
 
@@ -135,6 +168,8 @@ export default function DashboardClient() {
     });
 
     if (res.ok) {
+      await supabaseBrowser.auth.refreshSession();
+      await supabaseBrowser.auth.getSession();
       await loadDashboardData();
     }
   }
@@ -213,6 +248,37 @@ export default function DashboardClient() {
         {motd}
       </p>
 
+      {/* SELECT MODE BUTTONS */}
+      <div className="flex justify-center gap-4 mb-6">
+        {!selectMode && (
+          <button
+            onClick={toggleSelectMode}
+            className="px-4 py-2 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg font-semibold"
+          >
+            Velg kar
+          </button>
+        )}
+
+        {selectMode && (
+          <>
+            <button
+              onClick={deleteSelectedKars}
+              disabled={selectedKars.length === 0}
+              className="px-4 py-2 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg font-semibold disabled:opacity-40"
+            >
+              Slett valgte
+            </button>
+
+            <button
+              onClick={toggleSelectMode}
+              className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 border border-zinc-500 rounded-lg font-semibold"
+            >
+              Avbryt
+            </button>
+          </>
+        )}
+      </div>
+
       {/* KAROVERSIKT */}
       <h2 className="text-2xl font-semibold mb-4 text-center">
         Karoversikt
@@ -220,14 +286,21 @@ export default function DashboardClient() {
 
       <div className="flex flex-wrap justify-center gap-6">
 
-        {/* KAR-KNAPPER */}
         {kar.map((k, index) => (
           <a
             key={k.id}
-            href={`/kar/${k.id}`}
-            className="relative border border-white/10 rounded-xl p-4 bg-white/5 w-32 h-32 flex flex-col items-center justify-center hover:bg-white/10 transition overflow-hidden"
+            href={selectMode ? "#" : `/kar/${k.id}`}
+            onClick={(e) => {
+              if (selectMode) {
+                e.preventDefault();
+                if (k.nummer !== 1) toggleKarSelection(k.id, k.nummer);
+              }
+            }}
+            className={`relative border border-white/10 rounded-xl p-4 bg-white/5 w-32 h-32 flex flex-col items-center justify-center hover:bg-white/10 transition overflow-hidden
+              ${selectMode && selectedKars.includes(k.id) ? "ring-4 ring-red-500" : ""}
+              ${selectMode && k.nummer === 1 ? "opacity-40 cursor-not-allowed" : ""}
+            `}
           >
-            {/* CO2 BOBLER */}
             <div className="bubble-container">
               {[...Array(12)].map((_, i) => (
                 <span
@@ -260,17 +333,18 @@ export default function DashboardClient() {
           </a>
         ))}
 
-        {/* PLUSS-KNAPP */}
-        <button
-          onClick={createKar}
-          className="border border-white/10 bg-white/5 hover:bg-white/10 rounded-xl p-4 w-32 h-32 flex items-center justify-center text-white text-3xl font-bold"
-        >
-          +
-        </button>
+        {/* PLUSS-KNAPP — skjules ved 12 kar */}
+        {kar.length < 12 && (
+          <button
+            onClick={createKar}
+            className="border border-white/10 bg-white/5 hover:bg-white/10 rounded-xl p-4 w-32 h-32 flex items-center justify-center text-white text-3xl font-bold"
+          >
+            +
+          </button>
+        )}
 
       </div>
 
-      {/* COPYRIGHT */}
       <p className="text-sm opacity-40 mt-12 text-center">
         © {new Date().getFullYear()} Fiklebrygg AS.
       </p>

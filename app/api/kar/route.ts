@@ -29,22 +29,25 @@ export async function GET(request: NextRequest) {
     }
   );
 
-  // Hent bruker fra token
+  // Hent bruker fra token (mest for logging)
   const {
     data: { user },
     error: userError,
   } = await supabase.auth.getUser();
 
+  console.log("[/api/kar] User:", user);
+  console.log("[/api/kar] UserError:", userError);
+
   if (!user) {
     return NextResponse.json({ error: "Invalid token" }, { status: 401 });
   }
 
-  console.log("[/api/kar] Henter kar for bruker:", user.id);
+  console.log("[/api/kar] Henter ALLE kar (RLS styrer synlighet)");
 
+  // ⭐ VIKTIG: Ikke filtrer på user_id lenger
   const { data, error } = await supabase
     .from("kar")
     .select("*")
-    .eq("user_id", user.id)
     .order("created_at");
 
   if (error) {
