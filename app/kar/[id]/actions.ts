@@ -137,6 +137,13 @@ export async function finishBatch(formData: FormData) {
 
   const abv = (batch.og - fg) * 131.25;
 
+  // ⭐ HENT ALLE NOTATER FRA batch_notes
+  const { data: batchNotes } = await supabase
+    .from("batch_notes")
+    .select("*")
+    .eq("batch_id", batchId)
+    .order("created_at", { ascending: true });
+
   await supabase
     .from("batches")
     .update({
@@ -151,6 +158,7 @@ export async function finishBatch(formData: FormData) {
 
   await supabase.from("kar").update({ status: "Ledig" }).eq("id", karId);
 
+  // ⭐ LAGRE OPPPSKRIFT + NOTATLOGG
   if (saveRecipe) {
     await supabase.from("recipes").insert({
       user_id: batch.user_id,
@@ -163,6 +171,7 @@ export async function finishBatch(formData: FormData) {
       ingredients: batch.oppskrift,
       method: batch.fremgangsmåte || "",
       notes,
+      notes_log: batchNotes ?? [],   // ⭐ NYTT FELT: FULL NOTATLOGG
       is_public: false,
     });
   }

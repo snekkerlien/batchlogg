@@ -35,7 +35,7 @@ export default async function ProfilesPage() {
 
   const { data: profiles, error: profilesError } = await supabase
     .from("profiles")
-    .select("id, username")
+    .select("id, username, is_public")   // henter synlighet
     .order("username", { ascending: true });
 
   console.log("[/profiles] Profiles:", profiles);
@@ -52,7 +52,10 @@ export default async function ProfilesPage() {
     );
   }
 
-  const otherProfiles = (profiles ?? []).filter((p) => p.id !== user.id);
+  // filtrer bort egen bruker + private profiler
+  const otherProfiles = (profiles ?? [])
+    .filter((p) => p.id !== user.id)
+    .filter((p) => p.is_public === true);
 
   console.log("[/profiles] Filtrerte profiler:", otherProfiles);
   console.log("=== /profiles END ===");
@@ -92,19 +95,21 @@ export default async function ProfilesPage() {
             otherProfiles.map((p) => (
               <Link
                 key={p.id}
-                href={`/profiles/${p.username}`}   // ⭐ OPPDATERT: brukernavn i URL
+                href={`/profiles/${p.username}`}
                 className="block border border-white/10 bg-white/5 hover:bg-white/10 transition rounded-xl p-4 font-semibold text-center"
               >
-                {p.username || "Ukjent bruker"}
+                {p.username
+                  ? p.username.charAt(0).toUpperCase() + p.username.slice(1)
+                  : "Ukjent bruker"}
               </Link>
             ))
           ) : (
-            <p className="opacity-60 text-center">Ingen andre brukere funnet.</p>
+            <p className="opacity-60 text-center">Ingen offentlige brukere funnet.</p>
           )}
         </div>
 
         <p className="text-sm opacity-40 mt-12 text-center">
-          © {new Date().getFullYear()} Fiklebrygg AS.
+          © {new Date().getFullYear()} Fiklebrygg - Batchlogg
         </p>
       </div>
     </main>

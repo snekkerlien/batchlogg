@@ -1,6 +1,8 @@
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+"use client";
+
+import { useState, useEffect } from "react";
+import { createClient } from "@supabase/supabase-js";
+
 
 import * as Actions from "./actions";
 import NextDynamic from "next/dynamic";
@@ -11,14 +13,94 @@ const RecipeEditor = NextDynamic(
   { ssr: false }
 );
 
-import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
+// ⭐ Supabase-klient for frontend (valg B)
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
-export default async function KarPage({ params }: { params: { id: string } }) {
-  const { supabase } = supabaseServer();
+export default function KarPage({ params }: { params: { id: string } }) {
+  // ⭐ UI-state (valg 1)
+  const [openSecondary, setOpenSecondary] = useState(false);
+  const [openSecondaryActive, setOpenSecondaryActive] = useState(false);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // ⭐ Data-state
+  const [user, setUser] = useState<any>(null);
+  const [kar, setKar] = useState<any>(null);
+  const [activeBatch, setActiveBatch] = useState<any>(null);
+  const [historyBatch, setHistoryBatch] = useState<any>(null);
+  const [notes, setNotes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // ⭐ Hent bruker
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user);
+    });
+  }, []);
+
+  // ⭐ Hent kar
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("kar")
+      .select("*")
+      .eq("id", params.id)
+      .single()
+      .then(({ data }) => setKar(data));
+  }, [user, params.id]);
+
+  // ⭐ Hent aktiv batch
+  useEffect(() => {
+    if (!kar) return;
+    supabase
+      .from("batches")
+      .select("*")
+      .eq("aktivt_kar", kar.id)
+      .in("status", ["Aktiv", "Sekundær"])
+      .order("created_at", { ascending: false })
+      .maybeSingle()
+      .then(({ data }) => setActiveBatch(data));
+  }, [kar]);
+
+  // ⭐ Hent historisk batch hvis ingen aktiv
+  useEffect(() => {
+    if (!kar || activeBatch) return;
+    supabase
+      .from("batches")
+      .select("*")
+      .eq("user_id", kar.user_id)
+      .order("finished_date", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => setHistoryBatch(data));
+  }, [kar, activeBatch]);
+
+  // ⭐ Hent notater for aktiv batch
+  useEffect(() => {
+    if (!activeBatch) return;
+    supabase
+      .from("batch_notes")
+      .select("*")
+      .eq("batch_id", activeBatch.id)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => setNotes(data ?? []));
+  }, [activeBatch]);
+
+  // ⭐ Loading-state
+  useEffect(() => {
+    if (user !== null && kar !== null) {
+      setLoading(false);
+    }
+  }, [user, kar]);
+
+  if (loading) {
+    return (
+      <main className="min-h-screen flex items-center justify-center text-white">
+        <h1 className="text-2xl font-bold">Laster...</h1>
+      </main>
+    );
+  }
 
   if (!user) {
     return (
@@ -27,12 +109,6 @@ export default async function KarPage({ params }: { params: { id: string } }) {
       </main>
     );
   }
-
-  const { data: kar } = await supabase
-    .from("kar")
-    .select("*")
-    .eq("id", params.id)
-    .single();
 
   if (!kar) {
     return (
@@ -43,52 +119,8 @@ export default async function KarPage({ params }: { params: { id: string } }) {
   }
 
   const isOwner = kar.user_id === user.id;
-
-  // ---------------------------------------------------------
-  // HENT AKTIV / SEKUNDÆR BATCH
-  // ---------------------------------------------------------
-  const { data: activeBatch } = await supabase
-    .from("batches")
-    .select("*")
-    .eq("aktivt_kar", kar.id)
-    .in("status", ["Aktiv", "Sekundær"])
-    .order("created_at", { ascending: false })
-    .maybeSingle();
-
-  // ---------------------------------------------------------
-  // HENT HISTORISK BATCH
-  // ---------------------------------------------------------
-  let historyBatch = null;
-
-  if (!activeBatch) {
-    const { data: hb } = await supabase
-      .from("batches")
-      .select("*")
-      .eq("user_id", kar.user_id)
-      .order("finished_date", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    historyBatch = hb;
-  }
-
   const hasActive = !!activeBatch;
   const hasHistory = !!historyBatch;
-
-  // ---------------------------------------------------------
-  // HENT NOTATER
-  // ---------------------------------------------------------
-  let notes = [];
-
-  if (activeBatch) {
-    const { data: n } = await supabase
-      .from("batch_notes")
-      .select("*")
-      .eq("batch_id", activeBatch.id)
-      .order("created_at", { ascending: false });
-
-    notes = n ?? [];
-  }
 
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
@@ -107,7 +139,6 @@ export default async function KarPage({ params }: { params: { id: string } }) {
         <h1 className="text-4xl font-bold mb-6 text-center">
           Kar {kar.displayNummer}
         </h1>
-
         {/* LEDIG KAR */}
         {!hasActive && (
           <>
@@ -180,8 +211,8 @@ export default async function KarPage({ params }: { params: { id: string } }) {
           </>
         )}
 
-        {/* SEKUNDÆR VISNING */}
-        {hasActive && activeBatch.status === "Sekundær" && (
+        {/* SEKUNDÆR FERMENTERING */}
+        {hasActive && activeBatch?.status === "Sekundær" && (
           <>
             <h2 className="text-2xl font-semibold mb-4 text-center">
               Sekundær fermentering
@@ -199,7 +230,7 @@ export default async function KarPage({ params }: { params: { id: string } }) {
 
               <p className="opacity-80 mt-2">
                 Sekundær siden:{" "}
-                {new Date(activeBatch.secondary_startdate).toLocaleDateString()}
+                {new Date(activeBatch.secondary_startdate).toLocaleDateString("no-NO")}
               </p>
 
               {activeBatch.secondary_additions && (
@@ -243,53 +274,84 @@ export default async function KarPage({ params }: { params: { id: string } }) {
               </div>
             </div>
 
+            {/* ⭐ Slide-down uten <details> */}
+            {isOwner && (
+              <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                <button
+                  type="button"
+                  onClick={() => setOpenSecondary(!openSecondary)}
+                  className="w-full flex items-center justify-between font-semibold text-green-300 cursor-pointer"
+                >
+                  Overfør til sekundær
+                  <span
+                    className={`text-white text-xl transition-transform duration-300 ${
+                      openSecondary ? "rotate-90" : "rotate-180"
+                    }`}
+                  >
+                    ▶
+                  </span>
+                </button>
+
+                <div
+                  className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+                    openSecondary ? "[grid-template-rows:1fr]" : "[grid-template-rows:0fr]"
+                  }`}
+                >
+                  <div className="overflow-hidden">
+                    <form
+                      action={Actions.moveToSecondary}
+                      className="mt-4 flex flex-col gap-4"
+                    >
+                      <input type="hidden" name="batch_id" value={activeBatch.id} />
+                      <input type="hidden" name="kar_id" value={kar.id} />
+
+                      <textarea
+                        name="secondary_additions"
+                        placeholder="Tilsetninger"
+                        className="p-3 rounded bg-black/40 border border-white/20"
+                      />
+
+                      <textarea
+                        name="secondary_notes"
+                        placeholder="Notater"
+                        className="p-3 rounded bg-black/40 border border-white/20"
+                      />
+
+                      <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
+                        Overfør til sekundær
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Kanseller */}
+            {isOwner && (
+              <>
+                <form action={Actions.cancelBatch} className="mt-8 mb-4">
+                  <input type="hidden" name="batch_id" value={activeBatch.id} />
+                  <input type="hidden" name="kar_id" value={kar.id} />
+                  <button className="w-full px-2 py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-md text-sm">
+                    Kanseller batch
+                  </button>
+                </form>
+
+                <div className="w-full h-px bg-white/10 my-6"></div>
+              </>
+            )}
+
             <KarNotesClient
               batchId={activeBatch.id}
               karId={kar.id}
               userId={user.id}
               notes={notes}
             />
-
-            {isOwner && (
-              <details className="bg-white/5 border border-white/10 rounded-lg p-4 mt-6">
-                <summary className="cursor-pointer font-semibold text-green-300">
-                  Avslutt batch
-                </summary>
-
-                <form action={Actions.finishBatch} className="mt-4 flex flex-col gap-4">
-                  <input type="hidden" name="batch_id" value={activeBatch.id} />
-                  <input type="hidden" name="kar_id" value={kar.id} />
-
-                  <input
-                    name="fg"
-                    type="number"
-                    step="0.001"
-                    placeholder="FG (Final Gravity)"
-                    className="p-3 rounded bg-black/40 border border-white/20"
-                  />
-
-                  <textarea
-                    name="finished_notes"
-                    placeholder="Avslutningsnotat"
-                    className="p-3 rounded bg-black/40 border border-white/20"
-                  />
-
-                  <label className="flex items-center gap-3">
-                    <input type="checkbox" name="save_as_recipe" />
-                    Lagre som oppskrift
-                  </label>
-
-                  <button className="px-4 py-3 bg-blue-700 hover:bg-blue-600 border border-blue-500 rounded-lg font-semibold">
-                    Avslutt batch
-                  </button>
-                </form>
-              </details>
-            )}
           </>
         )}
 
-        {/* AKTIV BATCH */}
-        {hasActive && activeBatch.status === "Aktiv" && (
+        {/* AKTIV FERMENTERING */}
+        {hasActive && activeBatch?.status === "Aktiv" && (
           <>
             <h2 className="text-2xl font-semibold mb-4 text-center">
               Aktiv fermentering
@@ -302,7 +364,6 @@ export default async function KarPage({ params }: { params: { id: string } }) {
 
               <p className="opacity-80">Batchnummer: {activeBatch.batchnummer}</p>
               <p className="opacity-80">Startdato: {activeBatch.startdato}</p>
-
               <p className="opacity-80">OG: {activeBatch.og}</p>
               <p className="opacity-80">Volum: {activeBatch.volume_l} L</p>
               <p className="opacity-80">Status: {activeBatch.status}</p>
@@ -336,13 +397,13 @@ export default async function KarPage({ params }: { params: { id: string } }) {
               </div>
 
               <p className="opacity-80 mt-4">
-                Opprettet: {new Date(activeBatch.created_at).toLocaleString()}
+                Opprettet: {new Date(activeBatch.created_at).toLocaleString("no-NO")}
               </p>
 
               {activeBatch.secondary_startdate && (
                 <p className="opacity-80 mt-2">
                   Sekundær siden:{" "}
-                  {new Date(activeBatch.secondary_startdate).toLocaleDateString()}
+                  {new Date(activeBatch.secondary_startdate).toLocaleDateString("no-NO")}
                 </p>
               )}
 
@@ -371,7 +432,7 @@ export default async function KarPage({ params }: { params: { id: string } }) {
               {activeBatch.finished_date && (
                 <p className="opacity-80 mt-2">
                   Avsluttet:{" "}
-                  {new Date(activeBatch.finished_date).toLocaleDateString()}
+                  {new Date(activeBatch.finished_date).toLocaleDateString("no-NO")}
                 </p>
               )}
 
@@ -381,6 +442,74 @@ export default async function KarPage({ params }: { params: { id: string } }) {
                 </p>
               )}
             </div>
+            {/* ⭐ Slide-down uten <details> for AKTIV batch */}
+            {isOwner && (
+              <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                <button
+                  type="button"
+                  onClick={() => setOpenSecondaryActive(!openSecondaryActive)}
+                  className="w-full flex items-center justify-between font-semibold text-green-300 cursor-pointer"
+                >
+                  Overfør til sekundær
+                  <span
+                    className={`text-white text-xl transition-transform duration-300 ${
+                      openSecondaryActive ? "rotate-90" : "rotate-180"
+                    }`}
+                  >
+                    ▶
+                  </span>
+                </button>
+
+                <div
+                  className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+                    openSecondaryActive
+                      ? "[grid-template-rows:1fr]"
+                      : "[grid-template-rows:0fr]"
+                  }`}
+                >
+                  <div className="overflow-hidden">
+                    <form
+                      action={Actions.moveToSecondary}
+                      className="mt-4 flex flex-col gap-4"
+                    >
+                      <input type="hidden" name="batch_id" value={activeBatch.id} />
+                      <input type="hidden" name="kar_id" value={kar.id} />
+
+                      <textarea
+                        name="secondary_additions"
+                        placeholder="Tilsetninger"
+                        className="p-3 rounded bg-black/40 border border-white/20"
+                      />
+
+                      <textarea
+                        name="secondary_notes"
+                        placeholder="Notater"
+                        className="p-3 rounded bg-black/40 border border-white/20"
+                      />
+
+                      <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
+                        Overfør til sekundær
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Kanseller */}
+            {isOwner && (
+              <>
+                <form action={Actions.cancelBatch} className="mt-8 mb-4">
+                  <input type="hidden" name="batch_id" value={activeBatch.id} />
+                  <input type="hidden" name="kar_id" value={kar.id} />
+                  <button className="w-full px-2 py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-md text-sm">
+                    Kanseller batch
+                  </button>
+                </form>
+
+                <div className="w-full h-px bg-white/10 my-6"></div>
+              </>
+            )}
 
             <KarNotesClient
               batchId={activeBatch.id}
@@ -388,79 +517,6 @@ export default async function KarPage({ params }: { params: { id: string } }) {
               userId={user.id}
               notes={notes}
             />
-
-            {isOwner && (
-              <div className="flex flex-col gap-4">
-                <form action={Actions.cancelBatch}>
-                  <input type="hidden" name="batch_id" value={activeBatch.id} />
-                  <input type="hidden" name="kar_id" value={kar.id} />
-                  <button className="w-full px-4 py-3 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg font-semibold">
-                    Kanseller batch
-                  </button>
-                </form>
-
-                <details className="bg-white/5 border border-white/10 rounded-lg p-4">
-                  <summary className="cursor-pointer font-semibold text-green-300">
-                    Overfør til sekundær
-                  </summary>
-
-                  <form action={Actions.moveToSecondary} className="mt-4 flex flex-col gap-4">
-                    <input type="hidden" name="batch_id" value={activeBatch.id} />
-                    <input type="hidden" name="kar_id" value={kar.id} />
-
-                    <textarea
-                      name="secondary_additions"
-                      placeholder="Tilsetninger"
-                      className="p-3 rounded bg-black/40 border border-white/20"
-                    />
-
-                    <textarea
-                      name="secondary_notes"
-                      placeholder="Notater"
-                      className="p-3 rounded bg-black/40 border border-white/20"
-                    />
-
-                    <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
-                      Overfør til sekundær
-                    </button>
-                  </form>
-                </details>
-
-                <details className="bg-white/5 border border-white/10 rounded-lg p-4">
-                  <summary className="cursor-pointer font-semibold text-green-300">
-                    Avslutt batch
-                  </summary>
-
-                  <form action={Actions.finishBatch} className="mt-4 flex flex-col gap-4">
-                    <input type="hidden" name="batch_id" value={activeBatch.id} />
-                    <input type="hidden" name="kar_id" value={kar.id} />
-
-                    <input
-                      name="fg"
-                      type="number"
-                      step="0.001"
-                      placeholder="FG (Final Gravity)"
-                      className="p-3 rounded bg-black/40 border border-white/20"
-                    />
-
-                    <textarea
-                      name="finished_notes"
-                      placeholder="Avslutningsnotat"
-                      className="p-3 rounded bg-black/40 border border-white/20"
-                    />
-
-                    <label className="flex items-center gap-3">
-                      <input type="checkbox" name="save_as_recipe" />
-                      Lagre som oppskrift
-                    </label>
-
-                    <button className="px-4 py-3 bg-blue-700 hover:bg-blue-600 border border-blue-500 rounded-lg font-semibold">
-                      Avslutt batch
-                    </button>
-                  </form>
-                </details>
-              </div>
-            )}
           </>
         )}
 
@@ -472,36 +528,12 @@ export default async function KarPage({ params }: { params: { id: string } }) {
             </h2>
 
             <div className="p-4 bg-white/10 border border-white/20 rounded-xl mb-10">
-                  <h3 className="text-xl font-bold text-green-300 mb-2">
-        {historyBatch.name}
-      </h3>
-
-      <p className="opacity-80">OG: {historyBatch.og}</p>
-      <p className="opacity-80">Volum: {historyBatch.volume_l} L</p>
-      <p className="opacity-80">Status: {historyBatch.status}</p>
-
-      {historyBatch.finished_date && (
-        <p className="opacity-80 mt-2">
-          Avsluttet:{" "}
-          {new Date(historyBatch.finished_date).toLocaleDateString()}
-        </p>
-      )}
-
-      {historyBatch.abv && (
-        <p className="opacity-80 mt-2">
-          ABV: {historyBatch.abv.toFixed(2)}%
-        </p>
-      )}
-
-      {historyBatch.finished_notes && (
-        <p className="opacity-80 mt-2 whitespace-pre-wrap">
-          Notater:<br />{historyBatch.finished_notes}
-        </p>
-      )}
-    </div>
-  </>
-)}
-
+              <h3 className="text-xl font-bold text-green-300 mb-2">
+                {historyBatch.name}
+              </h3>
+            </div>
+          </>
+        )}
       </div>
     </main>
   );

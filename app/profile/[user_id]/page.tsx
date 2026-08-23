@@ -29,6 +29,7 @@ export default function ProfilePage() {
 
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState<string | null>(null);
+  const [profile, setProfile] = useState<any>(null); // ⭐ NYTT
   const [kar, setKar] = useState<Kar[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [aktiveKar, setAktiveKar] = useState<Set<number>>(new Set());
@@ -55,13 +56,14 @@ export default function ProfilePage() {
 
   useEffect(() => {
     async function load() {
-      const { data: profile } = await supabaseBrowser
+      const { data: profileData } = await supabaseBrowser
         .from("profiles")
-        .select("username")
+        .select("username, is_public") // ⭐ NYTT
         .eq("id", userId)
         .maybeSingle();
 
-      setUsername(profile?.username ?? "Ukjent bruker");
+      setUsername(profileData?.username ?? "Ukjent bruker");
+      setProfile(profileData); // ⭐ NYTT
 
       const { data: karData } = await supabaseBrowser
         .from("kar")
@@ -126,6 +128,26 @@ export default function ProfilePage() {
               >
                 Min konto
               </Link>
+
+              {/* ⭐ NYTT: Toggle synlighet */}
+              <button
+                onClick={async () => {
+                  const newValue = !profile?.is_public;
+
+                  await supabaseBrowser
+                    .from("profiles")
+                    .update({ is_public: newValue })
+                    .eq("id", userId);
+
+                  setProfile((prev: any) => ({
+                    ...prev,
+                    is_public: newValue,
+                  }));
+                }}
+                className="block mb-3 text-white hover:text-green-300 font-semibold"
+              >
+                {profile?.is_public ? "Skjul profil" : "Gjør profil synlig"}
+              </button>
 
               <form action="/logout" method="post">
                 <button className="text-red-400 hover:text-red-300 font-semibold">
@@ -221,7 +243,7 @@ export default function ProfilePage() {
         </div>
 
         <p className="text-sm opacity-40 mt-12 text-center">
-          © {new Date().getFullYear()} Fiklebrygg.
+          © {new Date().getFullYear()} Fiklebrygg - Batchlogg
         </p>
       </div>
     </main>

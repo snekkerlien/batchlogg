@@ -123,7 +123,7 @@ export default async function BatchHistorikkPage() {
         )}
 
         <p className="text-sm opacity-40 mt-12 text-center">
-          © {new Date().getFullYear()} Fiklebrygg AS.
+          © {new Date().getFullYear()} Fiklebrygg - Batchlogg
         </p>
       </div>
     </main>

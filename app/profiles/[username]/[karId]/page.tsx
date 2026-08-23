@@ -90,7 +90,7 @@ export default async function KarDetailPage({
         </h1>
 
         <p className="opacity-80 text-center mb-10">
-          Dette er en lesemodus. Du kan se informasjon, men ikke endre noe.
+          Oversikt over {params.username}s batch i kar {kar.nummer}.
         </p>
 
         {/* ⭐ KARSTATUS */}
@@ -203,7 +203,7 @@ export default async function KarDetailPage({
         )}
 
         <p className="text-sm opacity-40 mt-12 text-center">
-          © {new Date().getFullYear()} Fiklebrygg AS.
+          © {new Date().getFullYear()} Fiklebrygg - Batchlogg
         </p>
       </div>
     </main>

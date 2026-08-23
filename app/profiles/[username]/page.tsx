@@ -1,31 +1,101 @@
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+"use client";
 
-import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
 
-export default async function ProfileDetailPage({ params }: { params: { username: string } }) {
-  const { supabase } = supabaseServer();
+export default function ProfileDetailPage({ params }: { params: { username: string } }) {
+  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<any>(null);
+  const [kar, setKar] = useState<any[]>([]);
+  const [recipes, setRecipes] = useState<any[]>([]);
+  const [expanded, setExpanded] = useState<string | null>(null);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  useEffect(() => {
+    async function load() {
+      const {
+        data: { session },
+      } = await supabaseBrowser.auth.getSession();
 
-  if (!user) {
+      if (!session) return;
+
+      const user = session.user;
+
+      // Hent profil
+      const { data: profileData } = await supabaseBrowser
+        .from("profiles")
+        .select("*")
+        .eq("username", params.username)
+        .single();
+
+      if (!profileData) {
+        setLoading(false);
+        return;
+      }
+
+      setProfile(profileData);
+
+      const userId = profileData.id;
+
+      // Hent kar
+      const { data: karRaw } = await supabaseBrowser
+        .from("kar")
+        .select("*")
+        .eq("user_id", userId)
+        .order("nummer");
+
+      // Hent batches
+      const { data: batchesRaw } = await supabaseBrowser
+        .from("batches")
+        .select("*")
+        .eq("user_id", userId);
+
+      // ⭐ RIKTIG STATUS PER KAR
+      const karProcessed = (karRaw ?? []).map((k: any, index: number) => {
+        const active = batchesRaw?.find(
+          (b: any) => b.aktivt_kar === k.id && b.status === "Aktiv"
+        );
+
+        const secondary = batchesRaw?.find(
+          (b: any) => b.aktivt_kar === k.id && b.status === "Sekundær"
+        );
+
+        let status = "Ledig";
+        if (active) status = "Aktiv";
+        else if (secondary) status = "Sekundær";
+
+        return {
+          id: k.id,
+          nummer: index + 1,
+          created_at: k.created_at,
+          status,
+        };
+      });
+
+      setKar(karProcessed);
+
+      // Hent oppskrifter
+      const { data: recipesRaw } = await supabaseBrowser
+        .from("recipes")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("is_public", true)
+        .order("created_at", { ascending: false });
+
+      setRecipes(recipesRaw ?? []);
+      setLoading(false);
+    }
+
+    load();
+  }, [params.username]);
+
+  if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
-        <h1 className="text-2xl font-bold">Du må være innlogget</h1>
+        Laster…
       </main>
     );
   }
-
-  // Finn bruker via username
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("username", params.username)
-    .single();
 
   if (!profile) {
     return (
@@ -35,46 +105,9 @@ export default async function ProfileDetailPage({ params }: { params: { username
     );
   }
 
-  const userId = profile.id;
-
-  // Hent kar
-  const { data: karRaw } = await supabase
-    .from("kar")
-    .select("*")
-    .eq("user_id", userId)
-    .order("nummer");
-
-  // Hent batches
-  const { data: batchesRaw } = await supabase
-    .from("batches")
-    .select("*")
-    .eq("user_id", userId);
-
-  // Hent oppskrifter
-  const { data: recipesRaw } = await supabase
-    .from("recipes")
-    .select("*")
-    .eq("user_id", userId)
-    .eq("is_public", true)
-    .order("created_at", { ascending: false });
-
-  // ⭐ Sett status + renummerer kar etter rekkefølge
-  const kar = (karRaw ?? []).map((k: any, index: number) => {
-    const batch = batchesRaw?.find((b: any) => b.aktivt_kar === k.id);
-
-    let status = "Ledig";
-    if (batch) {
-      if (batch.status === "Sekundær") status = "Sekundær";
-      else status = "Aktiv";
-    }
-
-    return {
-      id: k.id,
-      nummer: index + 1,
-      created_at: k.created_at,
-      status,
-    };
-  });
+  function toggle(id: string) {
+    setExpanded(expanded === id ? null : id);
+  }
 
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
@@ -99,13 +132,14 @@ export default async function ProfileDetailPage({ params }: { params: { username
         </div>
 
         <h1 className="text-4xl font-bold mb-6 text-center">
-          {profile.username}
+          {profile.username.charAt(0).toUpperCase() + profile.username.slice(1)}
         </h1>
 
         <p className="opacity-80 text-center mb-10">
           Oversikt over brukerens kar, aktive batches og offentlige oppskrifter.
         </p>
 
+        {/* KAR */}
         <h2 className="text-2xl font-semibold mb-4 text-center">Kar</h2>
 
         <div className="flex flex-wrap justify-center gap-6 mb-12">
@@ -138,45 +172,96 @@ export default async function ProfileDetailPage({ params }: { params: { username
           )}
         </div>
 
+        {/* OPPSKRIFTER */}
         <h2 className="text-2xl font-semibold mb-4 text-center">
           Offentlige oppskrifter
         </h2>
 
         <div className="space-y-4">
-          {recipesRaw && recipesRaw.length > 0 ? (
-            recipesRaw.map((r: any) => (
+          {recipes.length > 0 ? (
+            recipes.map((r) => (
               <div
                 key={r.id}
-                className="p-4 bg-white/10 border border-white/20 rounded-xl"
+                className="bg-white/10 border border-white/20 rounded-xl p-4"
               >
-                <h3 className="text-xl font-bold text-green-300 mb-2">
-                  {r.name}
-                </h3>
+                {/* HEADER */}
+                <button
+                  onClick={() => toggle(r.id)}
+                  className="w-full flex justify-between items-center text-left"
+                >
+                  <span className="text-xl font-bold text-green-300">
+                    {r.name.charAt(0).toUpperCase() + r.name.slice(1)}
+                  </span>
 
-                <p className="text-sm opacity-80">
-                  OG: {r.og} — FG: {r.fg} — ABV: {r.abv.toFixed(1)}%
-                </p>
+                  <span
+                    className={`text-white text-2xl transition-transform duration-200 ${
+                      expanded === r.id ? "rotate-90" : "rotate-180"
+                    }`}
+                  >
+                    ▶
+                  </span>
+                </button>
 
-                <p className="text-sm opacity-80 mt-1">
-                  Volum: {r.volume} L
-                </p>
+                {/* SMOOTH DROPDOWN */}
+                <div
+                  className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                    expanded === r.id ? "max-h-[2000px] mt-4" : "max-h-0"
+                  }`}
+                >
+                  <div className="space-y-3 opacity-90">
 
-                {r.notes && (
-                  <p className="mt-3 whitespace-pre-line opacity-90">
-                    {r.notes}
-                  </p>
-                )}
+                    <p className="text-sm">
+                      <strong>OG:</strong> {r.og}  
+                      <strong className="ml-4">FG:</strong> {r.fg}  
+                      <strong className="ml-4">ABV:</strong> {r.abv.toFixed(1)}%
+                    </p>
+
+                    <p className="text-sm">
+                      <strong>Volum:</strong> {r.volume} L
+                    </p>
+
+                    {r.ingredients && (
+                      <p className="whitespace-pre-line">
+                        <strong>Ingredienser:</strong>{"\n"}
+                        {r.ingredients}
+                      </p>
+                    )}
+
+                    {r.method && (
+                      <p className="whitespace-pre-line">
+                        <strong>Fremgangsmåte:</strong>{"\n"}
+                        {r.method}
+                      </p>
+                    )}
+
+                    {r.notes && (
+                      <p className="whitespace-pre-line">
+                        <strong>Notater:</strong>{"\n"}
+                        {r.notes}
+                      </p>
+                    )}
+
+                    {/* ⭐ NY KNAPP — nederst høyre */}
+                    <div className="flex justify-end pt-4">
+                      <Link
+                        href={`/profiles/${params.username}/recipes/${r.id}`}
+                        className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm font-semibold"
+                      >
+                        Åpne notatlogg →
+                      </Link>
+                    </div>
+
+                  </div>
+                </div>
               </div>
             ))
           ) : (
-            <p className="opacity-60 text-center">
-              Ingen offentlige oppskrifter.
-            </p>
+            <p className="opacity-60 text-center">Ingen offentlige oppskrifter.</p>
           )}
         </div>
 
         <p className="text-sm opacity-40 mt-12 text-center">
-          © {new Date().getFullYear()} Fiklebrygg AS.
+          © {new Date().getFullYear()} Fiklebrygg - Batchlogg
         </p>
       </div>
     </main>

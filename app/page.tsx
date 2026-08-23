@@ -11,7 +11,7 @@ export default function Home() {
   const [session, setSession] = useState<any>(null);
   const [username, setUsername] = useState("");
 
-  // Sjekk session
+  // Sjekk session + lytt på endringer
   useEffect(() => {
     async function load() {
       const {
@@ -21,7 +21,6 @@ export default function Home() {
       setSession(session);
 
       if (session) {
-        // Hent profil via API (JWT-modell)
         const token = session.access_token;
         const res = await fetch("/api/profile", {
           headers: { Authorization: `Bearer ${token}` },
@@ -37,16 +36,27 @@ export default function Home() {
     }
 
     load();
+
+    // ⭐ FIX: Oppdater session automatisk ved login/logout
+    const { data: listener } = supabaseBrowser.auth.onAuthStateChange(
+      (_event, newSession) => {
+        setSession(newSession);
+      }
+    );
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
-  // RIKTIG LOGOUT SOM OPPDATERER LANDINGSSIDEN
+  // ⭐ FIX: Vent litt etter signOut før refresh
   async function logout() {
     await supabaseBrowser.auth.signOut();
 
-    // Tving SSR til å lese nye cookies
-    router.refresh();
+    // Gi Supabase tid til å skrive nye cookies
+    await new Promise((r) => setTimeout(r, 80));
 
-    // Sikrer at vi havner på landingssiden
+    router.refresh();
     router.replace("/");
   }
 
@@ -159,7 +169,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <p className="text-sm opacity-40 mt-20 relative z-10">
-        © {new Date().getFullYear()} Fiklebrygg AS – Batchlogg
+        © {new Date().getFullYear()} Fiklebrygg - Batchlogg
       </p>
     </div>
   );
