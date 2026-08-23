@@ -11,7 +11,6 @@ export default function Home() {
   const [session, setSession] = useState<any>(null);
   const [username, setUsername] = useState("");
 
-  // Sjekk session + lytt på endringer
   useEffect(() => {
     async function load() {
       const {
@@ -28,7 +27,7 @@ export default function Home() {
 
         if (res.ok) {
           const json = await res.json();
-          setUsername(json.username ?? "Ukjent");
+          setUsername(json.username ?? "Unknown");
         }
       }
 
@@ -37,7 +36,6 @@ export default function Home() {
 
     load();
 
-    // ⭐ FIX: Oppdater session automatisk ved login/logout
     const { data: listener } = supabaseBrowser.auth.onAuthStateChange(
       (_event, newSession) => {
         setSession(newSession);
@@ -49,13 +47,9 @@ export default function Home() {
     };
   }, []);
 
-  // ⭐ FIX: Vent litt etter signOut før refresh
   async function logout() {
     await supabaseBrowser.auth.signOut();
-
-    // Gi Supabase tid til å skrive nye cookies
     await new Promise((r) => setTimeout(r, 80));
-
     router.refresh();
     router.replace("/");
   }
@@ -65,7 +59,7 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 text-white relative">
 
-      {/* CO2 BOBLER */}
+      {/* CO2 BUBBLES */}
       <div className="bubble-container absolute inset-0 pointer-events-none">
         {[...Array(25)].map((_, i) => (
           <span
@@ -84,26 +78,26 @@ export default function Home() {
 
       {/* HERO */}
       <div className="text-center space-y-6 bg-black/40 backdrop-blur-md p-10 rounded-xl border border-white/10 max-w-2xl relative z-10">
-        <h1 className="text-5xl font-bold">Batchlogg</h1>
+        <h1 className="text-5xl font-bold">Batchlog</h1>
         <p className="text-lg opacity-80">
-          Brygg smartere. Logg bedre. Hold styr på kar, batches og oppskrifter.
+          Brew smarter. Log better. Keep track of vessels, batches, and recipes.
         </p>
 
-        {/* AUTH KNAPPER */}
+        {/* AUTH BUTTONS */}
         {!session && (
           <div className="flex flex-col gap-4 mt-6">
             <a
               href="/auth/login"
               className="block bg-blue-600 hover:bg-blue-700 p-3 rounded-lg font-semibold"
             >
-              Logg inn
+              Log in
             </a>
 
             <a
               href="/auth/signup"
               className="block bg-green-600 hover:bg-green-700 p-3 rounded-lg font-semibold"
             >
-              Registrer
+              Sign up
             </a>
           </div>
         )}
@@ -111,57 +105,68 @@ export default function Home() {
         {session && (
           <div className="flex flex-col gap-4 mt-6">
             <p className="text-center text-green-300 font-semibold">
-              Logget inn som {username}
+              Logged in as {username}
             </p>
 
             <button
               onClick={logout}
               className="bg-red-600 hover:bg-red-700 p-3 rounded-lg font-semibold"
             >
-              Logg ut
+              Log out
             </button>
 
             <a
               href="/dashboard"
               className="block bg-white/10 hover:bg-white/20 p-3 rounded-lg font-semibold"
             >
-              Gå til dashboard
+              Go to dashboard
             </a>
           </div>
         )}
       </div>
 
-      {/* INFOSEKSJONER */}
+      {/* INFO SECTIONS */}
       <div className="mt-20 max-w-3xl space-y-16 relative z-10">
 
-        {/* Hva er Batchlogg */}
+        {/* What is Batchlogg */}
         <section className="bg-black/30 backdrop-blur-md p-8 rounded-xl border border-white/10">
-          <h2 className="text-3xl font-bold mb-4 text-center">Hva er Batchlogg?</h2>
+          <h2 className="text-3xl font-bold mb-4 text-center">What is Batchlog?</h2>
+          <p className="text-lg opacity-90 mb-4">
+            Batchlog is a brewing companion designed to give you complete control over your brewing workflow.
+            It keeps track of every vessel, every batch, and every detail — from gravity readings to tasting notes and photos.
+            Whether you're experimenting with new recipes or repeating a proven favorite, Batchlog helps you stay organized,
+            consistent, and confident throughout the entire brewing process.
+          </p>
           <ul className="space-y-3 text-lg opacity-90">
-            <li>• Full oversikt over alle karene dine</li>
-            <li>• Logg OG, FG, notater og bilder for hver batch</li>
-            <li>• Lagre og del oppskrifter</li>
-            <li>• Se andre bryggere og deres offentlige oppskrifter</li>
+            <li>• A clear overview of all your brewing vessels and active batches</li>
+            <li>• Detailed logging of OG, FG, notes, measurements, and images</li>
+            <li>• A recipe system built for saving, refining, and sharing your creations</li>
+            <li>• A community section where you can explore public recipes from other brewers</li>
           </ul>
         </section>
 
-        {/* Hvorfor bruke Batchlogg */}
+        {/* Why use Batchlogg */}
         <section className="bg-black/30 backdrop-blur-md p-8 rounded-xl border border-white/10">
-          <h2 className="text-3xl font-bold mb-4 text-center">Hvorfor bruke Batchlogg?</h2>
+          <h2 className="text-3xl font-bold mb-4 text-center">Why use Batchlog?</h2>
+          <p className="text-lg opacity-90 mb-4">
+            Batchlog removes the chaos from brewing. No more scattered notes, forgotten measurements,
+            or missing photos — everything is stored in one structured, easy‑to‑use system.
+            It helps you improve consistency, learn from past batches, and build a brewing history you can rely on.
+          </p>
           <ul className="space-y-3 text-lg opacity-90">
-            <li>• Full kontroll over bryggeprosessen</li>
-            <li>• Alt samlet på ett sted</li>
-            <li>• Ingen mer rot i notater og bilder</li>
-            <li>• Perfekt for både hobby og seriøs brygging</li>
+            <li>• Full control over your brewing process from start to finish</li>
+            <li>• All your data collected in one place — clean, searchable, and safe</li>
+            <li>• A smoother workflow with fewer mistakes and better repeatability</li>
+            <li>• Ideal for hobby brewers, homebrewers, mead‑makers, and small craft setups</li>
           </ul>
         </section>
 
-        {/* For bryggere, av bryggere */}
+        {/* For brewers, by brewers */}
         <section className="bg-black/30 backdrop-blur-md p-8 rounded-xl border border-white/10 text-center">
-          <h2 className="text-3xl font-bold mb-4">For bryggere, av bryggere</h2>
+          <h2 className="text-3xl font-bold mb-4">For brewers, by brewers</h2>
           <p className="text-lg opacity-90">
-            Batchlogg er laget for bryggere som vil ha struktur, oversikt og enkelhet.
-            Enten du brygger i garasjen eller driver et lite bryggeri – dette er ditt verktøy.
+            Batchlog is made for brewers who want structure, clarity, and simplicity.
+            Whether you brew in your garage or run a small brewery – this is your tool.
           </p>
         </section>
 
@@ -169,7 +174,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <p className="text-sm opacity-40 mt-20 relative z-10">
-        © {new Date().getFullYear()} Fiklebrygg - Batchlogg
+        © {new Date().getFullYear()} Batchlog
       </p>
     </div>
   );

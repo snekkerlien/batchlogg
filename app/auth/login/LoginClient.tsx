@@ -12,7 +12,6 @@ export default function LoginClient() {
 
   useEffect(() => {
     async function checkSession() {
-      // Bare sjekk – ikke redirect
       await supabaseBrowser.auth.getSession();
       setLoading(false);
     }
@@ -34,7 +33,7 @@ export default function LoginClient() {
     });
 
     if (error) {
-      setErrorMsg("Feil brukernavn eller passord.");
+      setErrorMsg("Incorrect username or password.");
       return;
     }
 
@@ -45,24 +44,55 @@ export default function LoginClient() {
 
   return (
     <main className="min-h-screen flex items-center justify-center px-6">
-      <form onSubmit={handleLogin} className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-sm border border-white/10 space-y-4">
-        <Link href="/" prefetch={false} className="block text-center text-sm text-blue-300 hover:text-blue-200 mb-2">
-          🏠 Tilbake til forsiden
+      <form
+        onSubmit={handleLogin}
+        className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-sm border border-white/10 space-y-4"
+      >
+        <Link
+          href="/"
+          prefetch={false}
+          className="block text-center text-sm text-blue-300 hover:text-blue-200 mb-2"
+        >
+          🏠 Back to homepage
         </Link>
 
-        <h2 className="text-2xl font-bold text-center">Logg inn</h2>
+        <h2 className="text-2xl font-bold text-center">Log in</h2>
 
-        {errorMsg && <p className="text-red-400 text-center font-semibold">{errorMsg}</p>}
+        {errorMsg && (
+          <p className="text-red-400 text-center font-semibold">
+            {errorMsg}
+          </p>
+        )}
 
-        <input type="text" name="username" placeholder="Brukernavn" required className="w-full px-4 py-3 rounded-lg bg-black/40 border border-white/20" />
-        <input type="password" name="password" placeholder="Passord" required className="w-full px-4 py-3 rounded-lg bg-black/40 border border-white/20" />
+        <input
+          type="text"
+          name="username"
+          placeholder="Username"
+          required
+          className="w-full px-4 py-3 rounded-lg bg-black/40 border border-white/20"
+        />
 
-        <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 p-3 rounded-lg font-semibold">
-          Logg inn
+        <input
+          type="password"
+          name="password"
+          placeholder="Password"
+          required
+          className="w-full px-4 py-3 rounded-lg bg-black/40 border border-white/20"
+        />
+
+        <button
+          type="submit"
+          className="w-full bg-blue-600 hover:bg-blue-700 p-3 rounded-lg font-semibold"
+        >
+          Log in
         </button>
 
-        <Link href="/auth/signup" prefetch={false} className="block text-center text-sm text-blue-300 hover:text-blue-200 mt-2">
-          Registrer ny konto
+        <Link
+          href="/auth/signup"
+          prefetch={false}
+          className="block text-center text-sm text-blue-300 hover:text-blue-200 mt-2"
+        >
+          Create new account
         </Link>
       </form>
     </main>

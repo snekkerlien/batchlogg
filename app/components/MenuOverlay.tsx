@@ -2,10 +2,13 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
+import { useRouter } from "next/navigation";
 
 export default function MenuOverlay({ current }: { current: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -19,6 +22,12 @@ export default function MenuOverlay({ current }: { current: string }) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  async function logout() {
+    await supabaseBrowser.auth.signOut();
+    router.refresh();
+    router.replace("/");
+  }
 
   const items = [
     { href: "/dashboard", label: "Dashboard", key: "dashboard" },
@@ -87,23 +96,18 @@ export default function MenuOverlay({ current }: { current: string }) {
               </Link>
             ))}
 
-          <form
-            action="/logout"
-            method="post"
-            className="flex items-center justify-end mt-2"
+          <button
+            onClick={logout}
+            className="
+              px-2 py-2
+              text-red-400 font-semibold
+              hover:text-red-300
+              rounded-md
+              whitespace-nowrap
+            "
           >
-            <button
-              className="
-                px-2 py-2
-                text-red-400 font-semibold
-                hover:text-red-300
-                rounded-md
-                whitespace-nowrap
-              "
-            >
-              Log out
-            </button>
-          </form>
+            Log out
+          </button>
         </div>
       )}
     </div>

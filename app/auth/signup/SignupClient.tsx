@@ -10,10 +10,10 @@ export default function SignupClient() {
 
   function validatePassword(password: string) {
     if (password.length < 8) {
-      return "Passord må være minst 8 tegn.";
+      return "Password must be at least 8 characters.";
     }
     if (!/[A-Z]/.test(password)) {
-      return "Passord må inneholde minst én stor bokstav.";
+      return "Password must contain at least one uppercase letter.";
     }
     return "";
   }
@@ -33,26 +33,25 @@ export default function SignupClient() {
       return;
     }
 
-    console.log("[Signup] Prøver signUp:", email);
+    console.log("[Signup] Trying signUp:", email);
 
     const { data, error: signupError } = await supabaseBrowser.auth.signUp({
       email,
       password,
     });
 
-    console.log("[Signup] Resultat:", { data, signupError });
+    console.log("[Signup] Result:", { data, signupError });
 
     if (signupError) {
-      setError("Kunne ikke opprette konto.");
+      setError("Could not create account.");
       return;
     }
 
     if (!data.user) {
-      setError("Kunne ikke opprette bruker.");
+      setError("Could not create user.");
       return;
     }
 
-    // Opprett profil via API
     await fetch("/api/profile/create", {
       method: "POST",
       headers: {
@@ -64,14 +63,13 @@ export default function SignupClient() {
       }),
     });
 
-    // Logg inn automatisk
     const { error: loginError } = await supabaseBrowser.auth.signInWithPassword({
       email,
       password,
     });
 
     if (loginError) {
-      setError("Kunne ikke logge inn etter registrering.");
+      setError("Could not log in after registration.");
       return;
     }
 
@@ -88,15 +86,15 @@ export default function SignupClient() {
           href="/"
           className="block text-center text-sm text-blue-300 hover:text-blue-200 mb-2"
         >
-          🏠 Tilbake til forsiden
+          🏠 Back to homepage
         </a>
 
-        <h2 className="text-2xl font-bold text-center">Registrer ny konto</h2>
+        <h2 className="text-2xl font-bold text-center">Create new account</h2>
 
         <input
           type="text"
           name="username"
-          placeholder="Brukernavn"
+          placeholder="Username"
           required
           className="w-full px-4 py-3 rounded-lg bg-black/40 border border-white/20"
         />
@@ -104,7 +102,7 @@ export default function SignupClient() {
         <input
           type="password"
           name="password"
-          placeholder="Passord"
+          placeholder="Password"
           required
           className="w-full px-4 py-3 rounded-lg bg-black/40 border border-white/20"
         />
@@ -117,14 +115,14 @@ export default function SignupClient() {
           type="submit"
           className="w-full bg-green-600 hover:bg-green-700 p-3 rounded-lg font-semibold"
         >
-          Registrer
+          Sign up
         </button>
 
         <a
           href="/auth/login"
           className="block text-center text-sm text-blue-300 hover:text-blue-200 mt-2"
         >
-          Allerede bruker? Logg inn
+          Already have an account? Log in
         </a>
       </form>
     </main>
