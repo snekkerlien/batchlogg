@@ -27,42 +27,42 @@ export function RecipeEditor() {
   const [notes, setNotes] = useState("");
 
   const combined = `
-Ingredienser:
+Ingredients:
 ${ingredients}
 
-Fremgangsmåte:
+Full process:
 ${steps}
 
-Notater:
+Notes:
 ${notes}
 `.trim();
 
   return (
     <div className="space-y-4">
       <div>
-        <label className="block mb-1 font-semibold">Ingredienser</label>
+        <label className="block mb-1 font-semibold">Ingredients</label>
         <AutoTextarea
           value={ingredients}
           onChange={setIngredients}
-          placeholder="Skriv ingrediensene her..."
+          placeholder="Please fill in all your ingredients"
         />
       </div>
 
       <div>
-        <label className="block mb-1 font-semibold">Fremgangsmåte</label>
+        <label className="block mb-1 font-semibold">Full process</label>
         <AutoTextarea
           value={steps}
           onChange={setSteps}
-          placeholder="Skriv steg-for-steg her..."
+          placeholder="Walk us through your full process"
         />
       </div>
 
       <div>
-        <label className="block mb-1 font-semibold">Notater</label>
+        <label className="block mb-1 font-semibold">Notes</label>
         <AutoTextarea
           value={notes}
           onChange={setNotes}
-          placeholder="Ekstra notater..."
+          placeholder="Additional notes..."
         />
       </div>
 

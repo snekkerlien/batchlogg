@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
 import { getNextMotd } from "../../lib/motd/motdList";
+import MenuOverlay from "@/app/components/MenuOverlay";
 
 interface KarType {
   id: string;
@@ -21,7 +22,6 @@ export default function DashboardClient() {
   const [kar, setKar] = useState<KarType[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [motd, setMotd] = useState("");
-
   const [selectMode, setSelectMode] = useState(false);
   const [selectedKars, setSelectedKars] = useState<string[]>([]);
   const [fadeMessage, setFadeMessage] = useState("");
@@ -58,7 +58,6 @@ export default function DashboardClient() {
 
   async function loadDashboardData() {
     const token = await getToken();
-
     if (!token) {
       router.replace("/");
       return;
@@ -75,7 +74,7 @@ export default function DashboardClient() {
     }
 
     const profileJson = await profileRes.json();
-    setUsername(profileJson.username ?? "Ukjent");
+    setUsername(profileJson.username ?? "Unknown");
 
     const {
       data: { session },
@@ -99,7 +98,6 @@ export default function DashboardClient() {
 
     const batches = batchRes.ok ? await batchRes.json() : [];
 
-    // ⭐ ENDRINGEN DU BA OM: bruk nyeste batch på karet
     const karWithStatus = owned.map((k) => {
       const batch = batches
         .filter((b: any) => b.aktivt_kar === k.id)
@@ -145,13 +143,15 @@ export default function DashboardClient() {
 
   function toggleKarSelection(id: string, nummer: number) {
     if (nummer === 1) {
-      setFadeMessage("Kan ikke slette kar 1");
+      setFadeMessage("Vessel 1 cannot be deleted");
       setTimeout(() => setFadeMessage(""), 1500);
       return;
     }
 
     setSelectedKars((prev) =>
-      prev.includes(id) ? prev.filter((k) => k !== id) : [...prev, id]
+      prev.includes(id)
+        ? prev.filter((k) => k !== id)
+        : [...prev, id]
     );
   }
 
@@ -176,7 +176,6 @@ export default function DashboardClient() {
 
   async function createKar() {
     const token = await getToken();
-
     if (!token) {
       router.replace("/");
       return;
@@ -200,131 +199,47 @@ export default function DashboardClient() {
         setMenuOpen(false);
       }
     }
+
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    return () =>
+      document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   if (loading) {
     return (
       <div className="text-center text-white mt-20 text-xl">
-        Laster dashboard…
+        Loading dashboard…
       </div>
     );
   }
 
   return (
-    <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl border border-white/10 max-w-3xl mx-auto mt-16 relative">
-
+    <div className="bg-black/60 backdrop-blur-md p-6 sm:p-8 rounded-xl border border-white/10 max-w-3xl mx-auto mt-20 sm:mt-24 relative">
       {fadeMessage && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-600/80 text-white px-4 py-2 rounded-lg animate-fadeOut z-50">
           {fadeMessage}
         </div>
       )}
 
-      {/* MENY */}
-      <div className="absolute top-4 right-4 z-50" ref={menuRef}>
-        <button
-          onClick={() => setMenuOpen(!menuOpen)}
-          className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
-        >
-          ☰
-        </button>
-
-        {menuOpen && (
-          <div className="mt-2 bg-black/80 border border-white/20 rounded-lg p-4 text-right backdrop-blur-md">
-
-            <a
-              href="/account"
-              className="block mb-3 text-white hover:text-green-300 font-semibold"
-            >
-              Min konto
-            </a>
-
-            <a
-              href="/recipes"
-              className="block mb-3 text-white hover:text-green-300 font-semibold"
-            >
-              Mine oppskrifter
-            </a>
-
-            <button
-              onClick={logout}
-              className="text-red-400 hover:text-red-300 font-semibold"
-            >
-              Logg ut
-            </button>
-          </div>
-        )}
+      {/* MENU */}
+      <div className="absolute top-4 right-4 z-50">
+        <MenuOverlay current="dashboard" />
       </div>
 
-      {/* KNAPPER ØVERST */}
-      <div className="flex justify-center gap-4 mb-10 mt-4">
-        <a
-          href="/profiles"
-          className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
-        >
-          Se andre bryggere
-        </a>
-
-        <a
-          href="/recipes"
-          className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
-        >
-          Mine oppskrifter
-        </a>
-
-        <a
-          href="/batchhistorikk"
-          className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
-        >
-          Batch historikk
-        </a>
-      </div>
-
-      <h1 className="text-3xl font-bold mb-2 text-center">
-        Logget inn som {username}
+      {/* HEADER */}
+      <h1 className="text-3xl font-bold mb-4 mt-10 text-center">
+        Logged in as {username}
       </h1>
 
-      <p className="text-center text-zinc-300 mb-6 italic">
+      <p className="text-center text-zinc-300 mb-10 italic">
         {motd}
       </p>
 
-      <div className="flex justify-center gap-4 mb-6">
-        {!selectMode && (
-          <button
-            onClick={toggleSelectMode}
-            className="px-4 py-2 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg font-semibold"
-          >
-            Velg kar
-          </button>
-        )}
-
-        {selectMode && (
-          <>
-            <button
-              onClick={deleteSelectedKars}
-              disabled={selectedKars.length === 0}
-              className="px-4 py-2 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg font-semibold disabled:opacity-40"
-            >
-              Slett valgte
-            </button>
-
-            <button
-              onClick={toggleSelectMode}
-              className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 border border-zinc-500 rounded-lg font-semibold"
-            >
-              Avbryt
-            </button>
-          </>
-        )}
-      </div>
-
       <h2 className="text-2xl font-semibold mb-4 text-center">
-        Karoversikt
+        Vessel Overview
       </h2>
 
       <div className="flex flex-wrap justify-center gap-6">
-
         {kar.map((k, index) => (
           <a
             key={k.id}
@@ -332,8 +247,9 @@ export default function DashboardClient() {
             onClick={(e) => {
               if (selectMode) {
                 e.preventDefault();
+
                 if (k.nummer === 1) {
-                  setFadeMessage("Kan ikke slette kar 1");
+                  setFadeMessage("Fermentation Vessel 1 cannot be deleted");
                   setTimeout(() => setFadeMessage(""), 1500);
                 } else {
                   toggleKarSelection(k.id, k.nummer);
@@ -342,8 +258,16 @@ export default function DashboardClient() {
             }}
             className={`relative border border-white/10 rounded-xl p-4 bg-white/5 w-32 h-32 flex flex-col items-center justify-center transition overflow-hidden
               ${selectMode ? "animate-fadeIn" : ""}
-              ${selectMode && selectedKars.includes(k.id) ? "ring-4 ring-red-500" : ""}
-              ${selectMode && k.nummer === 1 ? "opacity-40 cursor-not-allowed pointer-events-none animate-shake" : ""}
+              ${
+                selectMode && selectedKars.includes(k.id)
+                  ? "ring-4 ring-red-500"
+                  : ""
+              }
+              ${
+                selectMode && k.nummer === 1
+                  ? "opacity-40 cursor-not-allowed pointer-events-none animate-shake"
+                  : ""
+              }
               hover:bg-white/10
             `}
           >
@@ -364,7 +288,7 @@ export default function DashboardClient() {
             </div>
 
             <span className="text-lg font-bold text-green-300 relative z-10">
-              Kar {index + 1}
+              Vessel {index + 1}
             </span>
 
             <span
@@ -376,12 +300,16 @@ export default function DashboardClient() {
                   : "text-zinc-400 mt-2 relative z-10"
               }
             >
-              {k.status}
+              {k.status === "Aktiv"
+                ? "Primary"
+                : k.status === "Sekundær"
+                ? "Secondary"
+                : "Empty"}
             </span>
           </a>
         ))}
 
-        {kar.length < 12 && (
+        {!selectMode && kar.length < 12 && (
           <button
             onClick={createKar}
             className="border border-white/10 bg-white/5 hover:bg-white/10 rounded-xl p-4 w-32 h-32 flex items-center justify-center text-white text-3xl font-bold"
@@ -389,7 +317,36 @@ export default function DashboardClient() {
             +
           </button>
         )}
+      </div>
 
+      <div className="flex justify-center mt-10 mb-6">
+        {!selectMode && (
+          <button
+            onClick={toggleSelectMode}
+            className="px-6 py-3 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg font-semibold"
+          >
+            Select vessels
+          </button>
+        )}
+
+        {selectMode && (
+          <div className="flex flex-col sm:flex-row gap-4">
+            <button
+              onClick={deleteSelectedKars}
+              disabled={selectedKars.length === 0}
+              className="px-6 py-3 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg font-semibold disabled:opacity-40"
+            >
+              Delete selected
+            </button>
+
+            <button
+              onClick={toggleSelectMode}
+              className="px-6 py-3 bg-zinc-700 hover:bg-zinc-600 border border-zinc-500 rounded-lg font-semibold"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
       </div>
 
       <p className="text-sm opacity-40 mt-12 text-center">
@@ -398,12 +355,24 @@ export default function DashboardClient() {
 
       <style jsx>{`
         @keyframes shake {
-          0% { transform: translateX(0); }
-          20% { transform: translateX(-6px); }
-          40% { transform: translateX(6px); }
-          60% { transform: translateX(-4px); }
-          80% { transform: translateX(4px); }
-          100% { transform: translateX(0); }
+          0% {
+            transform: translateX(0);
+          }
+          20% {
+            transform: translateX(-6px);
+          }
+          40% {
+            transform: translateX(6px);
+          }
+          60% {
+            transform: translateX(-4px);
+          }
+          80% {
+            transform: translateX(4px);
+          }
+          100% {
+            transform: translateX(0);
+          }
         }
 
         .animate-shake {
@@ -411,8 +380,12 @@ export default function DashboardClient() {
         }
 
         @keyframes fadeOut {
-          0% { opacity: 1; }
-          100% { opacity: 0; }
+          0% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0;
+          }
         }
 
         .animate-fadeOut {
@@ -420,8 +393,14 @@ export default function DashboardClient() {
         }
 
         @keyframes fadeIn {
-          0% { opacity: 0; transform: scale(0.95); }
-          100% { opacity: 1; transform: scale(1); }
+          0% {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
         }
 
         .animate-fadeIn {

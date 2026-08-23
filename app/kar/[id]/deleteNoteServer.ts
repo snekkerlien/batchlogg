@@ -16,7 +16,7 @@ export async function deleteNoteServer(noteId: string, karId: string) {
 
   if (error) {
     console.error("NOTE DELETE ERROR:", error);
-    throw new Error("Kunne ikke slette notatet");
+    throw new Error("Could not delete your note");
   }
 
   revalidatePath(`/kar/${karId}`);

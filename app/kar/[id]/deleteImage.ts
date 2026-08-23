@@ -20,7 +20,7 @@ export async function deleteImageServer(noteId: string, imageUrl: string, karId:
 
   if (storageError) {
     console.error("Storage delete error:", storageError);
-    throw new Error("Kunne ikke slette bilde fra storage");
+    throw new Error("Could not remove image from storage");
   }
 
   // Slett notatet fra databasen
@@ -31,7 +31,7 @@ export async function deleteImageServer(noteId: string, imageUrl: string, karId:
 
   if (dbError) {
     console.error("DB delete error:", dbError);
-    throw new Error("Kunne ikke slette notat fra database");
+    throw new Error("Could not remove image from database");
   }
 
   revalidatePath(`/kar/${karId}`);

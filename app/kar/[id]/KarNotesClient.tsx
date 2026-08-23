@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { deleteNoteServer } from "./deleteNoteServer";
 import { deleteImageServer } from "./deleteImage";
-import * as Actions from "./actions";
+import { addNote } from "@/app/actions/addNote";
 
 type NoteType = {
   id: string;
@@ -15,12 +15,12 @@ type NoteType = {
 export function KarNotesClient({
   batchId,
   karId,
-  userId,   // ⭐ NYTT
+  userId,
   notes,
 }: {
   batchId: string;
   karId: string;
-  userId: string;   // ⭐ NYTT
+  userId: string;
   notes: NoteType[];
 }) {
   const [noteText, setNoteText] = useState("");
@@ -36,14 +36,15 @@ export function KarNotesClient({
   }
 
   async function handleSubmit(formData: FormData) {
-    formData.set("kar_id", karId);     // ⭐ viktig
-    formData.set("user_id", userId);   // ⭐ viktig
+    formData.set("batch_id", batchId);
+    formData.set("kar_id", karId);
+    formData.set("user_id", userId);
 
     if (imageFile) {
       formData.set("image", imageFile);
     }
 
-    await Actions.addBatchNote(formData);
+    await addNote(formData);
 
     setNoteText("");
     setImageFile(null);
@@ -61,12 +62,12 @@ export function KarNotesClient({
   return (
     <div className="p-4 bg-white/5 border border-white/10 rounded-xl mb-10">
 
-      <h3 className="text-xl font-semibold mb-4">Notater & bilder</h3>
+      <h3 className="text-xl font-semibold mb-4">Notes & pictures</h3>
 
-      {/* VIS NOTATER */}
+      {/* SHOW NOTES */}
       <div className="flex flex-col gap-4 mb-10">
         {notes.length === 0 && (
-          <p className="opacity-60 text-center">Ingen notater enda.</p>
+          <p className="opacity-60 text-center">No notes yet.</p>
         )}
 
         {notes.map((note) => (
@@ -85,26 +86,26 @@ export function KarNotesClient({
             {note.image_url && (
               <img
                 src={note.image_url}
-                alt="Batch bilde"
-                className="rounded-lg mt-2 border border-white/20"
+                alt="Batch image"
+                className="rounded-lg mt-2 border border-white/20 max-h-80 object-contain"
               />
             )}
 
-            {/* SLETT-KNAPPER */}
+            {/* DELETE BUTTONS */}
             <div className="flex gap-3 mt-4">
               {note.image_url ? (
                 <button
                   onClick={() => handleDeleteImage(note.id, note.image_url!)}
                   className="px-3 py-2 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg text-sm font-semibold"
                 >
-                  Slett bilde
+                  Delete picture
                 </button>
               ) : (
                 <button
                   onClick={() => handleDeleteNote(note.id)}
                   className="px-3 py-2 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg text-sm font-semibold"
                 >
-                  Slett notat
+                  Delete note
                 </button>
               )}
             </div>
@@ -112,22 +113,24 @@ export function KarNotesClient({
         ))}
       </div>
 
-      {/* SKJEMA FOR NYTT NOTAT */}
-      <h3 className="text-xl font-semibold mb-4">Legg til notat</h3>
+      {/* ADD NEW NOTE */}
+      <h3 className="text-xl font-semibold mb-4">Add note</h3>
 
       <form action={handleSubmit} className="flex flex-col gap-4">
 
         <input type="hidden" name="batch_id" value={batchId} />
+        <input type="hidden" name="kar_id" value={karId} />
+        <input type="hidden" name="user_id" value={userId} />
 
         <textarea
           name="note"
           value={noteText}
           onChange={(e) => setNoteText(e.target.value)}
-          placeholder="Skriv et notat..."
+          placeholder="Make a note..."
           className="p-3 rounded bg-black/40 border border-white/20"
         />
 
-        {/* BILDE-INPUT MED PREVIEW */}
+        {/* IMAGE INPUT WITH PREVIEW */}
         <input
           type="file"
           accept="image/*"
@@ -139,12 +142,12 @@ export function KarNotesClient({
           <img
             src={imagePreview}
             alt="Preview"
-            className="rounded-lg border border-white/20 mt-2"
+            className="rounded-lg border border-white/20 mt-2 max-h-80 object-contain"
           />
         )}
 
         <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
-          Lagre notat
+          Save note
         </button>
       </form>
     </div>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import { changeUsername } from "./actions";
+import MenuOverlay from "./MenuOverlay";
 
 export default function AccountPage() {
   const router = useRouter();
@@ -13,7 +14,6 @@ export default function AccountPage() {
   const [profile, setProfile] = useState<any>(null);
 
   const [showUsernameModal, setShowUsernameModal] = useState(false);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showPasswordChangeModal, setShowPasswordChangeModal] = useState(false);
 
   const [newUsername, setNewUsername] = useState("");
@@ -24,29 +24,40 @@ export default function AccountPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
 
-  useEffect(() => {
-    async function load() {
-      const {
-        data: { session },
-      } = await supabaseBrowser.auth.getSession();
+  async function load() {
+    const {
+      data: { session },
+    } = await supabaseBrowser.auth.getSession();
 
-      if (!session) {
-        router.replace("/auth/login");
-        return;
-      }
-
-      const user = session.user;
-      setUser(user);
-
-      const res = await fetch("/api/profile");
-      const data = await res.json();
-
-      setProfile(data);
-      setLoading(false);
+    if (!session) {
+      router.replace("/auth/login");
+      return;
     }
 
+    const user = session.user;
+    setUser(user);
+
+    const res = await fetch("/api/profile", {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    });
+
+    const data = await res.json();
+
+    setProfile(data);
+    setLoading(false);
+  }
+
+  useEffect(() => {
     load();
   }, [router]);
+
+  useEffect(() => {
+    const onFocus = () => load();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, []);
 
   useEffect(() => {
     if (!newUsername) {
@@ -78,12 +89,12 @@ export default function AccountPage() {
     setPasswordError("");
 
     if (!oldPassword || !newPassword || !confirmPassword) {
-      setPasswordError("Alle felt må fylles ut");
+      setPasswordError("All fields must be filled out");
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setPasswordError("Nytt passord matcher ikke bekreftelsen");
+      setPasswordError("New password does not match confirmation");
       return;
     }
 
@@ -93,7 +104,7 @@ export default function AccountPage() {
     });
 
     if (loginError) {
-      setPasswordError("Gammelt passord er feil");
+      setPasswordError("Old password is incorrect");
       return;
     }
 
@@ -102,245 +113,106 @@ export default function AccountPage() {
     });
 
     if (updateError) {
-      setPasswordError("Kunne ikke endre passord");
+      setPasswordError("Could not change password");
       return;
     }
 
     setShowPasswordChangeModal(false);
-    alert("Passord endret!");
+    alert("Password changed!");
   }
 
   if (loading) {
     return (
       <main className="text-white text-center mt-20">
-        Laster konto…
+        Loading account…
       </main>
     );
   }
 
   return (
     <main className="min-h-screen flex flex-col items-center px-6 py-12 text-white">
-      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10 relative">
+      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10 relative pt-16 sm:pt-0">
 
-        {/* Tilbake + Dashboard */}
-        <div className="absolute top-4 left-4 flex gap-3">
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
-          >
-            ← Tilbake
-          </button>
+        {/* MENU BUTTON */}
+        <div className="absolute top-2 sm:top-4 right-4 z-40">
+          <MenuOverlay />
+        </div>
 
+        {/* BACK BUTTON */}
+        <div className="absolute top-2 sm:top-4 left-4 z-40">
           <button
-            onClick={() => router.push("/dashboard")}
-            className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
+            onClick={() => window.history.back()}
+            className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg flex items-center justify-center"
           >
-            🏠 Dashboard
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 19l-7-7 7-7" />
+              <path d="M19 12H5" />
+            </svg>
           </button>
         </div>
 
-        {/* Logg ut + Synlighets-slider + tekst */}
-        <div className="absolute top-4 right-4 flex items-center gap-4">
-
-          <p className="text-sm opacity-80">Synlig profil</p>
-
-          <div
-            onClick={toggleVisibility}
-            className={`w-14 h-7 rounded-full cursor-pointer transition relative ${
-              profile.is_public ? "bg-green-500" : "bg-zinc-600"
-            }`}
-          >
-            <div
-              className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition ${
-                profile.is_public ? "translate-x-7" : ""
-              }`}
-            ></div>
-          </div>
-
-          <button
-            onClick={async () => {
-              await supabaseBrowser.auth.signOut();
-              router.replace("/auth/login");
-            }}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold"
-          >
-            Logg ut
-          </button>
-        </div>
-
-        <h1 className="text-3xl font-bold mb-6 text-center">Min konto</h1>
+        <h1 className="text-3xl font-bold mb-6 text-center">My Account</h1>
 
         {/* INFO */}
         <div className="space-y-4 mb-10 text-center">
           <div>
-            <p className="text-zinc-400 text-sm">Brukernavn</p>
-            <p className="font-semibold">{profile.username ?? "Ukjent"}</p>
-          </div>
-
-          <div>
-            <p className="text-zinc-400 text-sm">Registrert siden</p>
+            <p className="text-zinc-400 text-sm">Username</p>
             <p className="font-semibold">
-              {new Date(user.created_at).toLocaleDateString("no-NO")}
+              {profile.username
+                ? profile.username.charAt(0).toUpperCase() + profile.username.slice(1)
+                : "Unknown"}
             </p>
           </div>
 
           <div>
-            <p className="text-zinc-400 text-sm">Antall kar</p>
+            <p className="text-zinc-400 text-sm">Registered since</p>
+            <p className="font-semibold">
+              {new Date(user.created_at).toLocaleDateString("en-GB")}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-zinc-400 text-sm">Number of vessels</p>
             <p className="font-semibold">{profile.kar_count ?? 0}</p>
           </div>
 
           <div>
-            <p className="text-zinc-400 text-sm">Antall batches</p>
+            <p className="text-zinc-400 text-sm">Number of batches</p>
             <p className="font-semibold">{profile.batch_count ?? 0}</p>
           </div>
 
           <div>
-            <p className="text-zinc-400 text-sm">Antall oppskrifter</p>
+            <p className="text-zinc-400 text-sm">Number of recipes</p>
             <p className="font-semibold">{profile.recipe_count ?? 0}</p>
           </div>
         </div>
 
-        {/* KNAPPER – oppdatert farge */}
+        {/* BUTTONS */}
         <div className="grid grid-cols-2 gap-4 mb-10">
-
           <button
             onClick={() => setShowUsernameModal(true)}
             className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm"
           >
-            Endre brukernavn
+            Change username
           </button>
 
           <button
             onClick={() => setShowPasswordChangeModal(true)}
             className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm"
           >
-            Endre passord
+            Change password
           </button>
         </div>
-
-        {/* MODALER — uendret */}
-        {showUsernameModal && (
-          <div className="fixed inset-0 bg-black/70 flex items-center justify-center">
-            <div className="bg-zinc-900 p-6 rounded-xl border border-white/10 w-96">
-              <h2 className="text-xl font-bold mb-4">Velg nytt brukernavn</h2>
-
-              <input
-                type="text"
-                value={newUsername}
-                onChange={(e) => setNewUsername(e.target.value)}
-                placeholder="Nytt brukernavn"
-                className="w-full p-2 rounded bg-black/40 border border-white/20"
-              />
-
-              {usernameStatus === "ok" && (
-                <p className="text-green-400 mt-2">Brukernavnet er ledig</p>
-              )}
-              {usernameStatus === "taken" && (
-                <p className="text-red-400 mt-2">Brukernavnet er allerede i bruk</p>
-              )}
-
-              <div className="flex justify-between mt-6">
-                <button
-                  onClick={() => setShowUsernameModal(false)}
-                  className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-lg"
-                >
-                  Avbryt
-                </button>
-
-                <button
-                  disabled={usernameStatus !== "ok"}
-                  onClick={() => setShowPasswordModal(true)}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg disabled:bg-zinc-600"
-                >
-                  Fortsett
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showPasswordModal && (
-          <div className="fixed inset-0 bg-black/70 flex items-center justify-center">
-            <div className="bg-zinc-900 p-6 rounded-xl border border-white/10 w-96">
-              <h2 className="text-xl font-bold mb-4">Bekreft med passord</h2>
-
-              <form action={changeUsername} className="space-y-4">
-                <input type="hidden" name="newUsername" value={newUsername} />
-
-                <input
-                  type="password"
-                  name="password"
-                  placeholder="Passord"
-                  className="w-full p-2 rounded bg-black/40 border border-white/20"
-                  required
-                />
-
-                <button className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold w-full">
-                  Bekreft endring
-                </button>
-              </form>
-
-              <button
-                onClick={() => setShowPasswordModal(false)}
-                className="mt-4 w-full px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-lg"
-              >
-                Avbryt
-              </button>
-            </div>
-          </div>
-        )}
-
-        {showPasswordChangeModal && (
-          <div className="fixed inset-0 bg-black/70 flex items-center justify-center">
-            <div className="bg-zinc-900 p-6 rounded-xl border border-white/10 w-96">
-              <h2 className="text-xl font-bold mb-4">Endre passord</h2>
-
-              <div className="space-y-4">
-                <input
-                  type="password"
-                  placeholder="Gammelt passord"
-                  value={oldPassword}
-                  onChange={(e) => setOldPassword(e.target.value)}
-                  className="w-full p-2 rounded bg-black/40 border border-white/20"
-                />
-
-                <input
-                  type="password"
-                  placeholder="Nytt passord"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full p-2 rounded bg-black/40 border border-white/20"
-                />
-
-                <input
-                  type="password"
-                  placeholder="Bekreft nytt passord"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full p-2 rounded bg-black/40 border border-white/20"
-                />
-
-                {passwordError && (
-                  <p className="text-red-400">{passwordError}</p>
-                )}
-
-                <button
-                  onClick={changePassword}
-                  className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold w-full"
-                >
-                  Endre passord
-                </button>
-
-                <button
-                  onClick={() => setShowPasswordChangeModal(false)}
-                  className="w-full px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-lg"
-                >
-                  Avbryt
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         <p className="text-sm opacity-40 mt-12 text-center">
           © {new Date().getFullYear()} Fiklebrygg - Batchlogg

@@ -1,55 +1,46 @@
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+"use client";
 
-import { supabaseServer } from "../../../../../lib/supabase/supabaseServerFinal";
-import MenuOverlay from "./MenuOverlay";
-import BackButton from "./BackButton";
+import { useEffect, useState } from "react";
+import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
+import MenuOverlay from "../MenuOverlay";
+import BackButton from "../BackButton";
 
-export default async function RecipeNotesPage({
-  params,
-}: {
-  params: { username: string; recipeId: string };
-}) {
-  const { supabase } = supabaseServer();
+export default function RecipeNotesPage({ params }: { params: { id: string } }) {
+  const [loading, setLoading] = useState(true);
+  const [recipe, setRecipe] = useState<any>(null);
 
-  // Check login
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  useEffect(() => {
+    async function load() {
+      const {
+        data: { session },
+      } = await supabaseBrowser.auth.getSession();
 
-  if (!user) {
+      if (!session) {
+        window.location.href = "/auth/login";
+        return;
+      }
+
+      const { data: recipeData } = await supabaseBrowser
+        .from("recipes")
+        .select("*")
+        .eq("id", params.id)
+        .eq("user_id", session.user.id)
+        .single();
+
+      setRecipe(recipeData ?? null);
+      setLoading(false);
+    }
+
+    load();
+  }, [params.id]);
+
+  if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
-        <h1 className="text-2xl font-bold">You must be logged in</h1>
+        Loading recipe…
       </main>
     );
   }
-
-  // Find user by username
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("username", params.username)
-    .single();
-
-  if (!profile) {
-    return (
-      <main className="min-h-screen flex items-center justify-center text-white">
-        <h1 className="text-2xl font-bold">Profile not found</h1>
-      </main>
-    );
-  }
-
-  const userId = profile.id;
-
-  // Fetch recipe
-  const { data: recipe } = await supabase
-    .from("recipes")
-    .select("*")
-    .eq("id", params.recipeId)
-    .eq("user_id", userId)
-    .single();
 
   if (!recipe) {
     return (
@@ -59,7 +50,6 @@ export default async function RecipeNotesPage({
     );
   }
 
-  // ⭐ Note log
   const notes = recipe.notes_log || [];
 
   return (
@@ -73,26 +63,27 @@ export default async function RecipeNotesPage({
         </div>
 
         {/* Header */}
-        <h1 className="text-4xl font-bold mb-6 text-center">
+        <h1 className="text-4xl font-bold mb-6 text-center text-green-300">
           {recipe.name.charAt(0).toUpperCase() + recipe.name.slice(1)}
         </h1>
 
         <p className="opacity-80 text-center mb-10">
-          Note log and details for this recipe.
+          Full recipe details and brewer's notes.
         </p>
 
         {/* Recipe info */}
         <div className="space-y-6">
 
+          {/* Base values */}
           <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
             <h2 className="text-2xl font-semibold mb-3">Base values</h2>
 
             <p className="text-lg">
-              <strong>OG:</strong> {recipe.og}
+              <strong>OG:</strong> {Number(recipe.og).toFixed(3)}
             </p>
 
             <p className="text-lg mt-2">
-              <strong>FG:</strong> {recipe.fg}
+              <strong>FG:</strong> {Number(recipe.fg).toFixed(3)}
             </p>
 
             <p className="text-lg mt-2">
@@ -104,6 +95,7 @@ export default async function RecipeNotesPage({
             </p>
           </div>
 
+          {/* Ingredients */}
           {recipe.ingredients && (
             <div className="p-4 bg-white/5 border border-white/10 rounded-xl whitespace-pre-line">
               <h2 className="text-2xl font-semibold mb-3">Ingredients</h2>
@@ -111,6 +103,7 @@ export default async function RecipeNotesPage({
             </div>
           )}
 
+          {/* Method */}
           {recipe.method && (
             <div className="p-4 bg-white/5 border border-white/10 rounded-xl whitespace-pre-line">
               <h2 className="text-2xl font-semibold mb-3">Method</h2>
@@ -118,6 +111,7 @@ export default async function RecipeNotesPage({
             </div>
           )}
 
+          {/* Notes */}
           <div className="p-4 bg-white/5 border border-white/10 rounded-xl whitespace-pre-line">
             <h2 className="text-2xl font-semibold mb-3">Notes</h2>
             {recipe.notes || "No notes added"}
@@ -127,7 +121,7 @@ export default async function RecipeNotesPage({
 
         {/* ⭐ NOTE LOG */}
         <h2 className="text-2xl font-semibold mt-12 mb-4 text-center">
-          Note log
+          Notes
         </h2>
 
         <div className="space-y-4">
@@ -137,10 +131,12 @@ export default async function RecipeNotesPage({
                 key={n.id}
                 className="p-4 bg-white/10 border border-white/20 rounded-xl"
               >
+                {/* Date */}
                 <p className="text-sm opacity-60">
                   {new Date(n.created_at).toLocaleDateString("en-GB")}
                 </p>
 
+                {/* Image */}
                 {n.note_type === "image" && n.image_url && (
                   <img
                     src={n.image_url}
@@ -149,6 +145,7 @@ export default async function RecipeNotesPage({
                   />
                 )}
 
+                {/* Text */}
                 {n.note && (
                   <p className="mt-3 whitespace-pre-line">
                     {n.note}

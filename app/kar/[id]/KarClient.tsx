@@ -21,7 +21,7 @@ export default function KarClient({ kar }: KarClientProps) {
   return (
     <form
       action={async (formData) => {
-        // Send UUID til server action
+        // Send UUID to server action
         formData.set("kar", kar.id);
 
         await createBatch(formData);
@@ -30,33 +30,33 @@ export default function KarClient({ kar }: KarClientProps) {
       }}
       className="space-y-4 text-white"
     >
-      {/* Skjult felt for kar-ID (UUID) */}
+      {/* Hidden field for vessel ID (UUID) */}
       <input type="hidden" name="kar" value={kar.id} />
 
       <div>
-        <label className="block mb-1">Batchnavn</label>
+        <label className="block mb-1">Batch name</label>
         <input
           type="text"
           name="name"
           required
-          placeholder="Skriv navn på batchen"
+          placeholder="Enter batch name"
           className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
         />
       </div>
 
       <div>
-        <label className="block mb-1">Volum (liter)</label>
+        <label className="block mb-1">Volume (liters)</label>
         <input
           type="number"
           name="volume_l"
           required
-          placeholder="Skriv antall liter"
+          placeholder="Enter volume in liters"
           className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
         />
       </div>
 
       <div>
-        <label className="block mb-1">Startdato</label>
+        <label className="block mb-1">Brew date</label>
         <input
           type="date"
           name="startdato"
@@ -67,13 +67,13 @@ export default function KarClient({ kar }: KarClientProps) {
       </div>
 
       <div>
-        <label className="block mb-1">OG</label>
+        <label className="block mb-1">Original Gravity (OG)</label>
         <input
           type="number"
           step="0.001"
           name="og"
           required
-          placeholder="Skriv original gravity"
+          placeholder="Enter original gravity"
           className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
         />
       </div>
@@ -84,7 +84,7 @@ export default function KarClient({ kar }: KarClientProps) {
         type="submit"
         className="w-full bg-green-600 hover:bg-green-700 p-2 rounded font-semibold"
       >
-        Registrer batch
+        Register batch
       </button>
     </form>
   );

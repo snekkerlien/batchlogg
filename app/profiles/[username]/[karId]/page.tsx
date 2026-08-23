@@ -3,16 +3,22 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 import { supabaseServer } from "../../../../lib/supabase/supabaseServerFinal";
-import Link from "next/link";
+import MenuOverlay from "./MenuOverlay";
+import BackButton from "./BackButton";
+
+type KarDetailParams = {
+  username: string;
+  karId: string;
+};
 
 export default async function KarDetailPage({
   params,
 }: {
-  params: { username: string; karId: string };
+  params: KarDetailParams;
 }) {
   const { supabase } = supabaseServer();
 
-  // ⭐ Sjekk innlogging
+  // Check login
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -20,12 +26,12 @@ export default async function KarDetailPage({
   if (!user) {
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
-        <h1 className="text-2xl font-bold">Du må være innlogget</h1>
+        <h1 className="text-2xl font-bold">You must be logged in</h1>
       </main>
     );
   }
 
-  // ⭐ Finn bruker via username
+  // Find user by username
   const { data: profile } = await supabase
     .from("profiles")
     .select("*")
@@ -35,14 +41,14 @@ export default async function KarDetailPage({
   if (!profile) {
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
-        <h1 className="text-2xl font-bold">Profil ikke funnet</h1>
+        <h1 className="text-2xl font-bold">Profile not found</h1>
       </main>
     );
   }
 
   const userId = profile.id;
 
-  // ⭐ Finn karet via ekte karId
+  // Fetch vessel
   const { data: kar } = await supabase
     .from("kar")
     .select("*")
@@ -53,12 +59,12 @@ export default async function KarDetailPage({
   if (!kar) {
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
-        <h1 className="text-2xl font-bold">Kar ikke funnet</h1>
+        <h1 className="text-2xl font-bold">Vessel not found</h1>
       </main>
     );
   }
 
-  // ⭐ Finn batcher knyttet til karet
+  // Fetch batches linked to this vessel
   const { data: batches } = await supabase
     .from("batches")
     .select("*")
@@ -68,138 +74,155 @@ export default async function KarDetailPage({
   const activeBatch = batches?.find((b) => b.status === "Aktiv");
   const secondaryBatch = batches?.find((b) => b.status === "Sekundær");
 
-  const now = Date.now();
+  // Choose batch (active → secondary)
+  const batch = activeBatch || secondaryBatch;
+
+  // Fetch notes from batch_notes
+  let notes: any[] = [];
+
+  if (batch) {
+    const { data: notesData } = await supabase
+      .from("batch_notes")
+      .select("*")
+      .eq("batch_id", batch.id)
+      .order("created_at", { ascending: false });
+
+    notes = notesData || [];
+  }
 
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
       <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10 relative">
 
-        {/* TILBAKE */}
-        <div className="absolute top-4 left-4">
-          <Link
-            href={`/profiles/${params.username}`}
-            className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
-          >
-            ← Tilbake
-          </Link>
+        {/* TOP BAR */}
+        <div className="flex items-center justify-between mb-6">
+          <BackButton />
+          <MenuOverlay />
         </div>
 
         {/* HEADER */}
-        <h1 className="text-4xl font-bold mb-6 text-center">
-          Kar {kar.nummer}
+        <h1 className="text-4xl font-bold mb-2 text-center">
+          Vessel {kar.displayNummer ?? kar.nummer}
         </h1>
 
-        <p className="opacity-80 text-center mb-10">
-          Oversikt over {params.username}s batch i kar {kar.nummer}.
-        </p>
+        <h2 className="text-xl text-center opacity-80 mb-10">
+          {batch?.status === "Sekundær"
+            ? "Secondary fermentation"
+            : "Active fermentation"}
+        </h2>
 
-        {/* ⭐ KARSTATUS */}
-        <div className="mb-10 p-4 bg-white/5 border border-white/10 rounded-xl">
-          <h2 className="text-2xl font-semibold mb-4">Karstatus</h2>
+        {/* EMPTY VESSEL */}
+        {!batch && (
+          <>
+            <p className="text-center opacity-70 mb-10">
+              This vessel is currently empty.
+            </p>
+          </>
+        )}
 
-          {activeBatch ? (
-            <>
-              <p className="text-lg">
-                <span className="font-bold">Status:</span>{" "}
-                <span className="text-green-400">Aktiv</span>
+        {/* BATCH INFO */}
+        {batch && (
+          <div className="p-4 bg-white/10 border border-white/20 rounded-xl mb-10">
+
+            <h3 className="text-xl font-bold text-green-300 mb-2">
+              {batch.name}
+            </h3>
+
+            <p className="opacity-80">Batch number: {batch.batchnummer}</p>
+            <p className="opacity-80">
+              Start date: {new Date(batch.startdato).toLocaleDateString("en-GB")}
+            </p>
+            <p className="opacity-80">Volume: {batch.volume_l} L</p>
+            <p className="opacity-80">OG: {batch.og}</p>
+
+            {batch.status === "Sekundær" && (
+              <p className="opacity-80 mt-2">
+                Secondary since:{" "}
+                {new Date(batch.secondary_startdate).toLocaleDateString("en-GB")}
               </p>
+            )}
 
-              <p className="text-lg mt-2">
-                <span className="font-bold">Startet:</span>{" "}
-                {new Date(activeBatch.startdato).toLocaleDateString("no-NO")}
+            {batch.secondary_additions && (
+              <p className="opacity-80 mt-2 whitespace-pre-wrap">
+                Additions:<br />{batch.secondary_additions}
               </p>
-            </>
-          ) : secondaryBatch ? (
-            <>
-              <p className="text-lg">
-                <span className="font-bold">Status:</span>{" "}
-                <span className="text-yellow-400">Sekundær</span>
+            )}
+
+            {batch.secondary_notes && (
+              <p className="opacity-80 mt-2 whitespace-pre-wrap">
+                Notes:<br />{batch.secondary_notes}
               </p>
+            )}
 
-              <p className="text-lg mt-2">
-                <span className="font-bold">Startet sekundær:</span>{" "}
-                {new Date(
-                  secondaryBatch.secondary_startdate
-                ).toLocaleDateString("no-NO")}
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="text-lg">
-                <span className="font-bold">Status:</span>{" "}
-                <span className="text-zinc-400">Ledig</span>
-              </p>
+            {/* Recipe */}
+            <div className="mt-6 p-4 bg-white/5 border border-white/10 rounded-lg">
+              <h3 className="text-xl font-bold mb-3 text-green-300">Recipe</h3>
 
-              <p className="text-lg mt-2">
-                <span className="font-bold">Historikk:</span>{" "}
-                Ingen aktiv batch i dette karet
-              </p>
-            </>
-          )}
-        </div>
+              <div className="space-y-4 text-sm whitespace-pre-wrap">
 
-        {/* ⭐ BATCHDETALJER */}
-        {activeBatch ? (
-          <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
-            <h2 className="text-2xl font-semibold mb-4">Aktiv batch</h2>
+                <div>
+                  <h4 className="font-semibold text-white/90 mb-1">Ingredients</h4>
+                  <p className="opacity-80">
+                    {batch.oppskrift.split("Ingredienser:")[1]?.split("Fremgangsmåte:")[0]?.trim()}
+                  </p>
+                </div>
 
-            <p className="text-lg">
-              <span className="font-bold">Navn:</span> {activeBatch.name}
-            </p>
+                <div>
+                  <h4 className="font-semibold text-white/90 mb-1">Full process</h4>
+                  <p className="opacity-80">
+                    {batch.oppskrift.split("Fremgangsmåte:")[1]?.split("Notater:")[0]?.trim()}
+                  </p>
+                </div>
 
-            <p className="text-lg mt-2">
-              <span className="font-bold">Startet:</span>{" "}
-              {new Date(activeBatch.startdato).toLocaleDateString("no-NO")}
-            </p>
+                <div>
+                  <h4 className="font-semibold text-white/90 mb-1">Notes</h4>
+                  <p className="opacity-80">
+                    {batch.oppskrift.split("Notater:")[1]?.trim()}
+                  </p>
+                </div>
 
-            <p className="text-lg mt-2">
-              <span className="font-bold">Volum:</span>{" "}
-              {activeBatch.volume_l} L
-            </p>
+              </div>
+            </div>
 
-            <p className="text-lg mt-2">
-              <span className="font-bold">OG:</span> {activeBatch.og}
-            </p>
-
-            <p className="text-lg mt-2">
-              <span className="font-bold">Batchnummer:</span>{" "}
-              {activeBatch.batchnummer}
-            </p>
-
-            <p className="text-lg mt-4 whitespace-pre-line">
-              <span className="font-bold">Oppskrift:</span>{" "}
-              {activeBatch.oppskrift.replace(/Notater:[\s\S]*/i, "").trim()}
-            </p>
-
-            <p className="text-lg mt-4 whitespace-pre-line">
-              <span className="font-bold">Notater:</span>{" "}
-              {activeBatch.notater || "Ingen notater"}
-            </p>
           </div>
-        ) : secondaryBatch ? (
-          <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
-            <h2 className="text-2xl font-semibold mb-4">Sekundær batch</h2>
+        )}
 
-            <p className="text-lg">
-              <span className="font-bold">Navn:</span> {secondaryBatch.name}
-            </p>
+        {/* NOTES & IMAGES */}
+        {batch && (
+          <>
+            <h2 className="text-2xl font-semibold mt-12 mb-4 text-center">
+              Notes & images
+            </h2>
 
-            <p className="text-lg mt-2">
-              <span className="font-bold">Startet sekundær:</span>{" "}
-              {new Date(
-                secondaryBatch.secondary_startdate
-              ).toLocaleDateString("no-NO")}
-            </p>
+            <div className="space-y-4">
+              {notes.length > 0 ? (
+                notes.map((n) => (
+                  <div
+                    key={n.id}
+                    className="p-4 bg-white/10 border border-white/20 rounded-xl"
+                  >
+                    <p className="text-sm opacity-60">
+                      {new Date(n.created_at).toLocaleDateString("en-GB")}
+                    </p>
 
-            <p className="text-lg mt-2">
-              <span className="font-bold">Status:</span>{" "}
-              {secondaryBatch.status}
-            </p>
-          </div>
-        ) : (
-          <p className="opacity-60 text-center mt-10">
-            Ingen aktiv batch i dette karet.
-          </p>
+                    {n.note_type === "image" && n.image_url && (
+                      <img
+                        src={n.image_url}
+                        alt="Note image"
+                        className="rounded-lg mt-3"
+                      />
+                    )}
+
+                    {n.note && (
+                      <p className="mt-3 whitespace-pre-line">{n.note}</p>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <p className="opacity-60 text-center">No notes yet.</p>
+              )}
+            </div>
+          </>
         )}
 
         <p className="text-sm opacity-40 mt-12 text-center">

@@ -2,26 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
+import MenuOverlay from "./MenuOverlay";
+import BackButton from "./BackButton";
 import Link from "next/link";
-
-type Recipe = {
-  id: string;
-  name: string;
-  og: number;
-  fg: number;
-  abv: number;
-  volume: number;
-  ingredients: string;
-  method: string;
-  notes: string;
-  is_public: boolean;
-  created_at: string;
-};
 
 export default function RecipesPage() {
   const [loading, setLoading] = useState(true);
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [username, setUsername] = useState("");
+  const [recipes, setRecipes] = useState<any[]>([]);
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -34,24 +22,13 @@ export default function RecipesPage() {
         return;
       }
 
-      const token = session.access_token;
-
-      // Hent profil
-      const profileRes = await fetch("/api/profile", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const profileJson = await profileRes.json();
-      setUsername(profileJson.username ?? "Ukjent");
-
-      // Hent oppskrifter
-      const { data: recipesData } = await supabaseBrowser
+      const { data: recipesRaw } = await supabaseBrowser
         .from("recipes")
         .select("*")
         .eq("user_id", session.user.id)
         .order("created_at", { ascending: false });
 
-      setRecipes(recipesData || []);
+      setRecipes(recipesRaw ?? []);
       setLoading(false);
     }
 
@@ -71,94 +48,152 @@ export default function RecipesPage() {
     );
   }
 
+  function toggle(id: string) {
+    setExpanded(expanded === id ? null : id);
+  }
+
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
-        <div className="bg-black/60 backdrop-blur-md p-6 rounded-xl border border-white/10">
-          Laster oppskrifter…
-        </div>
+        Loading…
       </main>
     );
   }
 
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
-      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10 relative">
+      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10 relative pt-16 sm:pt-0">
 
-        {/* Tilbake */}
-        <div className="absolute top-4 left-4">
-          <Link
-            href="/dashboard"
-            className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
-          >
-            ← Tilbake
-          </Link>
+        {/* TOP BAR */}
+        <div className="absolute top-2 sm:top-4 right-4 z-40">
+          <MenuOverlay />
         </div>
 
-        {/* Konto */}
-        <div className="absolute top-4 right-4">
-          <Link
-            href="/account"
-            className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
-          >
-            ⚙️ Konto
-          </Link>
+        <div className="absolute top-2 sm:top-4 left-4 z-40">
+          <BackButton />
         </div>
 
         <h1 className="text-4xl font-bold mb-6 text-center">
-          Mine oppskrifter
+          My recipes
         </h1>
 
         <p className="opacity-80 text-center mb-10">
-          Oppskrifter lagret fra avsluttede batches.
+          Recipes saved from finished batches.
         </p>
 
-        {recipes.length === 0 && (
-          <p className="text-center opacity-60">Ingen oppskrifter enda.</p>
-        )}
-
-        <div className="space-y-6">
-          {recipes.map((r) => (
-            <div
-              key={r.id}
-              className="p-4 bg-white/10 border border-white/20 rounded-xl"
-            >
-              <h3 className="text-xl font-bold text-green-300 mb-2">
-                {r.name}
-              </h3>
-
-              <p className="text-sm opacity-80">
-                OG: {r.og} — FG: {r.fg} — ABV: {r.abv.toFixed(1)}%
-              </p>
-
-              <p className="text-sm opacity-80 mt-1">
-                Volum: {r.volume} L
-              </p>
-
-              {r.notes && (
-                <p className="mt-3 whitespace-pre-line opacity-90">
-                  {r.notes}
-                </p>
-              )}
-
-              <div className="mt-4 flex items-center gap-3">
-                <label className="text-sm opacity-80">
-                  Synlig for andre:
-                </label>
-
+        <div className="space-y-4">
+          {recipes.length > 0 ? (
+            recipes.map((r) => (
+              <div
+                key={r.id}
+                className="bg-white/10 border border-white/20 rounded-xl p-4"
+              >
+                {/* CLICKABLE HEADER */}
                 <button
-                  onClick={() => togglePublic(r.id, r.is_public)}
-                  className={`px-4 py-2 rounded-lg font-semibold border ${
-                    r.is_public
-                      ? "bg-green-600 hover:bg-green-700 border-green-400"
-                      : "bg-zinc-700 hover:bg-zinc-600 border-zinc-500"
+                  onClick={() => toggle(r.id)}
+                  className="w-full flex justify-between items-center text-left"
+                >
+                  <span className="text-xl font-bold text-green-300">
+                    {r.name.charAt(0).toUpperCase() + r.name.slice(1)}
+                  </span>
+
+                  <div className="flex items-center gap-3">
+
+                    {/* PUBLIC / PRIVATE TOGGLE */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        togglePublic(r.id, r.is_public);
+                      }}
+                      className={`px-4 py-2 rounded-lg font-semibold border ${
+                        r.is_public
+                          ? "bg-green-600 hover:bg-green-700 border-green-400"
+                          : "bg-zinc-700 hover:bg-zinc-600 border-zinc-500"
+                      }`}
+                    >
+                      {r.is_public ? "Public" : "Private"}
+                    </button>
+
+                    {/* ARROW */}
+                    <span
+                      className={`text-white text-2xl transition-transform duration-200 ${
+                        expanded === r.id ? "rotate-90" : "rotate-180"
+                      }`}
+                    >
+                      ▶
+                    </span>
+                  </div>
+                </button>
+
+                {/* SLIDER CONTENT */}
+                <div
+                  className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                    expanded === r.id ? "max-h-[2000px] mt-4" : "max-h-0"
                   }`}
                 >
-                  {r.is_public ? "Offentlig" : "Privat"}
-                </button>
+                  <div className="space-y-3 opacity-90">
+
+                    {/* STATS */}
+                    <p className="text-sm">
+                      <strong>OG:</strong> {Number(r.og).toFixed(3)}
+                      <strong className="ml-4">FG:</strong> {Number(r.fg).toFixed(3)}
+                      <strong className="ml-4">ABV:</strong> {r.abv.toFixed(1)}%
+                    </p>
+
+                    <p className="text-sm">
+                      <strong>Volume:</strong> {r.volume} L
+                    </p>
+
+                    {/* INGREDIENTS */}
+                    {r.ingredients && (
+                      <p className="whitespace-pre-line">
+                        <strong>Ingredients:</strong>{"\n"}
+                        {r.ingredients}
+                      </p>
+                    )}
+
+                    {/* METHOD */}
+                    {r.method && (
+                      <p className="whitespace-pre-line">
+                        <strong>Method:</strong>{"\n"}
+                        {r.method}
+                      </p>
+                    )}
+
+                    {/* NOTES */}
+                    {r.notes && (
+                      <p className="whitespace-pre-line">
+                        <strong>Notes:</strong>{"\n"}
+                        {r.notes}
+                      </p>
+                    )}
+
+                    {/* NOTES LOG (batch notes) */}
+                    {r.notes_log && r.notes_log.length > 0 && (
+                      <div className="whitespace-pre-line">
+                        <strong>Note log:</strong>
+                        {"\n"}
+                        {r.notes_log.map((n: any) => `• ${n.note}`).join("\n")}
+                      </div>
+                    )}
+
+                    {/* NOTE LOG BUTTON */}
+                    <div className="flex justify-end pt-4">
+                      <Link
+                        href={`/recipes/${r.id}`}
+                        className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm font-semibold"
+                      >
+                        Open note log →
+                      </Link>
+                    </div>
+
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            <p className="opacity-60 text-center">No recipes found.</p>
+          )}
         </div>
 
         <p className="text-sm opacity-40 mt-12 text-center">

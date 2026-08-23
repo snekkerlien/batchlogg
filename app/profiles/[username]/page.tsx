@@ -3,8 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
+import MenuOverlay from "./MenuOverlay";
+import { useRouter } from "next/navigation";
 
 export default function ProfileDetailPage({ params }: { params: { username: string } }) {
+  const router = useRouter();
+
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<any>(null);
   const [kar, setKar] = useState<any[]>([]);
@@ -19,9 +23,6 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
 
       if (!session) return;
 
-      const user = session.user;
-
-      // Hent profil
       const { data: profileData } = await supabaseBrowser
         .from("profiles")
         .select("*")
@@ -37,20 +38,17 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
 
       const userId = profileData.id;
 
-      // Hent kar
       const { data: karRaw } = await supabaseBrowser
         .from("kar")
         .select("*")
         .eq("user_id", userId)
         .order("nummer");
 
-      // Hent batches
       const { data: batchesRaw } = await supabaseBrowser
         .from("batches")
         .select("*")
         .eq("user_id", userId);
 
-      // ⭐ RIKTIG STATUS PER KAR
       const karProcessed = (karRaw ?? []).map((k: any, index: number) => {
         const active = batchesRaw?.find(
           (b: any) => b.aktivt_kar === k.id && b.status === "Aktiv"
@@ -60,9 +58,9 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
           (b: any) => b.aktivt_kar === k.id && b.status === "Sekundær"
         );
 
-        let status = "Ledig";
-        if (active) status = "Aktiv";
-        else if (secondary) status = "Sekundær";
+        let status = "Empty";
+        if (active) status = "Primary";
+        else if (secondary) status = "Secondary";
 
         return {
           id: k.id,
@@ -74,7 +72,6 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
 
       setKar(karProcessed);
 
-      // Hent oppskrifter
       const { data: recipesRaw } = await supabaseBrowser
         .from("recipes")
         .select("*")
@@ -92,7 +89,7 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
-        Laster…
+        Loading…
       </main>
     );
   }
@@ -100,7 +97,7 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
   if (!profile) {
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
-        <h1 className="text-2xl font-bold">Profil ikke funnet</h1>
+        <h1 className="text-2xl font-bold">Profile not found</h1>
       </main>
     );
   }
@@ -111,24 +108,33 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
 
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
-      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10 relative">
+      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10">
 
-        <div className="absolute top-4 left-4">
-          <Link
-            href="/profiles"
-            className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
-          >
-            ← Tilbake
-          </Link>
-        </div>
+        {/* TOP BAR */}
+        <div className="flex items-center justify-between mb-6">
 
-        <div className="absolute top-4 right-4">
-          <Link
-            href="/account"
-            className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
+          {/* BACK BUTTON */}
+          <button
+            onClick={() => router.back()}
+            className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg flex items-center justify-center"
           >
-            ⚙️ Konto
-          </Link>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 19l-7-7 7-7" />
+              <path d="M19 12H5" />
+            </svg>
+          </button>
+
+          <MenuOverlay />
         </div>
 
         <h1 className="text-4xl font-bold mb-6 text-center">
@@ -136,11 +142,11 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
         </h1>
 
         <p className="opacity-80 text-center mb-10">
-          Oversikt over brukerens kar, aktive batches og offentlige oppskrifter.
+          Overview of this user's vessels, active batches, and public recipes.
         </p>
 
-        {/* KAR */}
-        <h2 className="text-2xl font-semibold mb-4 text-center">Kar</h2>
+        {/* VESSELS */}
+        <h2 className="text-2xl font-semibold mb-4 text-center">Vessels</h2>
 
         <div className="flex flex-wrap justify-center gap-6 mb-12">
           {kar.length > 0 ? (
@@ -151,14 +157,14 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
                 className="border border-white/10 rounded-xl p-4 bg-white/5 w-32 h-32 flex flex-col items-center justify-center hover:bg-white/10 transition"
               >
                 <span className="text-lg font-bold text-green-300">
-                  Kar {k.nummer}
+                  Vessel {k.nummer}
                 </span>
 
                 <span
                   className={
-                    k.status === "Aktiv"
+                    k.status === "Primary"
                       ? "text-green-400 font-semibold mt-2"
-                      : k.status === "Sekundær"
+                      : k.status === "Secondary"
                       ? "text-yellow-400 font-semibold mt-2"
                       : "text-zinc-400 mt-2"
                   }
@@ -168,13 +174,13 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
               </Link>
             ))
           ) : (
-            <p className="opacity-60 text-center">Ingen kar funnet.</p>
+            <p className="opacity-60 text-center">No vessels found.</p>
           )}
         </div>
 
-        {/* OPPSKRIFTER */}
+        {/* RECIPES */}
         <h2 className="text-2xl font-semibold mb-4 text-center">
-          Offentlige oppskrifter
+          Public recipes
         </h2>
 
         <div className="space-y-4">
@@ -184,7 +190,6 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
                 key={r.id}
                 className="bg-white/10 border border-white/20 rounded-xl p-4"
               >
-                {/* HEADER */}
                 <button
                   onClick={() => toggle(r.id)}
                   className="w-full flex justify-between items-center text-left"
@@ -202,7 +207,6 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
                   </span>
                 </button>
 
-                {/* SMOOTH DROPDOWN */}
                 <div
                   className={`transition-all duration-300 ease-in-out overflow-hidden ${
                     expanded === r.id ? "max-h-[2000px] mt-4" : "max-h-0"
@@ -211,43 +215,42 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
                   <div className="space-y-3 opacity-90">
 
                     <p className="text-sm">
-                      <strong>OG:</strong> {r.og}  
-                      <strong className="ml-4">FG:</strong> {r.fg}  
+                      <strong>OG:</strong> {r.og}
+                      <strong className="ml-4">FG:</strong> {r.fg}
                       <strong className="ml-4">ABV:</strong> {r.abv.toFixed(1)}%
                     </p>
 
                     <p className="text-sm">
-                      <strong>Volum:</strong> {r.volume} L
+                      <strong>Volume:</strong> {r.volume} L
                     </p>
 
                     {r.ingredients && (
                       <p className="whitespace-pre-line">
-                        <strong>Ingredienser:</strong>{"\n"}
+                        <strong>Ingredients:</strong>{"\n"}
                         {r.ingredients}
                       </p>
                     )}
 
                     {r.method && (
                       <p className="whitespace-pre-line">
-                        <strong>Fremgangsmåte:</strong>{"\n"}
+                        <strong>Method:</strong>{"\n"}
                         {r.method}
                       </p>
                     )}
 
                     {r.notes && (
                       <p className="whitespace-pre-line">
-                        <strong>Notater:</strong>{"\n"}
+                        <strong>Notes:</strong>{"\n"}
                         {r.notes}
                       </p>
                     )}
 
-                    {/* ⭐ NY KNAPP — nederst høyre */}
                     <div className="flex justify-end pt-4">
                       <Link
                         href={`/profiles/${params.username}/recipes/${r.id}`}
                         className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm font-semibold"
                       >
-                        Åpne notatlogg →
+                        Open note log →
                       </Link>
                     </div>
 
@@ -256,7 +259,7 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
               </div>
             ))
           ) : (
-            <p className="opacity-60 text-center">Ingen offentlige oppskrifter.</p>
+            <p className="opacity-60 text-center">No public recipes.</p>
           )}
         </div>
 
