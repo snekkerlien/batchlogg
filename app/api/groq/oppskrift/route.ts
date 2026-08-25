@@ -11,67 +11,75 @@ export async function POST(req: Request) {
       apiKey: process.env.GROQ_API_KEY!,
     });
 
+    // Build a single prompt string (Groq does NOT accept OpenAI-style messages)
     const prompt = `
-Du er en ekspert på mjød, ølbrygging, cider, vin og fermentering.
-Lag en komplett oppskrift basert på brukerens input.
+You are BrewCompanion, an expert in mead, beer brewing, cider, wine, and fermentation.
+Create a complete recipe based on the user's input.
 
-VIKTIG:
-- Oppskriften skal alltid skaleres til nøyaktig ${body.volume} liter ferdig vørter.
-- Ikke bruk melk, krem, fløte eller andre meieriprodukter i fermentering.
-- Det skal aldri legges til noe som inneholder fett eller melk i selve bryggeprosessen.
-- Hvis stilen er "kremet", skal kremethet kun komme fra servering eller etter-fermentering (f.eks. topping, skum, emulsjon), aldri i gjæringskaret, med mindre man bruker f.eks laktose.
-- Ikke legg til mer vann enn nødvendig for å nå ${body.volume} liter totalvolum.
-- Ingrediensene skal være realistiske for stilen som er valgt, og mengdene skal være korrekte for batch-størrelsen.
-- Unngå unødvendige eller farlige ingredienser.
-- Ikke kom med unødvendige detaljer som kan forstyrre brukeren.
-- Oppgi alltid vanlige typer gjær og bruk alltid gram, desiliter eller liter, ikke bruk spiseskje og lignende måleenheter
+IMPORTANT:
+- The recipe must ALWAYS be scaled to exactly ${body.volume} liters of finished must.
+- Do NOT use milk, cream, dairy, or any fat-containing ingredients in fermentation.
+- Never add anything containing fat or dairy during the brewing process.
+- If the style is "creamy", the creaminess must ONLY come from serving or post-fermentation (foam, topping, emulsions), never inside the fermenter, unless lactose is used.
+- Do NOT add more water than necessary to reach ${body.volume} liters total volume.
+- Ingredients must be realistic for the chosen style, and quantities must be correct for the batch size.
+- Avoid unnecessary or unsafe ingredients.
+- Avoid unnecessary details that distract the user.
+- Always specify common yeast types and always use grams, deciliters, or liters. Do NOT use tablespoons or similar units.
 
-Skriv ALLTID i dette formatet:
+ALWAYS write in this format:
 
-Ingredienser:
-- punktliste
+Ingredients:
+- bullet list
 
-Fremgangsmåte:
-1. steg
-2. steg
+Method:
+1. step
+2. step
 
-Notater:
-- punktliste
+Notes:
+- bullet list
 
-Skriv på norsk.
-Ikke legg til ekstra seksjoner.
+Write in English.
+Do NOT add extra sections.
 
-Navn: ${body.name}
-Ingredienser: ${body.ingredients}
-Stil: ${body.stil ?? "standard"}
-Volum: ${body.volume} liter
+Name: ${body.name}
+Ingredients: ${body.ingredients}
+Style: ${body.stil ?? "standard"}
+Volume: ${body.volume} liters
 `;
 
     const response = await client.chat.completions.create({
       model: "openai/gpt-oss-20b",
       messages: [
-        { role: "user", content: prompt }
+        {
+          role: "system",
+          content: "You are BrewCompanion, an expert brewing assistant.",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
       ],
       max_tokens: 800,
     });
 
-    const oppskriftTekst = response.choices[0]?.message?.content ?? "";
+    const recipeText = response.choices[0]?.message?.content ?? "";
 
-    if (!oppskriftTekst.trim()) {
+    if (!recipeText.trim()) {
       return NextResponse.json(
-        { error: "AI returnerte tomt svar" },
+        { error: "AI returned an empty recipe" },
         { status: 500 }
       );
     }
 
     return NextResponse.json({
-      oppskrift: oppskriftTekst,
+      oppskrift: recipeText,
     });
 
   } catch (err: any) {
     console.error("GROQ ERROR:", err);
     return NextResponse.json(
-      { error: "Groq-feil", details: err.message },
+      { error: "Groq error", details: err.message },
       { status: 500 }
     );
   }
