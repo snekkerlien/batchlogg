@@ -30,7 +30,7 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.25, ease: "easeOut" }}
-          className="relative z-10"
+          className="relative z-0"
         >
           {children}
         </motion.div>

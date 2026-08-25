@@ -264,7 +264,7 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
         </div>
 
         <p className="text-sm opacity-40 mt-12 text-center">
-          © {new Date().getFullYear()} Fiklebrygg - Batchlogg
+          © {new Date().getFullYear()} Batchlog
         </p>
       </div>
     </main>

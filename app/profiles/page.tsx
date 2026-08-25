@@ -55,12 +55,12 @@ export default async function ProfilesPage() {
           <BackButton />
         </div>
 
-        <h1 className="text-4xl font-bold text-center mt-20 sm:mt-6 mb-6">
-          Profiles
+        <h1 className="text-4xl font-bold text-center mt-20 sm:mt-6 mt-6">
+          Community
         </h1>
 
-        <p className="opacity-80 text-center mb-10">
-          Select a user to view their vessels and active batches.
+        <p className="opacity-80 text-center mb-10 mt-6">
+          Explore the community and follow other brewers’ journeys.
         </p>
 
         <div className="max-w-xl mx-auto space-y-4">
@@ -82,7 +82,7 @@ export default async function ProfilesPage() {
         </div>
 
         <p className="text-sm opacity-40 mt-12 text-center">
-          © {new Date().getFullYear()} Fiklebrygg - Batchlogg
+          © {new Date().getFullYear()} Batchlog
         </p>
       </div>
     </main>

@@ -59,8 +59,8 @@ export async function GET(request: NextRequest) {
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("username, is_public")
-    .eq("id", user.id as unknown as string)
+    .select("username, is_public, avatar_url")
+    .eq("id", user.id)
     .single();
 
   console.log("[/api/profile] Profile data:", profile);
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
     .select("*", { count: "exact", head: true })
     .eq("user_id", user.id);
 
-  // Count recipes (IMPORTANT FIX)
+  // Count recipes
   const { count: recipeCount } = await supabase
     .from("recipes")
     .select("*", { count: "exact", head: true })
@@ -98,6 +98,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     username: profile.username ?? null,
     is_public: profile.is_public ?? false,
+    avatar_url: profile.avatar_url ?? null,
     kar_count: karCount ?? 0,
     batch_count: batchCount ?? 0,
     recipe_count: recipeCount ?? 0,

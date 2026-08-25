@@ -73,7 +73,7 @@ export default function RecipesPage() {
           <BackButton />
         </div>
 
-        <h1 className="text-4xl font-bold mb-6 text-center">
+        <h1 className="text-4xl font-bold mb-6 text-center mt-6">
           My recipes
         </h1>
 
@@ -197,7 +197,7 @@ export default function RecipesPage() {
         </div>
 
         <p className="text-sm opacity-40 mt-12 text-center">
-          © {new Date().getFullYear()} Fiklebrygg - Batchlogg
+          © {new Date().getFullYear()} Batchlog
         </p>
       </div>
     </main>
