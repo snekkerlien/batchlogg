@@ -68,47 +68,45 @@ export default function BrewCompanionModal({
   }
 
   async function sendMessage() {
-  if (!input.trim()) return;
+    if (!input.trim()) return;
 
-  const userMsg = input.trim();
-  setInput("");
-  setLoading(true);
+    const userMsg = input.trim();
+    setInput("");
+    setLoading(true);
 
-  // Funksjonell oppdatering – eneste måte å få riktig state
-  setChat((prevChat) => {
-    const updated = [...prevChat, { sender: "user", text: userMsg }];
+    // 1) Oppdater chat først (ingen fetch her!)
+    setChat((prev) => [...prev, { sender: "user", text: userMsg }]);
 
-    // Send til backend med korrekt state
-    fetch("/api/groq/chat", {
+    // 2) Kall API ETTER state-oppdatering
+    const res = await fetch("/api/groq/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        messages: updated.slice(-10),
+        messages: [...chat, { sender: "user", text: userMsg }].slice(-10),
       }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        const reply = data.reply;
+    });
 
-        setChat((prev2) => [...prev2, { sender: "ai", text: reply }]);
-        extractMetaFromAI(reply);
+    const data = await res.json();
+    const reply = data.reply;
 
-        const normalized = reply.toLowerCase().trim();
-        if (
-          normalized === "should i generate the recipe?" ||
-          normalized === "should i generate the recipe" ||
-          normalized === "do you want me to generate the recipe?" ||
-          normalized === "do you want me to generate the recipe"
-        ) {
-          setShowRecipeButtons(true);
-        }
+    // 3) Legg til AI-svar
+    setChat((prev) => [...prev, { sender: "ai", text: reply }]);
 
-        setLoading(false);
-      });
+    extractMetaFromAI(reply);
 
-    return updated;
-  });
-}
+    const normalized = reply.toLowerCase().trim();
+    if (
+      normalized === "should i generate the recipe?" ||
+      normalized === "should i generate the recipe" ||
+      normalized === "do you want me to generate the recipe?" ||
+      normalized === "do you want me to generate the recipe"
+    ) {
+      setShowRecipeButtons(true);
+    }
+
+    setLoading(false);
+  }
+
   function resetChat() {
     setChat([
       {
@@ -218,9 +216,9 @@ export default function BrewCompanionModal({
           rows={3}
         />
         <button
-         type="button"
-        onClick={sendMessage}
-        className="px-4 py-3 bg-blue-700 hover:bg-blue-600 rounded-lg font-semibold"
+          type="button"
+          onClick={sendMessage}
+          className="px-4 py-3 bg-blue-700 hover:bg-blue-600 rounded-lg font-semibold"
         >
           Send
         </button>

@@ -35,6 +35,7 @@ export default function MenuOverlay({ current }: { current: string }) {
     { href: "/batchhistorikk", label: "Batch history", key: "batchhistorikk" },
     { href: "/profiles", label: "Community", key: "profiles" },
     { href: "/account", label: "My account", key: "account" },
+    { href: "/brewcompanion", label: "BrewCompanion", key: "companion" },
   ];
 
   return (
