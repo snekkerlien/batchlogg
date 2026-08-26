@@ -3,7 +3,7 @@
 import { useState } from "react";
 import BrewCompanionModal from "../components/BrewCompanionModal";
 import UniversalMenuOverlay from "@/app/components/MenuOverlay";
-import BackButton from "./BackButton"; // ⭐ NYTT
+import BackButton from "./BackButton";
 
 export default function RecipeBuilder() {
   const [recipeId, setRecipeId] = useState<string | null>(null);
@@ -52,6 +52,7 @@ export default function RecipeBuilder() {
     const res = await fetch("/api/recipes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include", // ⭐ VIKTIG
       body: JSON.stringify({
         name,
         ingredients,
@@ -79,6 +80,7 @@ export default function RecipeBuilder() {
     const res = await fetch(`/api/recipes/${recipeId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
+      credentials: "include", // ⭐ VIKTIG
       body: JSON.stringify({
         name,
         ingredients,
@@ -99,7 +101,7 @@ export default function RecipeBuilder() {
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
       <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10 relative">
 
-        {/* ⭐ TOP BAR — FAST HØYDE, BACK + MENU */}
+        {/* TOP BAR */}
         <div className="flex items-center justify-between mb-6 h-10">
           <BackButton />
           <UniversalMenuOverlay current="companion" />

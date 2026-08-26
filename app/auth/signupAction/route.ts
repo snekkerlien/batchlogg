@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 export async function POST(req: Request) {
-  console.log("=== signupAction START ===");
+  
 
   const form = await req.formData();
 
@@ -12,8 +12,7 @@ export async function POST(req: Request) {
   const password = form.get("password") as string;
   const email = `${username}@example.com`;
 
-  console.log("[signupAction] username =", username);
-  console.log("[signupAction] email =", email);
+  
 
   // Passordvalidering
   function validatePassword(pw: string) {
@@ -24,7 +23,7 @@ export async function POST(req: Request) {
 
   const pwError = validatePassword(password);
   if (pwError) {
-    console.log("[signupAction] Passordfeil:", pwError);
+    
     return NextResponse.redirect(
       new URL(`/auth/signup?error=${pwError}`, req.url)
     );
@@ -42,14 +41,14 @@ export async function POST(req: Request) {
     }
   );
 
-  console.log("[signupAction] Prøver signUp...");
+ 
 
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
   });
 
-  console.log("[signupAction] signUp result:", { data, error });
+  
 
   if (error) {
     console.log("[signupAction] SIGNUP ERROR:", error);
@@ -65,7 +64,7 @@ export async function POST(req: Request) {
     );
   }
 
-  console.log("[signupAction] Oppretter profil...");
+  
 
   const { error: profileError } = await supabase
     .from("profiles")
@@ -74,10 +73,10 @@ export async function POST(req: Request) {
       username,
     });
 
-  console.log("[signupAction] Profile insert error:", profileError);
+ 
 
   // Etter signUp må vi logge inn manuelt for å få token
-  console.log("[signupAction] Prøver signInWithPassword...");
+  
 
   const { data: loginData, error: loginError } =
     await supabase.auth.signInWithPassword({
@@ -85,8 +84,7 @@ export async function POST(req: Request) {
       password,
     });
 
-  console.log("[signupAction] loginData:", loginData);
-  console.log("[signupAction] loginError:", loginError);
+  
 
   if (loginError || !loginData.session) {
     console.log("[signupAction] LOGIN FAILED");
@@ -95,8 +93,7 @@ export async function POST(req: Request) {
     );
   }
 
-  console.log("[signupAction] LOGIN SUCCESS");
-  console.log("=== signupAction END ===");
+  
 
   return NextResponse.redirect(new URL("/dashboard", req.url));
 }

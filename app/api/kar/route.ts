@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Invalid token" }, { status: 401 });
   }
 
-  console.log("[/api/kar] Henter ALLE kar (RLS styrer synlighet)");
+  
 
   // ⭐ VIKTIG: Ikke filtrer på user_id lenger
   const { data, error } = await supabase

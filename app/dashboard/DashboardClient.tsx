@@ -271,21 +271,25 @@ export default function DashboardClient() {
               hover:bg-white/10
             `}
           >
-            <div className="bubble-container">
-              {[...Array(12)].map((_, i) => (
-                <span
-                  key={i}
-                  className="bubble"
-                  style={{
-                    left: `${Math.random() * 100}%`,
-                    animationDuration: `${2 + Math.random() * 3}s`,
-                    animationDelay: `${Math.random() * 2}s`,
-                    width: `${4 + Math.random() * 6}px`,
-                    height: `${4 + Math.random() * 6}px`,
-                  }}
-                />
-              ))}
-            </div>
+            {/* ⭐ Only show bubbles when the vessel has an active batch */}
+{(k.status === "Aktiv" || k.status === "Sekundær") && (
+  <div className="bubble-container">
+    {[...Array(12)].map((_, i) => (
+      <span
+        key={i}
+        className="bubble"
+        style={{
+          left: `${Math.random() * 100}%`,
+          animationDuration: `${2 + Math.random() * 3}s`,
+          animationDelay: `${Math.random() * 2}s`,
+          width: `${4 + Math.random() * 6}px`,
+          height: `${4 + Math.random() * 6}px`,
+        }}
+      />
+    ))}
+  </div>
+)}
+
 
             <span className="text-lg font-bold text-green-300 relative z-10">
               Vessel {index + 1}
@@ -406,6 +410,43 @@ export default function DashboardClient() {
         .animate-fadeIn {
           animation: fadeIn 0.4s ease-out;
         }
+          .bubble-container {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.bubble {
+  position: absolute;
+  bottom: -28px;
+  background: rgba(223, 228, 226, 0.28); /* tydelig, men ikke sterk */
+  border-radius: 50%;
+  filter: blur(1.2px); /* smooth, moderne */
+  animation-name: sleekRise;
+  animation-timing-function: linear; /* jevn hastighet */
+  animation-iteration-count: infinite;
+  opacity: 0;
+}
+
+@keyframes sleekRise {
+  0% {
+    transform: translateY(0) scale(0.8);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.45; /* subtil, men synlig */
+  }
+  60% {
+    opacity: 0.55; /* peak, men ikke for sterk */
+  }
+  100% {
+    transform: translateY(-150px) scale(1.05);
+    opacity: 0;
+  }
+}
+
       `}</style>
     </div>
   );

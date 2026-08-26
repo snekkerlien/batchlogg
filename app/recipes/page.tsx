@@ -83,114 +83,123 @@ export default function RecipesPage() {
 
         <div className="space-y-4">
           {recipes.length > 0 ? (
-            recipes.map((r) => (
-              <div
-                key={r.id}
-                className="bg-white/10 border border-white/20 rounded-xl p-4"
-              >
-                {/* CLICKABLE HEADER */}
-                <button
-                  onClick={() => toggle(r.id)}
-                  className="w-full flex justify-between items-center text-left"
-                >
-                  <span className="text-xl font-bold text-green-300">
-                    {r.name.charAt(0).toUpperCase() + r.name.slice(1)}
-                  </span>
+            recipes.map((r) => {
+              const og = r.og ? Number(r.og).toFixed(3) : "—";
+              const fg = r.fg ? Number(r.fg).toFixed(3) : "—";
+              const abv = r.abv ? Number(r.abv).toFixed(1) : "—";
+              const volume = r.volume ?? "—";
 
-                  <div className="flex items-center gap-3">
-
-                    {/* PUBLIC / PRIVATE TOGGLE */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        togglePublic(r.id, r.is_public);
-                      }}
-                      className={`px-4 py-2 rounded-lg font-semibold border ${
-                        r.is_public
-                          ? "bg-green-600 hover:bg-green-700 border-green-400"
-                          : "bg-zinc-700 hover:bg-zinc-600 border-zinc-500"
-                      }`}
-                    >
-                      {r.is_public ? "Public" : "Private"}
-                    </button>
-
-                    {/* ARROW */}
-                    <span
-                      className={`text-white text-2xl transition-transform duration-200 ${
-                        expanded === r.id ? "rotate-90" : "rotate-180"
-                      }`}
-                    >
-                      ▶
-                    </span>
-                  </div>
-                </button>
-
-                {/* SLIDER CONTENT */}
+              return (
                 <div
-                  className={`transition-all duration-300 ease-in-out overflow-hidden ${
-                    expanded === r.id ? "max-h-[2000px] mt-4" : "max-h-0"
-                  }`}
+                  key={r.id}
+                  className="bg-white/10 border border-white/20 rounded-xl p-4"
                 >
-                  <div className="space-y-3 opacity-90">
+                  {/* CLICKABLE HEADER */}
+                  <button
+                    onClick={() => toggle(r.id)}
+                    className="w-full flex justify-between items-center text-left"
+                  >
+                    <span className="text-xl font-bold text-green-300">
+                      {r.name
+                        ? r.name.charAt(0).toUpperCase() + r.name.slice(1)
+                        : "Unnamed recipe"}
+                    </span>
 
-                    {/* STATS */}
-                    <p className="text-sm">
-                      <strong>OG:</strong> {Number(r.og).toFixed(3)}
-                      <strong className="ml-4">FG:</strong> {Number(r.fg).toFixed(3)}
-                      <strong className="ml-4">ABV:</strong> {r.abv.toFixed(1)}%
-                    </p>
+                    <div className="flex items-center gap-3">
 
-                    <p className="text-sm">
-                      <strong>Volume:</strong> {r.volume} L
-                    </p>
-
-                    {/* INGREDIENTS */}
-                    {r.ingredients && (
-                      <p className="whitespace-pre-line">
-                        <strong>Ingredients:</strong>{"\n"}
-                        {r.ingredients}
-                      </p>
-                    )}
-
-                    {/* METHOD */}
-                    {r.method && (
-                      <p className="whitespace-pre-line">
-                        <strong>Method:</strong>{"\n"}
-                        {r.method}
-                      </p>
-                    )}
-
-                    {/* NOTES */}
-                    {r.notes && (
-                      <p className="whitespace-pre-line">
-                        <strong>Notes:</strong>{"\n"}
-                        {r.notes}
-                      </p>
-                    )}
-
-                    {/* NOTES LOG (batch notes) */}
-                    {r.notes_log && r.notes_log.length > 0 && (
-                      <div className="whitespace-pre-line">
-                        <strong>Note log:</strong>
-                        {"\n"}
-                        {r.notes_log.map((n: any) => `• ${n.note}`).join("\n")}
-                      </div>
-                    )}
-
-                    {/* NOTE LOG BUTTON */}
-                    <div className="flex justify-end pt-4">
-                      <Link
-                        href={`/recipes/${r.id}`}
-                        className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm font-semibold"
+                      {/* PUBLIC / PRIVATE TOGGLE */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          togglePublic(r.id, r.is_public);
+                        }}
+                        className={`px-4 py-2 rounded-lg font-semibold border ${
+                          r.is_public
+                            ? "bg-green-600 hover:bg-green-700 border-green-400"
+                            : "bg-zinc-700 hover:bg-zinc-600 border-zinc-500"
+                        }`}
                       >
-                        Open note log →
-                      </Link>
-                    </div>
+                        {r.is_public ? "Public" : "Private"}
+                      </button>
 
+                      {/* ARROW */}
+                      <span
+                        className={`text-white text-2xl transition-transform duration-200 ${
+                          expanded === r.id ? "rotate-90" : "rotate-180"
+                        }`}
+                      >
+                        ▶
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* SLIDER CONTENT */}
+                  <div
+                    className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                      expanded === r.id ? "max-h-[2000px] mt-4" : "max-h-0"
+                    }`}
+                  >
+                    <div className="space-y-3 opacity-90">
+
+                      {/* STATS */}
+                      <p className="text-sm">
+                        <strong>OG:</strong> {og}
+                        <strong className="ml-4">FG:</strong> {fg}
+                        <strong className="ml-4">ABV:</strong> {abv}%
+                      </p>
+
+                      <p className="text-sm">
+                        <strong>Volume:</strong> {volume} L
+                      </p>
+
+                      {/* INGREDIENTS */}
+                      {r.ingredients && (
+                        <p className="whitespace-pre-line">
+                          <strong>Ingredients:</strong>{"\n"}
+                          {r.ingredients}
+                        </p>
+                      )}
+
+                      {/* METHOD */}
+                      {r.method && (
+                        <p className="whitespace-pre-line">
+                          <strong>Method:</strong>{"\n"}
+                          {r.method}
+                        </p>
+                      )}
+
+                      {/* NOTES */}
+                      {r.notes && (
+                        <p className="whitespace-pre-line">
+                          <strong>Notes:</strong>{"\n"}
+                          {r.notes}
+                        </p>
+                      )}
+
+                      {/* NOTES LOG */}
+                      {r.notes_log && r.notes_log.length > 0 && (
+                        <div className="whitespace-pre-line">
+                          <strong>Note log:</strong>
+                          {"\n"}
+                          {r.notes_log.map((n: any) => `• ${n.note}`).join("\n")}
+                        </div>
+                      )}
+
+                      {/* NOTE LOG BUTTON */}
+                      <div className="flex justify-end pt-4">
+                        <Link
+                          href={`/recipes/${r.id}`}
+                          className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm font-semibold"
+                        >
+                          Open note log →
+                        </Link>
+                      </div>
+
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <p className="opacity-60 text-center">No recipes found.</p>
           )}

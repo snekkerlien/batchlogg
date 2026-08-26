@@ -28,6 +28,8 @@ export default function KarPage({ params }: { params: { id: string } }) {
   const [historyBatch, setHistoryBatch] = useState<any>(null);
   const [notes, setNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+ 
+
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -113,6 +115,23 @@ export default function KarPage({ params }: { params: { id: string } }) {
   const hasActive = !!activeBatch;
   const hasHistory = !!historyBatch;
 
+  // ⭐ NEW: Toggle visibility for this vessel
+async function toggleVisibility() {
+  const newValue = !kar.is_public;
+
+  const form = new FormData();
+  form.append("id", kar.id);
+  form.append("is_public", String(newValue));
+
+  await fetch("/api/kar/visibility", {
+    method: "POST",
+    body: form,
+  });
+
+  setKar((prev: any) => ({ ...prev, is_public: newValue }));
+}
+
+
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
       <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10">
@@ -141,6 +160,31 @@ export default function KarPage({ params }: { params: { id: string } }) {
 
           <MenuOverlay current="kar" />
         </div>
+
+        {/* ⭐ VESSEL VISIBILITY SLIDER */}
+{isOwner && (
+  <div className="flex items-center justify-center gap-4 mb-10">
+    <p className="text-sm opacity-80">Vessel Visibility</p>
+
+    <div
+      onClick={toggleVisibility}
+      className={`w-14 h-7 rounded-full cursor-pointer transition relative ${
+        kar.is_public ? "bg-green-500" : "bg-zinc-600"
+      }`}
+    >
+      <div
+        className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition ${
+          kar.is_public ? "translate-x-7" : ""
+        }`}
+      ></div>
+    </div>
+
+    <p className="text-sm opacity-80">
+      {kar.is_public ? "visible" : "hidden"}
+    </p>
+  </div>
+)}
+
 
         {/* EMPTY VESSEL */}
         {!hasActive && (

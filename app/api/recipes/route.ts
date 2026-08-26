@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { name, ingredients, method, notes } = body;
+    const { name, ingredients, method, notes, volume } = body;
 
     const { data, error } = await supabase
       .from("recipes")
@@ -52,12 +52,12 @@ export async function POST(req: Request) {
         ingredients,
         method,
         notes,
+        volume: Number(volume), // ⭐ lagt til
       })
       .select()
       .single();
 
     if (error) {
-      console.error("Recipe insert error:", error);
       return NextResponse.json(
         { error: "Kunne ikke lagre oppskriften", details: error.message },
         { status: 500 }
@@ -66,7 +66,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, recipe: data });
   } catch (err: any) {
-    console.error("RECIPES API ERROR:", err);
     return NextResponse.json(
       { error: "Serverfeil", details: err.message },
       { status: 500 }
@@ -114,7 +113,7 @@ export async function GET() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("GET recipes error:", error);
+      console.log("SUPABASE INSERT ERROR:", error);
       return NextResponse.json(
         { error: "Kunne ikke hente oppskrifter", details: error.message },
         { status: 500 }
@@ -123,7 +122,6 @@ export async function GET() {
 
     return NextResponse.json({ recipes: data });
   } catch (err: any) {
-    console.error("RECIPES GET ERROR:", err);
     return NextResponse.json(
       { error: "Serverfeil", details: err.message },
       { status: 500 }

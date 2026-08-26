@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
 import MenuOverlay from "../MenuOverlay";
 import BackButton from "../BackButton";
+import { useRouter } from "next/navigation";
 
 export default function RecipeNotesPage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(true);
   const [recipe, setRecipe] = useState<any>(null);
+  const router = useRouter();
 
   useEffect(() => {
     async function load() {
@@ -16,7 +18,7 @@ export default function RecipeNotesPage({ params }: { params: { id: string } }) 
       } = await supabaseBrowser.auth.getSession();
 
       if (!session) {
-        window.location.href = "/auth/login";
+        router.push("/auth/login");
         return;
       }
 
@@ -32,7 +34,7 @@ export default function RecipeNotesPage({ params }: { params: { id: string } }) 
     }
 
     load();
-  }, [params.id]);
+  }, [params.id, router]);
 
   if (loading) {
     return (
@@ -119,7 +121,7 @@ export default function RecipeNotesPage({ params }: { params: { id: string } }) 
 
         </div>
 
-        {/* ⭐ NOTE LOG */}
+        {/* NOTE LOG */}
         <h2 className="text-2xl font-semibold mt-12 mb-4 text-center">
           Notes
         </h2>

@@ -37,6 +37,7 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
       setProfile(profileData);
 
       const userId = profileData.id;
+      const isOwner = session?.user?.id === userId;
 
       const { data: karRaw } = await supabaseBrowser
         .from("kar")
@@ -49,7 +50,12 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
         .select("*")
         .eq("user_id", userId);
 
-      const karProcessed = (karRaw ?? []).map((k: any, index: number) => {
+      // ⭐ FILTER: Only show public vessels unless owner
+      const visibleKar = isOwner
+        ? karRaw ?? []
+        : (karRaw ?? []).filter((k: any) => k.is_public === true);
+
+      const karProcessed = visibleKar.map((k: any, index: number) => {
         const active = batchesRaw?.find(
           (b: any) => b.aktivt_kar === k.id && b.status === "Aktiv"
         );

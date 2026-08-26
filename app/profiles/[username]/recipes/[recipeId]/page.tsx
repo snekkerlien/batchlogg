@@ -41,6 +41,17 @@ export default async function RecipeNotesPage({
     );
   }
 
+  // ⭐ NEW: Hide private profiles unless owner
+  const viewingOwnProfile = user.id === profile.id;
+
+  if (!profile.is_public && !viewingOwnProfile) {
+    return (
+      <main className="min-h-screen flex items-center justify-center text-white">
+        <h1 className="text-2xl font-bold">This profile is private</h1>
+      </main>
+    );
+  }
+
   const userId = profile.id;
 
   // Fetch recipe
@@ -61,7 +72,6 @@ export default async function RecipeNotesPage({
 
   // ⭐ Note log
   const notes = recipe.notes_log || [];
-
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
       <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10 relative">

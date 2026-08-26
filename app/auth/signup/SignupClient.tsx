@@ -33,7 +33,7 @@ export default function SignupClient() {
       return;
     }
 
-    console.log("[Signup] Trying signUp:", email);
+    
 
     const { data, error: signupError } = await supabaseBrowser.auth.signUp({
       email,
