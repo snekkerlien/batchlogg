@@ -1,0 +1,8 @@
+{
+  "model_list": [
+    {
+      "model_id": "Qwen2.5-1.5B-Instruct-q4f16_1-MLC",
+      "model_url": "/models/Qwen2.5-1.5B-Instruct-q4f16_1-MLC/"
+    }
+  ]
+}

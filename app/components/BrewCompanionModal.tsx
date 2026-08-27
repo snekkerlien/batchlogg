@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useBrewCompanionLLM } from "@/lib/BCLLM/useBrewCompanionLLM";
 
 interface BrewCompanionModalProps {
   isOpen: boolean;
@@ -34,6 +35,8 @@ export default function BrewCompanionModal({
   const [showRecipeButtons, setShowRecipeButtons] = useState(false);
 
   const chatRef = useRef<HTMLDivElement | null>(null);
+
+  const { ask, loading: modelLoading, progress } = useBrewCompanionLLM();
 
   useEffect(() => {
     if (chatRef.current) {
@@ -74,22 +77,22 @@ export default function BrewCompanionModal({
     setInput("");
     setLoading(true);
 
-    // 1) Oppdater chat først (ingen fetch her!)
     setChat((prev) => [...prev, { sender: "user", text: userMsg }]);
 
-    // 2) Kall API ETTER state-oppdatering
-    const res = await fetch("/api/groq/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        messages: [...chat, { sender: "user", text: userMsg }].slice(-10),
-      }),
-    });
+    if (modelLoading) {
+      setChat((prev) => [
+        ...prev,
+        {
+          sender: "ai",
+          text: "The model is still loading, please wait a moment…",
+        },
+      ]);
+      setLoading(false);
+      return;
+    }
 
-    const data = await res.json();
-    const reply = data.reply;
+    const reply = await ask(userMsg);
 
-    // 3) Legg til AI-svar
     setChat((prev) => [...prev, { sender: "ai", text: reply }]);
 
     extractMetaFromAI(reply);
@@ -166,6 +169,24 @@ export default function BrewCompanionModal({
         ref={chatRef}
         className="flex-1 overflow-y-auto p-6 space-y-4 text-white"
       >
+
+        {/* MODEL LOADING BAR */}
+        {modelLoading && (
+          <div className="w-full max-w-xl bg-white/20 rounded-lg p-4">
+            <div className="text-white mb-2">
+              Loading AI model… {progress}%
+            </div>
+
+            <div className="w-full h-3 bg-white/10 rounded overflow-hidden">
+              <div
+                className="h-full bg-green-400 transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* CHAT MESSAGES */}
         {chat.map((msg, i) => (
           <div
             key={i}
@@ -175,7 +196,9 @@ export default function BrewCompanionModal({
                 : "bg-blue-600 text-white self-end ml-auto"
             }`}
           >
-            {msg.text}
+            <div className="whitespace-pre-wrap">
+              {msg.text}
+            </div>
           </div>
         ))}
 

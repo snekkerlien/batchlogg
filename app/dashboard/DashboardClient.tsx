@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
 import { getNextMotd } from "../../lib/motd/motdList";
 import MenuOverlay from "@/app/components/MenuOverlay";
+import HelpButton from "./HelpButton";
+import HelpOverlay from "./HelpOverlay";
+
 
 interface KarType {
   id: string;
@@ -25,6 +28,9 @@ export default function DashboardClient() {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedKars, setSelectedKars] = useState<string[]>([]);
   const [fadeMessage, setFadeMessage] = useState("");
+  const [maxVessels, setMaxVessels] = useState(12);
+  const [showHelp, setShowHelp] = useState(false);
+
 
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -81,6 +87,16 @@ export default function DashboardClient() {
     } = await supabaseBrowser.auth.getSession();
 
     const currentUserId = session?.user?.id;
+
+    if (currentUserId) {
+      const { data: profile } = await supabaseBrowser
+        .from("profiles")
+        .select("max_vessels")
+        .eq("id", currentUserId)
+        .single();
+
+      setMaxVessels(profile?.max_vessels ?? 12);
+    }
 
     const karRes = await fetch("/api/kar", {
       headers: { Authorization: `Bearer ${token}` },
@@ -213,6 +229,8 @@ export default function DashboardClient() {
     );
   }
 
+  
+
   return (
     <div className="bg-black/60 backdrop-blur-md p-6 sm:p-8 rounded-xl border border-white/10 max-w-3xl mx-auto mt-20 sm:mt-24 relative">
       {fadeMessage && (
@@ -227,9 +245,13 @@ export default function DashboardClient() {
       </div>
 
       {/* HEADER */}
-      <h1 className="text-3xl font-bold mb-4 mt-10 text-center">
-        Logged in as {username}
+      <h1 className="text-3xl font-bold mb-4 mt-15 text-center">
+        Ferment-station
       </h1>
+
+      <p className="text-center text-zinc-300 mb-7">
+        Logget in as {username}
+      </p>  
 
       <p className="text-center text-zinc-300 mb-10 italic">
         {motd}
@@ -313,7 +335,7 @@ export default function DashboardClient() {
           </a>
         ))}
 
-        {!selectMode && kar.length < 12 && (
+        {!selectMode && kar.length < maxVessels && (
           <button
             onClick={createKar}
             className="border border-white/10 bg-white/5 hover:bg-white/10 rounded-xl p-4 w-32 h-32 flex items-center justify-center text-white text-3xl font-bold"
@@ -323,11 +345,15 @@ export default function DashboardClient() {
         )}
       </div>
 
+      <p className="text-center mt-5 opacity-60">
+  Max vessels: {maxVessels}
+</p>
+
       <div className="flex justify-center mt-10 mb-6">
         {!selectMode && (
           <button
             onClick={toggleSelectMode}
-            className="px-6 py-3 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg font-semibold"
+            className="px-6 py-3 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg font-semibold mb-5"
           >
             Select vessels
           </button>
@@ -353,9 +379,19 @@ export default function DashboardClient() {
         )}
       </div>
 
-      <p className="text-sm opacity-40 mt-12 text-center">
+      <p className="text-center text-zinc-300 mb-10 italic">
+        The dashboard gives you a simple overview of all your vessels and their current status. Tap a vessel to open its details, check activity, or make adjustments. Use the + button to add new vessels up to your personal limit, and switch to selection mode when you want to manage several at once. Status colors help you quickly see which vessels are active, secondary, or idle, keeping everything easy to follow at a glance.
+      </p>
+
+      <p className="text-center text-zinc-300 mb-10 italic">
+        You can access your recipes, batch history, the community, your account and our BrewCompanion AI Recipe builder through the menu!
+      </p>
+
+      <p className="text-sm opacity-40 mb-2 mt-12 text-center">
         © {new Date().getFullYear()} Batchlog
       </p>
+
+      
 
       <style jsx>{`
         @keyframes shake {

@@ -6,6 +6,11 @@ import Background from "./Background";
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="no">
+      <head>
+        {/* BLOCK MICROSOFT COPILOT */}
+        <meta name="copilot" content="no-assist" />
+      </head>
+
       <body className="min-h-screen bg-black text-white antialiased relative overflow-x-hidden">
         <Background>
           <ClientLayout>

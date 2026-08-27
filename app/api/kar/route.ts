@@ -2,7 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 export async function GET(request: NextRequest) {
-  console.log("=== /api/kar START ===");
+  
 
   const authHeader = request.headers.get("Authorization") ?? "";
   const token = authHeader.startsWith("Bearer ")
@@ -35,8 +35,7 @@ export async function GET(request: NextRequest) {
     error: userError,
   } = await supabase.auth.getUser();
 
-  console.log("[/api/kar] User:", user);
-  console.log("[/api/kar] UserError:", userError);
+ 
 
   if (!user) {
     return NextResponse.json({ error: "Invalid token" }, { status: 401 });
