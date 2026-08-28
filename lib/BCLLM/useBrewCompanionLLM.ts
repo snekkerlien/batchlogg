@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import * as webllm from "@mlc-ai/web-llm";
 
+function isMobile() {
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
 export function useBrewCompanionLLM() {
   const [engine, setEngine] = useState<webllm.MLCEngine | null>(null);
   const [loading, setLoading] = useState(true);
@@ -14,14 +18,17 @@ export function useBrewCompanionLLM() {
 
       // progress callback (new API)
       eng.setInitProgressCallback((report) => {
-        // report.progress = 0–1
         const pct = Math.floor(report.progress * 100);
-
         setProgress(pct);
         setLoading(pct < 100);
       });
 
-      await eng.reload("Qwen2.5-1.5B-Instruct-q4f16_1-MLC");
+      // Modellvalg: PC = full Phi3-mini-4k, Mobil = fallback Phi3-mini-128k
+      const modelName = isMobile()
+        ? "Phi3-mini-128k-instruct-q4f16_1-MLC"
+        : "Phi3-mini-4k-instruct-q4f16_1-MLC";
+
+      await eng.reload(modelName);
 
       setEngine(eng);
       setLoading(false);
