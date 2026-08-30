@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
 import { getNextMotd } from "../../lib/motd/motdList";
 import MenuOverlay from "@/app/components/MenuOverlay";
-import HelpButton from "./HelpButton";
-import HelpOverlay from "./HelpOverlay";
+import { preloadEngine } from "@/lib/BCLLM/engineStore";
 
 
 interface KarType {
@@ -18,6 +17,7 @@ interface KarType {
 }
 
 export default function DashboardClient() {
+ 
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
@@ -40,8 +40,30 @@ export default function DashboardClient() {
   }
 
   useEffect(() => {
-    setMotd(getNextMotd());
-  }, []);
+  preloadEngine(); 
+}, []);
+
+// ⭐ Hent MOTD ved mount
+useEffect(() => {
+  setMotd(getNextMotd());
+}, []);
+
+// ⭐ Last dashboard-data når router endres
+useEffect(() => {
+  loadDashboardData();
+}, [router]);
+
+// ⭐ Klikk utenfor menyen lukker den
+useEffect(() => {
+  function handleClickOutside(e: MouseEvent) {
+    if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      setMenuOpen(false);
+    }
+  }
+
+  document.addEventListener("mousedown", handleClickOutside);
+  return () => document.removeEventListener("mousedown", handleClickOutside);
+}, []);
 
   async function getToken() {
     const {
@@ -151,6 +173,7 @@ export default function DashboardClient() {
   useEffect(() => {
     loadDashboardData();
   }, [router]);
+
 
   function toggleSelectMode() {
     setSelectMode(!selectMode);

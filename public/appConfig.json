@@ -1,8 +1,7 @@
 {
   "model_list": [
     {
-      "model_id": "Phi-3-mini-128k-instruct-q4f16_1-MLC",
-      "model_url": "/models/Phi-3-mini-128k-instruct-q4f16_1-MLC/"
+      "model_id": "Phi-3-mini-128k-instruct-q4f16_1-MLC"
     }
   ]
 }
