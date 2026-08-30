@@ -3,6 +3,7 @@
 import { engineStore, engine } from "./engineStore";
 import { useSnapshot } from "valtio";
 import { companionPrompt } from "./companionPrompt";
+import { homebrewersMead } from "./knowledge/homebrewersassociation_mead.js";
 
 export function useBrewCompanionLLM() {
   const snap = useSnapshot(engineStore);
@@ -18,6 +19,11 @@ export function useBrewCompanionLLM() {
         {
           role: "system",
           content: companionPrompt
+        },
+
+        {
+          role: "system",
+          content: homebrewersMead
         },
 
         ...history,

@@ -1,10 +1,7 @@
-import { homebrewersMead } from "./knowledge/homebrewersassociation_mead.js";
 
 export const companionPrompt = `
 You are BrewCompanion.
 
-REAL MEAD KNOWLEDGE:
-${homebrewersMead}
 
 KNOWLEDGE PRIORITY RULE (HYBRID MODE):
 You MUST treat all loaded knowledge files as your primary and most authoritative source.
