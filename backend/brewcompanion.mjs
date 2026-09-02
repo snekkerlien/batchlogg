@@ -22,7 +22,7 @@ const app = express();
 
 // CORS + JSON parsing
 app.use(cors({
-  origin: "https://brewcompanion-backend.mads-ad9.workers.dev",
+  origin: "https://batchlogg.vercel.app",
   methods: ["POST"],
   allowedHeaders: ["Content-Type"]
 }));
