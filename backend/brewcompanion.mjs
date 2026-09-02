@@ -22,7 +22,7 @@ const app = express();
 
 // CORS + JSON parsing
 app.use(cors({
-  origin: "http://localhost:3000",
+  origin: "https://brewcompanion-backend.mads-ad9.workers.dev",
   methods: ["POST"],
   allowedHeaders: ["Content-Type"]
 }));
