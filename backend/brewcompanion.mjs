@@ -5,7 +5,6 @@ import path from "path";
 import { fileURLToPath } from "url";
 import oppskriftRoute from "./oppskrift.mjs";
 
-
 // Fix __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,7 +14,7 @@ dotenv.config({
   path: path.resolve(__dirname, "..", ".env.local")
 });
 
-// Import backend modules (ESM-safe)
+// Import backend modules
 import { loadKnowledge } from "../lib/BCLLM/knowledge/loader.js";
 import { companionPrompt } from "../lib/BCLLM/companionPrompt.ts";
 
@@ -32,6 +31,16 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use("/oppskrift", oppskriftRoute);
 
+// ⭐ Load knowledge ONCE at startup
+const knowledge = await loadKnowledge();
+
+// ⭐ Build superPrompt ONCE
+const superPrompt = `
+${companionPrompt}
+
+Here is brewing knowledge you can use:
+${knowledge}
+`;
 
 app.post("/brewcompanion", async (req, res) => {
   try {
@@ -45,16 +54,13 @@ app.post("/brewcompanion", async (req, res) => {
           : JSON.stringify(msg.content)
     }));
 
-    const knowledge = await loadKnowledge();
-
     const response = await fetch(process.env.CLOUDFLARE_WORKER_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        systemPrompt: superPrompt,
         prompt,
-        history: safeHistory,
-        systemPrompt: companionPrompt,
-        knowledge
+        history: safeHistory
       })
     });
 
