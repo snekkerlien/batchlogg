@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
 import { getNextMotd } from "../../lib/motd/motdList";
 import MenuOverlay from "@/app/components/MenuOverlay";
-import { preloadEngine } from "@/lib/BCLLM/engineStore";
 
 
 interface KarType {
@@ -38,10 +37,6 @@ export default function DashboardClient() {
     await supabaseBrowser.auth.signOut();
     router.replace("/");
   }
-
-  useEffect(() => {
-  preloadEngine(); 
-}, []);
 
 // ⭐ Hent MOTD ved mount
 useEffect(() => {

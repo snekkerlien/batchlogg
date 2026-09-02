@@ -1,8 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+
+  experimental: {
+    appDir: false
+  },
+
   images: {
-    domains: ["https://cvwydrbrxbvezyhvtfma.supabase.co"]
+    domains: ["cvwydrbrxbvezyhvtfma.supabase.co"]
   },
 };
 

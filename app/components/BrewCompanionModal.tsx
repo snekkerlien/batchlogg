@@ -30,7 +30,7 @@ export default function BrewCompanionModal({
 
   const chatRef = useRef<HTMLDivElement | null>(null);
 
-  const { ask, loading: modelLoading, progress } = useBrewCompanionLLM();
+  const { ask } = useBrewCompanionLLM();
 
   useEffect(() => {
     if (chatRef.current) {
@@ -73,26 +73,12 @@ export default function BrewCompanionModal({
 
     setChat((prev) => [...prev, { sender: "user", text: userMsg }]);
 
-    if (modelLoading) {
-      setChat((prev) => [
-        ...prev,
-        {
-          sender: "ai",
-          text: "The model is still loading, please wait a moment…",
-        },
-      ]);
-      setLoading(false);
-      return;
-    }
-
-    // ⭐ NYTT: bygg historikk til modellen
     const history: { role: "assistant" | "user"; content: string }[] =
-  chat.map((msg) => ({
+  chat.slice(-6).map((msg) => ({
     role: msg.sender === "ai" ? "assistant" : "user",
     content: String(msg.text),
   }));
 
-    // ⭐ NYTT: send historikk + ny melding
     const reply = await ask(userMsg, history);
 
     setChat((prev) => [...prev, { sender: "ai", text: reply }]);
@@ -124,7 +110,7 @@ export default function BrewCompanionModal({
   }
 
   async function handleGenerateYes() {
-    const res = await fetch("/api/groq/oppskrift", {
+    const res = await fetch("http://localhost:3001/oppskrift", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -166,34 +152,18 @@ export default function BrewCompanionModal({
         ref={chatRef}
         className="flex-1 overflow-y-auto p-6 space-y-4 text-white"
       >
-        {modelLoading && (
-          <div className="w-full max-w-xl bg-white/20 rounded-lg p-4">
-            <div className="text-white mb-2">
-              Loading AI model… {Math.round(progress * 100)}%
-            </div>
-
-            <div className="w-full h-3 bg-white/10 rounded overflow-hidden">
-              <div
-                className="h-full bg-green-400 transition-all duration-300"
-                style={{ width: `${Math.round(progress * 100)}%` }}
-              />
-            </div>
+        {chat.map((msg, i) => (
+          <div
+            key={i}
+            className={`max-w-xl px-4 py-3 rounded-lg ${
+              msg.sender === "ai"
+                ? "bg-white/10 text-white self-start"
+                : "bg-blue-600 text-white self-end ml-auto"
+            }`}
+          >
+            <div className="whitespace-pre-wrap">{msg.text}</div>
           </div>
-        )}
-
-        {!modelLoading &&
-          chat.map((msg, i) => (
-            <div
-              key={i}
-              className={`max-w-xl px-4 py-3 rounded-lg ${
-                msg.sender === "ai"
-                  ? "bg-white/10 text-white self-start"
-                  : "bg-blue-600 text-white self-end ml-auto"
-              }`}
-            >
-              <div className="whitespace-pre-wrap">{msg.text}</div>
-            </div>
-          ))}
+        ))}
 
         {loading && (
           <div className="text-white opacity-70">BrewCompanion is thinking…</div>
