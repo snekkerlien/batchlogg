@@ -110,7 +110,7 @@ export default function BrewCompanionModal({
   }
 
   async function handleGenerateYes() {
-    const res = await fetch("http://localhost:3001/oppskrift", {
+    const res = await fetch("https://brewcompanion-backend.mads-ad9.workers.dev/oppskrift", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

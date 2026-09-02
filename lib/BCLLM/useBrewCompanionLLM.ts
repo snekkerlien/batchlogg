@@ -7,7 +7,7 @@ export function useBrewCompanionLLM() {
   ): Promise<string> {
 
     try {
-      const res = await fetch("http://localhost:3001/brewcompanion", {
+      const res = await fetch("https://brewcompanion-backend.mads-ad9.workers.dev/brewcompanion", {
         method: "POST",
         mode: "cors",
         headers: {
