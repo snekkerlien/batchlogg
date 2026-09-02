@@ -58,10 +58,13 @@ app.post("/brewcompanion", async (req, res) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        systemPrompt: superPrompt,
-        prompt,
-        history: safeHistory
-      })
+      model: "@cf/meta/llama-3.1-8b-instruct",
+      messages: [
+     { role: "system", content: superPrompt },
+         ...safeHistory,
+      { role: "user", content: prompt }
+  ]
+}),
     });
 
     const data = await response.json();

@@ -20,6 +20,7 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
+    // Handle CORS preflight
     if (request.method === "OPTIONS") {
       return new Response(null, {
         status: 204,
@@ -27,11 +28,13 @@ export default {
       });
     }
 
+    // BrewCompanion endpoint
     if (url.pathname === "/brewcompanion" && request.method === "POST") {
       await ensureKnowledge();
       return handleBrewcompanion(request, env);
     }
 
+    // Oppskrift endpoint
     if (url.pathname === "/oppskrift" && request.method === "POST") {
       return handleOppskrift(request, env);
     }
@@ -43,6 +46,7 @@ export default {
   },
 };
 
+// CORS for Vercel frontend
 function corsHeaders() {
   return {
     "Access-Control-Allow-Origin": "https://batchlogg.vercel.app",
@@ -68,11 +72,29 @@ async function handleBrewcompanion(request, env) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        systemPrompt: superPrompt,
-        prompt,
-        history: safeHistory,
-      }),
+        model: "@cf/meta/llama-3.1-8b-instruct",
+         messages: [
+        { role: "system", content: superPrompt },
+          ...safeHistory,
+       { role: "user", content: prompt }
+  ]
+}),
     });
+
+    // --- FIX: Proper error handling ---
+    if (!response.ok) {
+      const errorText = await response.text();
+      return new Response(
+        JSON.stringify({ error: errorText }),
+        {
+          status: 500,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders(),
+          },
+        }
+      );
+    }
 
     const data = await response.json();
 
@@ -86,6 +108,7 @@ async function handleBrewcompanion(request, env) {
         },
       }
     );
+
   } catch (err) {
     return new Response(
       JSON.stringify({ error: err.message }),
@@ -101,7 +124,6 @@ async function handleBrewcompanion(request, env) {
 }
 
 async function handleOppskrift(request, env) {
-  // Midlertidig – du kan flytte logikken fra oppskrift.mjs hit senere
   return new Response(
     JSON.stringify({ message: "Oppskrift endpoint not implemented yet" }),
     {
