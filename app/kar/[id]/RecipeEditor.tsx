@@ -21,10 +21,21 @@ function AutoTextarea({ value, onChange, placeholder }: any) {
   );
 }
 
-export function RecipeEditor() {
-  const [ingredients, setIngredients] = useState("");
-  const [steps, setSteps] = useState("");
-  const [notes, setNotes] = useState("");
+export function RecipeEditor({ initialValue = "" }) {
+  // Extract existing values from initialValue
+  const initialIngredients =
+    initialValue.split("Ingredients:")[1]?.split("Full process:")[0]?.trim() || "";
+
+  const initialSteps =
+    initialValue.split("Full process:")[1]?.split("Notes:")[0]?.trim() || "";
+
+  const initialNotes =
+    initialValue.split("Notes:")[1]?.trim() || "";
+
+  // Set initial state based on extracted values
+  const [ingredients, setIngredients] = useState(initialIngredients);
+  const [steps, setSteps] = useState(initialSteps);
+  const [notes, setNotes] = useState(initialNotes);
 
   const combined = `
 Ingredients:

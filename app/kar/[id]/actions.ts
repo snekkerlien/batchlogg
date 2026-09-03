@@ -174,3 +174,39 @@ export async function finishBatch(formData: FormData) {
 
   redirect(`/kar/${karId}`);
 }
+
+// ---------------------------------------------------------
+// 4. OPPDATER AKTIV BATCH  ⭐ NY FUNKSJON
+// ---------------------------------------------------------
+export async function updateBatch(formData: FormData) {
+  const { supabase } = supabaseServer();
+
+  const batchId = formData.get("batch_id") as string;
+  const karId = formData.get("kar_id") as string;
+
+  const name = formData.get("name") as string;
+  const volume_l = Number(formData.get("volume_l"));
+  const og = Number(formData.get("og"));
+  const startdato = formData.get("startdato") as string;
+  const oppskrift = formData.get("oppskrift") as string;
+  const secondary_additions = formData.get("secondary_additions");
+  const secondary_notes = formData.get("secondary_notes");
+
+  if (!batchId || !karId) return;
+
+  await supabase
+    .from("batches")
+    .update({
+      name,
+      volume_l,
+      og,
+      startdato,
+      oppskrift,
+      secondary_additions,
+      secondary_notes,
+    })
+    .eq("id", batchId);
+
+  revalidatePath(`/kar/${karId}`);
+  redirect(`/kar/${karId}`);
+}

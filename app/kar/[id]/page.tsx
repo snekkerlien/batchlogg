@@ -45,10 +45,8 @@ export default function KarPage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(true);
   const [openImport, setOpenImport] = useState(false);
   const [recipes, setRecipes] = useState<any[]>([]);
-
- 
-
-
+  const [openEdit, setOpenEdit] = useState(false);
+  
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user);
@@ -295,9 +293,102 @@ async function toggleVisibility() {
             </h2>
 
             <div className="p-4 bg-white/10 border border-white/20 rounded-xl mb-10">
-              <h3 className="text-xl font-bold text-green-300 mb-2">
-                {activeBatch.name}
-              </h3>
+              <div className="flex items-center justify-between mb-2">
+  <h3 className="text-xl font-bold text-green-300">
+    {activeBatch.name}
+  </h3>
+
+  {isOwner && (
+    <button
+      type="button"
+      onClick={() => setOpenEdit(!openEdit)}
+      className="font-semibold text-green-300 cursor-pointer"
+    >
+      Edit batch
+    </button>
+  )}
+</div>
+
+{openEdit && (
+  <div className="p-4 bg-white/5 border border-white/10 rounded-lg mb-4">
+    <form action={Actions.updateBatch} className="flex flex-col gap-4">
+      <input type="hidden" name="batch_id" value={activeBatch.id} />
+      <input type="hidden" name="kar_id" value={kar.id} />
+
+      <div>
+        <label className="block mb-1 font-semibold">Batch name</label>
+        <input
+          name="name"
+          defaultValue={activeBatch.name}
+          className="w-full p-3 rounded bg-black/40 border border-white/20"
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block mb-1 font-semibold">Volume (L)</label>
+        <input
+          name="volume_l"
+          type="number"
+          step="0.1"
+          defaultValue={activeBatch.volume_l}
+          className="w-full p-3 rounded bg-black/40 border border-white/20"
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block mb-1 font-semibold">Start date</label>
+        <input
+          name="startdato"
+          type="date"
+          defaultValue={activeBatch.startdato.split("T")[0]}
+          className="w-full p-3 rounded bg-black/40 border border-white/20"
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block mb-1 font-semibold">Original Gravity (OG)</label>
+        <input
+          name="og"
+          type="number"
+          step="0.001"
+          defaultValue={activeBatch.og}
+          className="w-full p-3 rounded bg-black/40 border border-white/20"
+          required
+        />
+      </div>
+
+      {/* ⭐ Secondary additions */}
+      <div>
+        <label className="block mb-1 font-semibold">Secondary additions</label>
+        <textarea
+          name="secondary_additions"
+          defaultValue={activeBatch.secondary_additions || ""}
+          className="w-full p-3 rounded bg-black/40 border border-white/20"
+        />
+      </div>
+
+      {/* ⭐ Secondary notes */}
+      <div>
+        <label className="block mb-1 font-semibold">Secondary notes</label>
+        <textarea
+          name="secondary_notes"
+          defaultValue={activeBatch.secondary_notes || ""}
+          className="w-full p-3 rounded bg-black/40 border border-white/20"
+        />
+      </div>
+
+      <RecipeEditor initialValue={activeBatch.oppskrift} />
+
+      <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
+        Save changes
+      </button>
+    </form>
+  </div>
+)}
+
 
               <p className="opacity-80">Batch ID: {activeBatch.batchnummer}</p>
               <p className="opacity-80">
@@ -465,10 +556,71 @@ async function toggleVisibility() {
             </h2>
 
             <div className="p-4 bg-white/10 border border-white/20 rounded-xl mb-10">
-              <h3 className="text-xl font-bold text-green-300 mb-2">
-                {activeBatch.name}
-              </h3>
+              <div className="flex items-center justify-between mb-2">
+  <h3 className="text-xl font-bold text-green-300">
+    {activeBatch.name}
+  </h3>
 
+  {isOwner && (
+    <button
+      type="button"
+      onClick={() => setOpenEdit(!openEdit)}
+      className="font-semibold text-green-300 cursor-pointer"
+    >
+      Edit batch
+    </button>
+  )}
+</div>
+
+{openEdit && (
+  <div className="p-4 bg-white/5 border border-white/10 rounded-lg mb-4">
+    <form action={Actions.updateBatch} className="flex flex-col gap-4">
+      <input type="hidden" name="batch_id" value={activeBatch.id} />
+      <input type="hidden" name="kar_id" value={kar.id} />
+
+      <label className="font-semibold">Batch name</label>
+      <input
+        name="name"
+        defaultValue={activeBatch.name}
+        className="p-3 rounded bg-black/40 border border-white/20"
+      />
+
+      <label className="font-semibold">Volume (L)</label>
+      <input
+        name="volume_l"
+        type="number"
+        step="0.1"
+        defaultValue={activeBatch.volume_l}
+        className="p-3 rounded bg-black/40 border border-white/20"
+      />
+
+      <label className="font-semibold">Start date</label>
+      <input
+        name="startdato"
+        type="date"
+        defaultValue={activeBatch.startdato.split("T")[0]}
+        className="p-3 rounded bg-black/40 border border-white/20"
+      />
+
+      <label className="font-semibold">Original Gravity (OG)</label>
+      <input
+        name="og"
+        type="number"
+        step="0.001"
+        defaultValue={activeBatch.og}
+        className="p-3 rounded bg-black/40 border border-white/20"
+      />
+
+      <RecipeEditor initialValue={activeBatch.oppskrift} />
+
+      <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
+        Save changes
+      </button>
+    </form>
+  </div>
+)}
+
+            
               <p className="opacity-80">Batch ID: {activeBatch.batchnummer}</p>
               <p className="opacity-80">
                 Start date: {new Date(activeBatch.startdato).toLocaleDateString("en-US")}
