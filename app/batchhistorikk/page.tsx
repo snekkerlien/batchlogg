@@ -6,10 +6,14 @@ import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 
 export default function BatchHistoryPage() {
+
   const [loading, setLoading] = useState(true);
   const [batches, setBatches] = useState<any[]>([]);
   const [kars, setKars] = useState<any[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
+
+  // ⭐ NEW: delete confirmation modal state
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -24,14 +28,12 @@ export default function BatchHistoryPage() {
 
       const userId = session.user.id;
 
-      // Fetch batches
       const { data: batchesRaw } = await supabaseBrowser
         .from("batches")
         .select("*")
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
 
-      // Fetch vessels
       const { data: karsRaw } = await supabaseBrowser
         .from("kar")
         .select("*")
@@ -41,17 +43,14 @@ export default function BatchHistoryPage() {
         (a, b) => a.nummer - b.nummer
       );
 
-      // Fetch batch notes for all batches
       const { data: notesRaw } = await supabaseBrowser
         .from("batch_notes")
         .select("*")
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
 
-      // Enrich batches with vessel number + notes
       const enriched = (batchesRaw ?? []).map((batch) => {
         const index = sortedKars.findIndex((k) => k.id === batch.aktivt_kar);
-
         const previousKar = sortedKars.find((k) => k.id === batch.aktivt_kar);
         const previousKarNumber = previousKar
           ? sortedKars.findIndex((k) => k.id === previousKar.id) + 1
@@ -81,6 +80,18 @@ export default function BatchHistoryPage() {
     setExpanded(expanded === id ? null : id);
   }
 
+  async function deleteBatch(id: string) {
+    const res = await fetch("/api/batches/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+
+    if (res.ok) {
+      setBatches((prev) => prev.filter((b) => b.id !== id));
+    }
+  }
+
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
@@ -93,7 +104,6 @@ export default function BatchHistoryPage() {
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
       <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-4xl border border-white/10 relative pt-16 sm:pt-0">
 
-        {/* TOP BAR */}
         <div className="absolute top-2 sm:top-4 right-4 z-40">
           <MenuOverlay />
         </div>
@@ -115,31 +125,43 @@ export default function BatchHistoryPage() {
                 key={batch.id}
                 className="bg-white/10 border border-white/20 rounded-xl p-4"
               >
-                {/* CLICKABLE HEADER */}
-                <button
+                {/* HEADER — ONLY THIS AREA EXPANDS */}
+                <div
+                  className="w-full flex justify-between items-center mb-2 cursor-pointer"
                   onClick={() => toggle(batch.id)}
-                  className="w-full flex justify-between items-center text-left"
                 >
                   <div className="flex flex-col">
                     <span className="text-xl font-bold text-green-300">
                       {batch.name}
                     </span>
 
-                    {/* DATE ALWAYS VISIBLE */}
                     <span className="text-sm opacity-70">
                       {new Date(batch.startdato).toLocaleDateString("en-GB")}
                     </span>
                   </div>
 
-                  <span
-                    className={`text-white text-2xl transition-transform duration-200 ${
-                      expanded === batch.id ? "rotate-90" : "rotate-180"
-                    }`}
-                  >
-                    ▶
-                  </span>
-                </button>
+                  <div className="flex items-center gap-3">
 
+                    {/* ALWAYS VISIBLE DELETE BUTTON — NOW OPENS CONFIRMATION */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation(); // prevent expand
+                        setConfirmDeleteId(batch.id); // open modal
+                      }}
+                      className="px-4 py-2 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg font-semibold"
+                    >
+                      Delete
+                    </button>
+
+                    <span
+                      className={`text-white text-2xl transition-transform duration-200 ${
+                        expanded === batch.id ? "rotate-90" : "rotate-180"
+                      }`}
+                    >
+                      ▶
+                    </span>
+                  </div>
+                </div>
                 {/* COLLAPSIBLE CONTENT */}
                 <div
                   className={`transition-all duration-300 ease-in-out overflow-hidden ${
@@ -148,7 +170,6 @@ export default function BatchHistoryPage() {
                 >
                   <div className="space-y-4 opacity-90">
 
-                    {/* BASIC INFO */}
                     <p className="text-sm">
                       <strong>Batch number:</strong> {batch.batchnummer}
                     </p>
@@ -198,7 +219,6 @@ export default function BatchHistoryPage() {
                         : "No longer linked"}
                     </p>
 
-                    {/* FINISHED NOTES */}
                     {batch.finished_notes && (
                       <p className="text-sm whitespace-pre-line">
                         <strong>Finished notes:</strong>{"\n"}
@@ -206,7 +226,6 @@ export default function BatchHistoryPage() {
                       </p>
                     )}
 
-                    {/* SECONDARY INFO */}
                     {batch.status === "Sekundær" && (
                       <>
                         {batch.secondary_startdate && (
@@ -232,39 +251,41 @@ export default function BatchHistoryPage() {
                       </>
                     )}
 
-                    {/* RECIPE PARSED */}
                     {batch.oppskrift && (
                       <div className="mt-4 p-4 bg-white/5 border border-white/10 rounded-lg">
                         <h3 className="text-xl font-bold mb-3 text-green-300">Recipe</h3>
 
                         <div className="space-y-4 text-sm whitespace-pre-wrap">
-
                           <div>
                             <h4 className="font-semibold text-white/90 mb-1">Ingredients</h4>
                             <p className="opacity-80">
-                              {batch.oppskrift.split("Ingredienser:")[1]?.split("Fremgangsmåte:")[0]?.trim()}
+                              {batch.oppskrift
+                                .split("Ingredients:")[1]
+                                ?.split("Full process:")[0]
+                                ?.trim()}
                             </p>
                           </div>
 
                           <div>
-                            <h4 className="font-semibold text-white/90 mb-1">Method</h4>
+                            <h4 className="font-semibold text-white/90 mb-1">Full Process</h4>
                             <p className="opacity-80">
-                              {batch.oppskrift.split("Fremgangsmåte:")[1]?.split("Notater:")[0]?.trim()}
+                              {batch.oppskrift
+                                .split("Full process:")[1]
+                                ?.split("Notes:")[0]
+                                ?.trim()}
                             </p>
                           </div>
 
                           <div>
-                            <h4 className="font-semibold text-white/90 mb-1">Notes</h4>
+                            <h4 className="font-semibold text-white/90 mb-1">Recipe notes</h4>
                             <p className="opacity-80">
-                              {batch.oppskrift.split("Notater:")[1]?.trim()}
+                              {batch.oppskrift.split("Notes:")[1]?.trim()}
                             </p>
                           </div>
-
                         </div>
                       </div>
                     )}
 
-                    {/* BATCH NOTES */}
                     <div className="mt-6">
                       <h3 className="text-xl font-bold mb-3 text-green-300">Batch notes</h3>
 
@@ -300,6 +321,38 @@ export default function BatchHistoryPage() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* ⭐ CONFIRM DELETE MODAL */}
+        {confirmDeleteId && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-zinc-900 border border-white/20 p-6 rounded-xl w-full max-w-sm text-white">
+              <h2 className="text-xl font-bold mb-4">Delete batch?</h2>
+
+              <p className="opacity-80 mb-6">
+                Are you sure you want to delete this batch? This action cannot be undone.
+              </p>
+
+              <div className="flex justify-end gap-4">
+                <button
+                  onClick={() => setConfirmDeleteId(null)}
+                  className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 border border-zinc-500 rounded-lg font-semibold"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  onClick={async () => {
+                    await deleteBatch(confirmDeleteId);
+                    setConfirmDeleteId(null);
+                  }}
+                  className="px-4 py-2 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg font-semibold"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

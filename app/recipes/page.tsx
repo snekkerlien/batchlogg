@@ -11,6 +11,9 @@ export default function RecipesPage() {
   const [recipes, setRecipes] = useState<any[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
 
+  // ⭐ NEW: delete confirmation modal state
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
   useEffect(() => {
     async function load() {
       const {
@@ -46,6 +49,18 @@ export default function RecipesPage() {
         r.id === id ? { ...r, is_public: !current } : r
       )
     );
+  }
+
+  async function deleteRecipe(id: string) {
+    const res = await fetch("/api/recipes/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+
+    if (res.ok) {
+      setRecipes((prev) => prev.filter((r) => r.id !== id));
+    }
   }
 
   function toggle(id: string) {
@@ -122,6 +137,17 @@ export default function RecipesPage() {
                         {r.is_public ? "Public" : "Private"}
                       </button>
 
+                      {/* DELETE BUTTON — NOW OPENS CONFIRMATION */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmDeleteId(r.id);
+                        }}
+                        className="px-4 py-2 rounded-lg font-semibold border bg-red-700 hover:bg-red-600 border-red-500"
+                      >
+                        Delete
+                      </button>
+
                       {/* ARROW */}
                       <span
                         className={`text-white text-2xl transition-transform duration-200 ${
@@ -132,7 +158,6 @@ export default function RecipesPage() {
                       </span>
                     </div>
                   </button>
-
                   {/* SLIDER CONTENT */}
                   <div
                     className={`transition-all duration-300 ease-in-out overflow-hidden ${
@@ -141,7 +166,6 @@ export default function RecipesPage() {
                   >
                     <div className="space-y-3 opacity-90">
 
-                      {/* STATS */}
                       <p className="text-sm">
                         <strong>OG:</strong> {og}
                         <strong className="ml-4">FG:</strong> {fg}
@@ -152,7 +176,6 @@ export default function RecipesPage() {
                         <strong>Volume:</strong> {volume} L
                       </p>
 
-                      {/* INGREDIENTS */}
                       {r.ingredients && (
                         <p className="whitespace-pre-line">
                           <strong>Ingredients:</strong>{"\n"}
@@ -160,23 +183,20 @@ export default function RecipesPage() {
                         </p>
                       )}
 
-                      {/* METHOD */}
                       {r.method && (
                         <p className="whitespace-pre-line">
-                          <strong>Method:</strong>{"\n"}
+                          <strong>Full Process:</strong>{"\n"}
                           {r.method}
                         </p>
                       )}
 
-                      {/* NOTES */}
                       {r.notes && (
                         <p className="whitespace-pre-line">
-                          <strong>Notes:</strong>{"\n"}
+                          <strong>Recipe notes:</strong>{"\n"}
                           {r.notes}
                         </p>
                       )}
 
-                      {/* NOTES LOG */}
                       {r.notes_log && r.notes_log.length > 0 && (
                         <div className="whitespace-pre-line">
                           <strong>Note log:</strong>
@@ -185,7 +205,6 @@ export default function RecipesPage() {
                         </div>
                       )}
 
-                      {/* NOTE LOG BUTTON */}
                       <div className="flex justify-end pt-4">
                         <Link
                           href={`/recipes/${r.id}`}
@@ -204,6 +223,38 @@ export default function RecipesPage() {
             <p className="opacity-60 text-center">No recipes found.</p>
           )}
         </div>
+
+        {/* ⭐ CONFIRM DELETE MODAL */}
+        {confirmDeleteId && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-zinc-900 border border-white/20 p-6 rounded-xl w-full max-w-sm text-white">
+              <h2 className="text-xl font-bold mb-4">Delete recipe?</h2>
+
+              <p className="opacity-80 mb-6">
+                Are you sure you want to delete this recipe? This action cannot be undone.
+              </p>
+
+              <div className="flex justify-end gap-4">
+                <button
+                  onClick={() => setConfirmDeleteId(null)}
+                  className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 border border-zinc-500 rounded-lg font-semibold"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  onClick={async () => {
+                    await deleteRecipe(confirmDeleteId);
+                    setConfirmDeleteId(null);
+                  }}
+                  className="px-4 py-2 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg font-semibold"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <p className="text-sm opacity-40 mt-12 text-center">
           © {new Date().getFullYear()} Batchlog

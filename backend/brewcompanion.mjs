@@ -62,7 +62,7 @@ app.post("/brewcompanion", async (req, res) => {
       messages: [
      { role: "system", content: superPrompt },
          ...safeHistory,
-      { role: "user", content: prompt }
+    { role: "user", content: prompt }
   ]
 }),
     });

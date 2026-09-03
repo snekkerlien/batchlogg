@@ -45,6 +45,7 @@ ${notes}
           value={ingredients}
           onChange={setIngredients}
           placeholder="Please fill in all your ingredients"
+          name="ingredients"
         />
       </div>
 
@@ -54,6 +55,7 @@ ${notes}
           value={steps}
           onChange={setSteps}
           placeholder="Walk us through your full process"
+          name="full_process"
         />
       </div>
 
@@ -63,6 +65,7 @@ ${notes}
           value={notes}
           onChange={setNotes}
           placeholder="Additional notes..."
+          name="notes"
         />
       </div>
 

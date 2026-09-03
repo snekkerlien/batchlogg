@@ -49,7 +49,7 @@ export default {
 // CORS for Vercel frontend
 function corsHeaders() {
   return {
-    "Access-Control-Allow-Origin": "https://batchlogg.vercel.app",
+    "Access-Control-Allow-Origin": "http://localhost:3000",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
   };
@@ -68,18 +68,30 @@ async function handleBrewcompanion(request, env) {
           : JSON.stringify(msg.content),
     }));
 
-    const response = await fetch(env.CLOUDFLARE_WORKER_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "@cf/meta/llama-3.1-8b-instruct",
-         messages: [
-        { role: "system", content: superPrompt },
-          ...safeHistory,
-       { role: "user", content: prompt }
-  ]
-}),
-    });
+  const ai = env.AI;
+
+const result = await ai.run(
+  "@cf/meta/llama-3.1-8b-instruct",
+  {
+    messages: [
+      { role: "system", content: superPrompt },
+      ...safeHistory,
+      { role: "user", content: prompt }
+    ]
+  }
+);
+
+return new Response(
+  JSON.stringify({ answer: result.response }),
+  {
+    status: 200,
+    headers: {
+      "Content-Type": "application/json",
+      ...corsHeaders(),
+    },
+  }
+);
+
 
     // --- FIX: Proper error handling ---
     if (!response.ok) {

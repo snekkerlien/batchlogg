@@ -26,14 +26,16 @@ export async function createBatch(formData: FormData) {
 
   // Find next batch number
   const { data: last } = await supabase
-    .from("batches")
-    .select("batchnummer")
-    .order("batchnummer", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  .from("batches")
+  .select("batchnummer_int")
+  .eq("user_id", userId)
+  .order("batchnummer_int", { ascending: false })
+  .limit(1)
+  .maybeSingle();
 
-  const nextNumber = last ? Number(last.batchnummer) + 1 : 1;
-  const formattedBatchnummer = String(nextNumber).padStart(4, "0");
+const nextInt = last ? last.batchnummer_int + 1 : 1;
+const nextFormatted = String(nextInt).padStart(4, "0");
+
 
   // Fetch fields
   const name = formData.get("name") as string;
@@ -48,7 +50,8 @@ export async function createBatch(formData: FormData) {
 
   // Insert batch (UUID as aktivt_kar)
   const { error } = await supabase.from("batches").insert({
-    batchnummer: formattedBatchnummer,
+    batchnummer_int: nextInt,
+    batchnummer: nextFormatted,
     aktivt_kar: karId,        // correct: UUID
     user_id: userId,
     name,

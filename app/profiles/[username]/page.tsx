@@ -50,7 +50,6 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
         .select("*")
         .eq("user_id", userId);
 
-      // ⭐ FILTER: Only show public vessels unless owner
       const visibleKar = isOwner
         ? karRaw ?? []
         : (karRaw ?? []).filter((k: any) => k.is_public === true);
@@ -118,8 +117,6 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
 
         {/* TOP BAR */}
         <div className="flex items-center justify-between mb-6">
-
-          {/* BACK BUTTON */}
           <button
             onClick={() => router.back()}
             className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg flex items-center justify-center"
@@ -160,8 +157,26 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
               <Link
                 key={k.id}
                 href={`/profiles/${params.username}/${k.id}`}
-                className="border border-white/10 rounded-xl p-4 bg-white/5 w-32 h-32 flex flex-col items-center justify-center hover:bg-white/10 transition"
+                className="relative border border-white/10 rounded-xl p-4 bg-white/5 w-32 h-32 flex flex-col items-center justify-center hover:bg-white/10 transition overflow-hidden"
               >
+                {(k.status === "Primary" || k.status === "Secondary") && (
+                  <div className="bubble-container">
+                    {[...Array(12)].map((_, i) => (
+                      <span
+                        key={i}
+                        className="bubble"
+                        style={{
+                          left: `${Math.random() * 100}%`,
+                          animationDuration: `${2 + Math.random() * 3}s`,
+                          animationDelay: `${Math.random() * 2}s`,
+                          width: `${4 + Math.random() * 6}px`,
+                          height: `${4 + Math.random() * 6}px`,
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+
                 <span className="text-lg font-bold text-green-300">
                   Vessel {k.nummer}
                 </span>
@@ -272,6 +287,47 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
         <p className="text-sm opacity-40 mt-12 text-center">
           © {new Date().getFullYear()} Batchlog
         </p>
+
+        {/* ⭐ BUBBLE CSS */}
+        <style jsx>{`
+          .bubble-container {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 1;
+          }
+
+          .bubble {
+            position: absolute;
+            bottom: -28px;
+            background: rgba(223, 228, 226, 0.28);
+            border-radius: 50%;
+            filter: blur(1.2px);
+            animation-name: sleekRise;
+            animation-timing-function: linear;
+            animation-iteration-count: infinite;
+            opacity: 0;
+          }
+
+          @keyframes sleekRise {
+            0% {
+              transform: translateY(0) scale(0.8);
+              opacity: 0;
+            }
+            20% {
+              opacity: 0.45;
+            }
+            60% {
+              opacity: 0.55;
+            }
+            100% {
+              transform: translateY(-150px) scale(1.05);
+              opacity: 0;
+            }
+          }
+        `}</style>
+
       </div>
     </main>
   );

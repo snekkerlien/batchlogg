@@ -115,7 +115,7 @@ export default function RecipeNotesPage({ params }: { params: { id: string } }) 
 
           {/* Notes */}
           <div className="p-4 bg-white/5 border border-white/10 rounded-xl whitespace-pre-line">
-            <h2 className="text-2xl font-semibold mb-3">Notes</h2>
+            <h2 className="text-2xl font-semibold mb-3">Recipe notes</h2>
             {recipe.notes || "No notes added"}
           </div>
 

@@ -130,7 +130,7 @@ export default async function KarDetailPage({
 
             <p className="opacity-80">Batch number: {batch.batchnummer}</p>
             <p className="opacity-80">
-              Start date: {new Date(batch.startdato).toLocaleDateString("en-GB")}
+              Start date: {new Date(batch.startdato).toLocaleDateString("en-US")}
             </p>
             <p className="opacity-80">Volume: {batch.volume_l} L</p>
             <p className="opacity-80">OG: {batch.og}</p>
@@ -163,21 +163,21 @@ export default async function KarDetailPage({
                 <div>
                   <h4 className="font-semibold text-white/90 mb-1">Ingredients</h4>
                   <p className="opacity-80">
-                    {batch.oppskrift.split("Ingredienser:")[1]?.split("Fremgangsmåte:")[0]?.trim()}
+                    {batch.oppskrift.split("Ingredients:")[1]?.split("Full process:")[0]?.trim()}
                   </p>
                 </div>
 
                 <div>
                   <h4 className="font-semibold text-white/90 mb-1">Full process</h4>
                   <p className="opacity-80">
-                    {batch.oppskrift.split("Fremgangsmåte:")[1]?.split("Notater:")[0]?.trim()}
+                    {batch.oppskrift.split("Full process:")[1]?.split("Notes:")[0]?.trim()}
                   </p>
                 </div>
 
                 <div>
-                  <h4 className="font-semibold text-white/90 mb-1">Notes</h4>
+                  <h4 className="font-semibold text-white/90 mb-1">Recipe notes</h4>
                   <p className="opacity-80">
-                    {batch.oppskrift.split("Notater:")[1]?.trim()}
+                    {batch.oppskrift.split("Notes:")[1]?.trim()}
                   </p>
                 </div>
 

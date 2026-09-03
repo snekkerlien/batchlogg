@@ -17,6 +17,21 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+function daysSince(dateString: string) {
+  const start = new Date(dateString);
+  const now = new Date();
+
+  const diffMs = now.getTime() - start.getTime();
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  return days;
+}
+
+function dayLabel(days: number) {
+  return days === 1 ? "day" : "days";
+}
+
+
 export default function KarPage({ params }: { params: { id: string } }) {
   const [openSecondary, setOpenSecondary] = useState(false);
   const [openSecondaryActive, setOpenSecondaryActive] = useState(false);
@@ -28,6 +43,9 @@ export default function KarPage({ params }: { params: { id: string } }) {
   const [historyBatch, setHistoryBatch] = useState<any>(null);
   const [notes, setNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [openImport, setOpenImport] = useState(false);
+  const [recipes, setRecipes] = useState<any[]>([]);
+
  
 
 
@@ -36,6 +54,18 @@ export default function KarPage({ params }: { params: { id: string } }) {
       setUser(data.user);
     });
   }, []);
+
+  useEffect(() => {
+  if (!user) return;
+
+  supabase
+    .from("recipes")
+    .select("*")
+    .or(`user_id.eq.${user.id}, is_public.eq.true`)
+    .order("created_at", { ascending: false })
+    .then(({ data }) => setRecipes(data ?? []));
+  }, [user]);
+
 
   useEffect(() => {
     if (!user) return;
@@ -221,7 +251,7 @@ async function toggleVisibility() {
                   </div>
 
                   <div>
-                    <label className="block mb-1 font-semibold">Brew date</label>
+                    <label className="block mb-1 font-semibold">Start date</label>
                     <input
                       name="startdato"
                       type="date"
@@ -250,6 +280,8 @@ async function toggleVisibility() {
                   <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
                     Start batch
                   </button>
+
+                  
                 </form>
               </div>
             )}
@@ -268,7 +300,13 @@ async function toggleVisibility() {
               </h3>
 
               <p className="opacity-80">Batch ID: {activeBatch.batchnummer}</p>
-              <p className="opacity-80">Brew date: {activeBatch.startdato}</p>
+              <p className="opacity-80">
+                Start date: {new Date(activeBatch.startdato).toLocaleDateString("en-US")}
+                <span className="ml-2 opacity-70">
+                  ({daysSince(activeBatch.startdato)} {dayLabel(daysSince(activeBatch.startdato))})
+                </span>
+              </p>
+
               <p className="opacity-80">Batch volume: {activeBatch.volume_l} L</p>
               <p className="opacity-80">Original Gravity (OG): {activeBatch.og}</p>
 
@@ -432,14 +470,19 @@ async function toggleVisibility() {
               </h3>
 
               <p className="opacity-80">Batch ID: {activeBatch.batchnummer}</p>
-              <p className="opacity-80">Brew date: {activeBatch.startdato}</p>
+              <p className="opacity-80">
+                Start date: {new Date(activeBatch.startdato).toLocaleDateString("en-US")}
+                <span className="ml-2 opacity-70">
+                  ({daysSince(activeBatch.startdato)} {dayLabel(daysSince(activeBatch.startdato))})
+                </span>
+              </p>
               <p className="opacity-80">Original Gravity (OG): {activeBatch.og}</p>
               <p className="opacity-80">Batch volume: {activeBatch.volume_l} L</p>
               <p className="opacity-80">Status: Primary fermentation</p>
 
               <div className="mt-6 p-4 bg-white/5 border border-white/10 rounded-lg">
                 <h3 className="text-xl font-bold mb-3 text-green-300">
-                  Brew sheet
+                  Recipe
                 </h3>
 
                 <div className="space-y-4 text-sm whitespace-pre-wrap">
@@ -457,7 +500,7 @@ async function toggleVisibility() {
 
                   <div>
                     <h4 className="font-semibold text-white/90 mb-1">
-                      Brew process
+                      Full Process
                     </h4>
                     <p className="opacity-80">
                       {activeBatch.oppskrift
