@@ -11,6 +11,20 @@ type KarDetailParams = {
   karId: string;
 };
 
+function daysSince(dateString: string) {
+  const start = new Date(dateString);
+  const now = new Date();
+
+  const diffMs = now.getTime() - start.getTime();
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  return days;
+}
+
+function dayLabel(days: number) {
+  return days === 1 ? "day" : "days";
+}
+
 export default async function KarDetailPage({
   params,
 }: {
@@ -130,8 +144,11 @@ export default async function KarDetailPage({
 
             <p className="opacity-80">Batch number: {batch.batchnummer}</p>
             <p className="opacity-80">
-              Start date: {new Date(batch.startdato).toLocaleDateString("en-US")}
-            </p>
+                Start date: {new Date(activeBatch.startdato).toLocaleDateString("en-US")}
+                <span className="ml-2 opacity-70">
+                  ({daysSince(activeBatch.startdato)} {dayLabel(daysSince(activeBatch.startdato))})
+                </span>
+              </p>
             <p className="opacity-80">Volume: {batch.volume_l} L</p>
             <p className="opacity-80">OG: {batch.og}</p>
 
