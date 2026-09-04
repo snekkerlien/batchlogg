@@ -61,7 +61,7 @@ export const motdList = [
   "You brew like someone who knows exactly what they’re doing 😎",
   "Let’s brew something that tastes like mountain air 🏔️",
   "The brewery opens its arms when you walk in 🤝",
-  "You’re back — high‑level craftsmanship incoming 🏆",
+  "You’re back — highlevel craftsmanship incoming 🏆",
   "Let’s brew something that tastes like warm hands 🔥",
   "Your vessels are ready for a new story 📜",
   "You brew like someone with brewing in their blood 👴",
@@ -91,7 +91,7 @@ export const motdList = [
   "You brew like someone who found their calling 😎",
   "Let’s brew something that tastes like true craftsmanship 🛠️",
   "The brewery feels alive when you’re here 🔥",
-  "You’re back — high‑level brewing incoming 🏆",
+  "You’re back — highlevel brewing incoming 🏆",
   "Let’s brew something that tastes like adventure in a glass 🍯",
   "Your vessels are ready to shine 🌟",
   "You brew like someone born for this ⚔️",
@@ -99,39 +99,7 @@ export const motdList = [
   "The brewery feels complete when you’re here 🍻"
 ];
 
-function shuffle(array: string[]) {
-  const arr = [...array];
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-
 export function getNextMotd() {
-  if (typeof window === "undefined") {
-    return motdList[0];
-  }
-
-  let shuffled = JSON.parse(localStorage.getItem("motd_shuffled") || "null");
-  let pointer = Number(localStorage.getItem("motd_pointer") || "0");
-
-  if (!shuffled || shuffled.length !== motdList.length) {
-    shuffled = shuffle(motdList);
-    pointer = 0;
-  }
-
-  const motd = shuffled[pointer];
-
-  pointer++;
-
-  if (pointer >= shuffled.length) {
-    shuffled = shuffle(motdList);
-    pointer = 0;
-  }
-
-  localStorage.setItem("motd_shuffled", JSON.stringify(shuffled));
-  localStorage.setItem("motd_pointer", String(pointer));
-
-  return motd;
+  const index = Math.floor(Math.random() * motdList.length);
+  return motdList[index];
 }
