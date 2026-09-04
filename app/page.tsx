@@ -174,7 +174,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <p className="text-sm opacity-40 mt-20 relative z-10">
-        © {new Date().getFullYear()} Batchlog
+        © {new Date().getFullYear()} Batchlogg
       </p>
     </div>
   );
