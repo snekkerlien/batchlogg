@@ -17,7 +17,9 @@ export async function POST(req: Request) {
     headers: {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
-      "HTTP-Referer": "https://batchlogg.vercel.app",
+      "HTTP-Referer": process.env.NODE_ENV === "development"
+        ? "http://localhost:3000"
+        : "https://batchlogg.vercel.app",
       "X-Title": "BrewCompanion"
     },
     body: JSON.stringify({
