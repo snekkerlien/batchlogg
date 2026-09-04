@@ -7,9 +7,8 @@ export function useBrewCompanionLLM() {
   ): Promise<string> {
 
     try {
-      const res = await fetch("https://brewcompanion-backend.mads-ad9.workers.dev/brewcompanion", {
+      const res = await fetch("/api/brewcompanion", {
         method: "POST",
-        mode: "cors",
         headers: {
           "Content-Type": "application/json"
         },
@@ -27,7 +26,5 @@ export function useBrewCompanionLLM() {
     }
   }
 
-  return {
-    ask
-  };
+  return { ask };
 }

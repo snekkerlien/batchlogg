@@ -1,6 +1,0 @@
-name = "brewcompanion-backend"
-main = "worker.js"
-compatibility_date = "2024-09-01"
-
-[vars]
-CLOUDFLARE_WORKER_URL = "https://brewcompanion-ai.mads-ad9.workers.dev"
