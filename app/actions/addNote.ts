@@ -10,8 +10,10 @@ export async function addNote(formData: FormData) {
   const { supabase } = await supabaseServer();
 
   const batchId = formData.get("batch_id")?.toString();
-  const note = formData.get("note")?.toString() ?? "";
+  const noteRaw = formData.get("note")?.toString() ?? "";
   const imageFile = formData.get("image") as File | null;
+
+  const note = noteRaw.trim(); // ⭐ ren tekst
 
   console.log("[addNote] Batch ID:", batchId);
   console.log("[addNote] Note:", note);
@@ -30,9 +32,15 @@ export async function addNote(formData: FormData) {
     return;
   }
 
+  // ⭐ NYTT: Tillat bilde uten tekst, men stopp hvis begge er tomme
+  if (!note && !imageFile) {
+    console.log("[addNote] Ingen tekst eller bilde → avbryter");
+    return;
+  }
+
   let imageUrl: string | null = null;
 
-  // Hvis det finnes et bilde → last opp og hent URL
+  // Last opp bilde hvis det finnes
   if (imageFile && imageFile.size > 0) {
     try {
       imageUrl = await uploadNoteImage(imageFile, batchId!);
@@ -47,14 +55,13 @@ export async function addNote(formData: FormData) {
     .insert({
       batch_id: batchId,
       user_id: user.id,
-      note: note || null,
-      image_url: imageUrl,
+      note: note || null,          // ⭐ tekst eller null
+      image_url: imageUrl,         // ⭐ bilde eller null
       note_type: imageUrl ? "image" : "text",
     });
 
   console.log("[addNote] InsertError:", insertError);
 
-  // ⭐ NYTT: Revalidate slik at nye notater vises uten logout
   if (batchId) {
     revalidatePath(`/kar/${batchId}`);
   }
