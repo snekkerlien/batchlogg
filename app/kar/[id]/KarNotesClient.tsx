@@ -35,21 +35,29 @@ export function KarNotesClient({
     setImagePreview(URL.createObjectURL(file));
   }
 
-  async function handleSubmit(formData: FormData) {
-    formData.set("batch_id", batchId);
-    formData.set("kar_id", karId);
-    formData.set("user_id", userId);
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  e.preventDefault();
 
-    if (imageFile) {
-      formData.set("image", imageFile);
-    }
+  const formData = new FormData();
+  formData.set("batch_id", batchId);
+  formData.set("kar_id", karId);
+  formData.set("user_id", userId);
 
-    await addNote(formData);
-
-    setNoteText("");
-    setImageFile(null);
-    setImagePreview(null);
+  if (noteText.trim() !== "") {
+    formData.set("note", noteText.trim());
   }
+
+  if (imageFile) {
+    formData.set("image", imageFile);
+  }
+
+  await addNote(formData);
+
+  setNoteText("");
+  setImageFile(null);
+  setImagePreview(null);
+}
+
 
   async function handleDeleteNote(noteId: string) {
     await deleteNoteServer(noteId, karId);
@@ -116,7 +124,7 @@ export function KarNotesClient({
       {/* ADD NEW NOTE */}
       <h3 className="text-xl font-semibold mb-4">Add note</h3>
 
-      <form action={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
         <input type="hidden" name="batch_id" value={batchId} />
         <input type="hidden" name="kar_id" value={karId} />
