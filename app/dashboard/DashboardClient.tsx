@@ -402,7 +402,7 @@ useEffect(() => {
       </p>
 
       <p className="text-center text-zinc-300 mb-10 italic">
-        You can access your recipes, batch history, the community, your account and our BrewCompanion AI Recipe builder through the menu!
+        You can access your recipes, batch history, the community and your account through the menu!
       </p>
 
       <p className="text-sm opacity-40 mb-2 mt-12 text-center">
