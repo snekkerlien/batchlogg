@@ -61,23 +61,12 @@ useEffect(() => {
 }, []);
 
   async function getToken() {
-    const {
-      data: { session },
-    } = await supabaseBrowser.auth.getSession();
+  const {
+    data: { session },
+  } = await supabaseBrowser.auth.getSession();
 
-    let token = session?.access_token;
-
-    if (!token) {
-      const cookieToken = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("sb-access-token="))
-        ?.split("=")[1];
-
-      token = cookieToken;
-    }
-
-    return token;
-  }
+  return session?.access_token || null;
+}
 
   async function loadDashboardData() {
     const token = await getToken();
@@ -165,9 +154,6 @@ useEffect(() => {
     setLoading(false);
   }
 
-  useEffect(() => {
-    loadDashboardData();
-  }, [router]);
 
 
   function toggleSelectMode() {
@@ -211,9 +197,13 @@ useEffect(() => {
   async function createKar() {
     const token = await getToken();
     if (!token) {
-      router.replace("/");
-      return;
-    }
+  await supabaseBrowser.auth.refreshSession();
+  const { data: { session } } = await supabaseBrowser.auth.getSession();
+  if (!session?.access_token) {
+    router.replace("/");
+    return;
+  }
+}
 
     const res = await fetch("/kar/create", {
       method: "POST",
