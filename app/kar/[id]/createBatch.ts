@@ -26,16 +26,15 @@ export async function createBatch(formData: FormData) {
 
   // Find next batch number
   const { data: last } = await supabase
-  .from("batches")
-  .select("batchnummer_int")
-  .eq("user_id", userId)
-  .order("batchnummer_int", { ascending: false })
-  .limit(1)
-  .maybeSingle();
+    .from("batches")
+    .select("batchnummer_int")
+    .eq("user_id", userId)
+    .order("batchnummer_int", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-const nextInt = last ? last.batchnummer_int + 1 : 1;
-const nextFormatted = String(nextInt).padStart(4, "0");
-
+  const nextInt = last ? last.batchnummer_int + 1 : 1;
+  const nextFormatted = String(nextInt).padStart(4, "0");
 
   // Fetch fields
   const name = formData.get("name") as string;
@@ -49,28 +48,39 @@ const nextFormatted = String(nextInt).padStart(4, "0");
   }
 
   // Insert batch (UUID as aktivt_kar)
-  const { error } = await supabase.from("batches").insert({
-    batchnummer_int: nextInt,
-    batchnummer: nextFormatted,
-    aktivt_kar: karId,        // correct: UUID
-    user_id: userId,
-    name,
-    volume_l,
-    startdato,
-    og,
-    oppskrift,
-    status: "Aktiv",
-  });
+  const { data: batch, error } = await supabase
+    .from("batches")
+    .insert({
+      batchnummer_int: nextInt,
+      batchnummer: nextFormatted,
+      aktivt_kar: karId, // correct: UUID
+      user_id: userId,
+      name,
+      volume_l,
+      startdato,
+      og,
+      oppskrift,
+      status: "Aktiv",
+    })
+    .select()
+    .single();
 
   if (error) {
     throw new Error("Insert failed: " + error.message);
   }
 
+  // ⭐ NEW: Register OG as first SG reading
+  await supabase.from("sg_readings").insert({
+    batch_id: batch.id,
+    sg: og,
+    created_at: startdato, // same date as batch start
+  });
+
   // Update vessel status (UUID)
   await supabase
     .from("kar")
     .update({ status: "Aktiv" })
-    .eq("id", karId);         // correct: UUID
+    .eq("id", karId); // correct: UUID
 
   // Revalidate correct path (UUID)
   revalidatePath(`/kar/${karId}`);

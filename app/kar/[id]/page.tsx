@@ -6,6 +6,28 @@ import * as Actions from "./actions";
 import NextDynamic from "next/dynamic";
 import { KarNotesClient } from "./KarNotesClient";
 import MenuOverlay from "@/app/components/MenuOverlay";
+import { Line } from "react-chartjs-2";
+
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 const RecipeEditor = NextDynamic(
   () => import("./RecipeEditor").then((mod) => mod.RecipeEditor),
@@ -46,6 +68,10 @@ export default function KarPage({ params }: { params: { id: string } }) {
   const [openImport, setOpenImport] = useState(false);
   const [recipes, setRecipes] = useState<any[]>([]);
   const [openEdit, setOpenEdit] = useState(false);
+  const [sgReadings, setSgReadings] = useState<any[]>([]);
+  const [openSG, setOpenSG] = useState(false);
+  const [sgValue, setSgValue] = useState("");
+
   
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -115,6 +141,18 @@ export default function KarPage({ params }: { params: { id: string } }) {
     }
   }, [user, kar]);
 
+  useEffect(() => {
+  if (!activeBatch) return;
+
+  supabase
+    .from("sg_readings")
+    .select("*")
+    .eq("batch_id", activeBatch.id)
+    .order("created_at", { ascending: true })
+    .then(({ data }) => setSgReadings(data ?? []));
+}, [activeBatch]);
+
+
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
@@ -142,6 +180,27 @@ export default function KarPage({ params }: { params: { id: string } }) {
   const isOwner = kar.user_id === user.id;
   const hasActive = !!activeBatch;
   const hasHistory = !!historyBatch;
+
+async function saveSG() {
+  const { data, error } = await supabase
+    .from("sg_readings")
+    .insert({
+      batch_id: activeBatch.id,
+      sg: Number(sgValue),
+    });
+
+  if (!error) {
+    setSgValue("");
+    // Refresh SG list
+    supabase
+      .from("sg_readings")
+      .select("*")
+      .eq("batch_id", activeBatch.id)
+      .order("created_at", { ascending: true })
+      .then(({ data }) => setSgReadings(data ?? []));
+  }
+}
+
 
   // ⭐ NEW: Toggle visibility for this vessel
 async function toggleVisibility() {
@@ -723,6 +782,104 @@ async function toggleVisibility() {
               )}
             </div>
 
+            {isOwner && (
+  <div className="bg-white/5 border border-white/10 rounded-lg p-4 mt-6 mb-6">
+    <button
+      type="button"
+      onClick={() => setOpenSG(!openSG)}
+      className="w-full flex items-center justify-between font-semibold text-green-300 cursor-pointer"
+    >
+      Specific Gravity Development (SG)
+      <span
+        className={`text-white text-xl transition-transform duration-300 ${
+          openSG ? "rotate-90" : "rotate-180"
+        }`}
+      >
+        ▶
+      </span>
+    </button>
+
+    <div
+      className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+        openSG ? "[grid-template-rows:1fr]" : "[grid-template-rows:0fr]"
+      }`}
+    >
+      <div className="overflow-hidden">
+        {/* SG input */}
+        <div className="mt-4 flex flex-col gap-4">
+          <input
+            type="number"
+            step="0.001"
+            value={sgValue}
+            onChange={(e) => setSgValue(e.target.value)}
+            placeholder="Enter SG"
+            className="p-3 rounded bg-black/40 border border-white/20"
+          />
+
+          <button
+            onClick={saveSG}
+            className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold"
+          >
+            Save SG
+          </button>
+        </div>
+
+        {/* SG graph */}
+        {sgReadings.length > 0 && (
+          <div className="mt-6">
+  <h3 className="text-xl font-bold mb-3 text-green-300">
+    Development graph
+  </h3>
+
+  <div className="bg-black/40 p-4 rounded-lg border border-white/10">
+    <Line
+  data={{
+    labels: sgReadings.map((r) =>
+      new Date(r.created_at).toLocaleDateString()
+    ),
+    datasets: [
+      {
+        data: sgReadings.map((r) => Number(r.sg).toFixed(3)),
+        borderColor: "rgb(75, 192, 192)",
+        tension: 0,          // ⭐ smooth curve
+        pointRadius: 4,
+        pointHoverRadius: 6,
+      },
+    ],
+  }}
+  options={{
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      callbacks: {
+        label: (context) => {
+          const value = Number(context.raw);
+          return value.toFixed(3).replace(",", ".");
+        },
+      },
+    },
+  },
+  scales: {
+    y: {
+      ticks: {
+        callback: (value) =>
+          Number(value).toFixed(3).replace(",", "."),
+      },
+    },
+  },
+}}
+
+/>
+  </div>
+</div>
+
+        )}
+      </div>
+    </div>
+  </div>
+)}
+
+            
             {/* Rack to secondary */}
             {isOwner && (
               <div className="bg-white/5 border border-white/10 rounded-lg p-4">

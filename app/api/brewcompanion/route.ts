@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { NextRequest } from "next/server";
-
-export async function POST(req: NextRequest)
+export async function POST(req: Request) {
   const { prompt, history = [] } = await req.json();
 
   const messages = [
@@ -25,12 +23,20 @@ export async function POST(req: NextRequest)
       "X-Title": "BrewCompanion"
     },
     body: JSON.stringify({
-      model: "minimax/minimax-m3",
+      model: "nvidia/nemotron-3.5-lightning",
       messages,
       temperature: 0.7
     })
   });
 
   const data = await response.json();
-  return NextResponse.json({ answer: data.choices[0].message.content });
+  console.log("OPENROUTER RAW RESPONSE:", JSON.stringify(data, null, 2));
+
+  const answer =
+    data?.choices?.[0]?.message?.content ??
+    data?.choices?.[0]?.content ??
+    data?.output_text ??
+    "No answer";
+
+  return NextResponse.json({ answer });
 }

@@ -41,25 +41,38 @@ export async function createBatch(formData: FormData) {
     throw new Error("Mangler obligatoriske felter.");
   }
 
-  const { error } = await supabase.from("batches").insert({
-    batchnummer: formattedBatchnummer,
-    aktivt_kar: karId,
-    user_id: userId,
-    name,
-    volume_l,
-    startdato,
-    og,
-    oppskrift,
-    status: "Aktiv",
-  });
+  // ⭐ Insert batch and return the created row
+  const { data: batch, error } = await supabase
+    .from("batches")
+    .insert({
+      batchnummer: formattedBatchnummer,
+      aktivt_kar: karId,
+      user_id: userId,
+      name,
+      volume_l,
+      startdato,
+      og,
+      oppskrift,
+      status: "Aktiv",
+    })
+    .select()
+    .single();
 
   if (error) throw new Error("Insert failed: " + error.message);
+
+  // ⭐ NEW: Register OG as first SG reading
+  await supabase.from("sg_readings").insert({
+    batch_id: batch.id,
+    sg: og,
+    created_at: startdato, // same date as batch start
+  });
 
   await supabase.from("kar").update({ status: "Aktiv" }).eq("id", karId);
 
   revalidatePath(`/kar/${karId}`);
   redirect(`/kar/${karId}`);
 }
+
 
 // ---------------------------------------------------------
 // 1. KANSELLER BATCH
