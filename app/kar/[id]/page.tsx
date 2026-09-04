@@ -332,6 +332,22 @@ async function toggleVisibility() {
                     />
                   </div>
 
+                  <div>
+                    <label className="block mb-1 font-semibold">Batch type</label>
+                    <select
+                      name="type"
+                      required
+                      className="w-full p-3 rounded bg-black/40 border border-white/20"
+                     >
+                      <option value="Mead">Mead</option>
+                      <option value="Cider">Cider</option>
+                      <option value="Beer">Beer</option>
+                      <option value="Wine">Wine</option>
+                      <option value="Hard Seltzer">Hard Seltzer</option>
+                    </select>
+                  </div>
+
+
                   <RecipeEditor />
 
                   <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">

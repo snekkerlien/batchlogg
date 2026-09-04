@@ -36,12 +36,12 @@ export async function createBatch(formData: FormData) {
   const startdato = formData.get("startdato") as string;
   const og = Number(formData.get("og"));
   const oppskrift = formData.get("oppskrift") as string;
+  const type = formData.get("type") as string;   // ⭐ FIX
 
   if (!name || !volume_l || !startdato || !og) {
     throw new Error("Mangler obligatoriske felter.");
   }
 
-  // ⭐ Insert batch and return the created row
   const { data: batch, error } = await supabase
     .from("batches")
     .insert({
@@ -53,6 +53,7 @@ export async function createBatch(formData: FormData) {
       startdato,
       og,
       oppskrift,
+      type,                     // ⭐ FIX
       status: "Aktiv",
     })
     .select()
@@ -60,11 +61,10 @@ export async function createBatch(formData: FormData) {
 
   if (error) throw new Error("Insert failed: " + error.message);
 
-  // ⭐ NEW: Register OG as first SG reading
   await supabase.from("sg_readings").insert({
     batch_id: batch.id,
     sg: og,
-    created_at: startdato, // same date as batch start
+    created_at: startdato,
   });
 
   await supabase.from("kar").update({ status: "Aktiv" }).eq("id", karId);
@@ -72,6 +72,7 @@ export async function createBatch(formData: FormData) {
   revalidatePath(`/kar/${karId}`);
   redirect(`/kar/${karId}`);
 }
+
 
 
 // ---------------------------------------------------------
