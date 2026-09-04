@@ -78,21 +78,6 @@ export default function AccountPage() {
     setProfile((prev: any) => ({ ...prev, is_public: newValue }));
   }
 
-  async function toggleInventory() {
-  const newValue = !profile.use_inventory;
-
-  const { error } = await supabaseBrowser
-    .from("profiles")
-    .update({ use_inventory: newValue })
-    .eq("id", user.id);
-
-  console.log("UPDATE ERROR:", error);
-
-  setProfile((prev: any) => ({ ...prev, use_inventory: newValue }));
-
-  router.refresh();
-}
-
 
   async function changePassword() {
     setPasswordError("");
@@ -241,24 +226,6 @@ export default function AccountPage() {
             ></div>
           </div>
         </div>
-
-        {/* INVENTORY SYSTEM TOGGLE */}
-<div className="flex items-center justify-center gap-4 mb-10">
-  <p className="text-sm opacity-80">Inventory system</p>
-
-  <div
-    onClick={toggleInventory}
-    className={`w-14 h-7 rounded-full cursor-pointer transition relative ${
-      profile?.use_inventory ? "bg-green-500" : "bg-zinc-600"
-    }`}
->
-    <div
-      className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition ${
-        profile?.use_inventory ? "translate-x-7" : ""
-      }`}
-    ></div>
-  </div>
-</div>
 
 
         {/* AVATAR TEMPORARILY DISABLED */}

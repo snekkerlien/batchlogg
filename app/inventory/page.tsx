@@ -51,14 +51,6 @@ export default function InventoryPage() {
     return () => window.removeEventListener("focus", onFocus);
   }, []);
 
-  if (profile && profile.use_inventory === false) {
-    return (
-      <main className="min-h-screen flex items-center justify-center text-white">
-        <h1 className="text-2xl font-bold">Inventory system is disabled</h1>
-      </main>
-    );
-  }
-
   const lowItems = items.filter((i) => {
     const current = Number(i.amount);
     const minimum = Number(i.minimum_amount);

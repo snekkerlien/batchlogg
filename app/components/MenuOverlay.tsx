@@ -12,27 +12,7 @@ export default function MenuOverlay({ current }: { current: string }) {
 
   const [profile, setProfile] = useState<any>(null);
 
-  // HENT PROFIL FOR Å SKJULE INVENTORY
-  useEffect(() => {
-    async function loadProfile() {
-      const {
-        data: { session },
-      } = await supabaseBrowser.auth.getSession();
 
-      if (!session) return;
-
-      const res = await fetch("/api/profile", {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      const data = await res.json();
-      setProfile(data);
-    }
-
-    loadProfile();
-  }, []);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -53,7 +33,7 @@ export default function MenuOverlay({ current }: { current: string }) {
     router.replace("/");
   }
 
-  // MENYVALG — inventory legges til kun hvis aktivert
+  
   const items: { href: string; label: string; key: string }[] = [
     { href: "/dashboard", label: "Dashboard", key: "dashboard" },
     { href: "/recipes", label: "My recipes", key: "recipes" },
@@ -61,11 +41,8 @@ export default function MenuOverlay({ current }: { current: string }) {
     { href: "/profiles", label: "Community", key: "profiles" },
     { href: "/account", label: "My account", key: "account" },
     { href: "/abvtools", label: "ABV Tools", key: "abvtools" },
+    { href: "/inventory", label: "Inventory", key: "inventory" },
   ];
-
-  if (profile?.use_inventory) {
-    items.push({ href: "/inventory", label: "Inventory", key: "inventory" });
-  }
 
   return (
     <div ref={menuRef} className="relative inline-flex">
