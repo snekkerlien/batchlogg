@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
-export async function POST(req: Request) {
+import { NextRequest } from "next/server";
+
+export async function POST(req: NextRequest)
   const { prompt, history = [] } = await req.json();
 
   const messages = [
