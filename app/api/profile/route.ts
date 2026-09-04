@@ -1,5 +1,6 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("username, is_public, avatar_url")
+    .select("username, is_public, avatar_url, use_inventory")
     .eq("id", user.id)
     .single();
 
@@ -92,6 +93,7 @@ export async function GET(request: NextRequest) {
     username: profile.username ?? null,
     is_public: profile.is_public ?? false,
     avatar_url: profile.avatar_url ?? null,
+    use_inventory: profile.use_inventory ?? false,
     kar_count: karCount ?? 0,
     batch_count: batchCount ?? 0,
     recipe_count: recipeCount ?? 0,
