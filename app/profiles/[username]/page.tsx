@@ -179,9 +179,9 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
                 )}
 
                 <span
-                  className="text-lg font-bold text-green-300 block truncate w-full text-center"
+                  className="text-lg font-bold text-green-300 text-center leading-tight line-clamp-2"
                 >
-                  {k.batchName ?? `Vessel ${index + 1}`}
+                  {k.batchName ?? `Vessel`}
                 </span>
 
                 <span
