@@ -67,14 +67,14 @@ export default function KarPage({ params }: { params: { id: string } }) {
   const [historyBatch, setHistoryBatch] = useState<any>(null);
   const [notes, setNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [openImport, setOpenImport] = useState(false);
-  const [recipes, setRecipes] = useState<any[]>([]);
   const [openEdit, setOpenEdit] = useState(false);
   const [sgReadings, setSgReadings] = useState<any[]>([]);
   const [openSG, setOpenSG] = useState(false);
   const [sgValue, setSgValue] = useState("");
   const [showQR, setShowQR] = useState(false);
   const [qrPng, setQrPng] = useState<string | null>(null);
+  const [karLoading, setKarLoading] = useState(true);
+
 
 
   
@@ -89,24 +89,16 @@ export default function KarPage({ params }: { params: { id: string } }) {
   if (!user) return;
 
   supabase
-    .from("recipes")
+    .from("kar")
     .select("*")
-    .or(`user_id.eq.${user.id}, is_public.eq.true`)
-    .order("created_at", { ascending: false })
-    .then(({ data }) => setRecipes(data ?? []));
-  }, [user]);
-
-
-  useEffect(() => {
-    if (!user) return;
-    supabase
-      .from("kar")
-      .select("*")
-      .eq("id", params.id)
-      .eq("user_id", user.id)
-      .single()
-      .then(({ data }) => setKar(data));
-  }, [user, params.id]);
+    .eq("id", params.id)
+    .eq("user_id", user.id)
+    .single()
+    .then(({ data }) => {
+      setKar(data);
+      setKarLoading(false);
+    });
+}, [user, params.id]);
 
   useEffect(() => {
     if (!kar) return;
@@ -167,9 +159,17 @@ export default function KarPage({ params }: { params: { id: string } }) {
     window.location.href = `/auth/login?redirect=/kar/${params.id}`;
   }
   return null;
+  }
+
+  if (karLoading) {
+  return (
+    <main className="min-h-screen flex items-center justify-center text-white">
+      <h1 className="text-2xl font-bold">Loading...</h1>
+    </main>
+  );
 }
 
-  if (!kar && !loading) {
+  if (!kar && !karLoading) {
   return (
     <main className="min-h-screen flex items-center justify-center px-6 py-12 text-white">
       <div className="bg-black/60 backdrop-blur-md p-10 rounded-2xl border border-white/10 text-center max-w-md w-full">
