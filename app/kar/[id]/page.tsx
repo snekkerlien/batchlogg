@@ -169,7 +169,7 @@ export default function KarPage({ params }: { params: { id: string } }) {
   return null;
 }
 
-  if (!kar) {
+  if (!kar && !loading) {
   return (
     <main className="min-h-screen flex items-center justify-center px-6 py-12 text-white">
       <div className="bg-black/60 backdrop-blur-md p-10 rounded-2xl border border-white/10 text-center max-w-md w-full">
