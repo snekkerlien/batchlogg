@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { createBatch } from "./createBatch";
+import { createBatch } from "../../actions/createBatch";
 import { RecipeEditor } from "./RecipeEditor";
 
 type KarType = {

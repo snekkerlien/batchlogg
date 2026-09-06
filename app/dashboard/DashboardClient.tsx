@@ -13,6 +13,7 @@ interface KarType {
   user_id: string;
   created_at: string;
   status: "Aktiv" | "Ledig" | "Sekundær";
+  batchName?: string | null;
 }
 
 export default function DashboardClient() {
@@ -22,7 +23,6 @@ export default function DashboardClient() {
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState("");
   const [kar, setKar] = useState<KarType[]>([]);
-  const [nutrientUpcoming, setNutrientUpcoming] = useState<any[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [motd, setMotd] = useState("");
   const [selectMode, setSelectMode] = useState(false);
@@ -121,18 +121,6 @@ useEffect(() => {
 
     const batches = batchRes.ok ? await batchRes.json() : [];
 
-    // ⭐ Fetch upcoming nutrient additions
-const nutrientRes = await fetch("/api/nutrient/upcoming", {
-  headers: { Authorization: `Bearer ${token}` },
-  credentials: "include",
-});
-
-if (nutrientRes.ok) {
-  const nutrientJson = await nutrientRes.json();
-  setNutrientUpcoming(nutrientJson);
-}
-
-
     const karWithStatus = owned.map((k) => {
       const batch = batches
         .filter((b: any) => b.aktivt_kar === k.id)
@@ -154,7 +142,7 @@ if (nutrientRes.ok) {
         }
       }
 
-      return { ...k, status };
+      return { ...k, status, batchName: batch?.name ?? null };
     });
 
     const sorted = [...karWithStatus].sort(
@@ -334,9 +322,13 @@ if (nutrientRes.ok) {
 )}
 
 
-            <span className="text-lg font-bold text-green-300 relative z-10">
-              Vessel {index + 1}
-            </span>
+            <div
+  className="text-lg font-bold text-green-300 text-center leading-tight line-clamp-3"
+  title={k.batchName ?? `Vessel ${index + 1}`}
+>
+  {k.batchName ?? `Vessel ${index + 1}`}
+</div>
+
 
             <span
               className={
@@ -369,38 +361,6 @@ if (nutrientRes.ok) {
       <p className="text-center mt-5 opacity-60">
   Max vessels: {maxVessels}
 </p>
-
-{/* ⭐ Upcoming Nutrient Additions */}
-{nutrientUpcoming.length > 0 && (
-  <div className="bg-white/5 border border-white/10 p-4 rounded-xl mt-10 mb-6">
-    <h3 className="text-lg font-semibold mb-3 text-center">
-      Upcoming Nutrient Additions
-    </h3>
-
-    <div className="flex flex-col gap-2">
-      {nutrientUpcoming.map((step) => {
-        const timeLeftHours = Math.round(
-          (new Date(step.due_at).getTime() - Date.now()) / 3600000
-        );
-
-        // ⭐ Lookup vessel number from kar[]
-        const vessel = kar.find(v => v.id === step.vessel_number);
-        const vesselNum = vessel?.nummer ?? "?";
-
-        return (
-          <div
-            key={step.id}
-            className="text-sm text-zinc-300 text-center"
-          >
-            Vessel {vesselNum} – Step {step.step_number} due{" "}
-            {timeLeftHours <= 0 ? "now" : `in ${timeLeftHours} hours`}
-          </div>
-        );
-      })}
-    </div>
-  </div>
-)}
-
 
       <div className="flex justify-center mt-10 mb-6">
         {!selectMode && (
@@ -437,7 +397,7 @@ if (nutrientRes.ok) {
       </p>
 
       <p className="text-center text-zinc-300 mb-10 italic">
-        You can access your recipes, batch history, the community and your account through the menu!
+        You can access your recipes, batch history, the community, your account, inventory management and our ABV tools through the menu!
       </p>
 
       <p className="text-sm opacity-40 mb-2 mt-12 text-center">

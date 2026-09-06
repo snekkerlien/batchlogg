@@ -130,7 +130,7 @@ export default function InventoryPage() {
 </div>
 
         {/* GLOBAL LOW STOCK */}
-        <h2 className="text-2xl font-bold mb-4 text-center">Low stock (all categories)</h2>
+        <h2 className="text-2xl font-bold mb-4 text-center">Low stock</h2>
 
         {loading ? (
           <p className="opacity-60 text-center mt-10">Loading…</p>

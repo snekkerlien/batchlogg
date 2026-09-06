@@ -72,6 +72,7 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
           nummer: index + 1,
           created_at: k.created_at,
           status,
+          batchName: active?.name ?? secondary?.name ?? null,
         };
       });
 
@@ -153,7 +154,7 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
 
         <div className="flex flex-wrap justify-center gap-6 mb-12">
           {kar.length > 0 ? (
-            kar.map((k) => (
+            kar.map((k, index) => (
               <Link
                 key={k.id}
                 href={`/profiles/${params.username}/${k.id}`}
@@ -177,8 +178,10 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
                   </div>
                 )}
 
-                <span className="text-lg font-bold text-green-300">
-                  Vessel {k.nummer}
+                <span
+                  className="text-lg font-bold text-green-300 block truncate w-full text-center"
+                >
+                  {k.batchName ?? `Vessel ${index + 1}`}
                 </span>
 
                 <span
