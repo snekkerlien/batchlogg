@@ -164,7 +164,7 @@ export default function KarPage({ params }: { params: { id: string } }) {
 
   if (!user) {
   if (typeof window !== "undefined") {
-    window.location.href = `/login?redirect=/kar/${params.id}`;
+    window.location.href = `/auth/login?redirect=/kar/${params.id}`;
   }
   return null;
 }
