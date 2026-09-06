@@ -311,7 +311,7 @@ async function toggleVisibility() {
 
 {showQR && (
   <div
-    className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50"
+    className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-start justify-center pt-10 z-50"
     onClick={() => setShowQR(false)}
   >
     <div
@@ -320,7 +320,6 @@ async function toggleVisibility() {
     >
       <h2 className="text-xl font-semibold mb-4">QR code for this vessel</h2>
 
-      {/* Responsive PNG QR */}
       <div className="mx-auto" style={{ width: "80vw", maxWidth: "600px" }}>
         <div style={{ position: "relative", width: "100%", paddingBottom: "100%" }}>
           <div style={{ position: "absolute", inset: 0 }}>
@@ -337,7 +336,7 @@ async function toggleVisibility() {
 
       <div className="flex flex-col items-center gap-4 mt-6">
 
-        {/* Download PNG */}
+        {/* PC only */}
         <button
           onClick={() => {
             if (!qrPng) return;
@@ -347,7 +346,7 @@ async function toggleVisibility() {
             link.download = `kar-${kar.id}-qr.png`;
             link.click();
           }}
-          className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold w-40 text-center"
+          className="hidden md:block px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold w-40 text-center"
         >
           Download PNG
         </button>
