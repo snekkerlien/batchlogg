@@ -7,6 +7,7 @@ import NextDynamic from "next/dynamic";
 import { KarNotesClient } from "./KarNotesClient";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import { Line } from "react-chartjs-2";
+import { QRCodeCanvas } from "qrcode.react";
 
 import {
   Chart as ChartJS,
@@ -71,6 +72,7 @@ export default function KarPage({ params }: { params: { id: string } }) {
   const [sgReadings, setSgReadings] = useState<any[]>([]);
   const [openSG, setOpenSG] = useState(false);
   const [sgValue, setSgValue] = useState("");
+  const [showQR, setShowQR] = useState(false);
 
   
   useEffect(() => {
@@ -163,12 +165,11 @@ export default function KarPage({ params }: { params: { id: string } }) {
   }
 
   if (!user) {
-    return (
-      <main className="min-h-screen flex items-center justify-center text-white">
-        <h1 className="text-2xl font-bold">You must be logged in</h1>
-      </main>
-    );
+  if (typeof window !== "undefined") {
+    window.location.href = `/login?redirect=/kar/${params.id}`;
   }
+  return null;
+}
 
   if (!kar) {
   return (
@@ -285,6 +286,47 @@ async function toggleVisibility() {
   </div>
 )}
 
+{isOwner && (
+  <button
+    onClick={() => setShowQR(true)}
+    className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold mb-10 mx-auto block"
+  >
+    Generate QR code
+  </button>
+)}
+
+{showQR && (
+  <div
+    className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50"
+    onClick={() => setShowQR(false)}   // Lukk når man klikker utenfor
+  >
+    <div
+      className="bg-black/60 p-6 rounded-xl border border-white/10 text-center"
+      onClick={(e) => e.stopPropagation()}   // Hindrer lukking når man klikker inni
+    >
+      <h2 className="text-xl font-semibold mb-4">QR code for this vessel</h2>
+
+      <QRCodeCanvas
+        value={`https://batchlogg.vercel.app/kar/${kar.id}`}
+        size={600}
+        bgColor="#00000000"
+        fgColor="#ffffff"
+        className="p-4 bg-black/40 rounded-xl border border-white/10 mx-auto"
+      />
+
+      <p className="opacity-70 text-sm mt-3 mb-6">
+        Long‑press or right‑click to save the QR code
+      </p>
+
+      <button
+        onClick={() => setShowQR(false)}
+        className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
+      >
+        Close
+      </button>
+    </div>
+  </div>
+)}
 
         {/* EMPTY VESSEL */}
         {!hasActive && (

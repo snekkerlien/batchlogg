@@ -27,6 +27,10 @@ export default function LoginClient() {
     const password = form.get("password")?.toString() ?? "";
     const email = `${username}@example.com`;
 
+    // ⭐ NEW: Check for redirect parameter
+    const params = new URLSearchParams(window.location.search);
+    const redirect = params.get("redirect");
+
     const { data, error } = await supabaseBrowser.auth.signInWithPassword({
       email,
       password,
@@ -37,7 +41,12 @@ export default function LoginClient() {
       return;
     }
 
-    router.replace("/dashboard");
+    // ⭐ NEW: Conditional redirect
+    if (redirect) {
+      router.replace(redirect);
+    } else {
+      router.replace("/dashboard");
+    }
   }
 
   if (loading) return null;
