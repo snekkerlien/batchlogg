@@ -78,6 +78,7 @@ export default function KarPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user);
+      setLoading(false);
     });
   }, []);
 
@@ -137,12 +138,6 @@ export default function KarPage({ params }: { params: { id: string } }) {
       .order("created_at", { ascending: false })
       .then(({ data }) => setNotes(data ?? []));
   }, [activeBatch]);
-
-  useEffect(() => {
-    if (user !== null) {
-      setLoading(false);
-    }
-  }, [user, kar]);
 
   useEffect(() => {
   if (!activeBatch) return;
@@ -311,19 +306,34 @@ async function toggleVisibility() {
         size={600}
         bgColor="#00000000"
         fgColor="#ffffff"
-        className="p-4 bg-black/40 rounded-xl border border-white/10 mx-auto"
+        className="p-4 bg-black/40 rounded-xl border border-white/10 mx-auto max-w-[80vw] h-auto"
       />
 
-      <p className="opacity-70 text-sm mt-3 mb-6">
-        Long‑press or right‑click to save the QR code
-      </p>
+      <div className="flex flex-col items-center gap-4 mt-6">
+  <button
+    onClick={() => {
+      const canvas = document.querySelector("canvas");
+      if (!canvas) return;
 
-      <button
-        onClick={() => setShowQR(false)}
-        className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
-      >
-        Close
-      </button>
+      const pngUrl = canvas.toDataURL("image/png");
+
+      const link = document.createElement("a");
+      link.href = pngUrl;
+      link.download = `kar-${kar.id}-qr.png`;
+      link.click();
+    }}
+    className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold w-40 text-center"
+  >
+    Download PNG
+  </button>
+
+  <button
+    onClick={() => setShowQR(false)}
+    className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold w-40 text-center"
+  >
+    Close
+  </button>
+</div>
     </div>
   </div>
 )}
