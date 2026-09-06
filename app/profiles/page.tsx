@@ -39,8 +39,13 @@ export default async function ProfilesPage() {
   }
 
   const otherProfiles = (profiles ?? [])
-    .filter((p) => p.id !== user.id)
     .filter((p) => p.is_public === true);
+
+  // ← NY: hent favoritter
+  const { data: favorites } = await supabase
+    .from("profile_favorites")
+    .select("favorite_profile_id")
+    .eq("user_id", user.id);
 
   return (
     <main className="min-h-screen flex flex-col items-center px-6 py-12 text-white">
@@ -65,7 +70,7 @@ export default async function ProfilesPage() {
         </p>
 
         {/* ← NY: søk + liste */}
-        <ProfilesList profiles={otherProfiles} />
+        <ProfilesList profiles={otherProfiles} favorites={favorites} />
 
         <p className="text-sm opacity-40 mt-12 text-center">
           © {new Date().getFullYear()} Batchlog

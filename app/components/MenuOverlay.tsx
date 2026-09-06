@@ -36,10 +36,10 @@ export default function MenuOverlay({ current }: { current: string }) {
   
   const items: { href: string; label: string; key: string }[] = [
     { href: "/dashboard", label: "Dashboard", key: "dashboard" },
-    { href: "/recipes", label: "My recipes", key: "recipes" },
     { href: "/batchhistorikk", label: "Batch history", key: "batchhistorikk" },
     { href: "/profiles", label: "Community", key: "profiles" },
     { href: "/account", label: "My account", key: "account" },
+    { href: "/recipes", label: "My recipes", key: "recipes" },
     { href: "/abvtools", label: "ABV Tools", key: "abvtools" },
     { href: "/inventory", label: "Inventory", key: "inventory" },
   ];
