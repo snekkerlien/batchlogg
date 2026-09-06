@@ -116,11 +116,13 @@ export default async function KarDetailPage({
 
         {/* HEADER */}
         <h1 className="text-4xl font-bold mb-2 text-center">
-          Vessel {kar.displayNummer ?? kar.nummer}
+          Vessel
         </h1>
 
         <h2 className="text-xl text-center opacity-80 mb-10">
-          {batch?.status === "Sekundær"
+          {!batch
+            ? ""
+            : batch.status === "Sekundær"
             ? "Secondary fermentation"
             : "Active fermentation"}
         </h2>
