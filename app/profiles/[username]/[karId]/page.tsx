@@ -64,11 +64,10 @@ export default async function KarDetailPage({
 
   // Fetch vessel
   const { data: kar } = await supabase
-    .from("kar")
-    .select("*")
-    .eq("id", params.karId)
-    .eq("user_id", userId)
-    .single();
+  .from("kar")
+  .select("*")
+  .eq("id", params.karId)
+  .single();
 
   if (!kar) {
     return (
@@ -80,10 +79,9 @@ export default async function KarDetailPage({
 
   // Fetch batches linked to this vessel
   const { data: batches } = await supabase
-    .from("batches")
-    .select("*")
-    .eq("aktivt_kar", kar.id)
-    .eq("user_id", userId);
+  .from("batches")
+  .select("*")
+  .eq("aktivt_kar", kar.id);
 
   const activeBatch = batches?.find((b) => b.status === "Aktiv");
   const secondaryBatch = batches?.find((b) => b.status === "Sekundær");
@@ -146,9 +144,9 @@ export default async function KarDetailPage({
 
             <p className="opacity-80">Batch number: {batch.batchnummer}</p>
             <p className="opacity-80">
-                Start date: {new Date(activeBatch.startdato).toLocaleDateString("en-US")}
+                Start date: {new Date(batch.startdato).toLocaleDateString("en-US")}
                 <span className="ml-2 opacity-70">
-                  ({daysSince(activeBatch.startdato)} {dayLabel(daysSince(activeBatch.startdato))})
+                  ({daysSince(batch.startdato)} {dayLabel(daysSince(batch.startdato))})
                 </span>
               </p>
             <p className="opacity-80">Volume: {batch.volume_l} L</p>
@@ -157,7 +155,7 @@ export default async function KarDetailPage({
             {batch.status === "Sekundær" && (
               <p className="opacity-80 mt-2">
                 Secondary since:{" "}
-                {new Date(batch.secondary_startdate).toLocaleDateString("en-GB")}
+                {new Date(batch.secondary_startdate).toLocaleDateString("en-US")}
               </p>
             )}
 
@@ -221,7 +219,7 @@ export default async function KarDetailPage({
                     className="p-4 bg-white/10 border border-white/20 rounded-xl"
                   >
                     <p className="text-sm opacity-60">
-                      {new Date(n.created_at).toLocaleDateString("en-GB")}
+                      {new Date(n.created_at).toLocaleDateString("en-US")}
                     </p>
 
                     {n.note_type === "image" && n.image_url && (
