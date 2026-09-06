@@ -3,77 +3,43 @@
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import JSZip from "jszip";
 
-/* ============================================================
-   UPLOAD / CHANGE AVATAR (inkl. sletting av gammelt bilde)
-   ============================================================ */
-export async function uploadAvatar(formData: FormData) {
-  console.log("=== uploadAvatar START ===");
 
-  const file = formData.get("file") as File;
-  if (!file) {
-    console.log("[uploadAvatar] Ingen fil mottatt");
-    return;
-  }
-
-  // Hent supabase-klient og bruker
-  const { supabase } = await supabaseServer();
+export async function saveAvatarUrl(newUrl: string) {
+  const { supabase, serviceRole } = await supabaseServer();
 
   const {
     data: { user },
-    error: userError,
   } = await supabase.auth.getUser();
 
-  if (!user || userError) {
-    console.log("[uploadAvatar] Ingen bruker funnet");
-    return;
-  }
+  if (!user) return null;
 
-  // Slett gammelt bilde hvis det finnes
-  const { data: oldProfile } = await supabase
+  // Hent gammel avatar-url
+  const { data: oldProfile } = await serviceRole
     .from("profiles")
     .select("avatar_url")
     .eq("id", user.id)
     .single();
 
+  // Slett gammel fil hvis den finnes
   if (oldProfile?.avatar_url) {
     const parts = oldProfile.avatar_url.split("/");
     const oldFileName = parts[parts.length - 1];
 
-    await supabase.storage.from("avatars").remove([oldFileName]);
-    console.log("[uploadAvatar] Gammelt bilde slettet:", oldFileName);
+    await serviceRole.storage.from("avatars").remove([oldFileName]);
+    console.log("[saveAvatarUrl] Gammelt bilde slettet:", oldFileName);
   }
 
-  // Last opp nytt bilde med riktig MIME-type
-  const fileName = `${user.id}-${Date.now()}`;
-  const { data: uploadData, error: uploadError } = await supabase.storage
-    .from("avatars")
-    .upload(fileName, file, {
-      contentType: file.type, // ← kritisk!
-      upsert: true,
-    });
-
-  if (uploadError) {
-    console.log("[uploadAvatar] Upload error:", uploadError);
-    return;
-  }
-
-  // Hent public URL
-  const { data: urlData } = supabase.storage
-    .from("avatars")
-    .getPublicUrl(uploadData.path);
-
-  const avatarUrl = urlData.publicUrl.trim();
-
-  // Oppdater profil
-  await supabase
+  // Lagre ny URL i databasen
+  await serviceRole
     .from("profiles")
-    .update({ avatar_url: avatarUrl })
+    .update({ avatar_url: newUrl })
     .eq("id", user.id);
 
-  console.log("[uploadAvatar] Avatar oppdatert:", avatarUrl);
+  console.log("[saveAvatarUrl] Ny avatar lagret:", newUrl);
 
-  return avatarUrl;
+  return newUrl;
 }
+
 
 /* ============================================================
    DOWNLOAD ALL USER DATA (ZIP-format, base64 return)
@@ -81,7 +47,7 @@ export async function uploadAvatar(formData: FormData) {
 export async function downloadUserData() {
   console.log("=== downloadUserData START ===");
 
-  const { supabase } = await supabaseServer();
+  const { supabase, serviceRole } = await supabaseServer();
 
   const {
     data: { user },
@@ -94,23 +60,23 @@ export async function downloadUserData() {
 
   const userId = user.id;
 
-  const { data: profile } = await supabase
+  const { data: profile } = await serviceRole
     .from("profiles")
     .select("*")
     .eq("id", userId)
     .single();
 
-  const { data: batches } = await supabase
+  const { data: batches } = await serviceRole
     .from("batches")
     .select("*")
     .eq("user_id", userId);
 
-  const { data: kar } = await supabase
+  const { data: kar } = await serviceRole
     .from("kar")
     .select("*")
     .eq("user_id", userId);
 
-  const { data: recipes } = await supabase
+  const { data: recipes } = await serviceRole
     .from("recipes")
     .select("*")
     .eq("user_id", userId);
@@ -142,6 +108,48 @@ export async function downloadUserData() {
 
   return zipBase64;
 }
+/* ============================================================
+   DELETE AVATAR (tilbakestill til default)
+   ============================================================ */
+export async function deleteAvatar() {
+  console.log("=== deleteAvatar START ===");
+
+  const { supabase, serviceRole } = await supabaseServer();
+
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (!user || userError) {
+    console.log("[deleteAvatar] Ingen bruker funnet");
+    return;
+  }
+
+  // Hent nåværende avatar
+  const { data: profile } = await serviceRole
+    .from("profiles")
+    .select("avatar_url")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.avatar_url) {
+  const parts = profile.avatar_url.split("/");
+  const fileName = parts[parts.length - 1];
+
+  await serviceRole.storage.from("avatars").remove([fileName]);
+  console.log("[deleteAvatar] Avatar slettet:", fileName);
+}
+
+  // Sett avatar_url til null → frontend viser default-avatar.png
+  await serviceRole
+    .from("profiles")
+    .update({ avatar_url: null })
+    .eq("id", user.id);
+
+  console.log("[deleteAvatar] Avatar_url satt til null");
+}
 
 /* ============================================================
    DELETE ACCOUNT (inkl. sletting av alt innhold + avatar + auth)
@@ -162,19 +170,19 @@ export async function deleteAccount() {
 
   const userId = user.id;
 
-  const { data: profile } = await supabase
+  const { data: profile } = await serviceRole
     .from("profiles")
     .select("avatar_url")
     .eq("id", userId)
     .single();
 
   if (profile?.avatar_url) {
-    const parts = profile.avatar_url.split("/");
-    const fileName = parts[parts.length - 1];
+  const parts = profile.avatar_url.split("/");
+  const fileName = parts[parts.length - 1];
 
-    await serviceRole.storage.from("avatars").remove([fileName]);
-    console.log("[deleteAccount] Avatar slettet:", fileName);
-  }
+  await serviceRole.storage.from("avatars").remove([fileName]);
+  console.log("[deleteAccount] Avatar slettet:", fileName);
+}
 
   await serviceRole.from("batches").delete().eq("user_id", userId);
   await serviceRole.from("kar").delete().eq("user_id", userId);
@@ -191,6 +199,5 @@ export async function deleteAccount() {
   }
 
   console.log("[deleteAccount] Auth bruker slettet");
-
   console.log("=== deleteAccount END ===");
 }

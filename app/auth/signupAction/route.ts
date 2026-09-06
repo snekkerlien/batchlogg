@@ -71,6 +71,8 @@ export async function POST(req: Request) {
     .insert({
       id: data.user.id,
       username,
+      avatar_url: null,
+      is_public: true,
     });
 
  

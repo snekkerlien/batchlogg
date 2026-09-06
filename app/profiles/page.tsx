@@ -6,6 +6,7 @@ import { supabaseServer } from "../../lib/supabase/supabaseServerFinal";
 import Link from "next/link";
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
+import ProfilesList from "./ProfilesList"; // ← NY
 
 export default async function ProfilesPage() {
   const { supabase } = await supabaseServer();
@@ -24,7 +25,7 @@ export default async function ProfilesPage() {
 
   const { data: profiles, error: profilesError } = await supabase
     .from("profiles")
-    .select("id, username, is_public")
+    .select("id, username, is_public, avatar_url")
     .order("username", { ascending: true });
 
   if (profilesError) {
@@ -63,23 +64,8 @@ export default async function ProfilesPage() {
           Explore the community and follow other brewers’ journeys.
         </p>
 
-        <div className="max-w-xl mx-auto space-y-4">
-          {otherProfiles.length > 0 ? (
-            otherProfiles.map((p) => (
-              <Link
-                key={p.id}
-                href={`/profiles/${p.username}`}
-                className="block border border-white/10 bg-white/5 hover:bg-white/10 transition rounded-xl p-4 font-semibold text-center"
-              >
-                {p.username
-                  ? p.username.charAt(0).toUpperCase() + p.username.slice(1)
-                  : "Unknown user"}
-              </Link>
-            ))
-          ) : (
-            <p className="opacity-60 text-center">No public users found.</p>
-          )}
-        </div>
+        {/* ← NY: søk + liste */}
+        <ProfilesList profiles={otherProfiles} />
 
         <p className="text-sm opacity-40 mt-12 text-center">
           © {new Date().getFullYear()} Batchlog

@@ -123,12 +123,14 @@ useEffect(() => {
 
     const karWithStatus = owned.map((k) => {
       const batch = batches
-        .filter((b: any) => b.aktivt_kar === k.id)
-        .sort(
-          (a: any, b: any) =>
-            new Date(b.created_at).getTime() -
-            new Date(a.created_at).getTime()
-        )[0];
+        .filter((b: any) => 
+          b.aktivt_kar === k.id &&
+          (b.status === "Aktiv" || b.status === "Sekundær")
+        )
+          .sort((a: any, b: any) =>
+            new Date(b.startdato).getTime() -
+            new Date(a.startdato).getTime()
+          )[0];
 
       let status: "Ledig" | "Aktiv" | "Sekundær" = "Ledig";
 
@@ -231,12 +233,14 @@ useEffect(() => {
   }, []);
 
   if (loading) {
-    return (
-      <div className="text-center text-white mt-20 text-xl">
+  return (
+    <main className="min-h-screen flex items-center justify-center text-white">
+      <div className="bg-black/60 backdrop-blur-md px-6 py-4 rounded-xl border border-white/10">
         Loading dashboard…
       </div>
-    );
-  }
+    </main>
+  );
+}
 
   
 

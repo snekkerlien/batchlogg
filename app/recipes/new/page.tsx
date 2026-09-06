@@ -14,6 +14,8 @@ export default function NewRecipePage() {
   const [og, setOg] = useState("");
   const [fg, setFg] = useState("");
   const [abv, setAbv] = useState("");
+  const [hadSecondary, setHadSecondary] = useState(false);
+
 
   // ⭐ NEW: Auto-calc ABV
   useEffect(() => {
@@ -52,6 +54,9 @@ export default function NewRecipePage() {
       notes: form.get("notes"),
       is_public: false,
       batch_id: null, // ⭐ MANUAL RECIPE
+      had_secondary: hadSecondary,
+      secondary_additions: form.get("secondary_additions") || null,
+      secondary_notes: form.get("secondary_notes") || null,
     });
 
     router.push("/recipes");
@@ -138,6 +143,31 @@ export default function NewRecipePage() {
             placeholder="Notes"
             className="p-3 rounded bg-black/40 border border-white/20"
           />
+
+          <label className="flex items-center gap-2 text-sm opacity-80">
+            <input
+              type="checkbox"
+              checked={hadSecondary}
+              onChange={(e) => setHadSecondary(e.target.checked)}
+            />
+              This recipe had a secondary fermentation
+          </label>
+
+          {hadSecondary && (
+            <>
+              <textarea
+                name="secondary_additions"
+                placeholder="Secondary additions"
+                className="p-3 rounded bg-black/40 border border-white/20"
+              />
+
+              <textarea
+                name="secondary_notes"
+                placeholder="Secondary notes"
+                className="p-3 rounded bg-black/40 border border-white/20"
+              />
+            </>
+          )}
 
           <button
             disabled={loading}

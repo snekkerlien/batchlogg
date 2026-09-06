@@ -93,12 +93,14 @@ export default function BatchHistoryPage() {
   }
 
   if (loading) {
-    return (
-      <main className="min-h-screen flex items-center justify-center text-white">
+  return (
+    <main className="min-h-screen flex items-center justify-center text-white">
+      <div className="bg-black/60 backdrop-blur-md px-6 py-4 rounded-xl border border-white/10">
         Loading batches…
-      </main>
-    );
-  }
+      </div>
+    </main>
+  );
+}
 
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">

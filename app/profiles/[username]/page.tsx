@@ -55,13 +55,25 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
         : (karRaw ?? []).filter((k: any) => k.is_public === true);
 
       const karProcessed = visibleKar.map((k: any, index: number) => {
-        const active = batchesRaw?.find(
-          (b: any) => b.aktivt_kar === k.id && b.status === "Aktiv"
-        );
+        const active = batchesRaw
+  ?.filter((b: any) =>
+    b.aktivt_kar === k.id && b.status === "Aktiv"
+  )
+  .sort(
+    (a: any, b: any) =>
+      new Date(b.created_at).getTime() -
+      new Date(a.created_at).getTime()
+  )[0];
 
-        const secondary = batchesRaw?.find(
-          (b: any) => b.aktivt_kar === k.id && b.status === "Sekundær"
-        );
+const secondary = batchesRaw
+  ?.filter((b: any) =>
+    b.aktivt_kar === k.id && b.status === "Sekundær"
+  )
+  .sort(
+    (a: any, b: any) =>
+      new Date(b.created_at).getTime() -
+      new Date(a.created_at).getTime()
+  )[0];
 
         let status = "Empty";
         if (active) status = "Primary";
@@ -141,9 +153,21 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
           <MenuOverlay />
         </div>
 
-        <h1 className="text-4xl font-bold mb-6 text-center">
-          {profile.username.charAt(0).toUpperCase() + profile.username.slice(1)}
-        </h1>
+       {/* PROFILE AVATAR */}
+<div className="w-full flex justify-center mb-6">
+  <img
+    src={
+      profile.avatar_url && profile.avatar_url.length > 5
+        ? profile.avatar_url
+        : "/default-avatar.png"
+    }
+    className="w-24 h-24 rounded-full object-cover object-center border border-white/20"
+  />
+</div>
+
+<h1 className="text-4xl font-bold mb-6 text-center">
+  {profile.username.charAt(0).toUpperCase() + profile.username.slice(1)}
+</h1>
 
         <p className="opacity-80 text-center mb-10">
           Overview of this user's vessels, active batches, and public recipes.

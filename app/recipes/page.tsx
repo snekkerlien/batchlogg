@@ -68,12 +68,14 @@ export default function RecipesPage() {
   }
 
   if (loading) {
-    return (
-      <main className="min-h-screen flex items-center justify-center text-white">
-        Loading…
-      </main>
-    );
-  }
+  return (
+    <main className="min-h-screen flex items-center justify-center text-white">
+      <div className="bg-black/60 backdrop-blur-md px-6 py-4 rounded-xl border border-white/10">
+        Loading recipes…
+      </div>
+    </main>
+  );
+}
 
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
@@ -92,6 +94,10 @@ export default function RecipesPage() {
           My recipes
         </h1>
 
+         <p className="opacity-80 text-center mb-10">
+          All your recipes in one place.
+        </p>
+
         <div className="flex justify-center mb-6">
           <Link
             href="/recipes/new"
@@ -101,9 +107,7 @@ export default function RecipesPage() {
           </Link>
         </div>
 
-        <p className="opacity-80 text-center mb-10">
-          Recipes saved from finished batches.
-        </p>
+       
 
         <div className="space-y-4">
           {recipes.length > 0 ? (
@@ -205,6 +209,28 @@ export default function RecipesPage() {
                           {r.notes}
                         </p>
                       )}
+
+                      {r.had_secondary && (
+  <div className="mt-8">
+    <h4 className="font-semibold text-white/90 mb-2">
+      Secondary fermentation
+    </h4>
+
+    {r.secondary_additions && (
+      <p className="whitespace-pre-line opacity-80">
+        <strong>Secondary additions:</strong>{"\n"}
+        {r.secondary_additions}
+      </p>
+    )}
+
+    {r.secondary_notes && (
+      <p className="whitespace-pre-line opacity-80 mt-2">
+        <strong>Secondary notes:</strong>{"\n"}
+        {r.secondary_notes}
+      </p>
+    )}
+  </div>
+)}
 
                       {r.notes_log && r.notes_log.length > 0 && (
                         <div className="whitespace-pre-line">

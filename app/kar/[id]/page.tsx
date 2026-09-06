@@ -147,12 +147,14 @@ export default function KarPage({ params }: { params: { id: string } }) {
 
 
   if (loading) {
-    return (
-      <main className="min-h-screen flex items-center justify-center text-white">
-        <h1 className="text-2xl font-bold">Loading...</h1>
-      </main>
-    );
-  }
+  return (
+    <main className="min-h-screen flex items-center justify-center text-white">
+      <div className="bg-black/60 backdrop-blur-md px-6 py-4 rounded-xl border border-white/10">
+        Loading…
+      </div>
+    </main>
+  );
+}
 
   if (!user) {
   if (typeof window !== "undefined") {
