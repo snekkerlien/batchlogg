@@ -7,7 +7,8 @@ import NextDynamic from "next/dynamic";
 import { KarNotesClient } from "./KarNotesClient";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import { Line } from "react-chartjs-2";
-import { QRCodeCanvas } from "qrcode.react";
+import QRCode from "qrcode";
+
 
 import {
   Chart as ChartJS,
@@ -73,6 +74,8 @@ export default function KarPage({ params }: { params: { id: string } }) {
   const [openSG, setOpenSG] = useState(false);
   const [sgValue, setSgValue] = useState("");
   const [showQR, setShowQR] = useState(false);
+  const [qrPng, setQrPng] = useState<string | null>(null);
+
 
   
   useEffect(() => {
@@ -283,7 +286,23 @@ async function toggleVisibility() {
 
 {isOwner && (
   <button
-    onClick={() => setShowQR(true)}
+    onClick={async () => {
+      setShowQR(true);
+
+      const url = `https://batchlogg.vercel.app/kar/${kar.id}`;
+
+      // Generer ren QR som PNG
+      const png = await QRCode.toDataURL(url, {
+        width: 600,
+        margin: 2,
+        color: {
+          dark: "#000000",
+          light: "#ffffff"
+        }
+      });
+
+      setQrPng(png);
+    }}
     className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold mb-10 mx-auto block"
   >
     Generate QR code
@@ -293,51 +312,56 @@ async function toggleVisibility() {
 {showQR && (
   <div
     className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50"
-    onClick={() => setShowQR(false)}   // Lukk når man klikker utenfor
+    onClick={() => setShowQR(false)}
   >
     <div
       className="bg-black/60 p-6 rounded-xl border border-white/10 text-center"
-      onClick={(e) => e.stopPropagation()}   // Hindrer lukking når man klikker inni
+      onClick={(e) => e.stopPropagation()}
     >
       <h2 className="text-xl font-semibold mb-4">QR code for this vessel</h2>
 
-      <QRCodeCanvas
-        value={`https://batchlogg.vercel.app/kar/${kar.id}`}
-        size={600}
-        bgColor="#00000000"
-        fgColor="#ffffff"
-        className="p-4 bg-black/40 rounded-xl border border-white/10 mx-auto max-w-[80vw] h-auto"
-      />
+      {/* Responsive PNG QR */}
+      <div className="mx-auto" style={{ width: "80vw", maxWidth: "600px" }}>
+        <div style={{ position: "relative", width: "100%", paddingBottom: "100%" }}>
+          <div style={{ position: "absolute", inset: 0 }}>
+            {qrPng && (
+              <img
+                src={qrPng}
+                alt="QR code"
+                className="p-4 bg-black/40 rounded-xl border border-white/10 w-full h-full object-contain"
+              />
+            )}
+          </div>
+        </div>
+      </div>
 
       <div className="flex flex-col items-center gap-4 mt-6">
-  <button
-    onClick={() => {
-      const canvas = document.querySelector("canvas");
-      if (!canvas) return;
 
-      const pngUrl = canvas.toDataURL("image/png");
+        {/* Download PNG */}
+        <button
+          onClick={() => {
+            if (!qrPng) return;
 
-      const link = document.createElement("a");
-      link.href = pngUrl;
-      link.download = `kar-${kar.id}-qr.png`;
-      link.click();
-    }}
-    className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold w-40 text-center"
-  >
-    Download PNG
-  </button>
+            const link = document.createElement("a");
+            link.href = qrPng;
+            link.download = `kar-${kar.id}-qr.png`;
+            link.click();
+          }}
+          className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold w-40 text-center"
+        >
+          Download PNG
+        </button>
 
-  <button
-    onClick={() => setShowQR(false)}
-    className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold w-40 text-center"
-  >
-    Close
-  </button>
-</div>
+        <button
+          onClick={() => setShowQR(false)}
+          className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold w-40 text-center"
+        >
+          Close
+        </button>
+      </div>
     </div>
   </div>
 )}
-
         {/* EMPTY VESSEL */}
         {!hasActive && (
           <>
