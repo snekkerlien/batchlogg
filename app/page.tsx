@@ -131,42 +131,43 @@ export default function Home() {
         {/* What is Batchlogg */}
         <section className="bg-black/30 backdrop-blur-md p-8 rounded-xl border border-white/10">
           <h2 className="text-3xl font-bold mb-4 text-center">What is Batchlog?</h2>
-          <p className="text-lg opacity-90 mb-4">
-            Batchlog is a brewing companion designed to give you complete control over your brewing workflow.
-            It keeps track of every vessel, every batch, and every detail — from gravity readings to tasting notes and photos.
-            Whether you're experimenting with new recipes or repeating a proven favorite, Batchlog helps you stay organized,
-            consistent, and confident throughout the entire brewing process.
+          <p className="text-lg opacity-90 mb-4 text-center">
+            Batchlog is a brewing companion built to give you structure and control over your brewing workflow.
+            It keeps track of every vessel and every batch — including primary fermentation, secondary fermentation, gravity readings, notes, and recipe details.
+            Whether you're experimenting with new ideas or repeating a proven favorite, Batchlog helps you stay organized and consistent throughout the brewing process.
           </p>
-          <ul className="space-y-3 text-lg opacity-90">
-            <li>• A clear overview of all your brewing vessels and active batches</li>
-            <li>• Detailed logging of OG, FG, notes, measurements, and images</li>
-            <li>• A recipe system built for saving, refining, and sharing your creations</li>
-            <li>• A community section where you can explore public recipes from other brewers</li>
+          <ul className="space-y-3 text-lg opacity-90 text-center mt-10">
+            <li>• A clear overview of all your brewing vessels</li>
+            <li>• Tracking of active, secondary, and finished batches</li>
+            <li>• Detailed logging of OG, FG, dates, notes, and images</li>
+            <li>• A recipe system for saving and refining your creations</li>
+            <li>• A community section for exploring public recipes and batches</li>
           </ul>
         </section>
 
         {/* Why use Batchlogg */}
         <section className="bg-black/30 backdrop-blur-md p-8 rounded-xl border border-white/10">
           <h2 className="text-3xl font-bold mb-4 text-center">Why use Batchlog?</h2>
-          <p className="text-lg opacity-90 mb-4">
-            Batchlog removes the chaos from brewing. No more scattered notes, forgotten measurements,
-            or missing photos — everything is stored in one structured, easy‑to‑use system.
+          <p className="text-lg opacity-90 mb-4 text-center">
+            Batchlog removes the chaos from brewing.
+            No more scattered notes, forgotten measurements, or missing photos — everything is stored in one structured, easy‑to‑use system.
             It helps you improve consistency, learn from past batches, and build a brewing history you can rely on.
           </p>
-          <ul className="space-y-3 text-lg opacity-90">
-            <li>• Full control over your brewing process from start to finish</li>
-            <li>• All your data collected in one place — clean, searchable, and safe</li>
-            <li>• A smoother workflow with fewer mistakes and better repeatability</li>
-            <li>• Ideal for hobby brewers, homebrewers, mead‑makers, and small craft setups</li>
+          <ul className="space-y-3 text-lg opacity-90 text-center mt-10">
+            <li>• Full control over your brewing process</li>
+            <li>• All your data collected in one place — clean and searchable</li>
+            <li>• Better repeatability and fewer mistakes</li>
+            <li>• Ideal for homebrewers and small craft setups alike</li>
+            <li>• Public/private control for sharing or keeping your batches personal</li>
           </ul>
         </section>
 
         {/* For brewers, by brewers */}
         <section className="bg-black/30 backdrop-blur-md p-8 rounded-xl border border-white/10 text-center">
           <h2 className="text-3xl font-bold mb-4">For brewers, by brewers</h2>
-          <p className="text-lg opacity-90">
-            Batchlog is made for brewers who want structure, clarity, and simplicity.
-            Whether you brew in your garage or run a small brewery – this is your tool.
+          <p className="text-lg opacity-90 text-center">
+            Batchlog is built for brewers who want structure, clarity, and simplicity.
+            Whether you brew in your garage, your kitchen, or a small craft setup — this is your brewing companion.
           </p>
         </section>
 
