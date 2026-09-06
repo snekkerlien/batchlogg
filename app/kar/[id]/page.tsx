@@ -97,6 +97,7 @@ export default function KarPage({ params }: { params: { id: string } }) {
       .from("kar")
       .select("*")
       .eq("id", params.id)
+      .eq("user_id", user.id)
       .single()
       .then(({ data }) => setKar(data));
   }, [user, params.id]);
@@ -136,7 +137,7 @@ export default function KarPage({ params }: { params: { id: string } }) {
   }, [activeBatch]);
 
   useEffect(() => {
-    if (user !== null && kar !== null) {
+    if (user !== null) {
       setLoading(false);
     }
   }, [user, kar]);
@@ -170,12 +171,24 @@ export default function KarPage({ params }: { params: { id: string } }) {
   }
 
   if (!kar) {
-    return (
-      <main className="min-h-screen flex items-center justify-center text-white">
-        <h1 className="text-2xl font-bold">Vessel not found</h1>
-      </main>
-    );
-  }
+  return (
+    <main className="min-h-screen flex items-center justify-center px-6 py-12 text-white">
+      <div className="bg-black/60 backdrop-blur-md p-10 rounded-2xl border border-white/10 text-center max-w-md w-full">
+        <h1 className="text-3xl font-bold mb-2">No access</h1>
+        <p className="opacity-80 mb-6">
+          You do not have access to this vessel.
+        </p>
+
+        <button
+          onClick={() => window.history.back()}
+          className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg transition"
+        >
+          Go back
+        </button>
+      </div>
+    </main>
+  );
+}
 
   const isOwner = kar.user_id === user.id;
   const hasActive = !!activeBatch;
