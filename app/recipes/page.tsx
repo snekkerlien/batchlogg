@@ -92,6 +92,15 @@ export default function RecipesPage() {
           My recipes
         </h1>
 
+        <div className="flex justify-center mb-6">
+          <Link
+            href="/recipes/new"
+            className="px-4 py-2 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold"
+          >
+            New recipe
+          </Link>
+        </div>
+
         <p className="opacity-80 text-center mb-10">
           Recipes saved from finished batches.
         </p>

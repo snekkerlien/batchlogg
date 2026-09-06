@@ -323,7 +323,7 @@ useEffect(() => {
 
 
             <div
-  className="text-lg font-bold text-green-300 text-center leading-tight line-clamp-3"
+  className="text-lg font-bold text-green-300 text-center leading-tight line-clamp-2"
   title={k.batchName ?? `Vessel ${index + 1}`}
 >
   {k.batchName ?? `Vessel ${index + 1}`}
