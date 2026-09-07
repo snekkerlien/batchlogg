@@ -5,6 +5,7 @@ export const revalidate = 0;
 import { supabaseServer } from "../../../../lib/supabase/supabaseServerFinal";
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
+import { translateOldRecipe } from "@/lib/translateOldRecipe";
 
 type KarDetailParams = {
   username: string;
@@ -84,10 +85,14 @@ export default async function KarDetailPage({
   .eq("aktivt_kar", kar.id);
 
   const activeBatch = batches?.find((b) => b.status === "Aktiv");
-  const secondaryBatch = batches?.find((b) => b.status === "Sekundær");
+const secondaryBatch = batches?.find((b) => b.status === "Sekundær");
 
-  // Choose batch (active → secondary)
-  const batch = activeBatch || secondaryBatch;
+// Choose batch (active → secondary)
+let batch = activeBatch || secondaryBatch;
+
+// ⭐ Oversett gamle batches til moderne format
+batch = translateOldRecipe(batch);
+
 
   // Fetch notes from batch_notes
   let notes: any[] = [];
@@ -171,35 +176,127 @@ export default async function KarDetailPage({
               </p>
             )}
 
-            {/* Recipe */}
-            <div className="mt-6 p-4 bg-white/5 border border-white/10 rounded-lg">
-              <h3 className="text-xl font-bold mb-3 text-green-300">Recipe</h3>
+            {/* ⭐ UNIVERSAL RECIPE RENDERER */}
+<div className="mt-6 p-4 bg-white/5 border border-white/10 rounded-lg">
+  <h3 className="text-xl font-bold mb-3 text-green-300">Recipe</h3>
 
-              <div className="space-y-4 text-sm whitespace-pre-wrap">
+  <div className="space-y-4 text-sm whitespace-pre-wrap">
 
-                <div>
-                  <h4 className="font-semibold text-white/90 mb-1">Ingredients</h4>
-                  <p className="opacity-80">
-                    {batch.oppskrift.split("Ingredients:")[1]?.split("Full process:")[0]?.trim()}
-                  </p>
-                </div>
+    {/* ⭐ Fallback for gamle batches */}
+    {!batch.type && batch.oppskrift && (
+      <p className="opacity-80">{batch.oppskrift}</p>
+    )}
 
-                <div>
-                  <h4 className="font-semibold text-white/90 mb-1">Full process</h4>
-                  <p className="opacity-80">
-                    {batch.oppskrift.split("Full process:")[1]?.split("Notes:")[0]?.trim()}
-                  </p>
-                </div>
+    {/* ⭐ MEAD */}
+    {batch.type === "Mead" && (
+      <>
+        <p><strong>Honey:</strong> {batch.honey_type || "Unknown"} – {batch.honey_amount || "?"} kg</p>
 
-                <div>
-                  <h4 className="font-semibold text-white/90 mb-1">Recipe notes</h4>
-                  <p className="opacity-80">
-                    {batch.oppskrift.split("Notes:")[1]?.trim()}
-                  </p>
-                </div>
+        {batch.fruits?.length > 0 && (
+          <div>
+            <strong>Fruits:</strong>
+            {batch.fruits.map((f: any, i: number) => (
+              <p key={i}>{f.name}: {f.amount}{f.unit}</p>
+            ))}
+          </div>
+        )}
 
-              </div>
-            </div>
+        <p><strong>Additives:</strong><br />{batch.additives || "None"}</p>
+        <p><strong>Full process:</strong><br />{batch.full_process || "No process described"}</p>
+        <p><strong>Notes:</strong><br />{batch.notes || "No notes"}</p>
+      </>
+    )}
+
+    {/* ⭐ BEER */}
+    {batch.type === "Beer" && (
+      <>
+        {batch.malts?.length > 0 && (
+          <div>
+            <strong>Malt additions:</strong>
+            {batch.malts.map((m: any, i: number) => (
+              <p key={i}>{m.name}: {m.amount}{m.unit}</p>
+            ))}
+          </div>
+        )}
+
+        {batch.hops?.length > 0 && (
+          <div>
+            <strong>Hop schedule:</strong>
+            {batch.hops.map((h: any, i: number) => (
+              <p key={i}>{h.name}: {h.amount}{h.unit} @ {h.boil} min</p>
+            ))}
+          </div>
+        )}
+
+        <p><strong>Total boil time:</strong> {batch.boil_time || "Unknown"} min</p>
+        <p><strong>Additives:</strong><br />{batch.additives || "None"}</p>
+        <p><strong>Full process:</strong><br />{batch.full_process || "No process described"}</p>
+        <p><strong>Notes:</strong><br />{batch.notes || "No notes"}</p>
+      </>
+    )}
+
+    {/* ⭐ BRAGGOT */}
+    {batch.type === "Braggot" && (
+      <>
+        {batch.malts?.length > 0 && (
+          <div>
+            <strong>Malt additions:</strong>
+            {batch.malts.map((m: any, i: number) => (
+              <p key={i}>{m.name}: {m.amount}{m.unit}</p>
+            ))}
+          </div>
+        )}
+
+        <p><strong>Boil time:</strong> {batch.boil_time || "Unknown"} min</p>
+        <p><strong>Honey:</strong> {batch.honey_amount || "?"} kg</p>
+        <p><strong>Additives:</strong><br />{batch.additives || "None"}</p>
+        <p><strong>Full process:</strong><br />{batch.full_process || "No process described"}</p>
+        <p><strong>Notes:</strong><br />{batch.notes || "No notes"}</p>
+      </>
+    )}
+
+    {/* ⭐ CIDER / WINE / SELTZER */}
+    {(batch.type === "Cider" ||
+      batch.type === "Wine" ||
+      batch.type === "Seltzer") && (
+      <>
+        <p><strong>Juice type:</strong> {batch.juice_type || "Unknown"}</p>
+        <p><strong>Sugar added:</strong> {batch.sugar_amount || "?"} kg</p>
+        <p><strong>Additives:</strong><br />{batch.additives || "None"}</p>
+        <p><strong>Full process:</strong><br />{batch.full_process || "No process described"}</p>
+        <p><strong>Notes:</strong><br />{batch.notes || "No notes"}</p>
+      </>
+    )}
+
+    {/* ⭐ OTHER */}
+    {batch.type === "Other" && (
+      <>
+        {batch.ingredients?.length > 0 && (
+          <div>
+            <strong>Ingredients:</strong>
+            {batch.ingredients.map((ing: any, idx: number) => (
+              <p key={idx}>{ing.name}: {ing.amount}{ing.unit}</p>
+            ))}
+          </div>
+        )}
+
+        {batch.steps?.length > 0 && (
+          <div>
+            <strong>Process steps:</strong>
+            {batch.steps.map((s: string, idx: number) => (
+              <p key={idx}>{idx + 1}. {s}</p>
+            ))}
+          </div>
+        )}
+
+        <p><strong>Additives:</strong><br />{batch.additives || "None"}</p>
+        <p><strong>Notes:</strong><br />{batch.notes || "No notes"}</p>
+      </>
+    )}
+
+  </div>
+</div>
+
 
           </div>
         )}
