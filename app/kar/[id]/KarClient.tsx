@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { createBatch } from "../../actions/createBatch";
-import { RecipeEditor } from "./RecipeEditor";
 
 type KarType = {
   id: string;        // UUID
@@ -77,9 +76,6 @@ export default function KarClient({ kar }: KarClientProps) {
           className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
         />
       </div>
-
-      <RecipeEditor />
-
       <button
         type="submit"
         className="w-full bg-green-600 hover:bg-green-700 p-2 rounded font-semibold"
