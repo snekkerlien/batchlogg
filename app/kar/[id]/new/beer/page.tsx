@@ -116,135 +116,142 @@ export default function NewBeerPage({ params }: { params: { id: string } }) {
             />
           </div>
 
-          {/* Dynamic malt additions */}
           <div>
-            <label className="block mb-2 font-semibold">Malt additions</label>
+  <label className="block mb-2 font-semibold">Malt additions</label>
 
-            {malts.map((m, i) => (
-              <div key={i} className="flex gap-2 mb-2 items-center">
-                <input
-                  placeholder="Malt type (e.g. Pale Ale, Munich, Caramel)"
-                  className="flex-1 p-3 rounded bg-black/40 border border-white/20"
-                  value={m.name}
-                  onChange={(e) => {
-                    const updated = [...malts];
-                    updated[i].name = e.target.value;
-                    setMalts(updated);
-                  }}
-                />
+  {malts.map((m, i) => (
+    <div
+      key={i}
+      className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full"
+    >
+      <input
+        placeholder="Malt type (e.g. Pale Ale, Munich, Caramel)"
+        className="p-3 rounded bg-black/40 border border-white/20 w-full md:flex-1"
+        value={m.name}
+        onChange={(e) => {
+          const updated = [...malts];
+          updated[i].name = e.target.value;
+          setMalts(updated);
+        }}
+      />
 
-                <input
-                  placeholder="Amount"
-                  className="w-24 p-3 rounded bg-black/40 border border-white/20"
-                  value={m.amount}
-                  onChange={(e) => {
-                    const updated = [...malts];
-                    updated[i].amount = e.target.value;
-                    setMalts(updated);
-                  }}
-                />
+      <input
+        placeholder="Amount"
+        className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-24"
+        value={m.amount}
+        onChange={(e) => {
+          const updated = [...malts];
+          updated[i].amount = e.target.value;
+          setMalts(updated);
+        }}
+      />
 
-                <input
-                  placeholder="Unit"
-                  className="w-20 p-3 rounded bg-black/40 border border-white/20"
-                  value={m.unit}
-                  onChange={(e) => {
-                    const updated = [...malts];
-                    updated[i].unit = e.target.value;
-                    setMalts(updated);
-                  }}
-                />
+      <input
+        placeholder="Unit"
+        className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-20"
+        value={m.unit}
+        onChange={(e) => {
+          const updated = [...malts];
+          updated[i].unit = e.target.value;
+          setMalts(updated);
+        }}
+      />
 
-                <button
-                  type="button"
-                  onClick={() => removeMalt(i)}
-                  className="px-3 py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm"
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
+      <button
+        type="button"
+        onClick={() => removeMalt(i)}
+        className="px-3 py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm self-start md:self-auto"
+      >
+        Remove
+      </button>
+    </div>
+  ))}
 
-            <button
-              type="button"
-              onClick={addMalt}
-              className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
-            >
-              + Add malt
-            </button>
-          </div>
+  <button
+    type="button"
+    onClick={addMalt}
+    className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
+  >
+    + Add malt
+  </button>
+</div>
+
 
           {/* Hidden JSON field */}
           <input type="hidden" name="malts_json" value={JSON.stringify(malts)} />
 
           {/* Dynamic hop additions */}
           <div>
-            <label className="block mb-2 font-semibold">Hop additions</label>
+  <label className="block mb-2 font-semibold">Hop additions</label>
 
-            {hops.map((h, i) => (
-              <div key={i} className="flex gap-2 mb-2 items-center">
-                <input
-                  placeholder="Hop type (e.g. Citra, Mosaic)"
-                  className="flex-1 p-3 rounded bg-black/40 border border-white/20"
-                  value={h.name}
-                  onChange={(e) => {
-                    const updated = [...hops];
-                    updated[i].name = e.target.value;
-                    setHops(updated);
-                  }}
-                />
+  {hops.map((h, i) => (
+    <div
+      key={i}
+      className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full"
+    >
+      <input
+        placeholder="Hop type (e.g. Citra, Mosaic)"
+        className="p-3 rounded bg-black/40 border border-white/20 w-full md:flex-1"
+        value={h.name}
+        onChange={(e) => {
+          const updated = [...hops];
+          updated[i].name = e.target.value;
+          setHops(updated);
+        }}
+      />
 
-                <input
-                  placeholder="Amount"
-                  className="w-20 p-3 rounded bg-black/40 border border-white/20"
-                  value={h.amount}
-                  onChange={(e) => {
-                    const updated = [...hops];
-                    updated[i].amount = e.target.value;
-                    setHops(updated);
-                  }}
-                />
+      <input
+        placeholder="Amount"
+        className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-20"
+        value={h.amount}
+        onChange={(e) => {
+          const updated = [...hops];
+          updated[i].amount = e.target.value;
+          setHops(updated);
+        }}
+      />
 
-                <input
-                  placeholder="Unit"
-                  className="w-16 p-3 rounded bg-black/40 border border-white/20"
-                  value={h.unit}
-                  onChange={(e) => {
-                    const updated = [...hops];
-                    updated[i].unit = e.target.value;
-                    setHops(updated);
-                  }}
-                />
+      <input
+        placeholder="Unit"
+        className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-16"
+        value={h.unit}
+        onChange={(e) => {
+          const updated = [...hops];
+          updated[i].unit = e.target.value;
+          setHops(updated);
+        }}
+      />
 
-                <input
-                  placeholder="Boil (min)"
-                  className="w-20 p-3 rounded bg-black/40 border border-white/20"
-                  value={h.boil}
-                  onChange={(e) => {
-                    const updated = [...hops];
-                    updated[i].boil = e.target.value;
-                    setHops(updated);
-                  }}
-                />
+      <input
+        placeholder="Boil (min)"
+        className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-20"
+        value={h.boil}
+        onChange={(e) => {
+          const updated = [...hops];
+          updated[i].boil = e.target.value;
+          setHops(updated);
+        }}
+      />
 
-                <button
-                  type="button"
-                  onClick={() => removeHop(i)}
-                  className="px-3 py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm"
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
+      <button
+        type="button"
+        onClick={() => removeHop(i)}
+        className="px-3 py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm self-start md:self-auto"
+      >
+        Remove
+      </button>
+    </div>
+  ))}
 
-            <button
-              type="button"
-              onClick={addHop}
-              className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
-            >
-              + Add hop
-            </button>
-          </div>
+  <button
+    type="button"
+    onClick={addHop}
+    className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
+  >
+    + Add hop
+  </button>
+</div>
+
 
           {/* Hidden JSON field */}
           <input type="hidden" name="hops_json" value={JSON.stringify(hops)} />
