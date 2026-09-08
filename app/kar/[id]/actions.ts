@@ -354,13 +354,14 @@ export async function finishBatch(formData: FormData) {
   const karId = formData.get("kar_id") as string;
 
   const fgRaw = formData.get("fg") as string;
-  const notes = (formData.get("finished_notes") as string) || "";
+  const finished_notes = (formData.get("finished_notes") as string) || "";
   const saveRecipe = formData.get("save_as_recipe") === "on";
 
   if (!batchId || !karId) return;
 
   const fg = parseFloat(fgRaw);
 
+  // Fetch batch
   const { data: batch } = await supabase
     .from("batches")
     .select("*")
@@ -369,47 +370,85 @@ export async function finishBatch(formData: FormData) {
 
   if (!batch) throw new Error("Batch not found");
 
+  // Calculate ABV
   const abv = (batch.og - fg) * 131.25;
 
+  // Fetch batch notes
   const { data: batchNotes } = await supabase
     .from("batch_notes")
     .select("*")
     .eq("batch_id", batchId)
     .order("created_at", { ascending: true });
 
+  // Update batch
   await supabase
     .from("batches")
     .update({
       status: "Avsluttet",
       fg,
       abv,
-      finished_notes: notes,
+      finished_notes,
       finished_date: new Date().toISOString(),
       save_as_recipe: saveRecipe,
     })
     .eq("id", batchId);
 
+  // Free vessel
   await supabase.from("kar").update({ status: "Ledig" }).eq("id", karId);
 
+  // SAVE AS RECIPE
   if (saveRecipe) {
     await supabase.from("recipes").insert({
       user_id: batch.user_id,
       batch_id: batch.id,
+
+      // Core
+      type: batch.type,
       name: batch.name,
       og: batch.og,
       fg,
       abv,
       volume: batch.volume_l,
-      ingredients: batch.oppskrift,
-      method: batch.fremgangsmåte || "",
-      notes,
+
+      // Mead
+      honey_type: batch.honey_type,
+      honey_amount: batch.honey_amount,
+      fruits: batch.fruits,
+
+      // Wine / Cider / Seltzer
+      juice_type: batch.juice_type,
+      sugar_amount: batch.sugar_amount,
+
+      // Beer / Braggot
+      malts: batch.malts,
+      hops: batch.hops,
+      boil_time: batch.boil_time,
+
+      // Other
+      ingredients: batch.ingredients,
+      steps: batch.steps,
+
+      // Shared
+      yeast: batch.yeast,
+      additives: batch.additives,
+      full_process: batch.full_process,
+      notes: batch.notes,
+
+      // Secondary
+      had_secondary: batch.secondary_startdate ? true : false,
+      secondary_additions: batch.secondary_additions,
+      secondary_notes: batch.secondary_notes,
+
+      // Notes log
       notes_log: batchNotes ?? [],
+
       is_public: false,
     });
   }
 
   redirect(`/kar/${karId}`);
 }
+
 
 // ---------------------------------------------------------
 // 4. OPPDATER AKTIV BATCH  ⭐ NY FUNKSJON
