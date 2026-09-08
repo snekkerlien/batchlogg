@@ -153,12 +153,13 @@ export default function RecipesPage() {
               const volume = r.volume ?? "—";
 
               return (
-                <div key={r.id} className="bg-white/10 border border-white/20 rounded-xl p-4">
+                <div key={r.id} className="bg-white/10 border border-white/20 rounded-xl p-4 sm:p-6">
+
 
                   {/* HEADER (mobile-friendly) */}
                   <button
                     onClick={() => toggle(r.id)}
-                    className="w-full flex flex-col md:flex-row md:justify-between md:items-center text-left gap-3"
+                    className="w-full flex flex-col sm:flex-row sm:justify-between sm:items-center text-left gap-3"
                   >
                     <span className="text-xl font-bold text-green-300 flex items-center gap-3">
   {r.name ? r.name.charAt(0).toUpperCase() + r.name.slice(1) : "Unnamed recipe"}
@@ -176,7 +177,7 @@ export default function RecipesPage() {
 
 
                     <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
-                      <div className="flex flex-row gap-2">
+                      <div className="flex flex-wrap gap-2">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -213,23 +214,27 @@ export default function RecipesPage() {
                   </button>
 
                   {/* Stats line */}
-<p className="text-sm mt-3">
-  <strong>OG:</strong> {og}
-  <span className="ml-4"><strong>FG:</strong> {fg}</span>
+<p className="text-sm mt-3 grid grid-cols-2 gap-y-1 gap-x-4 sm:flex sm:flex-wrap sm:items-center">
+  <span><strong>OG:</strong> {og}</span>
+  <span><strong>FG:</strong> {fg}</span>
 
-  {/* IBU/EBC only for beer/braggot or if malts exist */}
-  {(r.type === "Beer" || r.type === "Braggot" || (r.malts && r.malts.length > 0)) && (
+  {(r.type === "Beer" || r.type === "Braggot") && (
     <>
-      <span className="ml-4"><strong>IBU:</strong> {ibu}</span>
-      <span className="ml-4"><strong>EBC:</strong> {ebc !== null ? ebc.toFixed(0) : "—"}</span>
-  
-)
+      <span><strong>IBU:</strong> {ibu}</span>
+      <span><strong>EBC:</strong> {ebc !== null ? ebc.toFixed(0) : "—"}</span>
 
+      {ebc !== null && (
+        <span
+          className="inline-block w-4 h-4 rounded-md border border-white/20 shadow-sm"
+          style={{ backgroundColor: ebcToHex(ebc) }}
+        ></span>
+      )}
     </>
   )}
 
-  <span className="ml-4"><strong>ABV:</strong> {abv}%</span>
+  <span><strong>ABV:</strong> {abv}%</span>
 </p>
+
 
                   {/* SLIDER CONTENT */}
                   <div
@@ -382,7 +387,7 @@ export default function RecipesPage() {
                       <div className="flex justify-end pt-4">
                         <Link
                           href={`/recipes/${r.id}`}
-                          className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm font-semibold"
+                          className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm font-semibold w-full sm:w-auto text-center"
                         >
                           Open note log →
                         </Link>
