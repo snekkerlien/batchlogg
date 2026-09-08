@@ -1,20 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import * as Actions from "../../actions/createRecipe"; // ← bruker createRecipe
+import * as Actions from "../../actions/createRecipe";
 import MenuOverlay from "../../MenuOverlay";
 import BackButton from "../../BackButton";
 
 export default function NewBeerRecipePage() {
   const [loading, setLoading] = useState(false);
 
-  // Dynamic malt list
-  const [malts, setMalts] = useState<
-    { name: string; amount: string; unit: string }[]
-  >([]);
+  // MALTS (name + amount in kg)
+  const [malts, setMalts] = useState<{ name: string; amount: string }[]>([]);
+
+
 
   function addMalt() {
-    setMalts([...malts, { name: "", amount: "", unit: "" }]);
+    setMalts([...malts, { name: "", amount: "" }]);
   }
 
   function removeMalt(index: number) {
@@ -23,13 +23,12 @@ export default function NewBeerRecipePage() {
     setMalts(updated);
   }
 
-  // Dynamic hop list
-  const [hops, setHops] = useState<
-    { name: string; amount: string; unit: string; boil: string }[]
-  >([]);
+  // HOPS (name + amount in g + time in min)
+  const [hops, setHops] = useState<{ name: string; amount: string; time: string }[]>([]);
+
 
   function addHop() {
-    setHops([...hops, { name: "", amount: "", unit: "", boil: "" }]);
+    setHops([...hops, { name: "", amount: "", time: "" }]);
   }
 
   function removeHop(index: number) {
@@ -63,7 +62,6 @@ export default function NewBeerRecipePage() {
           className="flex flex-col gap-6"
           onSubmit={() => setLoading(true)}
         >
-          {/* Hidden fields */}
           <input type="hidden" name="type" value="Beer" />
 
           {/* Recipe name */}
@@ -82,8 +80,7 @@ export default function NewBeerRecipePage() {
             <label className="block mb-1 font-semibold">Volume (L)</label>
             <input
               name="volume"
-              type="number"
-              step="0.1"
+              type="text"
               placeholder="Example: 20"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
@@ -94,8 +91,7 @@ export default function NewBeerRecipePage() {
             <label className="block mb-1 font-semibold">Original Gravity (OG)</label>
             <input
               name="og"
-              type="number"
-              step="0.001"
+              type="text"
               placeholder="Example: 1.050"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
@@ -106,14 +102,13 @@ export default function NewBeerRecipePage() {
             <label className="block mb-1 font-semibold">Final Gravity (FG)</label>
             <input
               name="fg"
-              type="number"
-              step="0.001"
+              type="text"
               placeholder="Example: 1.010"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
 
-          {/* Malt additions */}
+          {/* MALTS */}
           <div>
             <label className="block mb-2 font-semibold">Malt additions</label>
 
@@ -134,26 +129,17 @@ export default function NewBeerRecipePage() {
                 />
 
                 <input
-                  placeholder="Amount"
-                  className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-24"
-                  value={m.amount}
-                  onChange={(e) => {
-                    const updated = [...malts];
-                    updated[i].amount = e.target.value;
-                    setMalts(updated);
-                  }}
-                />
+  placeholder="Amount (kg)"
+  type="text"
+  className="p-3 rounded bg-black/40 border border-white/20 placeholder:text-white/40 w-full md:w-32"
+  value={m.amount}
+  onChange={(e) => {
+    const updated = [...malts];
+    updated[i].amount = e.target.value; // behold string
+    setMalts(updated);
+  }}
+/>
 
-                <input
-                  placeholder="Unit"
-                  className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-20"
-                  value={m.unit}
-                  onChange={(e) => {
-                    const updated = [...malts];
-                    updated[i].unit = e.target.value;
-                    setMalts(updated);
-                  }}
-                />
 
                 <button
                   type="button"
@@ -176,7 +162,7 @@ export default function NewBeerRecipePage() {
 
           <input type="hidden" name="malts_json" value={JSON.stringify(malts)} />
 
-          {/* Hop additions */}
+          {/* HOPS */}
           <div>
             <label className="block mb-2 font-semibold">Hop additions</label>
 
@@ -197,37 +183,30 @@ export default function NewBeerRecipePage() {
                 />
 
                 <input
-                  placeholder="Amount"
-                  className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-20"
-                  value={h.amount}
-                  onChange={(e) => {
-                    const updated = [...hops];
-                    updated[i].amount = e.target.value;
-                    setHops(updated);
-                  }}
-                />
+  placeholder="Amount (g)"
+  type="text"
+  className="p-3 rounded bg-black/40 border border-white/20 placeholder:text-white/40 w-full md:w-28"
+  value={h.amount}
+  onChange={(e) => {
+    const updated = [...hops];
+    updated[i].amount = e.target.value;
+    setHops(updated);
+  }}
+/>
+
 
                 <input
-                  placeholder="Unit"
-                  className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-16"
-                  value={h.unit}
-                  onChange={(e) => {
-                    const updated = [...hops];
-                    updated[i].unit = e.target.value;
-                    setHops(updated);
-                  }}
-                />
+  placeholder="Boil time (min)"
+  type="text"
+  className="p-3 rounded bg-black/40 border border-white/20 placeholder:text-white/40 w-full md:w-32"
+  value={h.time}
+  onChange={(e) => {
+    const updated = [...hops];
+    updated[i].time = e.target.value;
+    setHops(updated);
+  }}
+/>
 
-                <input
-                  placeholder="Boil (min)"
-                  className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-20"
-                  value={h.boil}
-                  onChange={(e) => {
-                    const updated = [...hops];
-                    updated[i].boil = e.target.value;
-                    setHops(updated);
-                  }}
-                />
 
                 <button
                   type="button"

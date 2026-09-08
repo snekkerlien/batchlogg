@@ -3,6 +3,109 @@
 import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
 import { redirect } from "next/navigation";
 
+// ⭐ Import malt + humle databasen fra egen fil
+import { MALTS_DB, HOPS_DB } from "./data";
+
+// -----------------------------
+// Levenshtein fuzzy match
+// -----------------------------
+function levenshtein(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + cost
+      );
+    }
+  }
+
+  return dp[m][n];
+}
+
+function fuzzyMatchMalt(name: string) {
+  const normalized = name.trim().toLowerCase();
+  let best = null;
+  let bestScore = Infinity;
+
+  for (const malt of MALTS_DB) {
+    const dbName = malt.name.toLowerCase();
+    const dist = levenshtein(normalized, dbName);
+
+    if (dist < bestScore) {
+      bestScore = dist;
+      best = malt;
+    }
+  }
+
+  if (!best || bestScore > 3) {
+    return { name, lovibond: 0 };
+  }
+
+  return best;
+}
+
+// -----------------------------
+// IBU (Tinseth)
+// -----------------------------
+function calcIBU(hops: any[], og: number, volumeL: number) {
+  if (!hops || hops.length === 0) return 0;
+
+  const bigness = 1.65 * Math.pow(0.000125, og - 1.0);
+  let ibu = 0;
+
+  for (const hop of hops) {
+    const match = HOPS_DB.find(h => h.name.toLowerCase() === hop.name.toLowerCase());
+    const aa = match ? match.alpha : 0.05;
+
+    const boil = hop.time ? Number(hop.time) : 60;
+    const boilFactor = (1 - Math.exp(-0.04 * boil)) / 4.15;
+    const utilization = bigness * boilFactor;
+
+    ibu += (Number(hop.amount) * 1000 * aa * utilization) / volumeL;
+  }
+
+  return ibu;
+}
+
+// -----------------------------
+// EBC (MCU → SRM → EBC)
+// -----------------------------
+function calcEBC(malts: any[], volumeL: number) {
+  if (!malts || malts.length === 0) return 0;
+
+  const L_PER_GAL = 3.78541;
+  const KG_PER_LB = 0.453592;
+
+  let mcu = 0;
+
+  for (const malt of malts) {
+    const match = fuzzyMatchMalt(malt.name);
+    const lovibond = match.lovibond;
+
+    const weight_lb = Number(malt.amount) / KG_PER_LB;
+    const volume_gal = volumeL / L_PER_GAL;
+
+    mcu += (weight_lb * lovibond) / volume_gal;
+  }
+
+  const srm = 1.4922 * Math.pow(mcu, 0.6859);
+  const ebc = srm * 1.97;
+
+  return ebc;
+}
+
+// -----------------------------
+// MAIN FUNCTION
+// -----------------------------
 export async function createRecipe(formData: FormData) {
   const { supabase } = supabaseServer();
 
@@ -20,10 +123,17 @@ export async function createRecipe(formData: FormData) {
   // Core
   const type = formData.get("type") as string;
   const name = formData.get("name") as string;
-  const og = formData.get("og");
-  const fg = formData.get("fg");
-  const abv = formData.get("abv");
-  const volume = formData.get("volume");
+
+  const ogRaw = formData.get("og") as string | null;
+  const fgRaw = formData.get("fg") as string | null;
+  const volumeRaw = formData.get("volume") as string | null;
+
+  const og = ogRaw ? parseFloat(ogRaw) : null;
+  const fg = fgRaw ? parseFloat(fgRaw) : null;
+  const volume = volumeRaw ? parseFloat(volumeRaw) : null;
+
+  // ⭐ Automatic ABV
+  const abv = og !== null && fg !== null ? (og - fg) * 131.25 : null;
 
   // Shared
   const additives = formData.get("additives") as string;
@@ -51,6 +161,17 @@ export async function createRecipe(formData: FormData) {
 
   const boil_time = formData.get("boil_time") as string;
 
+  // ⭐ Automatic IBU/EBC for beer/braggot
+  const ibu =
+    (type === "Beer" || type === "Braggot") && og && volume
+      ? calcIBU(hops || [], og, volume)
+      : null;
+
+  const ebc =
+  (type === "Beer" || type === "Braggot") && volume
+    ? calcEBC(malts || [], volume)
+    : null;
+
   // Other
   const ingredients_json = formData.get("ingredients_json") as string;
   const ingredients = ingredients_json ? JSON.parse(ingredients_json) : null;
@@ -70,33 +191,29 @@ export async function createRecipe(formData: FormData) {
     og,
     fg,
     abv,
+    ibu,
+    ebc,
     volume,
 
-    // Mead
     honey_type,
     honey_amount,
     fruits,
 
-    // Cider / Wine / Seltzer
     juice_type,
     sugar_amount,
 
-    // Beer / Braggot
     malts,
     hops,
     boil_time,
 
-    // Other
     ingredients,
     steps,
 
-    // Shared
     yeast,
     additives,
     full_process,
     notes,
 
-    // Secondary
     had_secondary,
     secondary_additions,
     secondary_notes,

@@ -6,14 +6,33 @@ import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import Link from "next/link";
 
+function ebcToHex(ebc: number | string) {
+  const value = Number(ebc);
+
+  if (!value || value <= 0) return "#f3f3f3"; // pale
+
+  const srm = value / 1.97;
+
+  const r = Math.round(255 * Math.pow(0.975, srm));
+  const g = Math.round(245 * Math.pow(0.88, srm));
+  const b = Math.round(220 * Math.pow(0.7, srm));
+
+  return (
+    "#" +
+    [r, g, b]
+      .map((v) => Math.max(0, Math.min(255, v)).toString(16).padStart(2, "0"))
+      .join("")
+  );
+}
+
+
+
 export default function RecipesPage() {
   const [loading, setLoading] = useState(true);
   const [recipes, setRecipes] = useState<any[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [openStyleSelect, setOpenStyleSelect] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-
-  // ⭐ NEW: filter state
   const [filterType, setFilterType] = useState<string>("All");
 
   useEffect(() => {
@@ -105,23 +124,21 @@ export default function RecipesPage() {
           </button>
         </div>
 
-        {/* ⭐ FILTER BAR */}
+        {/* FILTER BAR */}
         <div className="flex flex-wrap gap-2 justify-center mb-6">
-          {["All", "Mead", "Beer", "Cider", "Wine", "Seltzer", "Braggot", "Other"].map(
-            (t) => (
-              <button
-                key={t}
-                onClick={() => setFilterType(t)}
-                className={`px-3 py-2 rounded-lg border text-sm ${
-                  filterType === t
-                    ? "bg-green-700 border-green-500"
-                    : "bg-white/10 border-white/20 hover:bg-white/20"
-                }`}
-              >
-                {t}
-              </button>
-            )
-          )}
+          {["All", "Mead", "Beer", "Cider", "Wine", "Seltzer", "Braggot", "Other"].map((t) => (
+            <button
+              key={t}
+              onClick={() => setFilterType(t)}
+              className={`px-3 py-2 rounded-lg border text-sm ${
+                filterType === t
+                  ? "bg-green-700 border-green-500"
+                  : "bg-white/10 border-white/20 hover:bg-white/20"
+              }`}
+            >
+              {t}
+            </button>
+          ))}
         </div>
 
         {/* RECIPE LIST */}
@@ -131,49 +148,62 @@ export default function RecipesPage() {
               const og = r.og ? Number(r.og).toFixed(3) : "—";
               const fg = r.fg ? Number(r.fg).toFixed(3) : "—";
               const abv = r.abv ? Number(r.abv).toFixed(1) : "—";
+              const ibu = r.ibu ? Number(r.ibu).toFixed(0) : "—";
+              const ebc = r.ebc ? Number(r.ebc) : null;
               const volume = r.volume ?? "—";
 
               return (
                 <div key={r.id} className="bg-white/10 border border-white/20 rounded-xl p-4">
-                  {/* CLICKABLE HEADER */}
+
+                  {/* HEADER (mobile-friendly) */}
                   <button
                     onClick={() => toggle(r.id)}
-                    className="w-full flex justify-between items-center text-left"
+                    className="w-full flex flex-col md:flex-row md:justify-between md:items-center text-left gap-3"
                   >
-                    <span className="text-xl font-bold text-green-300">
-                      {r.name ? r.name.charAt(0).toUpperCase() + r.name.slice(1) : "Unnamed recipe"}
-                    </span>
+                    <span className="text-xl font-bold text-green-300 flex items-center gap-3">
+  {r.name ? r.name.charAt(0).toUpperCase() + r.name.slice(1) : "Unnamed recipe"}
 
-                    <div className="flex items-center gap-3">
-                      {/* PUBLIC / PRIVATE */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          togglePublic(r.id, r.is_public);
-                        }}
-                        className={`px-4 py-2 rounded-lg font-semibold border ${
-                          r.is_public
-                            ? "bg-green-600 hover:bg-green-700 border-green-400"
-                            : "bg-zinc-700 hover:bg-zinc-600 border-zinc-500"
-                        }`}
-                      >
-                        {r.is_public ? "Public" : "Private"}
-                      </button>
+  {ebc !== null && (
+    <span
+      className="inline-block w-5 h-5 rounded-md border border-white/20 shadow-[0_0_6px_rgba(0,0,0,0.4)]"
+      style={{
+        backgroundColor: ebcToHex(ebc),
+        transform: "translateY(1px)"
+      }}
+    ></span>
+  )}
+</span>
 
-                      {/* DELETE */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setConfirmDeleteId(r.id);
-                        }}
-                        className="px-4 py-2 rounded-lg font-semibold border bg-red-700 hover:bg-red-600 border-red-500"
-                      >
-                        Delete
-                      </button>
 
-                      {/* ARROW */}
+                    <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
+                      <div className="flex flex-row gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            togglePublic(r.id, r.is_public);
+                          }}
+                          className={`px-4 py-2 rounded-lg font-semibold border ${
+                            r.is_public
+                              ? "bg-green-600 hover:bg-green-700 border-green-400"
+                              : "bg-zinc-700 hover:bg-zinc-600 border-zinc-500"
+                          }`}
+                        >
+                          {r.is_public ? "Public" : "Private"}
+                        </button>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setConfirmDeleteId(r.id);
+                          }}
+                          className="px-4 py-2 rounded-lg font-semibold border bg-red-700 hover:bg-red-600 border-red-500"
+                        >
+                          Delete
+                        </button>
+                      </div>
+
                       <span
-                        className={`text-white text-2xl transition-transform duration-200 ${
+                        className={`text-white text-2xl transition-transform duration-200 self-end md:self-auto ${
                           expanded === r.id ? "rotate-90" : "rotate-180"
                         }`}
                       >
@@ -182,6 +212,25 @@ export default function RecipesPage() {
                     </div>
                   </button>
 
+                  {/* Stats line */}
+<p className="text-sm mt-3">
+  <strong>OG:</strong> {og}
+  <span className="ml-4"><strong>FG:</strong> {fg}</span>
+
+  {/* IBU/EBC only for beer/braggot or if malts exist */}
+  {(r.type === "Beer" || r.type === "Braggot" || (r.malts && r.malts.length > 0)) && (
+    <>
+      <span className="ml-4"><strong>IBU:</strong> {ibu}</span>
+      <span className="ml-4"><strong>EBC:</strong> {ebc !== null ? ebc.toFixed(0) : "—"}</span>
+  
+)
+
+    </>
+  )}
+
+  <span className="ml-4"><strong>ABV:</strong> {abv}%</span>
+</p>
+
                   {/* SLIDER CONTENT */}
                   <div
                     className={`transition-all duration-300 ease-in-out overflow-hidden ${
@@ -189,37 +238,22 @@ export default function RecipesPage() {
                     }`}
                   >
                     <div className="space-y-3 opacity-90">
-                      <p className="text-sm">
-                        <strong>OG:</strong> {og}
-                        <strong className="ml-4">FG:</strong> {fg}
-                        <strong className="ml-4">ABV:</strong> {abv}%
-                      </p>
 
                       <p className="text-sm">
                         <strong>Volume:</strong> {volume} L
                       </p>
 
-                      {/* ⭐ TYPE-SPECIFIC FIELDS */}
+                      {/* TYPE-SPECIFIC */}
                       {r.type === "Mead" && (
                         <>
-                          {r.honey_type && (
-                            <p>
-                              <strong>Honey type:</strong> {r.honey_type}
-                            </p>
-                          )}
-                          {r.honey_amount && (
-                            <p>
-                              <strong>Honey amount:</strong> {r.honey_amount} kg
-                            </p>
-                          )}
-                          {r.fruits && r.fruits.length > 0 && (
+                          {r.honey_type && <p><strong>Honey type:</strong> {r.honey_type}</p>}
+                          {r.honey_amount && <p><strong>Honey amount:</strong> {r.honey_amount} kg</p>}
+                          {r.fruits?.length > 0 && (
                             <div>
                               <strong>Fruits:</strong>
                               <ul className="list-disc ml-6 opacity-80">
                                 {r.fruits.map((f: any, i: number) => (
-                                  <li key={i}>
-                                    {f.name} — {f.amount} {f.unit}
-                                  </li>
+                                  <li key={i}>{f.name} — {f.amount} {f.unit}</li>
                                 ))}
                               </ul>
                             </div>
@@ -227,71 +261,71 @@ export default function RecipesPage() {
                         </>
                       )}
 
-                      {r.type === "Beer" || r.type === "Braggot" ? (
+                      {(r.type === "Beer" || r.type === "Braggot") && (
                         <>
-                          {r.malts && r.malts.length > 0 && (
-                            <div>
-                              <strong>Malts:</strong>
-                              <ul className="list-disc ml-6 opacity-80">
-                                {r.malts.map((m: any, i: number) => (
-                                  <li key={i}>
-                                    {m.name} — {m.amount} kg
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
+                          {r.malts?.length > 0 && (
+  <div>
+    <strong>Malts:</strong>
+    <ul className="list-disc ml-6 opacity-80">
+      {r.malts.map((m: any, i: number) => (
+        <li key={i}>{m.name} — {m.amount} kg</li>
+      ))}
+    </ul>
 
-                          {r.hops && r.hops.length > 0 && (
-                            <div>
-                              <strong>Hops:</strong>
-                              <ul className="list-disc ml-6 opacity-80">
-                                {r.hops.map((h: any, i: number) => (
-                                  <li key={i}>
-                                    {h.name} — {h.amount} g @ {h.time} min
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
+    {/* ⭐ Total maltmengde */}
+    <p className="mt-2 opacity-80">
+      <strong>Total malt:</strong>{" "}
+      {r.malts.reduce((sum: number, m: any) => sum + Number(m.amount), 0).toFixed(2)} kg
+    </p>
+  </div>
+)}
+
+
+                          
+
+                          {r.hops?.length > 0 && (
+  <div>
+    <strong>Hops:</strong>
+    <ul className="list-disc ml-6 opacity-80">
+      {r.hops.map((h: any, i: number) => (
+        <li key={i}>{h.name} — {h.amount} g @ {h.time} min</li>
+      ))}
+    </ul>
+
+    {/* ⭐ Total humlemengde */}
+    <p className="mt-2 opacity-80">
+      <strong>Total hops:</strong>{" "}
+      {r.hops.reduce((sum: number, h: any) => sum + Number(h.amount), 0).toFixed(0)} g
+    </p>
+  </div>
+)}
+
 
                           {r.boil_time && (
-                            <p>
-                              <strong>Boil time:</strong> {r.boil_time} min
-                            </p>
+                            <p><strong>Boil time:</strong> {r.boil_time} min</p>
                           )}
                         </>
-                      ) : null}
+                      )}
 
-                      {r.type === "Wine" || r.type === "Cider" || r.type === "Hard Seltzer" ? (
+                      {(r.type === "Wine" || r.type === "Cider" || r.type === "Seltzer") && (
                         <>
-                          {r.juice_type && (
-                            <p>
-                              <strong>Juice / Must:</strong> {r.juice_type}
-                            </p>
-                          )}
-                          {r.sugar_amount && (
-                            <p>
-                              <strong>Sugar added:</strong> {r.sugar_amount}
-                            </p>
-                          )}
+                          {r.juice_type && <p><strong>Juice / Must:</strong> {r.juice_type}</p>}
+                          {r.sugar_amount && <p><strong>Sugar added:</strong> {r.sugar_amount}</p>}
                         </>
-                      ) : null}
+                      )}
 
                       {r.type === "Other" && r.ingredients && (
                         <div>
                           <strong>Ingredients:</strong>
                           <ul className="list-disc ml-6 opacity-80">
                             {r.ingredients.map((ing: any, i: number) => (
-                              <li key={i}>
-                                {ing.name} — {ing.amount} {ing.unit}
-                              </li>
+                              <li key={i}>{ing.name} — {ing.amount} {ing.unit}</li>
                             ))}
                           </ul>
                         </div>
                       )}
 
-                      {r.steps && r.steps.length > 0 && (
+                      {r.steps?.length > 0 && (
                         <div>
                           <strong>Steps:</strong>
                           <ul className="list-disc ml-6 opacity-80">
@@ -302,67 +336,45 @@ export default function RecipesPage() {
                         </div>
                       )}
 
-                      {/* Shared fields */}
-                      {r.yeast && (
-                        <p>
-                          <strong>Yeast:</strong> {r.yeast}
-                        </p>
-                      )}
-
+                      {/* Shared */}
+                      {r.yeast && <p><strong>Yeast:</strong> {r.yeast}</p>}
                       {r.additives && (
                         <p className="whitespace-pre-line">
-                          <strong>Additives:</strong>
-                          {"\n"}
-                          {r.additives}
+                          <strong>Additives:</strong>{"\n"}{r.additives}
                         </p>
                       )}
-
                       {r.full_process && (
                         <p className="whitespace-pre-line">
-                          <strong>Full process:</strong>
-                          {"\n"}
-                          {r.full_process}
+                          <strong>Full process:</strong>{"\n"}{r.full_process}
                         </p>
                       )}
-
                       {r.notes && (
                         <p className="whitespace-pre-line">
-                          <strong>Notes:</strong>
-                          {"\n"}
-                          {r.notes}
+                          <strong>Notes:</strong>{"\n"}{r.notes}
                         </p>
                       )}
 
                       {/* Secondary */}
                       {r.had_secondary && (
                         <div className="mt-6">
-                          <h4 className="font-semibold text-white/90 mb-2">
-                            Secondary fermentation
-                          </h4>
-
+                          <h4 className="font-semibold text-white/90 mb-2">Secondary fermentation</h4>
                           {r.secondary_additions && (
                             <p className="whitespace-pre-line opacity-80">
-                              <strong>Secondary additions:</strong>
-                              {"\n"}
-                              {r.secondary_additions}
+                              <strong>Secondary additions:</strong>{"\n"}{r.secondary_additions}
                             </p>
                           )}
-
                           {r.secondary_notes && (
                             <p className="whitespace-pre-line opacity-80 mt-2">
-                              <strong>Secondary notes:</strong>
-                              {"\n"}
-                              {r.secondary_notes}
+                              <strong>Secondary notes:</strong>{"\n"}{r.secondary_notes}
                             </p>
                           )}
                         </div>
                       )}
 
                       {/* Note log */}
-                      {r.notes_log && r.notes_log.length > 0 && (
+                      {r.notes_log?.length > 0 && (
                         <div className="whitespace-pre-line">
-                          <strong>Note log:</strong>
-                          {"\n"}
+                          <strong>Note log:</strong>{"\n"}
                           {r.notes_log.map((n: any) => `• ${n.note}`).join("\n")}
                         </div>
                       )}
@@ -429,19 +441,17 @@ export default function RecipesPage() {
               <h2 className="text-2xl font-bold text-center mb-6">Choose recipe type</h2>
 
               <div className="flex flex-col gap-4">
-                {["Mead", "Beer", "Cider", "Wine", "Hard Seltzer", "Braggot", "Other"].map(
-                  (type) => (
-                    <button
-                      key={type}
-                      onClick={() => {
-                        window.location.href = `/recipes/new/${type.toLowerCase()}`;
-                      }}
-                      className="px-4 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
-                    >
-                      {type}
-                    </button>
-                  )
-                )}
+                {["Mead", "Beer", "Cider", "Wine", "Seltzer", "Braggot", "Other"].map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => {
+                      window.location.href = `/recipes/new/${type.toLowerCase()}`;
+                    }}
+                    className="px-4 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
+                  >
+                    {type}
+                  </button>
+                ))}
               </div>
 
               <button
