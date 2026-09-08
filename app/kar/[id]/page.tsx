@@ -194,11 +194,12 @@ useEffect(() => {
         </p>
 
         <button
-          onClick={() => window.history.back()}
-          className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg transition"
-        >
-          Go back
-        </button>
+  onClick={() => (window.location.href = "/dashboard")}
+  className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg transition"
+>
+  Go back
+</button>
+
       </div>
     </main>
   );
@@ -253,7 +254,7 @@ async function toggleVisibility() {
         {/* Top bar */}
         <div className="flex items-center justify-between mb-6">
           <button
-            onClick={() => window.history.back()}
+            onClick={() => (window.location.href = "/dashboard")}
             className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg flex items-center justify-center"
           >
             <svg

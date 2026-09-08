@@ -124,60 +124,65 @@ export default function NewMeadPage({ params }: { params: { id: string } }) {
 
           {/* Dynamic fruit additions */}
           <div>
-            <label className="block mb-2 font-semibold">Fruit additions</label>
+  <label className="block mb-2 font-semibold">Fruit additions</label>
 
-            {fruits.map((f, i) => (
-              <div key={i} className="flex gap-2 mb-2 items-center">
-                <input
-                  placeholder="Fruit"
-                  className="flex-1 p-3 rounded bg-black/40 border border-white/20"
-                  value={f.name}
-                  onChange={(e) => {
-                    const updated = [...fruits];
-                    updated[i].name = e.target.value;
-                    setFruits(updated);
-                  }}
-                />
-                <input
-                  placeholder="Amount"
-                  className="w-24 p-3 rounded bg-black/40 border border-white/20"
-                  value={f.amount}
-                  onChange={(e) => {
-                    const updated = [...fruits];
-                    updated[i].amount = e.target.value;
-                    setFruits(updated);
-                  }}
-                />
-                <input
-                  placeholder="Unit"
-                  className="w-20 p-3 rounded bg-black/40 border border-white/20"
-                  value={f.unit}
-                  onChange={(e) => {
-                    const updated = [...fruits];
-                    updated[i].unit = e.target.value;
-                    setFruits(updated);
-                  }}
-                />
+  {fruits.map((f, i) => (
+    <div
+      key={i}
+      className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full"
+    >
+      <input
+        placeholder="Fruit"
+        className="p-3 rounded bg-black/40 border border-white/20 w-full md:flex-1"
+        value={f.name}
+        onChange={(e) => {
+          const updated = [...fruits];
+          updated[i].name = e.target.value;
+          setFruits(updated);
+        }}
+      />
 
-                {/* Remove button */}
-                <button
-                  type="button"
-                  onClick={() => removeFruit(i)}
-                  className="px-3 py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm"
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
+      <input
+        placeholder="Amount"
+        className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-24"
+        value={f.amount}
+        onChange={(e) => {
+          const updated = [...fruits];
+          updated[i].amount = e.target.value;
+          setFruits(updated);
+        }}
+      />
 
-            <button
-              type="button"
-              onClick={addFruit}
-              className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
-            >
-              + Add fruit
-            </button>
-          </div>
+      <input
+        placeholder="Unit"
+        className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-20"
+        value={f.unit}
+        onChange={(e) => {
+          const updated = [...fruits];
+          updated[i].unit = e.target.value;
+          setFruits(updated);
+        }}
+      />
+
+      <button
+        type="button"
+        onClick={() => removeFruit(i)}
+        className="px-3 py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm self-start md:self-auto"
+      >
+        Remove
+      </button>
+    </div>
+  ))}
+
+  <button
+    type="button"
+    onClick={addFruit}
+    className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
+  >
+    + Add fruit
+  </button>
+</div>
+
 
           {/* Hidden JSON fields */}
           <input type="hidden" name="fruits_json" value={JSON.stringify(fruits)} />

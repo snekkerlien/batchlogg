@@ -3,5 +3,5 @@
 import UniversalMenuOverlay from "@/app/components/MenuOverlay";
 
 export default function MenuOverlay() {
-  return <UniversalMenuOverlay current="recipes" />;
+  return <UniversalMenuOverlay current="beer" />;
 }
