@@ -168,8 +168,8 @@ export default function RecipesPage() {
 <div
   className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
   onClick={(e) => {
-    // Når kortet er åpnet → hele headeren skal lukke det
-    if (expanded === r.id) {
+    // PC: hele headeren lukker kortet
+    if (expanded === r.id && window.innerWidth >= 640) {
       e.stopPropagation();
       toggle(r.id);
     }
@@ -178,16 +178,21 @@ export default function RecipesPage() {
   {/* Tittel */}
   <button
     onClick={(e) => {
-      // Tittelen skal IKKE lukke kortet alene
-      // Den skal bare hindre wrapperen fra å åpne kortet
-      e.stopPropagation();
+      // Mobil: kun tittelen lukker kortet
+      if (expanded === r.id && window.innerWidth < 640) {
+        e.stopPropagation();
+        toggle(r.id);
+      }
+
+      // PC: tittelen skal ikke åpne kortet alene
+      if (window.innerWidth >= 640) {
+        e.stopPropagation();
+      }
     }}
     className="text-left flex items-center gap-3"
   >
     <span className="text-xl font-bold text-green-300 flex items-center gap-3">
       {r.name ? r.name.charAt(0).toUpperCase() + r.name.slice(1) : "Unnamed recipe"}
-
-      
     </span>
   </button>
 
@@ -195,7 +200,7 @@ export default function RecipesPage() {
   <div className="flex flex-row items-center justify-center sm:justify-end gap-2 sm:mt-[6px]">
     <button
       onClick={(e) => {
-        e.stopPropagation(); // hindrer åpning
+        e.stopPropagation();
         togglePublic(r.id, r.is_public);
       }}
       className={`px-4 py-2 rounded-lg font-semibold border ${
@@ -209,7 +214,7 @@ export default function RecipesPage() {
 
     <button
       onClick={(e) => {
-        e.stopPropagation(); // hindrer åpning
+        e.stopPropagation();
         setConfirmDeleteId(r.id);
       }}
       className="px-4 py-2 rounded-lg font-semibold border bg-red-700 hover:bg-red-600 border-red-500"
@@ -219,7 +224,11 @@ export default function RecipesPage() {
 
     <span
       onClick={(e) => {
-        e.stopPropagation(); // hindrer åpning
+        e.stopPropagation();
+        // Mobil: pil skal også lukke kortet
+        if (expanded === r.id && window.innerWidth < 640) {
+          toggle(r.id);
+        }
       }}
       className={`text-white text-2xl transition-transform duration-200 ${
         expanded === r.id ? "rotate-90" : "rotate-180"
@@ -229,6 +238,8 @@ export default function RecipesPage() {
     </span>
   </div>
 </div>
+
+
 
 
 
