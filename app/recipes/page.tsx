@@ -196,47 +196,44 @@ export default function RecipesPage() {
     </span>
   </button>
 
-  {/* Knapper + pil */}
-  <div className="flex flex-row items-center justify-center sm:justify-end gap-2 sm:mt-[6px]">
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        togglePublic(r.id, r.is_public);
-      }}
-      className={`px-4 py-2 rounded-lg font-semibold border ${
-        r.is_public
-          ? "bg-green-600 hover:bg-green-700 border-green-400"
-          : "bg-zinc-700 hover:bg-zinc-600 border-zinc-500"
-      }`}
-    >
-      {r.is_public ? "Public" : "Private"}
-    </button>
+  {/* Knapper + pil (PC) */}
+<div className="hidden sm:flex flex-row items-center justify-end gap-2 sm:mt-[6px]">
+  <button
+    onClick={(e) => {
+      e.stopPropagation();
+      togglePublic(r.id, r.is_public);
+    }}
+    className={`px-4 py-2 rounded-lg font-semibold border ${
+      r.is_public
+        ? "bg-green-600 hover:bg-green-700 border-green-400"
+        : "bg-zinc-700 hover:bg-zinc-600 border-zinc-500"
+    }`}
+  >
+    {r.is_public ? "Public" : "Private"}
+  </button>
 
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        setConfirmDeleteId(r.id);
-      }}
-      className="px-4 py-2 rounded-lg font-semibold border bg-red-700 hover:bg-red-600 border-red-500"
-    >
-      Delete
-    </button>
+  <button
+    onClick={(e) => {
+      e.stopPropagation();
+      setConfirmDeleteId(r.id);
+    }}
+    className="px-4 py-2 rounded-lg font-semibold border bg-red-700 hover:bg-red-600 border-red-500"
+  >
+    Delete
+  </button>
 
-    <span
-      onClick={(e) => {
-        e.stopPropagation();
-        // Mobil: pil skal også lukke kortet
-        if (expanded === r.id && window.innerWidth < 640) {
-          toggle(r.id);
-        }
-      }}
-      className={`text-white text-2xl transition-transform duration-200 ${
-        expanded === r.id ? "rotate-90" : "rotate-180"
-      }`}
-    >
-      ▶
-    </span>
-  </div>
+  <span
+    onClick={(e) => {
+      e.stopPropagation();
+    }}
+    className={`text-white text-2xl transition-transform duration-200 ${
+      expanded === r.id ? "rotate-90" : "rotate-180"
+    }`}
+  >
+    ▶
+  </span>
+</div>
+
 </div>
 
 
