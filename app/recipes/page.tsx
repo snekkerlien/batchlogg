@@ -153,68 +153,92 @@ export default function RecipesPage() {
               const volume = r.volume ?? "—";
 
               return (
-                <div key={r.id} className="bg-white/10 border border-white/20 rounded-xl p-4 sm:p-6">
+                <div
+  key={r.id}
+  className={`bg-white/10 border border-white/20 rounded-xl p-4 sm:p-6 ${
+    expanded === r.id ? "cursor-default" : "cursor-pointer"
+  }`}
+  onClick={() => {
+    if (expanded !== r.id) toggle(r.id); // åpne kortet
+  }}
+>
 
 
-                  {/* HEADER (mobile-friendly) */}
-                  <button
-                    onClick={() => toggle(r.id)}
-                    className="w-full flex flex-col sm:flex-row sm:justify-between sm:items-center text-left gap-3"
-                  >
-                    <span className="text-xl font-bold text-green-300 flex items-center gap-3">
-  {r.name ? r.name.charAt(0).toUpperCase() + r.name.slice(1) : "Unnamed recipe"}
+{/* HEADER */}
+<div
+  className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+  onClick={(e) => {
+    // Når kortet er åpnet → hele headeren skal lukke det
+    if (expanded === r.id) {
+      e.stopPropagation();
+      toggle(r.id);
+    }
+  }}
+>
+  {/* Tittel */}
+  <button
+    onClick={(e) => {
+      // Tittelen skal IKKE lukke kortet alene
+      // Den skal bare hindre wrapperen fra å åpne kortet
+      e.stopPropagation();
+    }}
+    className="text-left flex items-center gap-3"
+  >
+    <span className="text-xl font-bold text-green-300 flex items-center gap-3">
+      {r.name ? r.name.charAt(0).toUpperCase() + r.name.slice(1) : "Unnamed recipe"}
 
-  {ebc !== null && (
-    <span
-      className="inline-block w-5 h-5 rounded-md border border-white/20 shadow-[0_0_6px_rgba(0,0,0,0.4)]"
-      style={{
-        backgroundColor: ebcToHex(ebc),
-        transform: "translateY(1px)"
+      
+    </span>
+  </button>
+
+  {/* Knapper + pil */}
+  <div className="flex flex-row items-center justify-center sm:justify-end gap-2 sm:mt-[6px]">
+    <button
+      onClick={(e) => {
+        e.stopPropagation(); // hindrer åpning
+        togglePublic(r.id, r.is_public);
       }}
-    ></span>
-  )}
-</span>
+      className={`px-4 py-2 rounded-lg font-semibold border ${
+        r.is_public
+          ? "bg-green-600 hover:bg-green-700 border-green-400"
+          : "bg-zinc-700 hover:bg-zinc-600 border-zinc-500"
+      }`}
+    >
+      {r.is_public ? "Public" : "Private"}
+    </button>
+
+    <button
+      onClick={(e) => {
+        e.stopPropagation(); // hindrer åpning
+        setConfirmDeleteId(r.id);
+      }}
+      className="px-4 py-2 rounded-lg font-semibold border bg-red-700 hover:bg-red-600 border-red-500"
+    >
+      Delete
+    </button>
+
+    <span
+      onClick={(e) => {
+        e.stopPropagation(); // hindrer åpning
+      }}
+      className={`text-white text-2xl transition-transform duration-200 ${
+        expanded === r.id ? "rotate-90" : "rotate-180"
+      }`}
+    >
+      ▶
+    </span>
+  </div>
+</div>
 
 
-                    <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            togglePublic(r.id, r.is_public);
-                          }}
-                          className={`px-4 py-2 rounded-lg font-semibold border ${
-                            r.is_public
-                              ? "bg-green-600 hover:bg-green-700 border-green-400"
-                              : "bg-zinc-700 hover:bg-zinc-600 border-zinc-500"
-                          }`}
-                        >
-                          {r.is_public ? "Public" : "Private"}
-                        </button>
 
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setConfirmDeleteId(r.id);
-                          }}
-                          className="px-4 py-2 rounded-lg font-semibold border bg-red-700 hover:bg-red-600 border-red-500"
-                        >
-                          Delete
-                        </button>
-                      </div>
 
-                      <span
-                        className={`text-white text-2xl transition-transform duration-200 self-end md:self-auto ${
-                          expanded === r.id ? "rotate-90" : "rotate-180"
-                        }`}
-                      >
-                        ▶
-                      </span>
-                    </div>
-                  </button>
+
+
+                   
 
                   {/* Stats line */}
-<p className="text-sm mt-3 grid grid-cols-2 gap-y-1 gap-x-4 sm:flex sm:flex-wrap sm:items-center">
+<p className="text-sm mt-3 grid grid-cols-3 gap-y-1 gap-x-4 sm:flex sm:flex-wrap sm:items-center">
   <span><strong>OG:</strong> {og}</span>
   <span><strong>FG:</strong> {fg}</span>
 
@@ -234,6 +258,45 @@ export default function RecipesPage() {
 
   <span><strong>ABV:</strong> {abv}%</span>
 </p>
+
+{/* Mobil-knapper + pil */}
+<div className="flex sm:hidden justify-between items-center mt-3">
+  <div className="flex gap-2">
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        togglePublic(r.id, r.is_public);
+      }}
+      className={`px-4 py-2 rounded-lg font-semibold border ${
+        r.is_public
+          ? "bg-green-600 hover:bg-green-700 border-green-400"
+          : "bg-zinc-700 hover:bg-zinc-600 border-zinc-500"
+      }`}
+    >
+      {r.is_public ? "Public" : "Private"}
+    </button>
+
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        setConfirmDeleteId(r.id);
+      }}
+      className="px-4 py-2 rounded-lg font-semibold border bg-red-700 hover:bg-red-600 border-red-500"
+    >
+      Delete
+    </button>
+  </div>
+
+  <span
+    className={`text-white text-2xl transition-transform duration-200 ${
+      expanded === r.id ? "rotate-90" : "rotate-180"
+    }`}
+  >
+    ▶
+  </span>
+</div>
+
+
 
 
                   {/* SLIDER CONTENT */}
