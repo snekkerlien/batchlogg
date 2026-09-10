@@ -160,16 +160,19 @@ export async function createRecipe(formData: FormData) {
   const hops = hops_json ? JSON.parse(hops_json) : null;
 
   const boil_time = formData.get("boil_time") as string;
+  const boilVolumeRaw = formData.get("boil_volume") as string | null;
+  const boil_volume = boilVolumeRaw ? parseFloat(boilVolumeRaw) : null;
+
 
   // ⭐ Automatic IBU/EBC for beer/braggot
   const ibu =
     (type === "Beer" || type === "Braggot") && og && volume
-      ? calcIBU(hops || [], og, volume)
+      ? calcIBU(hops || [], og, boil_volume ?? volume)
       : null;
 
   const ebc =
   (type === "Beer" || type === "Braggot") && volume
-    ? calcEBC(malts || [], volume)
+    ? calcEBC(malts || [], boil_volume ?? volume)
     : null;
 
   // Other
@@ -205,6 +208,7 @@ export async function createRecipe(formData: FormData) {
     malts,
     hops,
     boil_time,
+    boil_volume,
 
     ingredients,
     steps,

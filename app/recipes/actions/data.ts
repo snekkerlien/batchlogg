@@ -7,7 +7,7 @@ export const MALTS_DB = [
   { name: "Hvetemalt", lovibond: 3 / 1.97 },
   { name: "Maris Otter Pale Ale Malt", lovibond: 5 / 1.97 },
   { name: "Vienna Malt", lovibond: 10 / 1.97 },
-  { name: "Chocolate Malt", lovibond: 1150 / 1.97 },
+  { name: "Chocolate Malt", lovibond: 1250 / 1.97 },
   { name: "Planet Pale Ale Malt", lovibond: 5 / 1.97 },
 
   { name: "Caramunich I", lovibond: 80 / 1.97 },
@@ -21,12 +21,13 @@ export const MALTS_DB = [
   { name: "Crystal 240", lovibond: 240 / 1.97 },
   { name: "Heritage Crystal", lovibond: 180 / 1.97 },
 
-  { name: "CaraMalt", lovibond: 30 / 1.97 },
+  { name: "CaraMalt", lovibond: 36 / 1.97 },
   { name: "CaraHell", lovibond: 25 / 1.97 },
   { name: "CaraAmber", lovibond: 70 / 1.97 },
   { name: "CaraGlow", lovibond: 15 / 1.97 },
   { name: "CaraAroma", lovibond: 400 / 1.97 },
   { name: "Carared", lovibond: 50 / 1.97 },
+  { name: "Amber Malt", lovibond: 58 / 1.97 },
 
   { name: "Melanoidin Malt", lovibond: 70 / 1.97 },
   { name: "Aromatic Malt", lovibond: 60 / 1.97 },
@@ -60,15 +61,34 @@ export const MALTS_DB = [
   { name: "Torrefied Wheat", lovibond: 1 / 1.97 },
   { name: "Chit Malt", lovibond: 3.5 / 1.97 },
 
-  { name: "Acidulated Malt", lovibond: 7 / 1.97 },
+  { name: "Acidulated Malt", lovibond: 4 / 1.97 },
 
   { name: "Pale Chocolate Malt", lovibond: 600 / 1.97 },
   { name: "Roasted Barley", lovibond: 1600 / 1.97 },
   { name: "Black Malt", lovibond: 1650 / 1.97 },
   { name: "Carafa Special III", lovibond: 1500 / 1.97 },
 
+  { name: "Carafa I", lovibond: 300 / 1.97 },
+  { name: "Carafa II", lovibond: 600 / 1.97 },
+  { name: "Carafa Special I", lovibond: 900 / 1.97 },
+  { name: "Carafa Special II", lovibond: 1150 / 1.97 },
+  { name: "Carafa Special III", lovibond: 1400 / 1.97 },
+
   { name: "Rice Hulls", lovibond: 0 },
+  { name : "English Caramalt", lovibond: 60 / 1.97 },
+  { name: "Carapils", lovibond: 4 / 1.97 },
+  { name: "DRC", lovibond: 250 / 1.97 },
+  { name: "Brown Malt", lovibond: 500 / 1.97 },
+  { name: "Abbey Malt", lovibond: 45 / 1.97 },
+  { name: "Bøkerøkt Bygg", lovibond: 5 / 1.97 },
+  { name: "Medium Peated", lovibond: 4 / 1.97 },
+  { name: "Havre", lovibond: 3 / 1.97 },
+  { name: "Oat", lovibond: 3 / 1.97 },
+  { name: "Rye", lovibond: 7 / 1.97 },
+  { name: "Rug", lovibond: 7 / 1.97 },
+  { name: "Red X", lovibond: 30 / 1.97 },
 ];
+
 
 
 export const HOPS_DB = [

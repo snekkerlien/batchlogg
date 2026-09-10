@@ -81,10 +81,22 @@ export default function NewBeerRecipePage() {
             <input
               name="volume"
               type="text"
-              placeholder="Example: 20"
+              placeholder="Final batch size after the boil (e.g., 20 L)"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
+
+          {/* Boil Volume */}
+          <div>
+            <label className="block mb-1 font-semibold">Boil Volume (L)</label>
+            <input
+              name="boil_volume"
+              type="number"
+              placeholder="Total wort volume before the boil (usually 20–30% higher than batch size)"
+              className="w-full p-3 rounded bg-black/40 border border-white/20"
+            />
+          </div>
+
 
           {/* OG */}
           <div>
@@ -232,11 +244,9 @@ export default function NewBeerRecipePage() {
           {/* Boil time */}
           <div>
             <label className="block mb-1 font-semibold">Total boil time (minutes)</label>
-            <input
+            <textarea
               name="boil_time"
-              type="number"
-              step="1"
-              placeholder="Example: 60"
+              placeholder="Length of the boil in minutes (e.g., 60)"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
