@@ -219,8 +219,16 @@ export async function createRecipe(formData: FormData) {
   const hops = hopsRaw.map((h: any) => {
   const alias = HOPS_ALIASES[h.name.toLowerCase()];
   const realName = alias || h.name;
-  return { ...h, name: realName };
+
+  const match = HOPS_DB.find(x => x.name.toLowerCase() === realName.toLowerCase());
+
+  return {
+    ...h,
+    name: realName,
+    alpha: match ? match.alpha : 0.05
+  };
 });
+
 
 
 
