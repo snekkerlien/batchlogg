@@ -140,7 +140,7 @@ function removeDryHop(index: number) {
           <div>
             <label className="block mb-1 font-semibold">Boil Volume (L)</label>
             <input
-              name="boil_volume"
+              name="boil_volume_l"
               type="number"
               placeholder="Total wort volume before the boil"
               className="w-full p-3 rounded bg-black/40 border border-white/20"

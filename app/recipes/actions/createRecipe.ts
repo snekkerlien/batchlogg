@@ -86,6 +86,7 @@ function calcIBU(hops: any[], og: number, volumeL: number) {
     const utilization = bigness * boilFactor;
 
     ibu += (Number(hop.amount) * 1000 * aa * utilization) / volumeL;
+    
   }
 
   return ibu;
@@ -221,6 +222,7 @@ export async function createRecipe(formData: FormData) {
   const realName = alias || h.name;
 
   const match = HOPS_DB.find(x => x.name.toLowerCase() === realName.toLowerCase());
+  
 
   return {
     ...h,
@@ -331,6 +333,7 @@ export async function createRecipe(formData: FormData) {
     is_public: false,
     batch_id: null,
   });
+  
 
   if (error) {
     return { success: false, error: error.message };

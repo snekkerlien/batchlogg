@@ -5,6 +5,7 @@ import * as Actions from "../../actions";
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 
+
 export default function NewBeerPage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(false);
 
@@ -51,7 +52,8 @@ function removeDryHop(index: number) {
   setDryHops(updated);
 }
 
-const [boilVolume, setBoilVolume] = useState("");
+const [boilVolume, setBoilVolume] = useState<number | "">("");
+const [volume, setVolume] = useState("");
 
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
@@ -72,6 +74,8 @@ const [boilVolume, setBoilVolume] = useState("");
         <p className="text-center opacity-80 mb-10">
           Fill out the details below to start a new beer batch.
         </p>
+
+        
 
         <form
           action={Actions.createBatch}
@@ -97,12 +101,13 @@ const [boilVolume, setBoilVolume] = useState("");
           <div>
             <label className="block mb-1 font-semibold">Volume (L)</label>
             <input
-              name="volume_l"
-              type="text"
-              placeholder="Example: 20"
-              className="w-full p-3 rounded bg-black/40 border border-white/20"
-              required
-            />
+  name="volume_l"
+  type="text"
+  value={volume}
+  onChange={(e) => setVolume(e.target.value)}
+  required
+/>
+
           </div>
 
           <div>
@@ -112,9 +117,10 @@ const [boilVolume, setBoilVolume] = useState("");
   type="number"
   step="0.1"
   value={boilVolume}
-  onChange={(e) => setBoilVolume(e.target.value)}
+  onChange={(e) => setBoilVolume(e.target.value === "" ? "" : Number(e.target.value))}
   required
-/>
+  />
+
 </div>
 
 
@@ -405,8 +411,13 @@ const [boilVolume, setBoilVolume] = useState("");
           >
             {loading ? "Creating..." : "Create batch"}
           </button>
+          
         </form>
       </div>
     </main>
   );
 }
+function useEffect(arg0: () => void, arg1: string[]) {
+  throw new Error("Function not implemented.");
+}
+

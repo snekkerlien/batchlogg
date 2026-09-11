@@ -208,7 +208,7 @@ const resolvedHops = hops.map(h => {
 
   const boil_time = (formData.get("boil_time") as string) || "";
 
-  const boil_volume_l = Number(formData.get("boil_volume_l") || volume_l);
+  const boil_volume_l = Number(formData.get("boil_volume_l") ?? formData.get("volume_l"));
 
   // ⭐ Brewfather IBU/EBC for Beer + Braggot
 let ibu = 0;
@@ -381,6 +381,7 @@ ${additives}
 Notes:
 ${notes}
 `.trim();
+
   }
 
   // ---------------------------------------------------------

@@ -154,9 +154,6 @@ export default function RecipesPage() {
               const abv = r.abv ? Number(r.abv).toFixed(1) : "—";
               const ibu = r.ibu ? Number(r.ibu).toFixed(0) : "—";
               const ebc = Number(r.ebc);
-              console.log("RAW EBC:", r.ebc);
-              console.log("PARSED EBC:", Number(r.ebc));
-              console.log("TYPE:", r.type, "NAME:", r.name, "RAW EBC:", r.ebc);
               const volume = r.volume ?? "—";
 
               return (
