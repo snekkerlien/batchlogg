@@ -419,6 +419,7 @@ ${notes}
       malts: resolvedMalts,
       hops: resolvedHops,
       boil_time,
+      boil_volume_l,
       ibu,
       ebc,
       

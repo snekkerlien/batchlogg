@@ -51,6 +51,8 @@ function removeDryHop(index: number) {
   setDryHops(updated);
 }
 
+const [boilVolume, setBoilVolume] = useState("");
+
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
       <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10">
@@ -106,12 +108,13 @@ function removeDryHop(index: number) {
           <div>
   <label className="block mb-1 font-semibold">Boil Volume (L)</label>
   <input
-    name="boil_volume_l"
-    type="text"
-    placeholder="Example: 25"
-    className="w-full p-3 rounded bg-black/40 border border-white/20"
-    required
-  />
+  name="boil_volume_l"
+  type="number"
+  step="0.1"
+  value={boilVolume}
+  onChange={(e) => setBoilVolume(e.target.value)}
+  required
+/>
 </div>
 
 
