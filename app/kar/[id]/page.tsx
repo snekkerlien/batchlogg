@@ -33,7 +33,7 @@ ChartJS.register(
 
 type Fruit = { name: string; amount: string; unit: string };
 type Malt = { name: string; amount: string; unit: string };
-type Hop = { name: string; amount: string; unit: string; boil: string };
+type Hop = { name: string; amount: string; unit: string; time: string };
 type Ingredient = { name: string; amount: string; unit: string };
 
 
@@ -41,6 +41,26 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
+
+function ebcToHex(ebc: number) {
+  if (!ebc || ebc <= 0) return "#F3F3F3"; // very pale
+
+  // Convert EBC → SRM
+  const srm = ebc / 1.97;
+
+  // SRM → RGB (Morey approximation)
+  const r = Math.max(0, Math.min(255, 255 * Math.pow(0.975, srm)));
+  const g = Math.max(0, Math.min(255, 245 * Math.pow(0.88, srm)));
+  const b = Math.max(0, Math.min(255, 220 * Math.pow(0.7, srm)));
+
+  return (
+    "#" +
+    [r, g, b]
+      .map((v) => Math.round(v).toString(16).padStart(2, "0"))
+      .join("")
+  );
+}
+
 
 function daysSince(dateString: string) {
   const start = new Date(dateString);
@@ -207,6 +227,7 @@ useEffect(() => {
 
   const isOwner = kar.user_id === user.id;
   const hasActive = !!activeBatch;
+
   const hasHistory = !!historyBatch;
 
 async function saveSG() {
@@ -390,6 +411,8 @@ async function toggleVisibility() {
       : "Active fermentation"
     : ""}
 </h2>
+
+
 
 
 
@@ -678,7 +701,7 @@ async function toggleVisibility() {
       />
       <input
         name={`hops[${i}][boil]`}
-        defaultValue={h.boil}
+        defaultValue={h.time}
         placeholder="Boil time"
         className="p-2 rounded bg-black/40 border border-white/20 w-1/4"
       />
@@ -1006,7 +1029,7 @@ async function toggleVisibility() {
           <input name={`hops[${i}][name]`} defaultValue={h.name} className="p-2 rounded bg-black/40 border border-white/20 w-1/3" />
           <input name={`hops[${i}][amount]`} defaultValue={h.amount} className="p-2 rounded bg-black/40 border border-white/20 w-1/4" />
           <input name={`hops[${i}][unit]`} defaultValue={h.unit} className="p-2 rounded bg-black/40 border border-white/20 w-1/4" />
-          <input name={`hops[${i}][boil]`} defaultValue={h.boil} className="p-2 rounded bg-black/40 border border-white/20 w-1/4" />
+          <input name={`hops[${i}][boil]`} defaultValue={h.time} className="p-2 rounded bg-black/40 border border-white/20 w-1/4" />
 
           <button
             type="button"
@@ -1090,6 +1113,27 @@ async function toggleVisibility() {
               <p className="opacity-80">Batch volume: {activeBatch.volume_l} L</p>
               <p className="opacity-80">Status: Primary fermentation</p>
 
+              {(activeBatch.type === "Beer" || activeBatch.type === "Braggot") && (
+  <>
+    {activeBatch.ibu !== null && (
+      <p className="opacity-80">
+        IBU: {Number(activeBatch.ibu).toFixed(0)}
+      </p>
+    )}
+
+    {activeBatch.ebc !== null && (
+  <div className="flex items-center gap-2 opacity-80">
+    <p>EBC (calculated): {Number(activeBatch.ebc).toFixed(0)}</p>
+    <span
+      className="inline-block w-6 h-6 rounded border border-white/30"
+      style={{ backgroundColor: ebcToHex(Number(activeBatch.ebc)) }}
+    ></span>
+  </div>
+)}
+  </>
+)}
+
+
               <div className="mt-6 p-4 bg-white/5 border border-white/10 rounded-lg">
   <h3 className="text-xl font-bold mb-3 text-green-300">
     Recipe
@@ -1124,7 +1168,7 @@ async function toggleVisibility() {
           <div>
             <strong>Malt additions:</strong>
             {activeBatch.malts.map((m: Malt, i: number) => (
-              <p key={i}>{m.name}: {m.amount}{m.unit}</p>
+              <p key={i}>{m.name}: {m.amount} kg</p>
             ))}
           </div>
         )}
@@ -1133,7 +1177,7 @@ async function toggleVisibility() {
           <div>
             <strong>Hop schedule:</strong>
             {activeBatch.hops.map((h: Hop, i: number) => (
-              <p key={i}>{h.name}: {h.amount}{h.unit} @ {h.boil} min</p>
+              <p key={i}>{h.name}: {h.amount}{h.unit} @ {h.time} min</p>
             ))}
           </div>
         )}

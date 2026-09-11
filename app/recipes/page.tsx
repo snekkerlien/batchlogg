@@ -9,7 +9,7 @@ import Link from "next/link";
 function ebcToHex(ebc: number | string) {
   const value = Number(ebc);
 
-  if (!value || value <= 0) return "#f3f3f3"; // pale
+  if (isNaN(value) || value <= 0) return "#f3f3f3"; // pale fallback
 
   const srm = value / 1.97;
 
@@ -17,13 +17,17 @@ function ebcToHex(ebc: number | string) {
   const g = Math.round(245 * Math.pow(0.88, srm));
   const b = Math.round(220 * Math.pow(0.7, srm));
 
+  const clamp = (v: number) => Math.max(0, Math.min(255, v));
+
   return (
     "#" +
-    [r, g, b]
-      .map((v) => Math.max(0, Math.min(255, v)).toString(16).padStart(2, "0"))
+    [clamp(r), clamp(g), clamp(b)]
+      .map((v) => v.toString(16).padStart(2, "0"))
       .join("")
   );
 }
+
+
 
 
 
@@ -149,7 +153,10 @@ export default function RecipesPage() {
               const fg = r.fg ? Number(r.fg).toFixed(3) : "—";
               const abv = r.abv ? Number(r.abv).toFixed(1) : "—";
               const ibu = r.ibu ? Number(r.ibu).toFixed(0) : "—";
-              const ebc = r.ebc ? Number(r.ebc) : null;
+              const ebc = Number(r.ebc);
+              console.log("RAW EBC:", r.ebc);
+              console.log("PARSED EBC:", Number(r.ebc));
+              console.log("TYPE:", r.type, "NAME:", r.name, "RAW EBC:", r.ebc);
               const volume = r.volume ?? "—";
 
               return (
@@ -235,16 +242,6 @@ export default function RecipesPage() {
 </div>
 
 </div>
-
-
-
-
-
-
-
-
-                   
-
                   {/* Stats line */}
 <p className="text-sm mt-3 grid grid-cols-3 gap-y-1 gap-x-4 sm:flex sm:flex-wrap sm:items-center">
   <span><strong>OG:</strong> {og}</span>
@@ -255,16 +252,20 @@ export default function RecipesPage() {
       <span><strong>IBU:</strong> {ibu}</span>
       <span><strong>EBC:</strong> {ebc !== null ? ebc.toFixed(0) : "—"}</span>
 
-      {ebc !== null && (
+      {ebc > 0 && (
         <span
           className="inline-block w-4 h-4 rounded-md border border-white/20 shadow-sm"
           style={{ backgroundColor: ebcToHex(ebc) }}
         ></span>
       )}
+
+    
     </>
   )}
 
   <span><strong>ABV:</strong> {abv}%</span>
+
+  
 </p>
 
 {/* Mobil-knapper + pil */}
@@ -338,50 +339,73 @@ export default function RecipesPage() {
                       )}
 
                       {(r.type === "Beer" || r.type === "Braggot") && (
-                        <>
-                          {r.malts?.length > 0 && (
-  <div>
-    <strong>Malts:</strong>
-    <ul className="list-disc ml-6 opacity-80">
-      {r.malts.map((m: any, i: number) => (
-        <li key={i}>{m.name} — {m.amount} kg</li>
-      ))}
-    </ul>
-
-    {/* ⭐ Total maltmengde */}
-    <p className="mt-2 opacity-80">
-      <strong>Total malt:</strong>{" "}
-      {r.malts.reduce((sum: number, m: any) => sum + Number(m.amount), 0).toFixed(2)} kg
+  <>
+    <p className="text-xs opacity-60 mt-2">
+      Note: If the IBU or EBC values differ from the recipe you imported,
+      this is because Batchlogg uses more accurate brewing models
+      (Tinseth for bitterness and Morey for color). Many recipe kits use
+      simplified or inconsistent calculations, so their numbers may not match.
     </p>
-  </div>
+
+    {r.malts?.length > 0 && (
+      <div>
+        <strong>Malts:</strong>
+        <ul className="list-disc ml-6 opacity-80">
+          {r.malts.map((m: any, i: number) => (
+            <li key={i}>{m.name} — {m.amount} kg</li>
+          ))}
+        </ul>
+
+        <p className="mt-2 opacity-80">
+          <strong>Total malt:</strong>{" "}
+          {r.malts.reduce((sum: number, m: any) => sum + Number(m.amount), 0).toFixed(2)} kg
+        </p>
+      </div>
+    )}
+
+    {r.hops?.length > 0 && (
+      <div>
+        <strong>Hops:</strong>
+        <ul className="list-disc ml-6 opacity-80">
+          {r.hops.map((h: any, i: number) => (
+            <li key={i}>{h.name} — {h.amount} g @ {h.time} min</li>
+          ))}
+        </ul>
+
+        <p className="mt-2 opacity-80">
+          <strong>Total hops:</strong>{" "}
+          {(
+            r.hops.reduce((sum: number, h: any) => sum + Number(h.amount), 0) +
+            (r.dry_hops?.reduce((sum: number, h: any) => sum + Number(h.amount), 0) || 0)
+          ).toFixed(0)} g
+        </p>
+      </div>
+    )}
+
+    {r.dry_hops?.length > 0 && (
+      <div className="mt-3">
+        <strong>Dry hops:</strong>
+        <ul className="list-disc ml-6 opacity-80">
+          {r.dry_hops.map((h: any, i: number) => (
+            <li key={i}>{h.name} — {h.amount} g — {h.contact} days contact</li>
+          ))}
+        </ul>
+
+        <p className="mt-2 opacity-80">
+          <strong>Total dry hops:</strong>{" "}
+          {r.dry_hops.reduce((sum: number, h: any) => sum + Number(h.amount), 0).toFixed(0)} g
+        </p>
+      </div>
+    )}
+
+    {r.boil_time && (
+      <p><strong>Boil time:</strong> {r.boil_time} min</p>
+    )}
+
+    
+  </>
 )}
 
-
-                          
-
-                          {r.hops?.length > 0 && (
-  <div>
-    <strong>Hops:</strong>
-    <ul className="list-disc ml-6 opacity-80">
-      {r.hops.map((h: any, i: number) => (
-        <li key={i}>{h.name} — {h.amount} g @ {h.time} min</li>
-      ))}
-    </ul>
-
-    {/* ⭐ Total humlemengde */}
-    <p className="mt-2 opacity-80">
-      <strong>Total hops:</strong>{" "}
-      {r.hops.reduce((sum: number, h: any) => sum + Number(h.amount), 0).toFixed(0)} g
-    </p>
-  </div>
-)}
-
-
-                          {r.boil_time && (
-                            <p><strong>Boil time:</strong> {r.boil_time} min</p>
-                          )}
-                        </>
-                      )}
 
                       {(r.type === "Wine" || r.type === "Cider" || r.type === "Seltzer") && (
                         <>

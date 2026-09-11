@@ -7,6 +7,27 @@ import BackButton from "../../BackButton";
 
 export default function NewSeltzerRecipePage() {
   const [loading, setLoading] = useState(false);
+  const [warnings, setWarnings] = useState<string[]>([]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setWarnings([]);
+
+    const formData = new FormData(e.currentTarget as HTMLFormElement);
+    const result = await Actions.createRecipe(formData);
+
+    if (result?.success === false) {
+      setWarnings(result.maltWarnings ?? []);
+      setLoading(false);
+      return;
+    }
+
+    if (result?.success === true) {
+      window.location.href = "/recipes";
+      return;
+    }
+  }
 
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
@@ -28,12 +49,22 @@ export default function NewSeltzerRecipePage() {
           Fill out the details below to create a new hard seltzer recipe.
         </p>
 
+        {/* WARNINGS */}
+        {warnings.length > 0 && (
+          <div className="bg-red-600 text-white p-4 rounded-md mb-6">
+            <strong>⚠️ Validation warnings:</strong>
+            <ul className="mt-2 list-disc list-inside">
+              {warnings.map((w) => (
+                <li key={w}>{w}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <form
-          action={Actions.createRecipe}
+          onSubmit={handleSubmit}
           className="flex flex-col gap-6"
-          onSubmit={() => setLoading(true)}
         >
-          {/* Hidden fields */}
           <input type="hidden" name="type" value="Seltzer" />
 
           {/* Recipe name */}

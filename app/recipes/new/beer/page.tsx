@@ -8,10 +8,11 @@ import BackButton from "../../BackButton";
 export default function NewBeerRecipePage() {
   const [loading, setLoading] = useState(false);
 
+  // ⭐ warnings fra server action
+  const [warnings, setWarnings] = useState<string[]>([]);
+
   // MALTS (name + amount in kg)
   const [malts, setMalts] = useState<{ name: string; amount: string }[]>([]);
-
-
 
   function addMalt() {
     setMalts([...malts, { name: "", amount: "" }]);
@@ -25,6 +26,19 @@ export default function NewBeerRecipePage() {
 
   // HOPS (name + amount in g + time in min)
   const [hops, setHops] = useState<{ name: string; amount: string; time: string }[]>([]);
+ const [dryHops, setDryHops] = useState<{ name: string; amount: string; contact: string }[]>([]);
+
+function addDryHop() {
+  setDryHops([...dryHops, { name: "", amount: "", contact: "" }]);
+}
+
+function removeDryHop(index: number) {
+  const updated = [...dryHops];
+  updated.splice(index, 1);
+  setDryHops(updated);
+}
+
+
 
 
   function addHop() {
@@ -36,6 +50,30 @@ export default function NewBeerRecipePage() {
     updated.splice(index, 1);
     setHops(updated);
   }
+
+  // ⭐ HANDLE SUBMIT (viktig)
+  async function handleSubmit(e: React.FormEvent) {
+  e.preventDefault();
+  setLoading(true);
+  setWarnings([]); // reset warnings
+
+  const formData = new FormData(e.currentTarget as HTMLFormElement);
+  const result = await Actions.createRecipe(formData);
+
+  // ❌ Feil maltnavn → stopp lagring
+  if (result?.success === false) {
+    setWarnings(result.maltWarnings ?? []);
+    setLoading(false);
+    return;
+  }
+
+  // ✔ Alt OK → redirect
+  if (result?.success === true) {
+    window.location.href = "/recipes";
+    return;
+  }
+}
+
 
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
@@ -57,10 +95,22 @@ export default function NewBeerRecipePage() {
           Fill out the details below to create a new beer recipe.
         </p>
 
+        {/* ⭐ WARNINGS */}
+        {warnings.length > 0 && (
+          <div className="bg-red-600 text-white p-4 rounded-md mb-6">
+            <strong>⚠️ Unknown malts detected:</strong>
+            <ul className="mt-2 list-disc list-inside">
+              {warnings.map((w) => (
+                <li key={w}>{w}</li>
+              ))}
+            </ul>
+            <p className="mt-2">Correct them or before you can save.</p>
+          </div>
+        )}
+
         <form
-          action={Actions.createRecipe}
+          onSubmit={handleSubmit}
           className="flex flex-col gap-6"
-          onSubmit={() => setLoading(true)}
         >
           <input type="hidden" name="type" value="Beer" />
 
@@ -92,11 +142,10 @@ export default function NewBeerRecipePage() {
             <input
               name="boil_volume"
               type="number"
-              placeholder="Total wort volume before the boil (usually 20–30% higher than batch size)"
+              placeholder="Total wort volume before the boil"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
-
 
           {/* OG */}
           <div>
@@ -125,12 +174,9 @@ export default function NewBeerRecipePage() {
             <label className="block mb-2 font-semibold">Malt additions</label>
 
             {malts.map((m, i) => (
-              <div
-                key={i}
-                className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full"
-              >
+              <div key={i} className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full">
                 <input
-                  placeholder="Malt type (e.g. Pale Ale, Munich, Caramel)"
+                  placeholder="Malt type"
                   className="p-3 rounded bg-black/40 border border-white/20 w-full md:flex-1"
                   value={m.name}
                   onChange={(e) => {
@@ -141,22 +187,21 @@ export default function NewBeerRecipePage() {
                 />
 
                 <input
-  placeholder="Amount (kg)"
-  type="text"
-  className="p-3 rounded bg-black/40 border border-white/20 placeholder:text-white/40 w-full md:w-32"
-  value={m.amount}
-  onChange={(e) => {
-    const updated = [...malts];
-    updated[i].amount = e.target.value; // behold string
-    setMalts(updated);
-  }}
-/>
-
+                  placeholder="Amount (kg)"
+                  type="text"
+                  className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-32"
+                  value={m.amount}
+                  onChange={(e) => {
+                    const updated = [...malts];
+                    updated[i].amount = e.target.value;
+                    setMalts(updated);
+                  }}
+                />
 
                 <button
                   type="button"
                   onClick={() => removeMalt(i)}
-                  className="px-3 py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm self-start md:self-auto"
+                  className="px-3 py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm"
                 >
                   Remove
                 </button>
@@ -179,12 +224,9 @@ export default function NewBeerRecipePage() {
             <label className="block mb-2 font-semibold">Hop additions</label>
 
             {hops.map((h, i) => (
-              <div
-                key={i}
-                className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full"
-              >
+              <div key={i} className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full">
                 <input
-                  placeholder="Hop type (e.g. Citra, Mosaic)"
+                  placeholder="Hop type"
                   className="p-3 rounded bg-black/40 border border-white/20 w-full md:flex-1"
                   value={h.name}
                   onChange={(e) => {
@@ -195,35 +237,33 @@ export default function NewBeerRecipePage() {
                 />
 
                 <input
-  placeholder="Amount (g)"
-  type="text"
-  className="p-3 rounded bg-black/40 border border-white/20 placeholder:text-white/40 w-full md:w-28"
-  value={h.amount}
-  onChange={(e) => {
-    const updated = [...hops];
-    updated[i].amount = e.target.value;
-    setHops(updated);
-  }}
-/>
-
+                  placeholder="Amount (g)"
+                  type="text"
+                  className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-28"
+                  value={h.amount}
+                  onChange={(e) => {
+                    const updated = [...hops];
+                    updated[i].amount = e.target.value;
+                    setHops(updated);
+                  }}
+                />
 
                 <input
-  placeholder="Boil time (min)"
-  type="text"
-  className="p-3 rounded bg-black/40 border border-white/20 placeholder:text-white/40 w-full md:w-32"
-  value={h.time}
-  onChange={(e) => {
-    const updated = [...hops];
-    updated[i].time = e.target.value;
-    setHops(updated);
-  }}
-/>
-
+                  placeholder="Boil time (min)"
+                  type="text"
+                  className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-32"
+                  value={h.time}
+                  onChange={(e) => {
+                    const updated = [...hops];
+                    updated[i].time = e.target.value;
+                    setHops(updated);
+                  }}
+                />
 
                 <button
                   type="button"
                   onClick={() => removeHop(i)}
-                  className="px-3 py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm self-start md:self-auto"
+                  className="px-3 py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm"
                 >
                   Remove
                 </button>
@@ -241,12 +281,78 @@ export default function NewBeerRecipePage() {
 
           <input type="hidden" name="hops_json" value={JSON.stringify(hops)} />
 
+        {/* DRY HOPS */}
+<div>
+  <label className="block mb-2 font-semibold">Dry hop additions</label>
+
+  {dryHops.map((h, i) => (
+    <div key={i} className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full">
+
+      <input
+        placeholder="Hop type"
+        className="p-3 rounded bg-black/40 border border-white/20 w-full md:flex-1"
+        value={h.name}
+        onChange={(e) => {
+          const updated = [...dryHops];
+          updated[i].name = e.target.value;
+          setDryHops(updated);
+        }}
+      />
+
+      <input
+        placeholder="Amount (g)"
+        type="text"
+        className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-28"
+        value={h.amount}
+        onChange={(e) => {
+          const updated = [...dryHops];
+          updated[i].amount = e.target.value;
+          setDryHops(updated);
+        }}
+      />
+
+      <input
+        placeholder="Contact time (days)"
+        type="text"
+        className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-32"
+        value={h.contact}
+        onChange={(e) => {
+          const updated = [...dryHops];
+          updated[i].contact = e.target.value;
+          setDryHops(updated);
+        }}
+      />
+
+      <button
+        type="button"
+        onClick={() => removeDryHop(i)}
+        className="px-3 py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm"
+      >
+        Remove
+      </button>
+    </div>
+  ))}
+
+  <button
+    type="button"
+    onClick={addDryHop}
+    className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
+  >
+    + Add dry hop
+  </button>
+</div>
+
+<input type="hidden" name="dry_hops_json" value={JSON.stringify(dryHops)} />
+
+
+
+
           {/* Boil time */}
           <div>
             <label className="block mb-1 font-semibold">Total boil time (minutes)</label>
             <textarea
               name="boil_time"
-              placeholder="Length of the boil in minutes (e.g., 60)"
+              placeholder="Length of the boil"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
@@ -256,7 +362,7 @@ export default function NewBeerRecipePage() {
             <label className="block mb-1 font-semibold">Additives</label>
             <textarea
               name="additives"
-              placeholder="Irish Moss, gypsum, CaCl₂, nutrient..."
+              placeholder="Irish Moss, gypsum, CaCl₂..."
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
             />
           </div>
@@ -266,7 +372,7 @@ export default function NewBeerRecipePage() {
             <label className="block mb-1 font-semibold">Full process</label>
             <textarea
               name="full_process"
-              placeholder="Mash schedule, hop schedule, fermentation plan..."
+              placeholder="Mash schedule, hop schedule..."
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-40"
             />
           </div>
@@ -276,7 +382,7 @@ export default function NewBeerRecipePage() {
             <label className="block mb-1 font-semibold">Notes</label>
             <textarea
               name="notes"
-              placeholder="Any additional notes about the recipe..."
+              placeholder="Any additional notes..."
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
             />
           </div>

@@ -25,12 +25,37 @@ export default function NewBraggotRecipePage() {
 
   // Dynamic hop list
   const [hops, setHops] = useState<
-    { name: string; amount: string; unit: string; boil: string }[]
+  { name: string; amount: string; time: string }[]
   >([]);
 
-  function addHop() {
-    setHops([...hops, { name: "", amount: "", unit: "", boil: "" }]);
+  
+    function addHop() {
+  setHops([...hops, { name: "", amount: "", time: "" }]);
+}
+
+
+  const [warnings, setWarnings] = useState<string[]>([]);
+
+  async function handleSubmit(e: React.FormEvent) {
+  e.preventDefault();
+  setLoading(true);
+  setWarnings([]);
+
+  const formData = new FormData(e.currentTarget as HTMLFormElement);
+  const result = await Actions.createRecipe(formData);
+
+  if (result?.success === false) {
+    setWarnings(result.maltWarnings ?? []);
+    setLoading(false);
+    return;
   }
+
+  if (result?.success === true) {
+    window.location.href = "/recipes";
+    return;
+  }
+}
+
 
   function removeHop(index: number) {
     const updated = [...hops];
@@ -58,10 +83,22 @@ export default function NewBraggotRecipePage() {
           Fill out the details below to create a new braggot recipe.
         </p>
 
+        {warnings.length > 0 && (
+  <div className="bg-red-600 text-white p-4 rounded-md mb-6">
+    <strong>⚠️ Ukjente malter funnet:</strong>
+    <ul className="mt-2 list-disc list-inside">
+      {warnings.map((w) => (
+        <li key={w}>{w}</li>
+      ))}
+    </ul>
+    <p className="mt-2">Rett opp navnene før du kan lagre oppskriften.</p>
+  </div>
+)}
+
+
         <form
-          action={Actions.createRecipe}
+          onSubmit={handleSubmit}
           className="flex flex-col gap-6"
-          onSubmit={() => setLoading(true)}
         >
           {/* Hidden fields */}
           <input type="hidden" name="type" value="Braggot" />
@@ -82,8 +119,7 @@ export default function NewBraggotRecipePage() {
             <label className="block mb-1 font-semibold">Volume (L)</label>
             <input
               name="volume"
-              type="number"
-              step="0.1"
+              type="text"
               placeholder="Example: 10"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
@@ -94,8 +130,7 @@ export default function NewBraggotRecipePage() {
             <label className="block mb-1 font-semibold">Original Gravity (OG)</label>
             <input
               name="og"
-              type="number"
-              step="0.001"
+              type="text"
               placeholder="Example: 1.070"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
@@ -106,8 +141,7 @@ export default function NewBraggotRecipePage() {
             <label className="block mb-1 font-semibold">Final Gravity (FG)</label>
             <input
               name="fg"
-              type="number"
-              step="0.001"
+              type="text"
               placeholder="Example: 1.010"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
@@ -197,37 +231,26 @@ export default function NewBraggotRecipePage() {
                 />
 
                 <input
-                  placeholder="Amount"
-                  className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-20"
-                  value={h.amount}
-                  onChange={(e) => {
-                    const updated = [...hops];
-                    updated[i].amount = e.target.value;
-                    setHops(updated);
-                  }}
-                />
+  placeholder="Amount (g)"
+  className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-20"
+  value={h.amount}
+  onChange={(e) => {
+    const updated = [...hops];
+    updated[i].amount = e.target.value;
+    setHops(updated);
+  }}
+/>
 
-                <input
-                  placeholder="Unit"
-                  className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-16"
-                  value={h.unit}
-                  onChange={(e) => {
-                    const updated = [...hops];
-                    updated[i].unit = e.target.value;
-                    setHops(updated);
-                  }}
-                />
-
-                <input
-                  placeholder="Boil (min)"
-                  className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-20"
-                  value={h.boil}
-                  onChange={(e) => {
-                    const updated = [...hops];
-                    updated[i].boil = e.target.value;
-                    setHops(updated);
-                  }}
-                />
+<input
+  placeholder="Boil time (min)"
+  className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-20"
+  value={h.time}
+  onChange={(e) => {
+    const updated = [...hops];
+    updated[i].time = e.target.value;
+    setHops(updated);
+  }}
+/>
 
                 <button
                   type="button"
@@ -250,29 +273,38 @@ export default function NewBraggotRecipePage() {
 
           <input type="hidden" name="hops_json" value={JSON.stringify(hops)} />
 
-          {/* Honey amount */}
-          <div>
-            <label className="block mb-1 font-semibold">Honey amount (kg)</label>
-            <input
-              name="honey_amount"
-              type="number"
-              step="0.1"
-              placeholder="Example: 1.5"
-              className="w-full p-3 rounded bg-black/40 border border-white/20"
-            />
-          </div>
-
           {/* Boil time */}
           <div>
             <label className="block mb-1 font-semibold">Boil time (minutes)</label>
             <input
               name="boil_time"
-              type="number"
-              step="1"
+              type="text"
               placeholder="Example: 60"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
+
+          {/* Honey amount */}
+          <div>
+            <label className="block mb-1 font-semibold">Honey amount (kg)</label>
+            <input
+              name="honey_amount"
+              type="text"
+              placeholder="Example: 1.5"
+              className="w-full p-3 rounded bg-black/40 border border-white/20"
+            />
+          </div>
+
+          {/* Honey type */}
+          <div>
+            <label className="block mb-1 font-semibold">Honey type</label>
+            <input
+              name="honey_type"
+              placeholder="Example: Wildflower, Clover, Heather"
+              className="w-full p-3 rounded bg-black/40 border border-white/20"
+            />
+          </div>
+
 
           {/* Yeast */}
           <div>

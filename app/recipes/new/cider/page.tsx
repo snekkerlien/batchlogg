@@ -8,6 +8,31 @@ import BackButton from "../../BackButton";
 export default function NewCiderRecipePage() {
   const [loading, setLoading] = useState(false);
 
+  // Cider har ingen malt/humle-warnings
+  const [warnings, setWarnings] = useState<string[]>([]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setWarnings([]);
+
+    const formData = new FormData(e.currentTarget as HTMLFormElement);
+    const result = await Actions.createRecipe(formData);
+
+    // Hvis server action sier "success: false"
+    if (result?.success === false) {
+      setWarnings(result.maltWarnings ?? []);
+      setLoading(false);
+      return;
+    }
+
+    // Redirect når alt er OK
+    if (result?.success === true) {
+      window.location.href = "/recipes";
+      return;
+    }
+  }
+
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
       <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10">
@@ -28,12 +53,22 @@ export default function NewCiderRecipePage() {
           Fill out the details below to create a new cider recipe.
         </p>
 
+        {/* WARNINGS (Cider får aldri warnings, men vi viser hvis server action sender noe) */}
+        {warnings.length > 0 && (
+          <div className="bg-red-600 text-white p-4 rounded-md mb-6">
+            <strong>⚠️ Ukjente ingredienser funnet:</strong>
+            <ul className="mt-2 list-disc list-inside">
+              {warnings.map((w) => (
+                <li key={w}>{w}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <form
-          action={Actions.createRecipe}
+          onSubmit={handleSubmit}
           className="flex flex-col gap-6"
-          onSubmit={() => setLoading(true)}
         >
-          {/* Hidden fields */}
           <input type="hidden" name="type" value="Cider" />
 
           {/* Recipe name */}

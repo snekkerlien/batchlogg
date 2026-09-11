@@ -23,14 +23,14 @@ export const MALTS_DB = [
 
   { name: "CaraMalt", lovibond: 36 / 1.97 },
   { name: "CaraHell", lovibond: 25 / 1.97 },
-  { name: "CaraAmber", lovibond: 70 / 1.97 },
+  { name: "CaraAmber", lovibond: 26.85 },
   { name: "CaraGlow", lovibond: 15 / 1.97 },
   { name: "CaraAroma", lovibond: 400 / 1.97 },
   { name: "Carared", lovibond: 50 / 1.97 },
   { name: "Amber Malt", lovibond: 58 / 1.97 },
 
   { name: "Melanoidin Malt", lovibond: 70 / 1.97 },
-  { name: "Aromatic Malt", lovibond: 60 / 1.97 },
+  { name: "Aromatic Malt", lovibond: 22 },
   { name: "Imperial Malt", lovibond: 45 / 1.97 },
   { name: "Export Pale Brown", lovibond: 120 / 1.97 },
 
@@ -66,16 +66,13 @@ export const MALTS_DB = [
   { name: "Pale Chocolate Malt", lovibond: 600 / 1.97 },
   { name: "Roasted Barley", lovibond: 1600 / 1.97 },
   { name: "Black Malt", lovibond: 1650 / 1.97 },
-  { name: "Carafa Special III", lovibond: 1500 / 1.97 },
 
-  { name: "Carafa I", lovibond: 300 / 1.97 },
-  { name: "Carafa II", lovibond: 600 / 1.97 },
-  { name: "Carafa Special I", lovibond: 900 / 1.97 },
-  { name: "Carafa Special II", lovibond: 1150 / 1.97 },
-  { name: "Carafa Special III", lovibond: 1400 / 1.97 },
+  { name: "Carafa Special I", lovibond: 350 },
+  { name: "Carafa Special II", lovibond: 500 },
+  { name: "Carafa Special III", lovibond: 550 },
 
   { name: "Rice Hulls", lovibond: 0 },
-  { name : "English Caramalt", lovibond: 60 / 1.97 },
+  { name: "English Caramalt", lovibond: 60 / 1.97 },
   { name: "Carapils", lovibond: 4 / 1.97 },
   { name: "DRC", lovibond: 250 / 1.97 },
   { name: "Brown Malt", lovibond: 500 / 1.97 },
@@ -88,8 +85,6 @@ export const MALTS_DB = [
   { name: "Rug", lovibond: 7 / 1.97 },
   { name: "Red X", lovibond: 30 / 1.97 },
 ];
-
-
 
 export const HOPS_DB = [
   { name: "Citra", alpha: 0.14 },
@@ -123,7 +118,7 @@ export const HOPS_DB = [
   { name: "Magnum", alpha: 0.14 },
   { name: "Perle", alpha: 0.118 },
   { name: "Tettnang", alpha: 0.038 },
-  { name: "Hersbrucker", alpha: 0.028 },
+  { name: "Hersbrücker", alpha: 0.028 },
   { name: "Hallertau Tradition", alpha: 0.064 },
   { name: "Hersbrucker Spät", alpha: 0.032 },
   { name: "Spalter Select", alpha: 0.04 },
@@ -141,3 +136,431 @@ export const HOPS_DB = [
   { name: "Vic Secret", alpha: 0.173 },
   { name: "Motueka", alpha: 0.083 },
 ];
+
+export const MALT_ALIASES: Record<string, string> = {
+  // -----------------------------
+  // Pilsner
+  // -----------------------------
+  "pilsner": "Pilsnermalt",
+  "pilsner malt": "Pilsnermalt",
+  "pils malt": "Pilsnermalt",
+  "pilsnermalt": "Pilsnermalt",
+  "pilsner-malt": "Pilsnermalt",
+
+  "barke pilsner": "Barke Pilsnermalt",
+  "barke pils": "Barke Pilsnermalt",
+
+  "eraclea pilsner": "Eraclea Pilsnermalt",
+  "eraclea pils": "Eraclea Pilsnermalt",
+
+  "castle pilsner": "Castle Pilsnermalt",
+  "castle pils": "Castle Pilsnermalt",
+
+  "floor malted bohemian pilsner": "Floor-Malted Bohemian Pilsner Malt",
+  "floor malted bohemian": "Floor-Malted Bohemian Pilsner Malt",
+  "bohemian pilsner": "Floor-Malted Bohemian Pilsner Malt",
+  "floor malted": "Floor-Malted Bohemian Pilsner Malt",
+
+  "extra pale pilsner": "Extra Pale Premium Pilsner Malt",
+  "extra pale premium pilsner": "Extra Pale Premium Pilsner Malt",
+
+  // -----------------------------
+  // Munich
+  // -----------------------------
+  "munich": "Munich Malt",
+  "munich 1": "Munich Malt",
+  "munich malt 1": "Munich Malt",
+  "munich i": "Munich Malt",
+  "munich type 1": "Munich Malt",
+
+  "munich 2": "Munich Malt II",
+  "munich ii": "Munich Malt II",
+  "munich malt 2": "Munich Malt II",
+  "munich type 2": "Munich Malt II",
+
+  // -----------------------------
+  // Caramunich
+  // -----------------------------
+  "caramunich 1": "Caramunich I",
+  "caramunich i": "Caramunich I",
+  "caramunich type 1": "Caramunich I",
+
+  "caramunich 2": "Caramunich II",
+  "caramunich ii": "Caramunich II",
+  "caramunich type 2": "Caramunich II",
+
+  "caramunich 3": "Caramunich III",
+  "caramunich iii": "Caramunich III",
+  "caramunich type 3": "Caramunich III",
+
+  // -----------------------------
+  // Crystal malts
+  // -----------------------------
+  "crystal t50": "Crystal T50",
+  "crystal 50": "Crystal T50",
+  "t50": "Crystal T50",
+
+  "crystal dark": "Crystal Dark",
+  "dark crystal": "Crystal Dark",
+
+  "crystal light": "Crystal Light",
+  "light crystal": "Crystal Light",
+
+  "crystal extra dark": "Crystal Extra Dark",
+  "extra dark crystal": "Crystal Extra Dark",
+
+  "crystal 240": "Crystal 240",
+  "heritage crystal": "Heritage Crystal",
+
+  // -----------------------------
+  // Cara malts
+  // -----------------------------
+  "caramalt": "CaraMalt",
+  "cara malt": "CaraMalt",
+
+  "carahell": "CaraHell",
+  "cara hell": "CaraHell",
+
+  "caraamber": "CaraAmber",
+  "cara amber": "CaraAmber",
+
+  "caraglow": "CaraGlow",
+  "cara glow": "CaraGlow",
+
+  "caraaroma": "CaraAroma",
+  "cara aroma": "CaraAroma",
+
+  "carared": "Carared",
+  "cara red": "Carared",
+
+  // -----------------------------
+  // Carafa Special
+  // -----------------------------
+  "carafa 1": "Carafa Special I",
+  "carafa i": "Carafa Special I",
+  "carafa type 1": "Carafa Special I",
+
+  "carafa 2": "Carafa Special II",
+  "carafa ii": "Carafa Special II",
+  "carafa type 2": "Carafa Special II",
+
+  "carafa 3": "Carafa Special III",
+  "carafa iii": "Carafa Special III",
+  "carafa type 3": "Carafa Special III",
+
+  "carafa special 1": "Carafa Special I",
+  "carafa special i": "Carafa Special I",
+
+  "carafa special 2": "Carafa Special II",
+  "carafa special ii": "Carafa Special II",
+
+  "carafa special 3": "Carafa Special III",
+  "carafa special iii": "Carafa Special III",
+
+  // -----------------------------
+  // Roasted / Dark malts
+  // -----------------------------
+  "chocolate": "Chocolate Malt",
+  "chocolate malt": "Chocolate Malt",
+
+  "pale chocolate": "Pale Chocolate Malt",
+  "pale chocolate malt": "Pale Chocolate Malt",
+  "low colour chocolate": "Pale Chocolate Malt",
+  "low color chocolate": "Pale Chocolate Malt",
+
+  "black": "Black Malt",
+  "black malt": "Black Malt",
+
+  "roasted barley": "Roasted Barley",
+  "roast barley": "Roasted Barley",
+
+  "brown": "Brown Malt",
+  "brown malt": "Brown Malt",
+
+  // -----------------------------
+  // Base malts
+  // -----------------------------
+  "maris otter": "Maris Otter Pale Ale Malt",
+  "maris otter pale": "Maris Otter Pale Ale Malt",
+  "maris otter malt": "Maris Otter Pale Ale Malt",
+
+  "planet pale": "Planet Pale Ale Malt",
+  "planet pale ale": "Planet Pale Ale Malt",
+
+  "vienna": "Vienna Malt",
+  "vienna malt": "Vienna Malt",
+
+  "imperial": "Imperial Malt",
+  "imperial malt": "Imperial Malt",
+
+  "export pale brown": "Export Pale Brown",
+
+  // -----------------------------
+  // Wheat / Rye / Oats
+  // -----------------------------
+  "wheat": "Hvetemalt",
+  "hvetemalt": "Hvetemalt",
+  "hvete malt": "Hvetemalt",
+
+  "dark wheat": "Dark Wheat Malt",
+  "dark wheat malt": "Dark Wheat Malt",
+
+  "rye malt": "Rye Malt",
+  "rye": "Rye Malt",
+  "rug": "Rye Malt",
+
+  "spelt": "Spelt Malt",
+  "spelt malt": "Spelt Malt",
+
+  "oat malt": "Oat Malt",
+  "havre malt": "Oat Malt",
+  "havremalt": "Oat Malt",
+
+  "naked oats": "Golden Naked Oats",
+  "golden naked oats": "Golden Naked Oats",
+
+  // -----------------------------
+  // Flaked grains
+  // -----------------------------
+  "flaked oats": "Flaked Oats",
+  "flaked wheat": "Flaked Wheat",
+  "flaked barley": "Flaked Barley",
+  "flaked corn": "Flaked Corn",
+  "flaked rice": "Flaked Rice",
+
+  "torrefied wheat": "Torrefied Wheat",
+  "horrefied wheat": "Torrefied Wheat",
+
+  // -----------------------------
+  // Specialty malts
+  // -----------------------------
+  "melanoidin": "Melanoidin Malt",
+  "melanoidin malt": "Melanoidin Malt",
+  "melanodin malt": "Melanoidin Malt",
+  "Melanodin malt": "Melanoidin Malt",
+
+  "aromatic": "Aromatic Malt",
+  "aroma malt": "Aromatic Malt",
+
+  "special b": "Special B",
+
+  "acidulated": "Acidulated Malt",
+  "acid malt": "Acidulated Malt",
+
+  "chit": "Chit Malt",
+  "chit malt": "Chit Malt",
+
+  "abbey": "Abbey Malt",
+  "abbey malt": "Abbey Malt",
+
+  "carapils": "Carapils",
+  "cara pils": "Carapils",
+
+  "english caramalt": "English Caramalt",
+  "caramalt english": "English Caramalt",
+
+  "drc": "DRC",
+
+  "red x": "Red X",
+
+  // -----------------------------
+  // Smoked / Peated
+  // -----------------------------
+  "bøkerøkt bygg": "Bøkerøkt Bygg",
+  "bokerokt bygg": "Bøkerøkt Bygg",
+  "bøkerøkt": "Bøkerøkt Bygg",
+
+  "medium peated": "Medium Peated",
+  "peated malt": "Medium Peated",
+
+  // -----------------------------
+  // Rice hulls
+  // -----------------------------
+  "rice hulls": "Rice Hulls",
+  "ricehusks": "Rice Hulls",
+  "rice husks": "Rice Hulls",
+  "risskall": "Rice Hulls",
+  "ris skall": "Ruce Hulls",
+};
+
+export const HOPS_ALIASES: Record<string, string> = {
+  // Citra
+  "citra": "Citra",
+  "citra hop": "Citra",
+
+  // Cascade
+  "cascade": "Cascade",
+  "cascade hop": "Cascade",
+
+  // Amarillo
+  "amarillo": "Amarillo",
+  "amarillo hop": "Amarillo",
+
+  // Mosaic
+  "mosaic": "Mosaic",
+  "mosaic hop": "Mosaic",
+
+  // Chinook
+  "chinook": "Chinook",
+  "chinook hop": "Chinook",
+
+  // Columbus / CTZ
+  "columbus": "Columbus",
+  "ctz": "Columbus",
+  "tomahawk": "Columbus",
+  "zeus": "Columbus",
+  "columbus/tomahawk/zeus": "Columbus",
+
+  // Willamette
+  "willamette": "Willamette",
+
+  // Centennial
+  "centennial": "Centennial",
+
+  // Simcoe
+  "simcoe": "Simcoe",
+
+  // Idaho 7
+  "idaho 7": "Idaho 7",
+  "idaho7": "Idaho 7",
+  "idaho-7": "Idaho 7",
+
+  // Crystal
+  "crystal": "Crystal",
+
+  // Azacca
+  "azacca": "Azacca",
+
+  // Nugget
+  "nugget": "Nugget",
+
+  // Ekuanot
+  "ekuanot": "Ekuanot",
+  "equanot": "Ekuanot",
+  "equinox": "Ekuanot", // gammelt navn
+
+  // El Dorado
+  "el dorado": "El Dorado",
+  "eldorado": "El Dorado",
+
+  // Ahtanum
+  "ahtanum": "Ahtanum",
+
+  // Warrior
+  "warrior": "Warrior",
+
+  // Sabro
+  "sabro": "Sabro",
+
+  // Pekko
+  "pekko": "Pekko",
+
+  // Mount Hood
+  "mount hood": "Mount Hood",
+  "mt hood": "Mount Hood",
+
+  // East Kent Goldings
+  "east kent goldings": "East Kent Goldings",
+  "ekg": "East Kent Goldings",
+  "kent goldings": "East Kent Goldings",
+
+  // Fuggle
+  "fuggle": "Fuggle",
+
+  // Target
+  "target": "Target",
+
+  // Challenger
+  "challenger": "Challenger",
+
+  // Saaz
+  "saaz": "Saaz",
+
+  // Bobek
+  "bobek": "Bobek",
+
+  // Sladek
+  "sladek": "Sladek",
+
+  // Hallertau Mittelfrüh
+  "hallertau mittelfrüh": "Hallertau Mittelfrüh",
+  "hallertau mittelfruh": "Hallertau Mittelfrüh",
+  "mittelfrüh": "Hallertau Mittelfrüh",
+  "mittelfruh": "Hallertau Mittelfrüh",
+
+  // Magnum
+  "magnum": "Magnum",
+
+  // Perle
+  "perle": "Perle",
+
+  // Tettnang
+  "tettnang": "Tettnang",
+  "tett": "Tettnang",
+
+  // Hersbrucker
+  "hersbrucker": "Hersbrücker",
+
+  // Hallertau Tradition
+  "hallertau tradition": "Hallertau Tradition",
+  "tradition": "Hallertau Tradition",
+
+  // Hersbrucker Spät
+  "hersbrucker spät": "Hersbrucker Spät",
+  "hersbrucker spat": "Hersbrucker Spät",
+  "spät": "Hersbrucker Spät",
+  "spat": "Hersbrucker Spät",
+
+  // Spalter Select
+  "spalter select": "Spalter Select",
+  "spalter": "Spalter Select",
+
+  // Mandarina Bavaria
+  "mandarina bavaria": "Mandarina Bavaria",
+  "mandarina": "Mandarina Bavaria",
+
+  // Saphir
+  "saphir": "Saphir",
+
+  // Herkules
+  "herkules": "Herkules",
+  "hercules": "Herkules",
+
+  // Northern Brewer
+  "northern brewer": "Northern Brewer",
+  "nb": "Northern Brewer",
+
+  // Tango
+  "tango": "Tango",
+
+  // Hüll Melon
+  "hüll melon": "Hüll Melon",
+  "hull melon": "Hüll Melon",
+  "hul melon": "Hüll Melon",
+  "melon": "Hüll Melon",
+
+  // Hallertau Blanc
+  "hallertau blanc": "Hallertau Blanc",
+  "blanc": "Hallertau Blanc",
+
+  // Galaxy
+  "galaxy": "Galaxy",
+
+  // Superdelic
+  "superdelic": "Superdelic",
+
+  // Nectaron
+  "nectaron": "Nectaron",
+
+  // Nelson Sauvin
+  "nelson sauvin": "Nelson Sauvin",
+  "nelson": "Nelson Sauvin",
+  "sauvin": "Nelson Sauvin",
+
+  // Vic Secret
+  "vic secret": "Vic Secret",
+  "vicsecret": "Vic Secret",
+
+  // Motueka
+  "motueka": "Motueka",
+};

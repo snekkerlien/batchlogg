@@ -3,6 +3,8 @@
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { MALTS_DB, MALT_ALIASES, HOPS_DB, HOPS_ALIASES } from "@/app/recipes/actions/data";
+
 
 
 // ---------------------------------------------------------
@@ -11,8 +13,116 @@ import { revalidatePath } from "next/cache";
 
 type Fruit = { name: string; amount: string; unit: string };
 type Malt = { name: string; amount: string; unit: string };
-type Hop = { name: string; amount: string; unit: string; boil: string };
+type Hop = { name: string; amount: string; unit: string; time: string };
 type Ingredient = { name: string; amount: string; unit: string };
+
+function levenshtein(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + cost
+      );
+    }
+  }
+
+  return dp[m][n];
+}
+
+function normalizeMaltName(name: string): string {
+  const key = name.toLowerCase().trim();
+  return MALT_ALIASES[key] || name;
+}
+
+function fuzzyMatchMalt(name: string) {
+  const normalized = normalizeMaltName(name).toLowerCase().trim();
+
+  let best: any = null;
+  let bestScore = Infinity;
+
+  for (const malt of MALTS_DB) {
+    const dbName = malt.name.toLowerCase();
+    const dist = levenshtein(normalized, dbName);
+
+    if (dist < bestScore) {
+      bestScore = dist;
+      best = malt;
+    }
+  }
+
+  if (!best || bestScore > 3) {
+    return {
+      name,
+      lovibond: 0,
+      warning: true,
+    };
+  }
+
+  return {
+    ...best,
+    warning: false,
+  };
+}
+
+
+function calcIBU(hops: any[], og: number, volumeL: number) {
+  if (!hops || hops.length === 0) return 0;
+
+  const bigness = 1.65 * Math.pow(0.000125, og - 1.0);
+  let ibu = 0;
+
+  for (const hop of hops) {
+    const match = HOPS_DB.find(h => h.name.toLowerCase() === hop.name.toLowerCase());
+    const aa = match ? match.alpha : 0.05;
+
+    const boil = hop.time ? Number(hop.time) : 60;
+    const boilFactor = (1 - Math.exp(-0.04 * boil)) / 4.15;
+    const utilization = bigness * boilFactor;
+
+    ibu += (Number(hop.amount) * 1000 * aa * utilization) / volumeL;
+  }
+
+  return ibu;
+}
+
+function calcEBC(malts: any[], volumeL: number) {
+  if (!malts || malts.length === 0) return { ebc: 0, warnings: [] };
+
+  const L_PER_GAL = 3.78541;
+  const KG_PER_LB = 0.453592;
+
+  let mcu = 0;
+  const warnings: string[] = [];
+
+  for (const malt of malts) {
+    const match = fuzzyMatchMalt(malt.name);
+
+    if (match.warning) {
+      warnings.push(malt.name);
+    }
+
+    const lovibond = match.lovibond;
+    const weight_lb = Number(malt.amount) / KG_PER_LB;
+    const volume_gal = volumeL / L_PER_GAL;
+
+    mcu += (weight_lb * lovibond) / volume_gal;
+  }
+
+  const srm = 1.4922 * Math.pow(mcu, 0.6859);
+  const ebc = srm * 1.97;
+
+  return { ebc, warnings };
+}
+
 
 export async function createBatch(formData: FormData) {
   const { supabase } = supabaseServer();
@@ -69,7 +179,49 @@ export async function createBatch(formData: FormData) {
   const hops_json = formData.get("hops_json") as string;
   const hops: Hop[] = hops_json ? JSON.parse(hops_json) : [];
 
+  // Resolve malt names → real malt names
+const resolvedMalts = malts.map(m => {
+  const alias = MALT_ALIASES[m.name.toLowerCase()];
+  const realName = alias || m.name;
+
+  const dbEntry = MALTS_DB.find(x => x.name.toLowerCase() === realName.toLowerCase());
+
+  return {
+    ...m,
+    lovibond: dbEntry?.lovibond ?? 0
+  };
+});
+
+// Resolve hop names → real hop names
+const resolvedHops = hops.map(h => {
+  const alias = HOPS_ALIASES[h.name.toLowerCase()];
+  const realName = alias || h.name;
+
+  const dbEntry = HOPS_DB.find(x => x.name.toLowerCase() === realName.toLowerCase());
+
+  return {
+    ...h,
+    alpha: dbEntry?.alpha ?? 0
+  };
+});
+
+
   const boil_time = (formData.get("boil_time") as string) || "";
+
+  const boil_volume_l = Number(formData.get("boil_volume_l") || volume_l);
+
+  // ⭐ Brewfather IBU/EBC for Beer + Braggot
+let ibu = 0;
+let ebc = 0;
+
+if (type === "Beer" || type === "Braggot") {
+  const ibuBoil = calcIBU(resolvedHops, og, boil_volume_l || volume_l);
+  const ebcResult = calcEBC(malts, boil_volume_l || volume_l);
+
+  ibu = ibuBoil;
+  ebc = ebcResult.ebc;
+}
+
 
   // Other fields
   const ingredients_json = formData.get("ingredients_json") as string;
@@ -197,7 +349,7 @@ ${malts.map((m: Malt) => `${m.name}: ${m.amount}${m.unit}`).join("\n")}
 
 Hop additions:
 ${hops
-  .map((h: Hop) => `${h.name}: ${h.amount}${h.unit} @ ${h.boil} min`)
+  .map((h: Hop) => `${h.name}: ${h.amount}${h.unit} @ ${h.time} min`)
   .join("\n")}
 
 Total boil time:
@@ -264,9 +416,12 @@ ${notes}
       sugar_amount,
 
       // Braggot / Beer
-      malts,
-      hops,
+      malts: resolvedMalts,
+      hops: resolvedHops,
       boil_time,
+      ibu,
+      ebc,
+      
 
       // Other
       ingredients,
@@ -423,6 +578,8 @@ export async function finishBatch(formData: FormData) {
       malts: batch.malts,
       hops: batch.hops,
       boil_time: batch.boil_time,
+      ibu: batch.ibu,
+      ebc: batch.ebc,
 
       // Other
       ingredients: batch.ingredients,

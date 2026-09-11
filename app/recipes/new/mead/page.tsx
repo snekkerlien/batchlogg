@@ -8,6 +8,8 @@ import BackButton from "../../BackButton";
 export default function NewMeadRecipePage() {
   const [loading, setLoading] = useState(false);
 
+  const [warnings, setWarnings] = useState<string[]>([]);
+
   // Dynamic fruit list
   const [fruits, setFruits] = useState<
     { name: string; amount: string; unit: string }[]
@@ -27,6 +29,25 @@ export default function NewMeadRecipePage() {
   const [secondaryAdditions, setSecondaryAdditions] = useState("");
   const [secondaryNotes, setSecondaryNotes] = useState("");
 
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setWarnings([]);
+
+    const formData = new FormData(e.currentTarget as HTMLFormElement);
+    const result = await Actions.createRecipe(formData);
+
+    if (result?.success === false) {
+      setWarnings(result.maltWarnings ?? []);
+      setLoading(false);
+      return;
+    }
+
+    if (result?.success === true) {
+      window.location.href = "/recipes";
+      return;
+    }
+  }
 
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
@@ -48,12 +69,22 @@ export default function NewMeadRecipePage() {
           Fill out the details below to create a new mead recipe.
         </p>
 
+        {/* WARNINGS */}
+        {warnings.length > 0 && (
+          <div className="bg-red-600 text-white p-4 rounded-md mb-6">
+            <strong>⚠️ Validation warnings:</strong>
+            <ul className="mt-2 list-disc list-inside">
+              {warnings.map((w) => (
+                <li key={w}>{w}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <form
-          action={Actions.createRecipe}
+          onSubmit={handleSubmit}
           className="flex flex-col gap-6"
-          onSubmit={() => setLoading(true)}
         >
-          {/* Hidden fields */}
           <input type="hidden" name="type" value="Mead" />
 
           {/* Recipe name */}
@@ -124,7 +155,7 @@ export default function NewMeadRecipePage() {
             />
           </div>
 
-          {/* Dynamic fruit additions */}
+          {/* Fruit additions */}
           <div>
             <label className="block mb-2 font-semibold">Fruit additions</label>
 
@@ -228,53 +259,51 @@ export default function NewMeadRecipePage() {
           </div>
 
           {/* Secondary fermentation toggle */}
-<div>
-  <label className="block mb-2 font-semibold">Secondary fermentation</label>
+          <div>
+            <label className="block mb-2 font-semibold">Secondary fermentation</label>
 
-  <button
-    type="button"
-    onClick={() => setHadSecondary(!hadSecondary)}
-    className={`px-4 py-2 rounded-lg border ${
-      hadSecondary
-        ? "bg-purple-700 border-purple-500"
-        : "bg-black/40 border-white/20"
-    }`}
-  >
-    {hadSecondary ? "Secondary enabled" : "Enable secondary"}
-  </button>
-</div>
+            <button
+              type="button"
+              onClick={() => setHadSecondary(!hadSecondary)}
+              className={`px-4 py-2 rounded-lg border ${
+                hadSecondary
+                  ? "bg-purple-700 border-purple-500"
+                  : "bg-black/40 border-white/20"
+              }`}
+            >
+              {hadSecondary ? "Secondary enabled" : "Enable secondary"}
+            </button>
+          </div>
 
-{/* Secondary fields */}
-{hadSecondary && (
-  <div className="flex flex-col gap-4">
+          {/* Secondary fields */}
+          {hadSecondary && (
+            <div className="flex flex-col gap-4">
 
-    <div>
-      <label className="block mb-1 font-semibold">Secondary additions</label>
-      <textarea
-        name="secondary_additions"
-        placeholder="Fruit additions, spices, oak, etc..."
-        className="w-full p-3 rounded bg-black/40 border border-white/20 h-28"
-        value={secondaryAdditions}
-        onChange={(e) => setSecondaryAdditions(e.target.value)}
-      />
-    </div>
+              <div>
+                <label className="block mb-1 font-semibold">Secondary additions</label>
+                <textarea
+                  name="secondary_additions"
+                  placeholder="Fruit additions, spices, oak, etc..."
+                  className="w-full p-3 rounded bg-black/40 border border-white/20 h-28"
+                  value={secondaryAdditions}
+                  onChange={(e) => setSecondaryAdditions(e.target.value)}
+                />
+              </div>
 
-    <div>
-      <label className="block mb-1 font-semibold">Secondary notes</label>
-      <textarea
-        name="secondary_notes"
-        placeholder="Notes about racking, stabilization, clearing..."
-        className="w-full p-3 rounded bg-black/40 border border-white/20 h-28"
-        value={secondaryNotes}
-        onChange={(e) => setSecondaryNotes(e.target.value)}
-      />
-    </div>
-  </div>
-)}
+              <div>
+                <label className="block mb-1 font-semibold">Secondary notes</label>
+                <textarea
+                  name="secondary_notes"
+                  placeholder="Notes about racking, stabilization, clearing..."
+                  className="w-full p-3 rounded bg-black/40 border border-white/20 h-28"
+                  value={secondaryNotes}
+                  onChange={(e) => setSecondaryNotes(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
 
-{/* Hidden field for toggle */}
-<input type="hidden" name="had_secondary" value={hadSecondary ? "true" : "false"} />
-
+          <input type="hidden" name="had_secondary" value={hadSecondary ? "true" : "false"} />
 
           {/* Submit */}
           <button

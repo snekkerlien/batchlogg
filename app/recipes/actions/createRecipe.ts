@@ -4,7 +4,7 @@ import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
 import { redirect } from "next/navigation";
 
 // ⭐ Import malt + humle databasen fra egen fil
-import { MALTS_DB, HOPS_DB } from "./data";
+import { MALTS_DB, HOPS_DB, MALT_ALIASES, HOPS_ALIASES } from "./data";
 
 // -----------------------------
 // Levenshtein fuzzy match
@@ -31,9 +31,15 @@ function levenshtein(a: string, b: string): number {
   return dp[m][n];
 }
 
+function normalizeMaltName(name: string): string {
+  const key = name.toLowerCase().trim();
+  return MALT_ALIASES[key] || name;
+}
+
 function fuzzyMatchMalt(name: string) {
-  const normalized = name.trim().toLowerCase();
-  let best = null;
+  const normalized = normalizeMaltName(name).toLowerCase().trim();
+
+  let best: any = null;
   let bestScore = Infinity;
 
   for (const malt of MALTS_DB) {
@@ -47,10 +53,17 @@ function fuzzyMatchMalt(name: string) {
   }
 
   if (!best || bestScore > 3) {
-    return { name, lovibond: 0 };
+    return {
+      name,
+      lovibond: 0,
+      warning: true,
+    };
   }
 
-  return best;
+  return {
+    ...best,
+    warning: false,
+  };
 }
 
 // -----------------------------
@@ -63,7 +76,9 @@ function calcIBU(hops: any[], og: number, volumeL: number) {
   let ibu = 0;
 
   for (const hop of hops) {
-    const match = HOPS_DB.find(h => h.name.toLowerCase() === hop.name.toLowerCase());
+    const match = HOPS_DB.find(
+      (h) => h.name.toLowerCase() === hop.name.toLowerCase()
+    );
     const aa = match ? match.alpha : 0.05;
 
     const boil = hop.time ? Number(hop.time) : 60;
@@ -77,20 +92,44 @@ function calcIBU(hops: any[], og: number, volumeL: number) {
 }
 
 // -----------------------------
+// ⭐ Brewfather-style Dry Hop IBU
+// -----------------------------
+function calcDryHopIBU(dryHops: any[]) {
+  if (!dryHops || dryHops.length === 0) return 0;
+
+  let ibu = 0;
+
+  for (const hop of dryHops) {
+    const grams = Number(hop.amount) || 0;
+    const days = Number(hop.contact) || 0;
+
+    // Brewfather polyphenol bitterness model
+    ibu += grams * 0.0008 * days;
+  }
+
+  return ibu;
+}
+
+// -----------------------------
 // EBC (MCU → SRM → EBC)
 // -----------------------------
 function calcEBC(malts: any[], volumeL: number) {
-  if (!malts || malts.length === 0) return 0;
+  if (!malts || malts.length === 0) return { ebc: 0, warnings: [] };
 
   const L_PER_GAL = 3.78541;
   const KG_PER_LB = 0.453592;
 
   let mcu = 0;
+  const warnings: string[] = [];
 
   for (const malt of malts) {
     const match = fuzzyMatchMalt(malt.name);
-    const lovibond = match.lovibond;
 
+    if (match.warning) {
+      warnings.push(malt.name);
+    }
+
+    const lovibond = match.lovibond;
     const weight_lb = Number(malt.amount) / KG_PER_LB;
     const volume_gal = volumeL / L_PER_GAL;
 
@@ -99,6 +138,24 @@ function calcEBC(malts: any[], volumeL: number) {
 
   const srm = 1.4922 * Math.pow(mcu, 0.6859);
   const ebc = srm * 1.97;
+
+  return { ebc, warnings };
+}
+
+// -----------------------------
+// ⭐ Brewfather-style Dry Hop EBC
+// -----------------------------
+function calcDryHopEBC(dryHops: any[]) {
+  if (!dryHops || dryHops.length === 0) return 0;
+
+  let ebc = 0;
+
+  for (const hop of dryHops) {
+    const grams = Number(hop.amount) || 0;
+
+    // Brewfather hop color contribution
+    ebc += grams * 0.002;
+  }
 
   return ebc;
 }
@@ -157,23 +214,60 @@ export async function createRecipe(formData: FormData) {
   const malts = malts_json ? JSON.parse(malts_json) : null;
 
   const hops_json = formData.get("hops_json") as string;
-  const hops = hops_json ? JSON.parse(hops_json) : null;
+  const hopsRaw = hops_json ? JSON.parse(hops_json) : [];
+
+  const hops = hopsRaw.map((h: any) => {
+  const alias = HOPS_ALIASES[h.name.toLowerCase()];
+  const realName = alias || h.name;
+  return { ...h, name: realName };
+});
+
+
+
+
+
+  // ⭐ NEW: Dry hops
+  const dry_hops_json = formData.get("dry_hops_json") as string;
+  const dry_hops = dry_hops_json ? JSON.parse(dry_hops_json) : null;
 
   const boil_time = formData.get("boil_time") as string;
-  const boilVolumeRaw = formData.get("boil_volume") as string | null;
+  const boilVolumeRaw = formData.get("boil_volume_l") as string;
   const boil_volume = boilVolumeRaw ? parseFloat(boilVolumeRaw) : null;
 
-
   // ⭐ Automatic IBU/EBC for beer/braggot
-  const ibu =
-    (type === "Beer" || type === "Braggot") && og && volume
-      ? calcIBU(hops || [], og, boil_volume ?? volume)
-      : null;
+  const ibuBoil =
+  (type === "Beer" || type === "Braggot") && og && volume
+    ? calcIBU(hops || [], og, boil_volume ?? volume)
+    : 0
 
-  const ebc =
-  (type === "Beer" || type === "Braggot") && volume
-    ? calcEBC(malts || [], boil_volume ?? volume)
-    : null;
+  const ibuDry =
+    (type === "Beer" || type === "Braggot")
+      ? calcDryHopIBU(dry_hops || [])
+      : 0;
+
+  const ibu = ibuBoil + ibuDry;
+
+  const ebcResult =
+    (type === "Beer" || type === "Braggot") && volume
+      ? calcEBC(malts || [], boil_volume ?? volume)
+      : { ebc: 0, warnings: [] };
+
+  const ebcDry =
+    (type === "Beer" || type === "Braggot")
+      ? calcDryHopEBC(dry_hops || [])
+      : 0;
+
+  const ebc = ebcResult.ebc + ebcDry;
+
+  const maltWarnings = ebcResult.warnings;
+
+  // ⭐ STOPP LAGRING HVIS DET ER FEIL
+  if (maltWarnings.length > 0) {
+    return {
+      success: false,
+      maltWarnings,
+    };
+  }
 
   // Other
   const ingredients_json = formData.get("ingredients_json") as string;
@@ -207,6 +301,8 @@ export async function createRecipe(formData: FormData) {
 
     malts,
     hops,
+    dry_hops,
+
     boil_time,
     boil_volume,
 
@@ -222,14 +318,15 @@ export async function createRecipe(formData: FormData) {
     secondary_additions,
     secondary_notes,
 
+    malt_warnings: maltWarnings,
+
     is_public: false,
     batch_id: null,
   });
 
   if (error) {
-    console.error("Recipe insert failed:", error);
-    throw new Error(error.message);
+    return { success: false, error: error.message };
   }
 
-  redirect("/recipes");
+  return { success: true };
 }
