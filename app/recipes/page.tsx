@@ -361,23 +361,28 @@ export default function RecipesPage() {
     )}
 
     {r.hops?.length > 0 && (
-      <div>
-        <strong>Hops:</strong>
-        <ul className="list-disc ml-6 opacity-80">
-          {r.hops.map((h: any, i: number) => (
-            <li key={i}>{h.name} — {h.amount} g @ {h.time} min</li>
-          ))}
-        </ul>
+  <div>
+    <strong>Hops:</strong>
+    <ul className="list-disc ml-6 opacity-80">
+      {r.hops.map((h: any, i: number) => (
+        <li key={i}>
+          {h.name}  {h.amount} g @ {h.time} min
+          {h.alpha && (
+            <> - {Number(h.alpha)}% Alpha Acid</>
+          )}
+        </li>
+      ))}
+    </ul>
 
-        <p className="mt-2 opacity-80">
-          <strong>Total hops:</strong>{" "}
-          {(
-            r.hops.reduce((sum: number, h: any) => sum + Number(h.amount), 0) +
-            (r.dry_hops?.reduce((sum: number, h: any) => sum + Number(h.amount), 0) || 0)
-          ).toFixed(0)} g
-        </p>
-      </div>
-    )}
+    <p className="mt-2 opacity-80">
+      <strong>Total hops:</strong>{" "}
+      {(
+        r.hops.reduce((sum: number, h: any) => sum + Number(h.amount), 0) +
+        (r.dry_hops?.reduce((sum: number, h: any) => sum + Number(h.amount), 0) || 0)
+      ).toFixed(0)} g
+    </p>
+  </div>
+)}
 
     {r.dry_hops?.length > 0 && (
       <div className="mt-3">
