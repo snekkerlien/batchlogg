@@ -47,7 +47,7 @@ useEffect(() => {
 // ⭐ Last dashboard-data når router endres
 useEffect(() => {
   loadDashboardData();
-}, [router]);
+}, []);
 
 // ⭐ Klikk utenfor menyen lukker den
 useEffect(() => {
@@ -219,18 +219,6 @@ useEffect(() => {
       await loadDashboardData();
     }
   }
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () =>
-      document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   if (loading) {
   return (
