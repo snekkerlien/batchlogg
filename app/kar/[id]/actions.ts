@@ -83,7 +83,7 @@ function calcIBU(hops: any[], og: number, volumeL: number) {
   let ibu = 0;
 
   for (const hop of hops) {
-    const aa = Number(hop.alpha) || 0;   // brukerens alfasyre
+    const aa = (Number(hop.alpha) || 0) / 100;
 
     const boil = hop.time ? Number(hop.time) : 60;
     const boilFactor = (1 - Math.exp(-0.04 * boil)) / 4.15;
