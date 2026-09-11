@@ -86,18 +86,22 @@ if (profile !== null && !profile.snus_is_true && snusCategories.includes(item.ca
     >
 
       {/* HEADER */}
-      <div className="flex justify-between items-start">
-        <h3 className="text-base font-semibold line-clamp-2 leading-tight">
-          {item.name}
-        </h3>
+<div className="flex justify-between items-start">
+  <h3 className="text-base font-semibold line-clamp-2 leading-tight">
+    {item.name}
+  </h3>
 
-        {/* SNUS BADGE (kun hvis bruker har tilgang) */}
-        {profile?.snus_is_true && snusCategories.includes(item.category) && (
-          <span className="px-2 py-1 text-xs bg-purple-700 border border-purple-500 rounded-md">
-            Snus
-          </span>
-        )}
-      </div>
+  {profile?.snus_is_true && snusCategories.includes(item.category) && (
+    <span className="px-2 py-1 text-xs bg-purple-700 border border-purple-500 rounded-md">
+      Snus
+    </span>
+  )}
+</div>
+
+{/* CATEGORY */}
+<div className="text-white/60 text-xs mt-1">
+  {item.category.charAt(0).toUpperCase() + item.category.slice(1)}
+</div>
 
       {/* INFO */}
       {!editMode && (
