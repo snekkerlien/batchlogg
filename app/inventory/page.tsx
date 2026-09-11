@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import BackButton from "./BackButton";
 import MenuOverlay from "../components/MenuOverlay";
 import InventoryList from "./InventoryList";
 import AddItemModal from "./AddItemModal";
 import { useInventory } from "./useInventory";
-import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import Link from "next/link";
+import { useRef } from "react";
 
-const categories = [
+const baseCategories = [
   "honey",
   "fermentables",
   "fruit",
@@ -21,41 +21,42 @@ const categories = [
   "cleaning",
 ];
 
+const snusCategories = ["snus", "snusessens"];
+
 export default function InventoryPage() {
-  const { items, loading } = useInventory();
-  const [profile, setProfile] = useState<any>(null);
+  const { items, loading, profile } = useInventory();
   const [modalOpen, setModalOpen] = useState(false);
+  const [cardWidth, setCardWidth] = useState<number | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    async function loadProfile() {
-      const {
-        data: { session },
-      } = await supabaseBrowser.auth.getSession();
 
-      if (!session) return;
-
-      const res = await fetch("/api/profile", {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      const data = await res.json();
-      setProfile(data);
-    }
-
-    loadProfile();
-
-    const onFocus = () => loadProfile();
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
-  }, []);
+  const visibleCategories =
+    profile?.snus_is_true
+      ? [...baseCategories, ...snusCategories]
+      : baseCategories;
 
   const lowItems = items.filter((i) => {
+    if (!profile?.snus_is_true && snusCategories.includes(i.category)) {
+      return false;
+    }
+
     const current = Number(i.amount);
     const minimum = Number(i.minimum_amount);
     return current <= minimum;
   });
+
+  console.log("VISIBLE CATEGORIES:", visibleCategories);
+  console.log("PROFILE IN INVENTORY PAGE:", profile);
+  console.log("ITEMS IN INVENTORY PAGE:", items);
+  console.log("HAS SNUS ACCESS:", profile?.snus_is_true);
+  console.log("SNUS ITEMS:", items.filter(i => ["snus","snusessens"].includes(i.category)));
+
+useEffect(() => {
+  if (cardRef.current) {
+    setCardWidth(cardRef.current.offsetWidth);
+  }
+}, [items, profile]);
+
 
   return (
     <main className="min-h-screen flex flex-col items-center px-6 py-12 text-white">
@@ -77,7 +78,6 @@ export default function InventoryPage() {
           Overview of categories and low‑stock items.
         </p>
 
-        {/* ADD ITEM BUTTON */}
         <div className="text-center mb-10">
           <button
             onClick={() => setModalOpen(true)}
@@ -87,11 +87,55 @@ export default function InventoryPage() {
           </button>
         </div>
 
-        {/* CATEGORY GRID */}
-<h2 className="text-2xl font-bold mt-2 mb-4 text-center">Categories</h2>
+        <h2 className="text-2xl font-bold mt-2 mb-4 text-center">Categories</h2>
 
+{/* Vanlige kategorier */}
 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-12">
-  {categories.map((cat) => {
+  {baseCategories.map((cat) => {
+    const catItems = items.filter((i) => i.category === cat);
+    const catCount = catItems.length;
+
+    const catLow = catItems.filter((i) => {
+      const current = Number(i.amount);
+      const minimum = Number(i.minimum_amount);
+      return current <= minimum;
+    });
+
+    return (
+      <Link key={cat} href={`/inventory/category/${cat}`}>
+  <div
+    ref={cat === baseCategories[0] ? cardRef : null}
+    className="p-6 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition flex flex-col"
+  >
+    <span className="text-xl font-semibold capitalize mb-3">
+      {cat.replace("_", " ")}
+    </span>
+
+    <div className="text-white/80 text-sm mb-1">
+      {catCount} item{catCount !== 1 ? "s" : ""}
+    </div>
+
+    {catLow.length > 0 ? (
+      <div className="text-yellow-400 text-sm">
+        {catLow.length} low‑stock item{catLow.length > 1 ? "s" : ""}
+      </div>
+    ) : (
+      <div className="text-green-400 text-sm">All good</div>
+    )}
+  </div>
+</Link>
+
+    );
+  })}
+</div>
+
+{/* Snus-seksjon */}
+{profile?.snus_is_true && (
+  <>
+    <h2 className="text-2xl font-bold mb-4 text-center">Snus</h2>
+
+    <div className="flex flex-wrap justify-center gap-6 mb-12">
+  {snusCategories.map((cat) => {
     const catItems = items.filter((i) => i.category === cat);
     const catCount = catItems.length;
 
@@ -105,18 +149,17 @@ export default function InventoryPage() {
       <Link
         key={cat}
         href={`/inventory/category/${cat}`}
+        style={{ width: cardWidth ? `${cardWidth}px` : "auto" }}
         className="p-6 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition flex flex-col"
       >
         <span className="text-xl font-semibold capitalize mb-3">
           {cat.replace("_", " ")}
         </span>
 
-        {/* NUMBER OF ITEMS */}
         <div className="text-white/80 text-sm mb-1">
           {catCount} item{catCount !== 1 ? "s" : ""}
         </div>
 
-        {/* LOW STOCK STATUS */}
         {catLow.length > 0 ? (
           <div className="text-yellow-400 text-sm">
             {catLow.length} low‑stock item{catLow.length > 1 ? "s" : ""}
@@ -129,7 +172,10 @@ export default function InventoryPage() {
   })}
 </div>
 
-        {/* GLOBAL LOW STOCK */}
+  </>
+)}
+
+
         <h2 className="text-2xl font-bold mb-4 text-center">Low stock</h2>
 
         {loading ? (
@@ -145,7 +191,11 @@ export default function InventoryPage() {
         </p>
       </div>
 
-      <AddItemModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      <AddItemModal
+  open={modalOpen}
+  onClose={() => setModalOpen(false)}
+  profile={profile}
+/>
     </main>
   );
 }

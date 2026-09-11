@@ -1,13 +1,46 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useInventory } from "./useInventory";
+import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 
 export default function InventoryItem({ item }: { item: any }) {
   const { updateItem, deleteItem } = useInventory();
 
   const [editMode, setEditMode] = useState(false);
   const [amount, setAmount] = useState(item.amount);
+
+  const [profile, setProfile] = useState<any>(null);
+
+  // Skjulte kategorier
+  const snusCategories = ["snus", "snusessens"];
+
+  // Hent brukerprofil
+  useEffect(() => {
+    async function loadProfile() {
+      const {
+        data: { session },
+      } = await supabaseBrowser.auth.getSession();
+
+      if (!session) return;
+
+      const res = await fetch("/api/profile", {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      const data = await res.json();
+      setProfile(data);
+    }
+
+    loadProfile();
+  }, []);
+
+  // Ikke skjul snus-items før profile er lastet
+if (profile !== null && !profile.snus_is_true && snusCategories.includes(item.category)) {
+  return null;
+}
 
   const minimum = Number(item.minimum_amount);
   const current = Number(item.amount);
@@ -48,14 +81,23 @@ export default function InventoryItem({ item }: { item: any }) {
         shadow 
         flex flex-col 
         justify-between
-        h-44
+        h-48
       "
     >
 
       {/* HEADER */}
-      <h3 className="text-base font-semibold line-clamp-2 leading-tight">
-        {item.name}
-      </h3>
+      <div className="flex justify-between items-start">
+        <h3 className="text-base font-semibold line-clamp-2 leading-tight">
+          {item.name}
+        </h3>
+
+        {/* SNUS BADGE (kun hvis bruker har tilgang) */}
+        {profile?.snus_is_true && snusCategories.includes(item.category) && (
+          <span className="px-2 py-1 text-xs bg-purple-700 border border-purple-500 rounded-md">
+            Snus
+          </span>
+        )}
+      </div>
 
       {/* INFO */}
       {!editMode && (

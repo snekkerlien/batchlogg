@@ -3,7 +3,7 @@
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { MALTS_DB, MALT_ALIASES, HOPS_DB, HOPS_ALIASES } from "@/app/recipes/actions/data";
+import { MALTS_DB, MALT_ALIASES } from "@/app/recipes/actions/data";
 
 
 
@@ -13,7 +13,9 @@ import { MALTS_DB, MALT_ALIASES, HOPS_DB, HOPS_ALIASES } from "@/app/recipes/act
 
 type Fruit = { name: string; amount: string; unit: string };
 type Malt = { name: string; amount: string; unit: string };
-type Hop = { name: string; amount: string; unit: string; time: string };
+type Hop = { name: string; amount: string; unit: string; time: string; alpha: string; year: string; };
+type DryHop = { name: string; amount: string; contact: string; alpha: string; year: string; };
+
 type Ingredient = { name: string; amount: string; unit: string };
 
 function levenshtein(a: string, b: string): number {
@@ -81,8 +83,7 @@ function calcIBU(hops: any[], og: number, volumeL: number) {
   let ibu = 0;
 
   for (const hop of hops) {
-    const match = HOPS_DB.find(h => h.name.toLowerCase() === hop.name.toLowerCase());
-    const aa = match ? match.alpha : 0.05;
+    const aa = Number(hop.alpha) || 0;   // brukerens alfasyre
 
     const boil = hop.time ? Number(hop.time) : 60;
     const boilFactor = (1 - Math.exp(-0.04 * boil)) / 4.15;
@@ -93,6 +94,7 @@ function calcIBU(hops: any[], og: number, volumeL: number) {
 
   return ibu;
 }
+
 
 function calcEBC(malts: any[], volumeL: number) {
   if (!malts || malts.length === 0) return { ebc: 0, warnings: [] };
@@ -178,6 +180,9 @@ export async function createBatch(formData: FormData) {
 
   const hops_json = formData.get("hops_json") as string;
   const hops: Hop[] = hops_json ? JSON.parse(hops_json) : [];
+  const dry_hops_json = formData.get("dry_hops_json") as string;
+  const dryHops: DryHop[] = dry_hops_json ? JSON.parse(dry_hops_json) : [];
+
 
   // Resolve malt names → real malt names
 const resolvedMalts = malts.map(m => {
@@ -193,17 +198,20 @@ const resolvedMalts = malts.map(m => {
 });
 
 // Resolve hop names → real hop names
-const resolvedHops = hops.map(h => {
-  const alias = HOPS_ALIASES[h.name.toLowerCase()];
-  const realName = alias || h.name;
+const resolvedHops = hops.map(h => ({
+  ...h,
+  alpha: Number(h.alpha) || 0,   // brukerens alfasyre
+  year: Number(h.year) || null, // brukerens årstall
+}));
 
-  const dbEntry = HOPS_DB.find(x => x.name.toLowerCase() === realName.toLowerCase());
+const resolvedDryHops = dryHops.map(h => ({
+  ...h,
+  alpha: Number(h.alpha) || 0,
+  year: Number(h.year) || null,
+}));
 
-  return {
-    ...h,
-    alpha: dbEntry?.alpha ?? 0
-  };
-});
+
+
 
 
   const boil_time = (formData.get("boil_time") as string) || "";
@@ -342,14 +350,19 @@ ${notes}
   }
 
   // Beer
-  else if (type === "Beer") {
-    oppskrift = `
+else if (type === "Beer") {
+  oppskrift = `
 Malt additions:
 ${malts.map((m: Malt) => `${m.name}: ${m.amount}${m.unit}`).join("\n")}
 
 Hop additions:
 ${hops
-  .map((h: Hop) => `${h.name}: ${h.amount}${h.unit} @ ${h.time} min`)
+  .map((h: Hop) => `${h.name}: ${h.amount}${h.unit} @ ${h.time} min (${h.alpha}% - ${h.year})`)
+  .join("\n")}
+
+Dry hop additions:
+${dryHops
+  .map(h => `${h.name}: ${h.amount}g (${h.alpha}% - ${h.year}) for ${h.contact} days`)
   .join("\n")}
 
 Total boil time:
@@ -364,7 +377,7 @@ ${full_process}
 Notes:
 ${notes}
 `.trim();
-  }
+}
 
   // Other
   else if (type === "Other") {
@@ -419,6 +432,7 @@ ${notes}
       // Braggot / Beer
       malts: resolvedMalts,
       hops: resolvedHops,
+      dry_hops: resolvedDryHops,
       boil_time,
       boil_volume_l,
       ibu,

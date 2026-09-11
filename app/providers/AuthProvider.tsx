@@ -20,23 +20,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    async function syncSession() {
-      const { data, error } = await supabaseBrowser.auth.getSession();
+    async function loadInitialSession() {
+      const { data } = await supabaseBrowser.auth.getSession();
 
       if (!mounted) return;
 
-      if (error || !data.session) {
-        setUser(null);
-        setLoading(false);
-        return;
-      }
-
-      setUser(data.session.user);
+      setUser(data.session?.user ?? null);
       setLoading(false);
     }
 
-    syncSession();
+    loadInitialSession();
 
+    // Stabil event listener – unngår refresh-loop
     const { data: listener } = supabaseBrowser.auth.onAuthStateChange(
       (_event, session) => {
         if (!mounted) return;

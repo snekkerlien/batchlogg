@@ -4,7 +4,7 @@ import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
 import { redirect } from "next/navigation";
 
 // ⭐ Import malt + humle databasen fra egen fil
-import { MALTS_DB, HOPS_DB, MALT_ALIASES, HOPS_ALIASES } from "./data";
+import { MALTS_DB, MALT_ALIASES } from "./data";
 
 // -----------------------------
 // Levenshtein fuzzy match
@@ -76,21 +76,18 @@ function calcIBU(hops: any[], og: number, volumeL: number) {
   let ibu = 0;
 
   for (const hop of hops) {
-    const match = HOPS_DB.find(
-      (h) => h.name.toLowerCase() === hop.name.toLowerCase()
-    );
-    const aa = match ? match.alpha : 0.05;
+    const aa = Number(hop.alpha) || 0;
 
     const boil = hop.time ? Number(hop.time) : 60;
     const boilFactor = (1 - Math.exp(-0.04 * boil)) / 4.15;
     const utilization = bigness * boilFactor;
 
     ibu += (Number(hop.amount) * 1000 * aa * utilization) / volumeL;
-    
   }
 
   return ibu;
 }
+
 
 // -----------------------------
 // ⭐ Brewfather-style Dry Hop IBU
@@ -217,19 +214,11 @@ export async function createRecipe(formData: FormData) {
   const hops_json = formData.get("hops_json") as string;
   const hopsRaw = hops_json ? JSON.parse(hops_json) : [];
 
-  const hops = hopsRaw.map((h: any) => {
-  const alias = HOPS_ALIASES[h.name.toLowerCase()];
-  const realName = alias || h.name;
-
-  const match = HOPS_DB.find(x => x.name.toLowerCase() === realName.toLowerCase());
-  
-
-  return {
-    ...h,
-    name: realName,
-    alpha: match ? match.alpha : 0.05
-  };
-});
+  const hops = hopsRaw.map((h: any) => ({
+  ...h,
+  alpha: Number(h.alpha) || 0,
+  year: Number(h.year) || null,
+}));
 
 
 

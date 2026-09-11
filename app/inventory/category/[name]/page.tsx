@@ -1,13 +1,46 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useInventory } from "../../useInventory";
 import InventoryList from "../../InventoryList";
 import BackButton from "../../BackButton";
 import MenuOverlay from "../../../components/MenuOverlay";
+import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 
 export default function CategoryPage({ params }: { params: { name: string } }) {
   const { items, loading } = useInventory();
   const category = params.name;
+
+  const [profile, setProfile] = useState<any>(null);
+
+  // Skjulte kategorier
+  const snusCategories = ["snus", "snusessens"];
+
+  // Hent brukerprofil
+  useEffect(() => {
+    async function loadProfile() {
+      const {
+        data: { session },
+      } = await supabaseBrowser.auth.getSession();
+
+      if (!session) return;
+
+      const res = await fetch("/api/profile", {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      const data = await res.json();
+      setProfile(data);
+    }
+
+    loadProfile();
+  }, []);
+
+  // Hvis kategori er snus/snusessens og brukeren IKKE har tilgang → blokkér
+  const isRestrictedCategory =
+    snusCategories.includes(category) && !profile?.snus_is_true;
 
   const filtered = items.filter((i) => i.category === category);
 
@@ -23,25 +56,46 @@ export default function CategoryPage({ params }: { params: { name: string } }) {
           <BackButton />
         </div>
 
-        <h1 className="text-4xl font-bold text-center mt-20 sm:mt-6 capitalize">
-          {category.replace("_", " ")}
-        </h1>
+        {/* ACCESS DENIED */}
+        {isRestrictedCategory ? (
+          <>
+            <h1 className="text-4xl font-bold text-center mt-20 sm:mt-6">
+              Access denied
+            </h1>
 
-        <p className="opacity-80 text-center mb-10 mt-6">
-          All items in this category.
-        </p>
+            <p className="opacity-80 text-center mb-10 mt-6">
+              You do not have permission to view this category.
+            </p>
 
-        {loading ? (
-          <p className="opacity-60 text-center mt-10">Loading…</p>
-        ) : filtered.length === 0 ? (
-          <p className="opacity-60 text-center mt-10">No items in this category.</p>
+            <p className="text-sm opacity-40 mt-12 text-center">
+              © {new Date().getFullYear()} Batchlog
+            </p>
+          </>
         ) : (
-          <InventoryList items={filtered} />
-        )}
+          <>
+            <h1 className="text-4xl font-bold text-center mt-20 sm:mt-6 capitalize">
+              {category.replace("_", " ")}
+            </h1>
 
-        <p className="text-sm opacity-40 mt-12 text-center">
-          © {new Date().getFullYear()} Batchlog
-        </p>
+            <p className="opacity-80 text-center mb-10 mt-6">
+              All items in this category.
+            </p>
+
+            {loading ? (
+              <p className="opacity-60 text-center mt-10">Loading…</p>
+            ) : filtered.length === 0 ? (
+              <p className="opacity-60 text-center mt-10">
+                No items in this category.
+              </p>
+            ) : (
+              <InventoryList items={filtered} />
+            )}
+
+            <p className="text-sm opacity-40 mt-12 text-center">
+              © {new Date().getFullYear()} Batchlog
+            </p>
+          </>
+        )}
       </div>
     </main>
   );

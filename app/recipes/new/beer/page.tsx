@@ -25,11 +25,11 @@ export default function NewBeerRecipePage() {
   }
 
   // HOPS (name + amount in g + time in min)
-  const [hops, setHops] = useState<{ name: string; amount: string; time: string }[]>([]);
- const [dryHops, setDryHops] = useState<{ name: string; amount: string; contact: string }[]>([]);
+  const [hops, setHops] = useState<{ name: string; amount: string; time: string; alpha: string; year: string }[]>([]);
+ const [dryHops, setDryHops] = useState<{ name: string; amount: string; contact: string; alpha: string; year: string }[]>([]);
 
 function addDryHop() {
-  setDryHops([...dryHops, { name: "", amount: "", contact: "" }]);
+  setDryHops([...dryHops, { name: "", amount: "", contact: "", alpha: "", year: "" }]);
 }
 
 function removeDryHop(index: number) {
@@ -42,7 +42,7 @@ function removeDryHop(index: number) {
 
 
   function addHop() {
-    setHops([...hops, { name: "", amount: "", time: "" }]);
+    setHops([...hops, { name: "", amount: "", time: "", alpha: "", year: "" }]);
   }
 
   function removeHop(index: number) {
@@ -235,6 +235,31 @@ function removeDryHop(index: number) {
                     setHops(updated);
                   }}
                 />
+
+                <input
+  placeholder="Alpha (%)"
+  type="text"
+  className="p-3 rounded bg-black/40 border border-white/20 w-24"
+  value={h.alpha}
+  onChange={(e) => {
+    const updated = [...hops];
+    updated[i].alpha = e.target.value;
+    setHops(updated);
+  }}
+/>
+
+
+<input
+  placeholder="Year"
+  type="text"
+  className="p-3 rounded bg-black/40 border border-white/20 w-24"
+  value={h.year}
+  onChange={(e) => {
+    const updated = [...hops];
+    updated[i].year = e.target.value;
+    setHops(updated);
+  }}
+/>
 
                 <input
                   placeholder="Amount (g)"

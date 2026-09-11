@@ -86,57 +86,6 @@ export const MALTS_DB = [
   { name: "Red X", lovibond: 30 / 1.97 },
 ];
 
-export const HOPS_DB = [
-  { name: "Citra", alpha: 0.14 },
-  { name: "Cascade", alpha: 0.057 },
-  { name: "Amarillo", alpha: 0.089 },
-  { name: "Mosaic", alpha: 0.121 },
-  { name: "Chinook", alpha: 0.099 },
-  { name: "Columbus", alpha: 0.15 }, // CTZ – oppgis ofte uten tall, men typisk 14–16%
-  { name: "Willamette", alpha: 0.05 }, // typisk 4–6%
-  { name: "Centennial", alpha: 0.092 },
-  { name: "Simcoe", alpha: 0.123 },
-  { name: "Idaho 7", alpha: 0.143 },
-  { name: "Crystal", alpha: 0.037 },
-  { name: "Azacca", alpha: 0.115 },
-  { name: "Nugget", alpha: 0.152 },
-  { name: "Ekuanot", alpha: 0.142 },
-  { name: "El Dorado", alpha: 0.126 },
-  { name: "Ahtanum", alpha: 0.037 },
-  { name: "Warrior", alpha: 0.154 },
-  { name: "Sabro", alpha: 0.152 },
-  { name: "Pekko", alpha: 0.116 },
-  { name: "Mount Hood", alpha: 0.055 },
-  { name: "East Kent Goldings", alpha: 0.067 },
-  { name: "Fuggle", alpha: 0.04 },
-  { name: "Target", alpha: 0.113 },
-  { name: "Challenger", alpha: 0.0625 },
-  { name: "Saaz", alpha: 0.033 },
-  { name: "Bobek", alpha: 0.044 },
-  { name: "Sladek", alpha: 0.052 },
-  { name: "Hallertau Mittelfrüh", alpha: 0.051 },
-  { name: "Magnum", alpha: 0.14 },
-  { name: "Perle", alpha: 0.118 },
-  { name: "Tettnang", alpha: 0.038 },
-  { name: "Hersbrücker", alpha: 0.028 },
-  { name: "Hallertau Tradition", alpha: 0.064 },
-  { name: "Hersbrucker Spät", alpha: 0.032 },
-  { name: "Spalter Select", alpha: 0.04 },
-  { name: "Mandarina Bavaria", alpha: 0.095 },
-  { name: "Saphir", alpha: 0.04 },
-  { name: "Herkules", alpha: 0.143 },
-  { name: "Northern Brewer", alpha: 0.082 },
-  { name: "Tango", alpha: 0.051 },
-  { name: "Hüll Melon", alpha: 0.063 },
-  { name: "Hallertau Blanc", alpha: 0.089 },
-  { name: "Galaxy", alpha: 0.178 },
-  { name: "Superdelic", alpha: 0.106 },
-  { name: "Nectaron", alpha: 0.126 },
-  { name: "Nelson Sauvin", alpha: 0.163 },
-  { name: "Vic Secret", alpha: 0.173 },
-  { name: "Motueka", alpha: 0.083 },
-];
-
 export const MALT_ALIASES: Record<string, string> = {
   // -----------------------------
   // Pilsner
@@ -146,6 +95,8 @@ export const MALT_ALIASES: Record<string, string> = {
   "pils malt": "Pilsnermalt",
   "pilsnermalt": "Pilsnermalt",
   "pilsner-malt": "Pilsnermalt",
+  "pale ale": "Planet Pale Ale Malt",
+  "planet pale": "Planet Pale Ale Malt",
 
   "barke pilsner": "Barke Pilsnermalt",
   "barke pils": "Barke Pilsnermalt",
@@ -217,21 +168,27 @@ export const MALT_ALIASES: Record<string, string> = {
   // -----------------------------
   "caramalt": "CaraMalt",
   "cara malt": "CaraMalt",
+  "caramel malt": "CaraMalt",
 
   "carahell": "CaraHell",
   "cara hell": "CaraHell",
+  "caramell hell": "CaraHell",
 
   "caraamber": "CaraAmber",
   "cara amber": "CaraAmber",
+  "caramel amber": "CaraAmber",
 
   "caraglow": "CaraGlow",
   "cara glow": "CaraGlow",
+  "caramel glow": "CaraGlow",
 
   "caraaroma": "CaraAroma",
   "cara aroma": "CaraAroma",
+  "caramel aroma": "CaraAroma",
 
   "carared": "Carared",
   "cara red": "Carared",
+  "caramel red": "Carared",
 
   // -----------------------------
   // Carafa Special
@@ -262,6 +219,8 @@ export const MALT_ALIASES: Record<string, string> = {
   // -----------------------------
   "chocolate": "Chocolate Malt",
   "chocolate malt": "Chocolate Malt",
+  "sjokolade": "Chocolate Malt",
+  "sjokolade malt": "Chocolate Malt",
 
   "pale chocolate": "Pale Chocolate Malt",
   "pale chocolate malt": "Pale Chocolate Malt",
@@ -284,7 +243,7 @@ export const MALT_ALIASES: Record<string, string> = {
   "maris otter pale": "Maris Otter Pale Ale Malt",
   "maris otter malt": "Maris Otter Pale Ale Malt",
 
-  "planet pale": "Planet Pale Ale Malt",
+  
   "planet pale ale": "Planet Pale Ale Malt",
 
   "vienna": "Vienna Malt",
@@ -318,6 +277,8 @@ export const MALT_ALIASES: Record<string, string> = {
 
   "naked oats": "Golden Naked Oats",
   "golden naked oats": "Golden Naked Oats",
+  "GNO": "Golden Naked Oats",
+  "gno": "Golden Naked Oats",
 
   // -----------------------------
   // Flaked grains
@@ -338,11 +299,14 @@ export const MALT_ALIASES: Record<string, string> = {
   "melanoidin malt": "Melanoidin Malt",
   "melanodin malt": "Melanoidin Malt",
   "Melanodin malt": "Melanoidin Malt",
+  "Melanodin": "Melanoidin Malt",
 
   "aromatic": "Aromatic Malt",
   "aroma malt": "Aromatic Malt",
 
   "special b": "Special B",
+  "b": "Special B",
+  "B": "Special B",
 
   "acidulated": "Acidulated Malt",
   "acid malt": "Acidulated Malt",
@@ -381,186 +345,4 @@ export const MALT_ALIASES: Record<string, string> = {
   "rice husks": "Rice Hulls",
   "risskall": "Rice Hulls",
   "ris skall": "Ruce Hulls",
-};
-
-export const HOPS_ALIASES: Record<string, string> = {
-  // Citra
-  "citra": "Citra",
-  "citra hop": "Citra",
-
-  // Cascade
-  "cascade": "Cascade",
-  "cascade hop": "Cascade",
-
-  // Amarillo
-  "amarillo": "Amarillo",
-  "amarillo hop": "Amarillo",
-
-  // Mosaic
-  "mosaic": "Mosaic",
-  "mosaic hop": "Mosaic",
-
-  // Chinook
-  "chinook": "Chinook",
-  "chinook hop": "Chinook",
-
-  // Columbus / CTZ
-  "columbus": "Columbus",
-  "ctz": "Columbus",
-  "tomahawk": "Columbus",
-  "zeus": "Columbus",
-  "columbus/tomahawk/zeus": "Columbus",
-
-  // Willamette
-  "willamette": "Willamette",
-
-  // Centennial
-  "centennial": "Centennial",
-
-  // Simcoe
-  "simcoe": "Simcoe",
-
-  // Idaho 7
-  "idaho 7": "Idaho 7",
-  "idaho7": "Idaho 7",
-  "idaho-7": "Idaho 7",
-
-  // Crystal
-  "crystal": "Crystal",
-
-  // Azacca
-  "azacca": "Azacca",
-
-  // Nugget
-  "nugget": "Nugget",
-
-  // Ekuanot
-  "ekuanot": "Ekuanot",
-  "equanot": "Ekuanot",
-  "equinox": "Ekuanot", // gammelt navn
-
-  // El Dorado
-  "el dorado": "El Dorado",
-  "eldorado": "El Dorado",
-
-  // Ahtanum
-  "ahtanum": "Ahtanum",
-
-  // Warrior
-  "warrior": "Warrior",
-
-  // Sabro
-  "sabro": "Sabro",
-
-  // Pekko
-  "pekko": "Pekko",
-
-  // Mount Hood
-  "mount hood": "Mount Hood",
-  "mt hood": "Mount Hood",
-
-  // East Kent Goldings
-  "east kent goldings": "East Kent Goldings",
-  "ekg": "East Kent Goldings",
-  "kent goldings": "East Kent Goldings",
-
-  // Fuggle
-  "fuggle": "Fuggle",
-
-  // Target
-  "target": "Target",
-
-  // Challenger
-  "challenger": "Challenger",
-
-  // Saaz
-  "saaz": "Saaz",
-
-  // Bobek
-  "bobek": "Bobek",
-
-  // Sladek
-  "sladek": "Sladek",
-
-  // Hallertau Mittelfrüh
-  "hallertau mittelfrüh": "Hallertau Mittelfrüh",
-  "hallertau mittelfruh": "Hallertau Mittelfrüh",
-  "mittelfrüh": "Hallertau Mittelfrüh",
-  "mittelfruh": "Hallertau Mittelfrüh",
-
-  // Magnum
-  "magnum": "Magnum",
-
-  // Perle
-  "perle": "Perle",
-
-  // Tettnang
-  "tettnang": "Tettnang",
-  "tett": "Tettnang",
-
-  // Hersbrucker
-  "hersbrucker": "Hersbrücker",
-
-  // Hallertau Tradition
-  "hallertau tradition": "Hallertau Tradition",
-  "tradition": "Hallertau Tradition",
-
-  // Hersbrucker Spät
-  "hersbrucker spät": "Hersbrucker Spät",
-  "hersbrucker spat": "Hersbrucker Spät",
-  "spät": "Hersbrucker Spät",
-  "spat": "Hersbrucker Spät",
-
-  // Spalter Select
-  "spalter select": "Spalter Select",
-  "spalter": "Spalter Select",
-
-  // Mandarina Bavaria
-  "mandarina bavaria": "Mandarina Bavaria",
-  "mandarina": "Mandarina Bavaria",
-
-  // Saphir
-  "saphir": "Saphir",
-
-  // Herkules
-  "herkules": "Herkules",
-  "hercules": "Herkules",
-
-  // Northern Brewer
-  "northern brewer": "Northern Brewer",
-  "nb": "Northern Brewer",
-
-  // Tango
-  "tango": "Tango",
-
-  // Hüll Melon
-  "hüll melon": "Hüll Melon",
-  "hull melon": "Hüll Melon",
-  "hul melon": "Hüll Melon",
-  "melon": "Hüll Melon",
-
-  // Hallertau Blanc
-  "hallertau blanc": "Hallertau Blanc",
-  "blanc": "Hallertau Blanc",
-
-  // Galaxy
-  "galaxy": "Galaxy",
-
-  // Superdelic
-  "superdelic": "Superdelic",
-
-  // Nectaron
-  "nectaron": "Nectaron",
-
-  // Nelson Sauvin
-  "nelson sauvin": "Nelson Sauvin",
-  "nelson": "Nelson Sauvin",
-  "sauvin": "Nelson Sauvin",
-
-  // Vic Secret
-  "vic secret": "Vic Secret",
-  "vicsecret": "Vic Secret",
-
-  // Motueka
-  "motueka": "Motueka",
 };

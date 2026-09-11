@@ -3,7 +3,12 @@
 import { useState } from "react";
 import { useInventory } from "./useInventory";
 
-export default function AddItemForm({ onSubmitComplete }: { onSubmitComplete?: () => void }) {
+type AddItemFormProps = {
+  onSubmitComplete?: () => void;
+  profile: any; // du kan stramme inn senere
+};
+
+export default function AddItemForm({ onSubmitComplete, profile }: AddItemFormProps) {
   const { addItem } = useInventory();
 
   const [form, setForm] = useState({
@@ -14,7 +19,26 @@ export default function AddItemForm({ onSubmitComplete }: { onSubmitComplete?: (
     minimum_amount: "",
   });
 
-  async function handleSubmit(e: any) {
+  const baseCategories = [
+    "honey",
+    "fermentables",
+    "fruit",
+    "yeast",
+    "nutrients",
+    "additives",
+    "bottling",
+    "equipment",
+    "cleaning",
+  ];
+
+  const snusCategories = ["snus", "snusessens"];
+
+  const visibleCategories =
+    profile?.snus_is_true
+      ? [...baseCategories, ...snusCategories]
+      : baseCategories;
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
     const fd = new FormData();
@@ -24,8 +48,11 @@ export default function AddItemForm({ onSubmitComplete }: { onSubmitComplete?: (
 
     await addItem(fd);
 
-    if (onSubmitComplete) onSubmitComplete();
+    onSubmitComplete?.();
   }
+
+  console.log("PROFILE IN AddItemForm:", profile);
+
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -41,15 +68,11 @@ export default function AddItemForm({ onSubmitComplete }: { onSubmitComplete?: (
         value={form.category}
         onChange={(e) => setForm({ ...form, category: e.target.value })}
       >
-        <option value="honey">Honey</option>
-        <option value="fermentables">Fermentables</option>
-        <option value="fruit">Fruit</option>
-        <option value="yeast">Yeast</option>
-        <option value="nutrients">Nutrients</option>
-        <option value="additives">Additives</option>
-        <option value="bottling">Bottling</option>
-        <option value="equipment">Equipment</option>
-        <option value="cleaning">Cleaning</option>
+        {visibleCategories.map((cat) => (
+          <option key={cat} value={cat}>
+            {cat.charAt(0).toUpperCase() + cat.slice(1)}
+          </option>
+        ))}
       </select>
 
       <input

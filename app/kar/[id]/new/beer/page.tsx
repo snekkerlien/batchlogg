@@ -26,11 +26,11 @@ export default function NewBeerPage({ params }: { params: { id: string } }) {
 
   // Dynamic hop list
   const [hops, setHops] = useState<
-    { name: string; amount: string; time: string }[]
-  >([]);
+  { name: string; amount: string; time: string; alpha: string; year: string }[]
+>([]);
 
   function addHop() {
-    setHops([...hops, { name: "", amount: "", time: "" }]);
+    setHops([...hops, { name: "", amount: "", time: "", alpha: "", year:""}]);
   }
 
   function removeHop(index: number) {
@@ -39,11 +39,11 @@ export default function NewBeerPage({ params }: { params: { id: string } }) {
     setHops(updated);
   }
   const [dryHops, setDryHops] = useState<
-  { name: string; amount: string; contact: string }[]
+   { name: string; amount: string; contact: string; alpha: string; year: string }[]
 >([]);
 
 function addDryHop() {
-  setDryHops([...dryHops, { name: "", amount: "", contact: "" }]);
+  setDryHops([...dryHops, { name: "", amount: "", contact: "", alpha: "", year: "" }]);
 }
 
 function removeDryHop(index: number) {
@@ -103,9 +103,11 @@ const [volume, setVolume] = useState("");
             <input
   name="volume_l"
   type="text"
+  placeholder="Batchvolume"
   value={volume}
   onChange={(e) => setVolume(e.target.value)}
   required
+  className="w-full p-3 rounded bg-black/40 border border-white/20"
 />
 
           </div>
@@ -114,11 +116,12 @@ const [volume, setVolume] = useState("");
   <label className="block mb-1 font-semibold">Boil Volume (L)</label>
   <input
   name="boil_volume_l"
-  type="number"
-  step="0.1"
+  type="text"
+  placeholder="Volume before boil"
   value={boilVolume}
   onChange={(e) => setBoilVolume(e.target.value === "" ? "" : Number(e.target.value))}
   required
+  className="w-full p-3 rounded bg-black/40 border border-white/20"
   />
 
 </div>
@@ -186,7 +189,7 @@ const [volume, setVolume] = useState("");
     <button
       type="button"
       onClick={() => removeMalt(i)}
-      className="px-3 py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm"
+      className="px py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm"
     >
       Remove
     </button>
@@ -220,7 +223,7 @@ const [volume, setVolume] = useState("");
     {/* Hop type */}
     <input
       placeholder="Hop type"
-      className="p-3 rounded bg-black/40 border border-white/20 flex-1 min-w-[240px]"
+      className="p-3 rounded bg-black/40 border border-white/20 flex-1 min-w-[200px]"
       value={h.name}
       onChange={(e) => {
         const updated = [...hops];
@@ -229,11 +232,37 @@ const [volume, setVolume] = useState("");
       }}
     />
 
+    <input
+  placeholder="Alpha (%)"
+  type="text"
+  className="p-3 rounded bg-black/40 border border-white/20 w-24"
+  value={h.alpha}
+  onChange={(e) => {
+    const updated = [...hops];
+    updated[i].alpha = e.target.value;
+    setHops(updated);
+  }}
+/>
+
+
+<input
+  placeholder="Year"
+  type="text"
+  className="p-3 rounded bg-black/40 border border-white/20 w-24"
+  value={h.year}
+  onChange={(e) => {
+    const updated = [...hops];
+    updated[i].year = e.target.value;
+    setHops(updated);
+  }}
+/>
+
+
     {/* Amount */}
     <input
       placeholder="Amount (g)"
       type="text"
-      className="p-3 rounded bg-black/40 border border-white/20 w-28"
+      className="p-3 rounded bg-black/40 border border-white/20 w-26"
       value={h.amount}
       onChange={(e) => {
         const updated = [...hops];
@@ -259,7 +288,7 @@ const [volume, setVolume] = useState("");
     <button
       type="button"
       onClick={() => removeHop(i)}
-      className="px-3 py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm"
+      className="px py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm"
     >
       Remove
     </button>
@@ -281,59 +310,84 @@ const [volume, setVolume] = useState("");
   <label className="block mb-2 font-semibold">Dry hop additions</label>
 
   {dryHops.map((h, i) => (
-  <div
-    key={i}
-    className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full"
-  >
-    {/* Hop type */}
-    <input
-      placeholder="Hop type"
-      className="p-3 rounded bg-black/40 border border-white/20 flex-1 min-w-[240px]"
-      value={h.name}
-      onChange={(e) => {
-        const updated = [...dryHops];
-        updated[i].name = e.target.value;
-        setDryHops(updated);
-      }}
-    />
-
-    {/* Amount */}
-    <input
-      placeholder="Amount (g)"
-      type="text"
-      className="p-3 rounded bg-black/40 border border-white/20 w-28"
-      value={h.amount}
-      onChange={(e) => {
-        const updated = [...dryHops];
-        updated[i].amount = e.target.value;
-        setDryHops(updated);
-      }}
-    />
-
-    {/* Contact time */}
-    <input
-      placeholder="Contact time (days)"
-      type="text"
-      className="p-3 rounded bg-black/40 border border-white/20 w-42"
-      value={h.contact}
-      onChange={(e) => {
-        const updated = [...dryHops];
-        updated[i].contact = e.target.value;
-        setDryHops(updated);
-      }}
-    />
-
-    {/* Remove */}
-    <button
-      type="button"
-      onClick={() => removeDryHop(i)}
-      className="px-3 py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm"
+    <div
+      key={i}
+      className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full"
     >
-      Remove
-    </button>
-  </div>
-))}
+      {/* Hop type */}
+      <input
+        placeholder="Hop type"
+        className="p-3 rounded bg-black/40 border border-white/20 flex-1 min-w-[200px]"
+        value={h.name}
+        onChange={(e) => {
+          const updated = [...dryHops];
+          updated[i].name = e.target.value;
+          setDryHops(updated);
+        }}
+      />
 
+      {/* Alpha (%) */}
+      <input
+        placeholder="Alpha (%)"
+        type="text"
+        className="p-3 rounded bg-black/40 border border-white/20 w-24"
+        value={h.alpha}
+        onChange={(e) => {
+          const updated = [...dryHops];
+          updated[i].alpha = e.target.value;
+          setDryHops(updated);
+        }}
+      />
+
+      {/* Year */}
+      <input
+        placeholder="Year"
+        type="text"
+        className="p-3 rounded bg-black/40 border border-white/20 w-19"
+        value={h.year}
+        onChange={(e) => {
+          const updated = [...dryHops];
+          updated[i].year = e.target.value;
+          setDryHops(updated);
+        }}
+      />
+
+      {/* Amount */}
+      <input
+        placeholder="Amount (g)"
+        type="text"
+        className="p-3 rounded bg-black/40 border border-white/20 w-26"
+        value={h.amount}
+        onChange={(e) => {
+          const updated = [...dryHops];
+          updated[i].amount = e.target.value;
+          setDryHops(updated);
+        }}
+      />
+
+      {/* Contact time */}
+      <input
+        placeholder="Contact time (days)"
+        type="text"
+        className="p-3 rounded bg-black/40 border border-white/20 w-39"
+        value={h.contact}
+        onChange={(e) => {
+          const updated = [...dryHops];
+          updated[i].contact = e.target.value;
+          setDryHops(updated);
+        }}
+      />
+
+      {/* Remove */}
+      <button
+        type="button"
+        onClick={() => removeDryHop(i)}
+        className="px py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm"
+      >
+        Remove
+      </button>
+    </div>
+  ))}
 
   <button
     type="button"
@@ -345,6 +399,7 @@ const [volume, setVolume] = useState("");
 </div>
 
 <input type="hidden" name="dry_hops_json" value={JSON.stringify(dryHops)} />
+
 
 
 
