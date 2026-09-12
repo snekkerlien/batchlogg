@@ -6,6 +6,9 @@ import { redirect } from "next/navigation";
 // ⭐ Import malt + humle databasen fra egen fil
 import { MALTS_DB, MALT_ALIASES } from "./data";
 
+export { calcIBU, calcDryHopIBU, calcEBC, calcDryHopEBC };
+
+
 // -----------------------------
 // Levenshtein fuzzy match
 // -----------------------------
@@ -216,8 +219,10 @@ export async function createRecipe(formData: FormData) {
 
   const hops = hopsRaw.map((h: any) => ({
   ...h,
-  alpha: Number(h.alpha) || 0,
-  year: Number(h.year) || null,
+  alpha: h.alpha
+    ? Number(String(h.alpha).replace(",", "."))
+    : 0,
+  year: h.year ? Number(h.year) : null,
 }));
 
 

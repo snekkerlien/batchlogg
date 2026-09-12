@@ -29,6 +29,30 @@ function ebcToHex(ebc: number | string) {
 
 
 
+type Fruit = {
+  name: string;
+  amount: string;
+  unit: string;
+};
+
+type Malt = {
+  name: string;
+  amount: string;
+};
+
+type Hop = {
+  name: string;
+  alpha: string;
+  year: string;
+  amount: string;
+  time: string;
+};
+
+type DryHop = {
+  name: string;
+  amount: string;
+  contact: string;
+};
 
 
 export default function RecipesPage() {
@@ -38,6 +62,19 @@ export default function RecipesPage() {
   const [openStyleSelect, setOpenStyleSelect] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<string>("All");
+  const [openEdit, setOpenEdit] = useState<string | null>(null);
+  const [editRecipe, setEditRecipe] = useState<any>(null);
+  const [editFruits, setEditFruits] = useState<Fruit[]>([]);
+  const [hadSecondary, setHadSecondary] = useState(false);
+  const [secondaryAdditions, setSecondaryAdditions] = useState("");
+  const [secondaryNotes, setSecondaryNotes] = useState("");
+  const [editMalts, setEditMalts] = useState<Malt[]>([]);
+  const [editHops, setEditHops] = useState<Hop[]>([]);
+  const [editDryHops, setEditDryHops] = useState<DryHop[]>([]);
+
+
+
+
 
   useEffect(() => {
     async function load() {
@@ -52,7 +89,43 @@ export default function RecipesPage() {
 
       const { data: recipesRaw } = await supabaseBrowser
         .from("recipes")
-        .select("*")
+        .select(`
+  id,
+  user_id,
+  batch_id,
+  name,
+  og,
+  fg,
+  abv,
+  volume,
+  notes,
+  is_public,
+  created_at,
+  notes_log,
+  had_secondary,
+  secondary_additions,
+  secondary_notes,
+  type,
+  honey_type,
+  honey_amount,
+  fruits,
+  juice_type,
+  sugar_amount,
+  malts,
+  hops,
+  boil_time,
+  steps,
+  additives,
+  full_process,
+  yeast,
+  ingredients,
+  ibu,
+  ebc,
+  boil_volume,
+  malt_warnings,
+  dry_hops
+`)
+
         .eq("user_id", session.user.id)
         .order("created_at", { ascending: false });
 
@@ -71,6 +144,9 @@ export default function RecipesPage() {
     );
   }
 
+  
+
+
   async function deleteRecipe(id: string) {
     const res = await fetch("/api/recipes/delete", {
       method: "POST",
@@ -86,6 +162,77 @@ export default function RecipesPage() {
   function toggle(id: string) {
     setExpanded(expanded === id ? null : id);
   }
+
+  function addFruit() {
+  setEditFruits([...editFruits, { name: "", amount: "", unit: "" }]);
+}
+
+
+function updateFruit(index: number, key: keyof Fruit, value: string) {
+  const updated = [...editFruits];
+  updated[index][key] = value;
+  setEditFruits(updated);
+}
+
+
+function removeFruit(index: number) {
+  const updated = [...editFruits];
+  updated.splice(index, 1);
+  setEditFruits(updated);
+}
+
+function addMalt() {
+  setEditMalts([...editMalts, { name: "", amount: "" }]);
+}
+
+function updateMalt(index: number, key: keyof Malt, value: string) {
+  const updated = [...editMalts];
+  updated[index][key] = value;
+  setEditMalts(updated);
+}
+
+function removeMalt(index: number) {
+  const updated = [...editMalts];
+  updated.splice(index, 1);
+  setEditMalts(updated);
+}
+
+
+function addHop() {
+  setEditHops([...editHops, { name: "", alpha: "", year: "", amount: "", time: "" }]);
+}
+
+function updateHop(index: number, key: keyof Hop, value: string) {
+  const updated = [...editHops];
+  updated[index][key] = value;
+  setEditHops(updated);
+}
+
+function removeHop(index: number) {
+  const updated = [...editHops];
+  updated.splice(index, 1);
+  setEditHops(updated);
+}
+
+
+function addDryHop() {
+  setEditDryHops([...editDryHops, { name: "", amount: "", contact: "" }]);
+}
+
+function updateDryHop(index: number, key: keyof DryHop, value: string) {
+  const updated = [...editDryHops];
+  updated[index][key] = value;
+  setEditDryHops(updated);
+}
+
+function removeDryHop(index: number) {
+  const updated = [...editDryHops];
+  updated.splice(index, 1);
+  setEditDryHops(updated);
+}
+
+
+
 
   const filteredRecipes =
     filterType === "All"
@@ -168,6 +315,7 @@ export default function RecipesPage() {
 >
 
 
+
 {/* HEADER */}
 <div
   className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
@@ -202,6 +350,29 @@ export default function RecipesPage() {
 
   {/* Knapper + pil (PC) */}
 <div className="hidden sm:flex flex-row items-center justify-end gap-2 sm:mt-[6px]">
+
+  {/* ⭐ EDIT RECIPE BUTTON */}
+  <button
+    onClick={(e) => {
+      e.stopPropagation();
+      setEditRecipe(r);
+      setEditFruits(r.fruits || []);
+      setOpenEdit(r.id); 
+      setHadSecondary(r.had_secondary || false);
+      setSecondaryAdditions(r.secondary_additions || "");
+      setSecondaryNotes(r.secondary_notes || "");
+      setEditMalts(r.malts || []);
+      setEditHops(r.hops || []);
+      setEditDryHops(r.dry_hops || []);
+
+
+        // åpner edit-modal for denne oppskriften
+    }}
+    className="px-4 py-2 rounded-lg font-semibold border bg-green-700 hover:bg-green-600 border-green-500"
+  >
+    Edit
+  </button>
+
   <button
     onClick={(e) => {
       e.stopPropagation();
@@ -498,6 +669,464 @@ export default function RecipesPage() {
             <p className="opacity-60 text-center">No recipes found.</p>
           )}
         </div>
+
+          {openEdit && editRecipe && (
+  <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+
+    <div
+      className="bg-zinc-900 border border-white/20 p-6 rounded-xl w-full max-w-2xl text-white overflow-y-auto max-h-[90vh]"
+      onClick={(e) => e.stopPropagation()}
+    >
+
+      <h2 className="text-2xl font-bold mb-4">Edit recipe</h2>
+
+      <form
+        className="flex flex-col gap-4"
+        onSubmit={async (e) => {
+          e.preventDefault();
+
+          const formData = new FormData(e.currentTarget);
+          const payload = Object.fromEntries(formData.entries());
+
+          await fetch("/api/recipes/update", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: openEdit, ...payload }),
+          });
+
+          
+
+          setOpenEdit(null);
+          window.location.reload();
+        }}
+      >
+
+        <input type="hidden" name="type" value={editRecipe.type} />
+
+
+        {/* COMMON FIELDS */}
+        <label className="font-semibold">Name</label>
+        <input
+          name="name"
+          defaultValue={editRecipe.name}
+          className="p-3 rounded bg-black/40 border border-white/20"
+        />
+
+        <label className="font-semibold">Volume (L)</label>
+        <input
+          name="volume"
+          type="text"
+          defaultValue={editRecipe.volume}
+          className="p-3 rounded bg-black/40 border border-white/20"
+        />
+
+        <label className="font-semibold">OG</label>
+        <input
+          name="og"
+          type="text"
+          defaultValue={editRecipe.og}
+          className="p-3 rounded bg-black/40 border border-white/20"
+        />
+
+        <label className="font-semibold">FG</label>
+        <input
+          name="fg"
+          type="text"
+          defaultValue={editRecipe.fg}
+          className="p-3 rounded bg-black/40 border border-white/20"
+        />
+
+        <label className="font-semibold">Yeast</label>
+        <input
+          name="yeast"
+          defaultValue={editRecipe.yeast}
+          className="p-3 rounded bg-black/40 border border-white/20"
+        />
+
+        {/* TYPE SPECIFIC */}
+        {editRecipe.type === "Mead" && (
+  <>
+    <label className="block mb-2 font-semibold">Honey type</label>
+    <input
+      name="honey_type"
+      defaultValue={editRecipe.honey_type}
+      className="p-3 rounded bg-black/40 border border-white/20"
+    />
+
+    <label className="block mb-2 font-semibold">Honey amount (kg)</label>
+    <input
+      name="honey_amount"
+      type="text"
+      defaultValue={editRecipe.honey_amount}
+      className="p-3 rounded bg-black/40 border border-white/20"
+    />
+
+    {/* ⭐ Fruits — identisk med batch creation */}
+    <label className="block mb-2 font-semibold">Fruit additions</label>
+
+    {editFruits.map((f, i) => (
+      <div
+        key={i}
+        className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full"
+      >
+        <input
+          placeholder="Fruit (e.g. Mango, Raspberry)"
+          className="p-3 rounded bg-black/40 border border-white/20 w-full md:flex-1"
+          value={f.name}
+          onChange={(e) => updateFruit(i, "name", e.target.value)}
+        />
+
+        <input
+          placeholder="Amount"
+          className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-24"
+          value={f.amount}
+          onChange={(e) => updateFruit(i, "amount", e.target.value)}
+        />
+
+        <input
+          placeholder="Unit"
+          className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-20"
+          value={f.unit}
+          onChange={(e) => updateFruit(i, "unit", e.target.value)}
+        />
+
+        <button
+          type="button"
+          onClick={() => removeFruit(i)}
+          className="px-3 py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm self-start md:self-auto"
+        >
+          Remove
+        </button>
+      </div>
+    ))}
+
+    <button
+      type="button"
+      onClick={addFruit}
+      className="px-4 py-2 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold mt-2"
+    >
+      + Add fruit
+    </button>
+  </>
+)}
+
+
+
+        {(editRecipe.type === "Wine" || editRecipe.type === "Cider") && (
+          <>
+            <label className="font-semibold">Juice / Must</label>
+            <input
+              name="juice_type"
+              defaultValue={editRecipe.juice_type}
+              className="p-3 rounded bg-black/40 border border-white/20"
+            />
+
+            <label className="font-semibold">Sugar added</label>
+            <input
+              name="sugar_amount"
+              defaultValue={editRecipe.sugar_amount}
+              className="p-3 rounded bg-black/40 border border-white/20"
+            />
+          </>
+        )}
+
+        {editRecipe.type === "Seltzer" && (
+  <>
+    <label className="font-semibold">Sugar added</label>
+    <input
+      name="sugar_amount"
+      defaultValue={editRecipe.sugar_amount}
+      className="p-3 rounded bg-black/40 border border-white/20"
+    />
+  </>
+)}
+
+
+        {(editRecipe.type === "Beer" || editRecipe.type === "Braggot") && (
+  <>
+    {/* Boil Volume */}
+          <div>
+            <label className="block mb-1 font-semibold">Boil Volume (L)</label>
+            <input
+              name="boil_volume"
+              type="text"
+              defaultValue={editRecipe.boil_volume}
+              placeholder="Total wort volume before the boil"
+              className="w-full p-3 rounded bg-black/40 border border-white/20"
+            />
+          </div>
+    
+    {/* MALTS */}
+    <div>
+      <label className="block mb-2 font-semibold">Malt additions</label>
+
+      {editMalts.map((m, i) => (
+        <div key={i} className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full">
+          <input
+            placeholder="Malt type"
+            className="p-3 rounded bg-black/40 border border-white/20 w-full md:flex-1"
+            value={m.name}
+            onChange={(e) => updateMalt(i, "name", e.target.value)}
+          />
+
+          <input
+            placeholder="Amount (kg)"
+            type="text"
+            className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-32"
+            value={m.amount}
+            onChange={(e) => updateMalt(i, "amount", e.target.value)}
+          />
+
+          <button
+            type="button"
+            onClick={() => removeMalt(i)}
+            className="px-3 py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm"
+          >
+            Remove
+          </button>
+        </div>
+      ))}
+
+      <button
+        type="button"
+        onClick={addMalt}
+        className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
+      >
+        + Add malt
+      </button>
+    </div>
+
+    <input type="hidden" name="malts" value={JSON.stringify(editMalts)} />
+
+    {/* HOPS */}
+    <div>
+      <label className="block mb-2 font-semibold">Hop additions</label>
+
+      {editHops.map((h, i) => (
+        <div key={i} className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full">
+
+          <input
+            placeholder="Hop type"
+            className="p-3 rounded bg-black/40 border border-white/20 w-full md:flex-1"
+            value={h.name}
+            onChange={(e) => updateHop(i, "name", e.target.value)}
+          />
+
+          <input
+            placeholder="Alpha (%)"
+            className="p-3 rounded bg-black/40 border border-white/20 w-24"
+            value={h.alpha}
+            onChange={(e) => updateHop(i, "alpha", e.target.value)}
+          />
+
+          <input
+            placeholder="Year"
+            className="p-3 rounded bg-black/40 border border-white/20 w-24"
+            value={h.year}
+            onChange={(e) => updateHop(i, "year", e.target.value)}
+          />
+
+          <input
+            placeholder="Amount (g)"
+            className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-28"
+            value={h.amount}
+            onChange={(e) => updateHop(i, "amount", e.target.value)}
+          />
+
+          <input
+            placeholder="Boil time (min)"
+            className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-32"
+            value={h.time}
+            onChange={(e) => updateHop(i, "time", e.target.value)}
+          />
+
+          <button
+            type="button"
+            onClick={() => removeHop(i)}
+            className="px-3 py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm"
+          >
+            Remove
+          </button>
+        </div>
+      ))}
+
+      <button
+        type="button"
+        onClick={addHop}
+        className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
+      >
+        + Add hop
+      </button>
+    </div>
+
+    <input type="hidden" name="hops" value={JSON.stringify(editHops)} />
+
+    {/* DRY HOPS */}
+    <div>
+      <label className="block mb-2 font-semibold">Dry hop additions</label>
+
+      {editDryHops.map((h, i) => (
+        <div key={i} className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full">
+
+          <input
+            placeholder="Hop type"
+            className="p-3 rounded bg-black/40 border border-white/20 w-full md:flex-1"
+            value={h.name}
+            onChange={(e) => updateDryHop(i, "name", e.target.value)}
+          />
+
+          <input
+            placeholder="Amount (g)"
+            className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-28"
+            value={h.amount}
+            onChange={(e) => updateDryHop(i, "amount", e.target.value)}
+          />
+
+          <input
+            placeholder="Contact time (days)"
+            className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-32"
+            value={h.contact}
+            onChange={(e) => updateDryHop(i, "contact", e.target.value)}
+          />
+
+          <button
+            type="button"
+            onClick={() => removeDryHop(i)}
+            className="px-3 py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm"
+          >
+            Remove
+          </button>
+        </div>
+      ))}
+
+      <button
+        type="button"
+        onClick={addDryHop}
+        className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
+      >
+        + Add dry hop
+      </button>
+
+      
+
+      
+    </div>
+
+    <input type="hidden" name="dry_hops" value={JSON.stringify(editDryHops)} />
+
+
+    {/* Boil time */}
+          <div>
+            <label className="block mb-1 font-semibold">Total boil time (minutes)</label>
+            <input
+              name="boil_time"
+              type="text"
+              defaultValue={editRecipe.boil_time}
+              placeholder="Length of the boil"
+              className="w-full p-3 rounded bg-black/40 border border-white/20"
+            />
+          </div>
+
+  </>
+)}
+
+
+        {editRecipe.type === "Other" && (
+          <>
+            <label className="font-semibold">Ingredients (JSON)</label>
+            <input
+  name="other_boil_time"
+  type="number"
+  defaultValue={editRecipe.boil_time}
+  className="w-full p-3 rounded bg-black/40 border border-white/20"
+/>
+          </>
+        )}
+
+        {/* Shared fields */}
+        <label className="font-semibold">Additives</label>
+        <textarea
+          name="additives"
+          defaultValue={editRecipe.additives}
+          className="p-3 rounded bg-black/40 border border-white/20"
+        />
+
+        <label className="font-semibold">Full process</label>
+        <textarea
+          name="full_process"
+          defaultValue={editRecipe.full_process}
+          className="p-3 rounded bg-black/40 border border-white/20"
+        />
+
+        <label className="font-semibold">Notes</label>
+        <textarea
+          name="notes"
+          defaultValue={editRecipe.notes}
+          className="p-3 rounded bg-black/40 border border-white/20"
+        />
+
+        {/* Secondary fermentation toggle */}
+<div>
+  <label className="block mb-2 font-semibold">Secondary fermentation</label>
+
+  <button
+    type="button"
+    onClick={() => setHadSecondary(!hadSecondary)}
+    className={`px-4 py-2 rounded-lg border ${
+      hadSecondary
+        ? "bg-purple-700 border-purple-500"
+        : "bg-black/40 border-white/20"
+    }`}
+  >
+    {hadSecondary ? "Secondary enabled" : "Enable secondary"}
+  </button>
+</div>
+
+{/* Secondary fields */}
+{hadSecondary && (
+  <div className="flex flex-col gap-4">
+
+    <div>
+      <label className="block mb-1 font-semibold">Secondary additions</label>
+      <textarea
+        name="secondary_additions"
+        placeholder="Fruit additions, spices, oak, etc..."
+        className="w-full p-3 rounded bg-black/40 border border-white/20 h-28"
+        value={secondaryAdditions}
+        onChange={(e) => setSecondaryAdditions(e.target.value)}
+      />
+    </div>
+
+    <div>
+      <label className="block mb-1 font-semibold">Secondary notes</label>
+      <textarea
+        name="secondary_notes"
+        placeholder="Notes about racking, stabilization, clearing..."
+        className="w-full p-3 rounded bg-black/40 border border-white/20 h-28"
+        value={secondaryNotes}
+        onChange={(e) => setSecondaryNotes(e.target.value)}
+      />
+    </div>
+  </div>
+)}
+
+<input type="hidden" name="had_secondary" value={hadSecondary ? "true" : "false"} />
+
+
+        <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
+          Save changes
+        </button>
+      </form>
+
+      <button
+        onClick={() => setOpenEdit(null)}
+        className="mt-4 w-full px-4 py-2 bg-zinc-700 hover:bg-zinc-600 border border-zinc-500 rounded-lg font-semibold"
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
+)}
 
         {/* DELETE CONFIRMATION */}
         {confirmDeleteId && (

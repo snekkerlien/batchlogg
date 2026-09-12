@@ -169,6 +169,17 @@ function removeDryHop(index: number) {
             />
           </div>
 
+          {/* Yeast */}
+          <div>
+            <label className="block mb-1 font-semibold">Yeast</label>
+            <input
+              name="yeast"
+              type="text"
+              placeholder="Example: US-05"
+              className="w-full p-3 rounded bg-black/40 border border-white/20"
+            />
+          </div>
+
           {/* MALTS */}
           <div>
             <label className="block mb-2 font-semibold">Malt additions</label>
