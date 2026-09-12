@@ -387,10 +387,6 @@ useEffect(() => {
         The dashboard gives you a simple overview of all your vessels and their current status. Tap a vessel to open its details, check activity, or make adjustments. Use the + button to add new vessels up to your personal limit, and switch to selection mode when you want to manage several at once. Status colors help you quickly see which vessels are active, secondary, or idle, keeping everything easy to follow at a glance.
       </p>
 
-      <p className="text-center text-zinc-300 mb-10 italic">
-        You can access your recipes, batch history, the community, your account, inventory management and our ABV tools through the menu!
-      </p>
-
       <p className="text-sm opacity-40 mb-2 mt-12 text-center">
         © {new Date().getFullYear()} Batchlog
       </p>
