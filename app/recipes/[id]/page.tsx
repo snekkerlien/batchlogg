@@ -73,51 +73,185 @@ export default function RecipeNotesPage({ params }: { params: { id: string } }) 
           Full recipe details and brewer's notes.
         </p>
 
-        {/* Recipe info */}
-        <div className="space-y-6">
+        {/* BASE VALUES OUTSIDE CARD */}
+        <div className="space-y-2 mb-10 text-lg">
+          <p><strong>OG:</strong> {Number(recipe.og).toFixed(3)}</p>
+          <p><strong>FG:</strong> {Number(recipe.fg).toFixed(3)}</p>
+          <p><strong>ABV:</strong> {recipe.abv.toFixed(1)}%</p>
+          <p><strong>Volume:</strong> {recipe.volume} L</p>
+        </div>
 
-          {/* Base values */}
-          <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
-            <h2 className="text-2xl font-semibold mb-3">Base values</h2>
+        {/* FULL RECIPE DETAILS */}
+        <div className="space-y-6 opacity-90">
 
-            <p className="text-lg">
-              <strong>OG:</strong> {Number(recipe.og).toFixed(3)}
-            </p>
+          {/* Mead */}
+          {recipe.type === "Mead" && (
+            <>
+              {recipe.honey_type && (
+                <p><strong>Honey type:</strong> {recipe.honey_type}</p>
+              )}
 
-            <p className="text-lg mt-2">
-              <strong>FG:</strong> {Number(recipe.fg).toFixed(3)}
-            </p>
+              {recipe.honey_amount && (
+                <p><strong>Honey amount:</strong> {recipe.honey_amount} kg</p>
+              )}
 
-            <p className="text-lg mt-2">
-              <strong>ABV:</strong> {recipe.abv.toFixed(1)}%
-            </p>
+              {recipe.fruits?.length > 0 && (
+                <div>
+                  <strong>Fruits:</strong>
+                  <ul className="list-disc ml-6 opacity-80">
+                    {recipe.fruits.map((f: any, i: number) => (
+                      <li key={i}>{f.name} — {f.amount} {f.unit}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
+          )}
 
-            <p className="text-lg mt-2">
-              <strong>Volume:</strong> {recipe.volume} L
-            </p>
-          </div>
+          {/* Beer / Braggot */}
+          {(recipe.type === "Beer" || recipe.type === "Braggot") && (
+            <>
+              <p className="text-xs opacity-60 mt-2">
+                Note: If the IBU or EBC values differ from the recipe you imported,
+                this is because Batchlogg uses more accurate brewing models
+                (Tinseth for bitterness and Morey for color).
+              </p>
 
-          {/* Ingredients */}
-          {recipe.ingredients && (
-            <div className="p-4 bg-white/5 border border-white/10 rounded-xl whitespace-pre-line">
-              <h2 className="text-2xl font-semibold mb-3">Ingredients</h2>
-              {recipe.ingredients}
+              {recipe.malts?.length > 0 && (
+                <div>
+                  <strong>Malts:</strong>
+                  <ul className="list-disc ml-6 opacity-80">
+                    {recipe.malts.map((m: any, i: number) => (
+                      <li key={i}>{m.name} — {m.amount} kg</li>
+                    ))}
+                  </ul>
+
+                  <p className="mt-2 opacity-80">
+                    <strong>Total malt:</strong>{" "}
+                    {recipe.malts.reduce((sum: number, m: any) => sum + Number(m.amount), 0).toFixed(2)} kg
+                  </p>
+                </div>
+              )}
+
+              {recipe.hops?.length > 0 && (
+                <div>
+                  <strong>Hops:</strong>
+                  <ul className="list-disc ml-6 opacity-80">
+                    {recipe.hops.map((h: any, i: number) => (
+                      <li key={i}>
+                        {h.name} {h.amount} g @ {h.time} min
+                        {h.alpha && <> - {Number(h.alpha)}% Alpha Acid</>}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <p className="mt-2 opacity-80">
+                    <strong>Total hops:</strong>{" "}
+                    {(
+                      recipe.hops.reduce((sum: number, h: any) => sum + Number(h.amount), 0) +
+                      (recipe.dry_hops?.reduce((sum: number, h: any) => sum + Number(h.amount), 0) || 0)
+                    ).toFixed(0)} g
+                  </p>
+                </div>
+              )}
+
+              {recipe.dry_hops?.length > 0 && (
+                <div className="mt-3">
+                  <strong>Dry hops:</strong>
+                  <ul className="list-disc ml-6 opacity-80">
+                    {recipe.dry_hops.map((h: any, i: number) => (
+                      <li key={i}>{h.name} — {h.amount} g — {h.contact} days contact</li>
+                    ))}
+                  </ul>
+
+                  <p className="mt-2 opacity-80">
+                    <strong>Total dry hops:</strong>{" "}
+                    {recipe.dry_hops.reduce((sum: number, h: any) => sum + Number(h.amount), 0).toFixed(0)} g
+                  </p>
+                </div>
+              )}
+
+              {recipe.boil_time && (
+                <p><strong>Boil time:</strong> {recipe.boil_time} min</p>
+              )}
+            </>
+          )}
+
+          {/* Wine / Cider / Seltzer */}
+          {(recipe.type === "Wine" || recipe.type === "Cider" || recipe.type === "Seltzer") && (
+            <>
+              {recipe.juice_type && (
+                <p><strong>Juice / Must:</strong> {recipe.juice_type}</p>
+              )}
+              {recipe.sugar_amount && (
+                <p><strong>Sugar added:</strong> {recipe.sugar_amount}</p>
+              )}
+            </>
+          )}
+
+          {/* Other */}
+          {recipe.type === "Other" && recipe.ingredients && (
+            <div>
+              <strong>Ingredients:</strong>
+              <ul className="list-disc ml-6 opacity-80">
+                {recipe.ingredients.map((ing: any, i: number) => (
+                  <li key={i}>{ing.name} — {ing.amount} {ing.unit}</li>
+                ))}
+              </ul>
             </div>
           )}
 
-          {/* Method */}
-          {recipe.method && (
-            <div className="p-4 bg-white/5 border border-white/10 rounded-xl whitespace-pre-line">
-              <h2 className="text-2xl font-semibold mb-3">Method</h2>
-              {recipe.method}
+          {/* Steps */}
+          {recipe.steps?.length > 0 && (
+            <div>
+              <strong>Steps:</strong>
+              <ul className="list-disc ml-6 opacity-80">
+                {recipe.steps.map((s: string, i: number) => (
+                  <li key={i}>{s}</li>
+                ))}
+              </ul>
             </div>
           )}
 
-          {/* Notes */}
-          <div className="p-4 bg-white/5 border border-white/10 rounded-xl whitespace-pre-line">
-            <h2 className="text-2xl font-semibold mb-3">Recipe notes</h2>
-            {recipe.notes || "No notes added"}
-          </div>
+          {/* Shared */}
+          {recipe.yeast && <p><strong>Yeast:</strong> {recipe.yeast}</p>}
+
+          {recipe.additives && (
+            <p className="whitespace-pre-line">
+              <strong>Additives:</strong>{"\n"}{recipe.additives}
+            </p>
+          )}
+
+          {recipe.full_process && (
+            <p className="whitespace-pre-line">
+              <strong>Full process:</strong>{"\n"}{recipe.full_process}
+            </p>
+          )}
+
+          {recipe.notes && (
+            <p className="whitespace-pre-line">
+              <strong>Notes:</strong>{"\n"}{recipe.notes}
+            </p>
+          )}
+
+          {/* Secondary */}
+          {recipe.had_secondary && (
+            <div className="mt-6">
+              <h4 className="font-semibold text-white/90 mb-2">Secondary fermentation</h4>
+
+              {recipe.secondary_additions && (
+                <p className="whitespace-pre-line opacity-80">
+                  <strong>Secondary additions:</strong>{"\n"}{recipe.secondary_additions}
+                </p>
+              )}
+
+              {recipe.secondary_notes && (
+                <p className="whitespace-pre-line opacity-80 mt-2">
+                  <strong>Secondary notes:</strong>{"\n"}{recipe.secondary_notes}
+                </p>
+              )}
+            </div>
+          )}
 
         </div>
 

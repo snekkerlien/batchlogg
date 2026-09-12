@@ -77,6 +77,7 @@ function dayLabel(days: number) {
 }
 
 
+
 export default function KarPage({ params }: { params: { id: string } }) {
   const [openSecondary, setOpenSecondary] = useState(false);
   const [openSecondaryActive, setOpenSecondaryActive] = useState(false);
@@ -97,6 +98,14 @@ export default function KarPage({ params }: { params: { id: string } }) {
   const [karLoading, setKarLoading] = useState(true);
 
   const [openStyleSelect, setOpenStyleSelect] = useState(false);
+  const latestSG = sgReadings.length > 0
+    ? Number(sgReadings[sgReadings.length - 1].sg)
+    : null;
+
+  const currentAbv =
+    activeBatch?.og && latestSG
+      ? ((Number(activeBatch.og) - latestSG) * 131.25).toFixed(2)
+      : null;
 
 
 
@@ -1348,61 +1357,78 @@ async function toggleVisibility() {
         </div>
 
         {/* SG graph */}
-        {sgReadings.length > 0 && (
-          <div className="mt-6">
-  <h3 className="text-xl font-bold mb-3 text-green-300">
-    Development graph
-  </h3>
+{sgReadings.length > 0 && (
+  <div className="mt-6">
+    <h3 className="text-xl font-bold mb-3 text-green-300">
+      Development graph
+    </h3>
 
-  <div className="bg-black/40 p-4 rounded-lg border border-white/10">
-    <Line
-  data={{
-    labels: sgReadings.map((r) =>
-      new Date(r.created_at).toLocaleDateString()
-    ),
-    datasets: [
-      {
-        data: sgReadings.map((r) => Number(r.sg).toFixed(3)),
-        borderColor: "rgb(75, 192, 192)",
-        tension: 0,          // ⭐ smooth curve
-        pointRadius: 4,
-        pointHoverRadius: 6,
-      },
-    ],
-  }}
-  options={{
-  plugins: {
-    legend: { display: false },
-    tooltip: {
-      callbacks: {
-        label: (context) => {
-          const value = Number(context.raw);
-          return value.toFixed(3).replace(",", ".");
-        },
-      },
-    },
-  },
-  scales: {
-    y: {
-      ticks: {
-        callback: (value) =>
-          Number(value).toFixed(3).replace(",", "."),
-      },
-    },
-  },
-}}
+    <div className="bg-black/40 p-4 rounded-lg border border-white/10">
+      <Line
+        data={{
+          labels: sgReadings.map((r) =>
+            new Date(r.created_at).toLocaleDateString()
+          ),
+          datasets: [
+            {
+              data: sgReadings.map((r) => Number(r.sg).toFixed(3)),
+              borderColor: "rgb(75, 192, 192)",
+              tension: 0,
+              pointRadius: 4,
+              pointHoverRadius: 6,
+            },
+          ],
+        }}
+        options={{
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (context) => {
+                  const value = Number(context.raw);
+                  return value.toFixed(3).replace(",", ".");
+                },
+              },
+            },
+          },
+          scales: {
+            y: {
+              ticks: {
+                callback: (value) =>
+                  Number(value).toFixed(3).replace(",", "."),
+              },
+            },
+          },
+        }}
+      />
+    </div>
 
-/>
+    {/* ⭐ CURRENT ABV USING LATEST SG */}
+{(() => {
+  const latestSG =
+    sgReadings.length > 0
+      ? Number(sgReadings[sgReadings.length - 1].sg)
+      : null;
+
+  const currentAbv =
+    activeBatch?.og && latestSG && !isNaN(latestSG)
+      ? ((Number(activeBatch.og) - latestSG) * 131.25).toFixed(2)
+      : null;
+
+  return currentAbv ? (
+    <p className="text-center text-lg font-semibold mt-4 text-green-300">
+      Current ABV: {currentAbv}%
+    </p>
+  ) : null;
+})()}
+
   </div>
-</div>
-
-        )}
+)}
       </div>
     </div>
   </div>
 )}
 
-            
             {/* Rack to secondary */}
 {isOwner && hasActive && (
   <div className="bg-white/5 border border-white/10 rounded-lg p-4">

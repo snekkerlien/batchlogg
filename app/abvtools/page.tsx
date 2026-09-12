@@ -10,11 +10,11 @@ export default function ABVCalculatorPage() {
   const [abv, setAbv] = useState<number | null>(null);
 
   // ⭐ Blend/Fortify states
-  const [batchAbv, setBatchAbv] = useState("");
-  const [batchVol, setBatchVol] = useState("");
-  const [addAbv, setAddAbv] = useState("");
-  const [addVol, setAddVol] = useState("");
-  const [newAbv, setNewAbv] = useState<number | null>(null);
+  const [dilutionAbv, setDilutionAbv] = useState("");
+  const [dilutionVol, setDilutionVol] = useState("");
+  const [dilutionAddedVol, setDilutionAddedVol] = useState("");
+  const [dilutionResult, setDilutionResult] = useState<number | null>(null);
+
 
   // ⭐ Target ABV states
   const [targetBatchAbv, setTargetBatchAbv] = useState("");
@@ -38,18 +38,17 @@ export default function ABVCalculatorPage() {
 
   // ⭐ Live Blend/Fortify calculation
   useEffect(() => {
-    const A1 = parseFloat(batchAbv);
-    const V1 = parseFloat(batchVol);
-    const A2 = parseFloat(addAbv);
-    const V2 = parseFloat(addVol);
+  const A1 = parseFloat(dilutionAbv);
+  const V1 = parseFloat(dilutionVol);
+  const V2 = parseFloat(dilutionAddedVol);
 
-    if (!isNaN(A1) && !isNaN(V1) && !isNaN(A2) && !isNaN(V2)) {
-      const result = ((A1 * V1) + (A2 * V2)) / (V1 + V2);
-      setNewAbv(result);
-    } else {
-      setNewAbv(null);
-    }
-  }, [batchAbv, batchVol, addAbv, addVol]);
+  if (!isNaN(A1) && !isNaN(V1) && !isNaN(V2)) {
+    const result = (A1 * V1) / (V1 + V2);
+    setDilutionResult(result);
+  } else {
+    setDilutionResult(null);
+  }
+}, [dilutionAbv, dilutionVol, dilutionAddedVol]);
 
   // ⭐ Live Target ABV calculation
   useEffect(() => {
@@ -85,9 +84,12 @@ export default function ABVCalculatorPage() {
 
         {/* ⭐ ABV CALCULATOR — MATCHER DE ANDRE SEKSJONENE */}
         <div className="p-6 bg-white/5 border border-white/10 rounded-xl">
-          <h2 className="text-2xl font-bold mb-6 text-green-300 text-center">
-            ABV Calculator
-          </h2>
+          <h2 className="text-2xl font-bold mb-2 text-green-300 text-center">
+  ABV Calculator
+</h2>
+<p className="text-center opacity-70 mb-6">
+  Calculate ABV from Original Gravity (OG) and Final Gravity (FG).
+</p>
 
           <div className="space-y-6">
 
@@ -119,74 +121,72 @@ export default function ABVCalculatorPage() {
           </div>
         </div>
 
-        {/* ⭐ BLEND & FORTIFY SECTION */}
-        <div className="mt-12 p-6 bg-white/5 border border-white/10 rounded-xl">
-          <h2 className="text-2xl font-bold mb-6 text-green-300 text-center">
-            Blend & Fortify Calculator
-          </h2>
+        {/* ⭐ DILUTION CALCULATOR */}
+<div className="mt-12 p-6 bg-white/5 border border-white/10 rounded-xl">
+  <h2 className="text-2xl font-bold mb-2 text-green-300 text-center">
+  Dilution Calculator
+</h2>
+<p className="text-center opacity-70 mb-6">
+  Find your new ABV after adding juice or other liquids
+</p>
 
-          <div className="space-y-6">
 
-            {/* Original batch */}
-            <div>
-              <h3 className="text-xl font-semibold mb-2">Your batch</h3>
+  <div className="space-y-6">
 
-              <label className="block mb-1 opacity-80">ABV (%)</label>
-              <input
-                type="number"
-                value={batchAbv}
-                onChange={(e) => setBatchAbv(e.target.value)}
-                placeholder="e.g. 10"
-                className="w-full p-3 rounded bg-black/40 border border-white/20"
-              />
+    {/* Your batch */}
+    <div>
+      <h3 className="text-xl font-semibold mb-2">Your batch</h3>
 
-              <label className="block mt-4 mb-1 opacity-80">Volume (L)</label>
-              <input
-                type="number"
-                value={batchVol}
-                onChange={(e) => setBatchVol(e.target.value)}
-                placeholder="e.g. 20"
-                className="w-full p-3 rounded bg-black/40 border border-white/20"
-              />
-            </div>
+      <label className="block mb-1 opacity-80">Current ABV (%)</label>
+      <input
+        type="text"
+        value={dilutionAbv}
+        onChange={(e) => setDilutionAbv(e.target.value)}
+        placeholder="e.g. 10"
+        className="w-full p-3 rounded bg-black/40 border border-white/20"
+      />
 
-            {/* Addition */}
-            <div>
-              <h3 className="text-xl font-semibold mb-2">Addition</h3>
+      <label className="block mt-4 mb-1 opacity-80">Volume (L)</label>
+      <input
+        type="text"
+        value={dilutionVol}
+        onChange={(e) => setDilutionVol(e.target.value)}
+        placeholder="e.g. 20"
+        className="w-full p-3 rounded bg-black/40 border border-white/20"
+      />
+    </div>
 
-              <label className="block mb-1 opacity-80">ABV (%)</label>
-              <input
-                type="number"
-                value={addAbv}
-                onChange={(e) => setAddAbv(e.target.value)}
-                placeholder="ABV for your addition of choice (e.g. 0 for juice, 40 for vodka)"
-                className="w-full p-3 rounded bg-black/40 border border-white/20"
-              />
+    {/* Added volume */}
+    <div>
+      <label className="block mb-1 opacity-80">Volume added (L)</label>
+      <input
+        type="text"
+        value={dilutionAddedVol}
+        onChange={(e) => setDilutionAddedVol(e.target.value)}
+        placeholder="e.g. 5"
+        className="w-full p-3 rounded bg-black/40 border border-white/20"
+      />
+    </div>
 
-              <label className="block mt-4 mb-1 opacity-80">Volume (L)</label>
-              <input
-                type="number"
-                value={addVol}
-                onChange={(e) => setAddVol(e.target.value)}
-                placeholder="e.g. 1"
-                className="w-full p-3 rounded bg-black/40 border border-white/20"
-              />
-            </div>
+    {/* Result */}
+    {dilutionResult !== null && (
+      <p className="text-center text-xl font-bold mt-4">
+        New ABV: {dilutionResult.toFixed(2)}%
+      </p>
+    )}
+  </div>
+</div>
 
-            {/* Result */}
-            {newAbv !== null && (
-              <p className="text-center text-xl font-bold mt-4">
-                New ABV: {newAbv.toFixed(2)}%
-              </p>
-            )}
-          </div>
-        </div>
 
         {/* ⭐ TARGET ABV SECTION */}
         <div className="mt-12 p-6 bg-white/5 border border-white/10 rounded-xl">
-          <h2 className="text-2xl font-bold mb-6 text-green-300 text-center">
-            Target ABV Calculator
-          </h2>
+          <h2 className="text-2xl font-bold mb-2 text-green-300 text-center">
+  Target ABV Calculator
+</h2>
+<p className="text-center opacity-70 mb-6">
+  Calculate how much liquid you must add to reach a specific ABV.
+</p>
+
 
           <div className="space-y-6">
 
@@ -196,7 +196,7 @@ export default function ABVCalculatorPage() {
 
               <label className="block mb-1 opacity-80">Current ABV (%)</label>
               <input
-                type="number"
+                type="text"
                 value={targetBatchAbv}
                 onChange={(e) => setTargetBatchAbv(e.target.value)}
                 placeholder="e.g. 10"
@@ -205,7 +205,7 @@ export default function ABVCalculatorPage() {
 
               <label className="block mt-4 mb-1 opacity-80">Volume (L)</label>
               <input
-                type="number"
+                type="text"
                 value={targetBatchVol}
                 onChange={(e) => setTargetBatchVol(e.target.value)}
                 placeholder="e.g. 20"

@@ -228,6 +228,15 @@ batch = translateOldRecipe(batch);
           </div>
         )}
 
+        {batch.dry_hops?.length > 0 && (
+          <div>
+            <strong>Dry hops:</strong>
+            {batch.dry_hops.map((h: any, i: number) => (
+              <p key={i}>{h.name}: {h.amount}g — {h.contact} days</p>
+            ))}
+          </div>
+        )}
+
         <p><strong>Total boil time:</strong> {batch.boil_time || "Unknown"} min</p>
         <p><strong>Additives:</strong><br />{batch.additives || "None"}</p>
         <p><strong>Full process:</strong><br />{batch.full_process || "No process described"}</p>
@@ -296,6 +305,7 @@ batch = translateOldRecipe(batch);
 
   </div>
 </div>
+
 
 
           </div>

@@ -77,64 +77,92 @@ export default function RecipesPage() {
 
 
   useEffect(() => {
-    async function load() {
-      const {
-        data: { session },
-      } = await supabaseBrowser.auth.getSession();
+  async function load() {
+    const {
+      data: { session },
+    } = await supabaseBrowser.auth.getSession();
 
-      if (!session) {
-        window.location.href = "/auth/login";
-        return;
-      }
-
-      const { data: recipesRaw } = await supabaseBrowser
-        .from("recipes")
-        .select(`
-  id,
-  user_id,
-  batch_id,
-  name,
-  og,
-  fg,
-  abv,
-  volume,
-  notes,
-  is_public,
-  created_at,
-  notes_log,
-  had_secondary,
-  secondary_additions,
-  secondary_notes,
-  type,
-  honey_type,
-  honey_amount,
-  fruits,
-  juice_type,
-  sugar_amount,
-  malts,
-  hops,
-  boil_time,
-  steps,
-  additives,
-  full_process,
-  yeast,
-  ingredients,
-  ibu,
-  ebc,
-  boil_volume,
-  malt_warnings,
-  dry_hops
-`)
-
-        .eq("user_id", session.user.id)
-        .order("created_at", { ascending: false });
-
-      setRecipes(recipesRaw ?? []);
-      setLoading(false);
+    if (!session) {
+      window.location.href = "/auth/login";
+      return;
     }
 
-    load();
-  }, []);
+    // ⭐ HENT BATCH NOTES
+    const { data: notesRaw } = await supabaseBrowser
+      .from("batch_notes")
+      .select("batch_id")
+      .eq("user_id", session.user.id);
+
+    // ⭐ TYPE: Map batch_id → boolean
+    const notesMap: Record<string, boolean> =
+      notesRaw?.reduce((acc, n) => {
+        acc[n.batch_id] = true;
+        return acc;
+      }, {} as Record<string, boolean>) || {};
+
+    // ⭐ HENT RECIPES
+    const { data: recipesRaw } = await supabaseBrowser
+      .from("recipes")
+      .select(`
+        id,
+        user_id,
+        batch_id,
+        name,
+        og,
+        fg,
+        abv,
+        volume,
+        notes,
+        is_public,
+        created_at,
+        notes_log,
+        had_secondary,
+        secondary_additions,
+        secondary_notes,
+        type,
+        honey_type,
+        honey_amount,
+        fruits,
+        juice_type,
+        sugar_amount,
+        malts,
+        hops,
+        boil_time,
+        steps,
+        additives,
+        full_process,
+        yeast,
+        ingredients,
+        ibu,
+        ebc,
+        boil_volume,
+        malt_warnings,
+        dry_hops
+      `)
+      .eq("user_id", session.user.id)
+      .order("created_at", { ascending: false });
+
+    // ⭐ LEGG has_notes INN I RECIPES
+    const recipesWithNotes = (recipesRaw ?? []).map((r) => ({
+      ...r,
+      has_notes: notesMap[r.batch_id] || false,
+    }));
+
+    setRecipes(recipesWithNotes);
+    setLoading(false);
+  }
+
+  load();
+}, []);
+
+
+
+  
+
+
+  
+
+
 
   async function togglePublic(id: string, current: boolean) {
     await supabaseBrowser.from("recipes").update({ is_public: !current }).eq("id", id);
@@ -652,6 +680,7 @@ function removeDryHop(index: number) {
                         </div>
                       )}
 
+                    {r.has_notes && (
                       <div className="flex justify-end pt-4">
                         <Link
                           href={`/recipes/${r.id}`}
@@ -660,6 +689,7 @@ function removeDryHop(index: number) {
                           Open note log →
                         </Link>
                       </div>
+                    )}
                     </div>
                   </div>
                 </div>
