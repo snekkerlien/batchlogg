@@ -23,9 +23,15 @@ export default function SignupClient() {
     setError("");
 
     const form = new FormData(e.currentTarget);
-    const username = form.get("username")?.toString() ?? "";
+    const username = form.get("username")?.toString().trim() ?? "";
+    const email = form.get("email")?.toString().trim() ?? "";
     const password = form.get("password")?.toString() ?? "";
-    const email = `${username}@example.com`;
+    const confirmPassword = form.get("confirmPassword")?.toString() ?? "";
+
+    if (!username || !email || !password || !confirmPassword) {
+      setError("All fields are required.");
+      return;
+    }
 
     const validationError = validatePassword(password);
     if (validationError) {
@@ -33,36 +39,35 @@ export default function SignupClient() {
       return;
     }
 
-    
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
 
+    // Create account in Supabase Auth
     const { data, error: signupError } = await supabaseBrowser.auth.signUp({
       email,
       password,
     });
 
-    console.log("[Signup] Result:", { data, signupError });
-
-    if (signupError) {
+    if (signupError || !data.user) {
+      console.log("[Signup error]", signupError);
       setError("Could not create account.");
       return;
     }
 
-    if (!data.user) {
-      setError("Could not create user.");
-      return;
-    }
-
+    // Create profile row
     await fetch("/api/profile/create", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id: data.user.id,
         username,
+        email,
       }),
     });
 
+    // Auto-login
     const { error: loginError } = await supabaseBrowser.auth.signInWithPassword({
       email,
       password,
@@ -100,9 +105,25 @@ export default function SignupClient() {
         />
 
         <input
+          type="email"
+          name="email"
+          placeholder="Email"
+          required
+          className="w-full px-4 py-3 rounded-lg bg-black/40 border border-white/20"
+        />
+
+        <input
           type="password"
           name="password"
           placeholder="Password"
+          required
+          className="w-full px-4 py-3 rounded-lg bg-black/40 border border-white/20"
+        />
+
+        <input
+          type="password"
+          name="confirmPassword"
+          placeholder="Confirm password"
           required
           className="w-full px-4 py-3 rounded-lg bg-black/40 border border-white/20"
         />

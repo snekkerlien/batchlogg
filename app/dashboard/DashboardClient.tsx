@@ -251,7 +251,7 @@ useEffect(() => {
       </h1>
 
       <p className="text-center text-zinc-300 mb-7">
-        Logget in as {username}
+        Logged in as {username}
       </p>  
 
       <p className="text-center text-zinc-300 mb-10 italic">

@@ -7,8 +7,8 @@ export function supabaseServer() {
 
   // Vanlig supabase-klient (autentisert bruker)
   const supabase = createServerClient(
-    "https://cvwydrbrxbvezyhvtfma.supabase.co",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,        // ✔ hent fra env
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,  // ✔ hent fra env
     {
       cookies: {
         get(name: string) {
@@ -34,8 +34,8 @@ export function supabaseServer() {
 
   // Service role klient (admin)
   const serviceRole = createClient(
-    "https://cvwydrbrxbvezyhvtfma.supabase.co",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN2d3lkcmJyeGJ2ZXp5aHZ0Zm1hIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NzA2MTQyMiwiZXhwIjoyMTAyNjM3NDIyfQ.mBVdAIJBe2gZ8HYk32A-0Wf0eAdlueMXTjKeXYzKojs"
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,        // ✔ hent fra env
+    process.env.SUPABASE_SERVICE_ROLE_KEY!        // ✔ hent fra env
   );
 
   return { supabase, serviceRole };

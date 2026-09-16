@@ -5,12 +5,13 @@ export async function POST(req: Request) {
   const { serviceRole } = await supabaseServer();
   const body = await req.json();
 
-  const { id, username } = body;
+  const { id, username, email } = body;
 
   await serviceRole.from("profiles").insert({
     id,
     username,
-    avatar_url: null,   // ⭐ viktig
+    email,          // ⭐ MÅ MED
+    avatar_url: null,
     is_public: true,
   });
 

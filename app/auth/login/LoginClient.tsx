@@ -21,27 +21,52 @@ export default function LoginClient() {
 
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setErrorMsg("");
 
     const form = new FormData(e.currentTarget);
-    const username = form.get("username")?.toString() ?? "";
+    const identifier = form.get("identifier")?.toString().trim() ?? "";
     const password = form.get("password")?.toString() ?? "";
-    const email = `${username}@example.com`;
+
+    if (!identifier || !password) {
+      setErrorMsg("Please enter both username/email and password.");
+      return;
+    }
+
+    // ⭐ NEW: Determine if identifier is email or username
+    let loginEmail = identifier;
+
+    if (!identifier.includes("@")) {
+      // User typed a username → look up email
+      const { data: profile, error: lookupError } = await supabaseBrowser
+        .from("profiles")
+        .select("email")
+        .eq("username", identifier)
+        .single();
+
+      if (lookupError || !profile) {
+        setErrorMsg("Username not found.");
+        return;
+      }
+
+      loginEmail = profile.email;
+    }
 
     // ⭐ NEW: Check for redirect parameter
     const params = new URLSearchParams(window.location.search);
     const redirect = params.get("redirect");
 
-    const { data, error } = await supabaseBrowser.auth.signInWithPassword({
-      email,
+    // ⭐ Login with resolved email
+    const { error } = await supabaseBrowser.auth.signInWithPassword({
+      email: loginEmail,
       password,
     });
 
     if (error) {
-      setErrorMsg("Incorrect username or password.");
+      setErrorMsg("Incorrect username/email or password.");
       return;
     }
 
-    // ⭐ NEW: Conditional redirect
+    // ⭐ Conditional redirect
     if (redirect) {
       router.replace(redirect);
     } else {
@@ -75,8 +100,8 @@ export default function LoginClient() {
 
         <input
           type="text"
-          name="username"
-          placeholder="Username"
+          name="identifier"
+          placeholder="Username or Email"
           required
           className="w-full px-4 py-3 rounded-lg bg-black/40 border border-white/20"
         />
@@ -102,6 +127,14 @@ export default function LoginClient() {
           className="block text-center text-sm text-blue-300 hover:text-blue-200 mt-2"
         >
           Create new account
+        </Link>
+
+        <Link
+          href="/auth/forgot"
+          prefetch={false}
+          className="block text-center text-sm text-blue-300 hover:text-blue-200 mt-1"
+        >
+          Forgot password?
         </Link>
       </form>
     </main>

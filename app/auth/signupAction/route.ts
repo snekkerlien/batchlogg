@@ -1,20 +1,23 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 
 export async function POST(req: Request) {
-  
-
   const form = await req.formData();
 
   const username = form.get("username") as string;
+  const email = form.get("email") as string;
   const password = form.get("password") as string;
-  const email = `${username}@example.com`;
+  const confirmPassword = form.get("confirmPassword") as string;
 
-  
+  // Basic validation
+  if (!username || !email || !password || !confirmPassword) {
+    return NextResponse.redirect(
+      new URL(`/auth/signup?error=missing_fields`, req.url)
+    );
+  }
 
-  // Passordvalidering
   function validatePassword(pw: string) {
     if (pw.length < 8) return "too_short";
     if (!/[A-Z]/.test(pw)) return "no_uppercase";
@@ -23,79 +26,71 @@ export async function POST(req: Request) {
 
   const pwError = validatePassword(password);
   if (pwError) {
-    
     return NextResponse.redirect(
       new URL(`/auth/signup?error=${pwError}`, req.url)
     );
   }
 
-  // Supabase-klient (kun JWT, ingen cookies)
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    }
-  );
+  if (password !== confirmPassword) {
+    return NextResponse.redirect(
+      new URL(`/auth/signup?error=nomatch`, req.url)
+    );
+  }
 
- 
+  // ⭐ KUN nødvendig endring:
+  const { supabase: supabaseAuth, serviceRole: supabaseAdmin } = await supabaseServer();
 
-  const { data, error } = await supabase.auth.signUp({
+  // Create user in Supabase Auth
+  const { data, error } = await supabaseAuth.auth.signUp({
     email,
     password,
   });
 
-  
-
   if (error) {
     console.log("[signupAction] SIGNUP ERROR:", error);
     return NextResponse.redirect(
-      new URL("/auth/signup?error=supabase", req.url)
+      new URL(`/auth/signup?error=supabase`, req.url)
     );
   }
 
   if (!data.user) {
-    console.log("[signupAction] Ingen user i signUp-resultatet");
+    console.log("[signupAction] No user returned from signUp");
     return NextResponse.redirect(
-      new URL("/auth/signup?error=nouser", req.url)
+      new URL(`/auth/signup?error=nouser`, req.url)
     );
   }
 
-  
-
-  const { error: profileError } = await supabase
+  // Create profile row
+  const { error: profileError } = await supabaseAdmin
     .from("profiles")
     .insert({
       id: data.user.id,
       username,
+      email,
       avatar_url: null,
       is_public: true,
     });
 
- 
+  if (profileError) {
+    console.log("[signupAction] PROFILE ERROR:", profileError);
+    return NextResponse.redirect(
+      new URL(`/auth/signup?error=profile`, req.url)
+    );
+  }
 
-  // Etter signUp må vi logge inn manuelt for å få token
-  
-
+  // Manual login
   const { data: loginData, error: loginError } =
-    await supabase.auth.signInWithPassword({
+    await supabaseAuth.auth.signInWithPassword({
       email,
       password,
     });
 
-  
-
   if (loginError || !loginData.session) {
     console.log("[signupAction] LOGIN FAILED");
     return NextResponse.redirect(
-      new URL("/auth/login?error=1", req.url)
+      new URL(`/auth/login?error=login_failed`, req.url)
     );
   }
-
-  
 
   return NextResponse.redirect(new URL("/dashboard", req.url));
 }
