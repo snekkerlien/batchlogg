@@ -65,7 +65,7 @@ export async function POST(req: Request) {
     .from("profiles")
     .insert({
       id: data.user.id,
-      username,
+      username: username.toLowerCase(),
       email,
       avatar_url: null,
       is_public: true,

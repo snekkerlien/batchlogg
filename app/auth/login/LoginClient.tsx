@@ -20,59 +20,58 @@ export default function LoginClient() {
   }, []);
 
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setErrorMsg("");
+  e.preventDefault();
+  setErrorMsg("");
 
-    const form = new FormData(e.currentTarget);
-    const identifier = form.get("identifier")?.toString().trim() ?? "";
-    const password = form.get("password")?.toString() ?? "";
+  const form = new FormData(e.currentTarget);
+  const identifier = form.get("identifier")?.toString().trim() ?? "";
+  const password = form.get("password")?.toString() ?? "";
 
-    if (!identifier || !password) {
-      setErrorMsg("Please enter both username/email and password.");
-      return;
-    }
-
-    // ⭐ NEW: Determine if identifier is email or username
-    let loginEmail = identifier;
-
-    if (!identifier.includes("@")) {
-      // User typed a username → look up email
-      const { data: profile, error: lookupError } = await supabaseBrowser
-        .from("profiles")
-        .select("email")
-        .eq("username", identifier)
-        .single();
-
-      if (lookupError || !profile) {
-        setErrorMsg("Username not found.");
-        return;
-      }
-
-      loginEmail = profile.email;
-    }
-
-    // ⭐ NEW: Check for redirect parameter
-    const params = new URLSearchParams(window.location.search);
-    const redirect = params.get("redirect");
-
-    // ⭐ Login with resolved email
-    const { error } = await supabaseBrowser.auth.signInWithPassword({
-      email: loginEmail,
-      password,
-    });
-
-    if (error) {
-      setErrorMsg("Incorrect username/email or password.");
-      return;
-    }
-
-    // ⭐ Conditional redirect
-    if (redirect) {
-      router.replace(redirect);
-    } else {
-      router.replace("/dashboard");
-    }
+  if (!identifier || !password) {
+    setErrorMsg("Please enter both username/email and password.");
+    return;
   }
+
+  // ⭐ CASE-INSENSITIVE LOGIN
+  const normalized = identifier.toLowerCase();
+  let loginEmail = normalized;
+
+  if (!normalized.includes("@")) {
+    // User typed a username → look up email (case-insensitive)
+    const { data: profile, error: lookupError } = await supabaseBrowser
+      .from("profiles")
+      .select("email")
+      .eq("username", normalized)
+      .single();
+
+    if (lookupError || !profile) {
+      setErrorMsg("Username not found.");
+      return;
+    }
+
+    loginEmail = profile.email;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const redirect = params.get("redirect");
+
+  const { error } = await supabaseBrowser.auth.signInWithPassword({
+    email: loginEmail,
+    password,
+  });
+
+  if (error) {
+    setErrorMsg("Incorrect username/email or password.");
+    return;
+  }
+
+  if (redirect) {
+    router.replace(redirect);
+  } else {
+    router.replace("/dashboard");
+  }
+}
+
 
   if (loading) return null;
 
