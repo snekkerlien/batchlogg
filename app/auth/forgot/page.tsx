@@ -9,19 +9,22 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setMsg("");
-    setError("");
+  e.preventDefault();
+  setMsg("");
+  setError("");
 
-    const { error } = await supabaseBrowser.auth.resetPasswordForEmail(email);
+  const { error } = await supabaseBrowser.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/auth/reset`,
+  });
 
-    if (error) {
-      setError("Could not send reset link.");
-      return;
-    }
-
-    setMsg("A reset link has been sent to your email.");
+  if (error) {
+    setError("Could not send reset link.");
+    return;
   }
+
+  setMsg("A reset link has been sent to your email.");
+}
+
 
   return (
     <main className="min-h-screen flex items-center justify-center px-6">
