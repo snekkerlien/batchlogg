@@ -23,6 +23,48 @@ export default function ABVCalculatorPage() {
   const [targetDesiredAbv, setTargetDesiredAbv] = useState("");
   const [targetResult, setTargetResult] = useState<number | null>(null);
 
+  // ⭐ OG Dilution states
+const [ogDilutionOg, setOgDilutionOg] = useState("");
+const [ogDilutionVol, setOgDilutionVol] = useState("");
+const [ogDilutionAddedVol, setOgDilutionAddedVol] = useState("");
+const [ogDilutionResult, setOgDilutionResult] = useState<number | null>(null);
+
+const [targetAbvVol, setTargetAbvVol] = useState("");
+const [targetAbvPercent, setTargetAbvPercent] = useState("");
+const [sugarNeeded, setSugarNeeded] = useState<number | null>(null);
+const [honeyNeeded, setHoneyNeeded] = useState<number | null>(null);
+const [abvMode, setAbvMode] = useState<"sugar" | "honey">("sugar");
+
+
+
+function smartRound(value: number) {
+  if (value % 1 > 0.9) {
+    return Math.ceil(value); // 7.97 → 8
+  }
+  return Math.round(value * 10) / 10; // 6.38 → 6.4
+}
+
+
+useEffect(() => {
+  const V = parseFloat(targetAbvVol);
+  const A = parseFloat(targetAbvPercent);
+
+  if (!isNaN(V) && !isNaN(A)) {
+    if (abvMode === "sugar") {
+      setSugarNeeded(V * A * 17);
+      setHoneyNeeded(null);
+    } else {
+      setHoneyNeeded(V * A * 21.25);
+      setSugarNeeded(null);
+    }
+  } else {
+    setSugarNeeded(null);
+    setHoneyNeeded(null);
+  }
+}, [targetAbvVol, targetAbvPercent, abvMode]);
+
+
+
   // ⭐ Live ABV calculation
   useEffect(() => {
     const ogNum = parseFloat(og);
@@ -64,6 +106,21 @@ export default function ABVCalculatorPage() {
       setTargetResult(null);
     }
   }, [targetBatchAbv, targetBatchVol, targetAddAbv, targetDesiredAbv]);
+
+  // ⭐ Live OG Dilution calculation
+useEffect(() => {
+  const OG1 = parseFloat(ogDilutionOg);
+  const V1 = parseFloat(ogDilutionVol);
+  const V2 = parseFloat(ogDilutionAddedVol);
+
+  if (!isNaN(OG1) && !isNaN(V1) && !isNaN(V2)) {
+    const result = 1 + (OG1 - 1) * (V1 / (V1 + V2));
+    setOgDilutionResult(result);
+  } else {
+    setOgDilutionResult(null);
+  }
+}, [ogDilutionOg, ogDilutionVol, ogDilutionAddedVol]);
+
 
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
@@ -249,6 +306,138 @@ export default function ABVCalculatorPage() {
             )}
           </div>
         </div>
+
+        {/* ⭐ OG DILUTION CALCULATOR */}
+<div className="mt-12 p-6 bg-white/5 border border-white/10 rounded-xl">
+  <h2 className="text-2xl font-bold mb-2 text-green-300 text-center">
+    OG Dilution Calculator
+  </h2>
+
+  <p className="text-center opacity-70 mb-6">
+    Calculate your new OG after adding water or other non‑sugar liquids.
+  </p>
+
+  <div className="space-y-6">
+
+    {/* Original batch */}
+    <div>
+      <h3 className="text-xl font-semibold mb-2">Your batch</h3>
+
+      <label className="block mb-1 opacity-80">Original OG</label>
+      <input
+        type="text"
+        value={ogDilutionOg}
+        onChange={(e) => setOgDilutionOg(e.target.value)}
+        placeholder="e.g. 1.100"
+        className="w-full p-3 rounded bg-black/40 border border-white/20"
+      />
+
+      <label className="block mt-4 mb-1 opacity-80">Volume (L)</label>
+      <input
+        type="text"
+        value={ogDilutionVol}
+        onChange={(e) => setOgDilutionVol(e.target.value)}
+        placeholder="e.g. 4"
+        className="w-full p-3 rounded bg-black/40 border border-white/20"
+      />
+    </div>
+
+    {/* Added water */}
+    <div>
+      <label className="block mb-1 opacity-80">Water added (L)</label>
+      <input
+        type="text"
+        value={ogDilutionAddedVol}
+        onChange={(e) => setOgDilutionAddedVol(e.target.value)}
+        placeholder="e.g. 1"
+        className="w-full p-3 rounded bg-black/40 border border-white/20"
+      />
+    </div>
+
+    {/* Result */}
+    {ogDilutionResult !== null && (
+      <p className="text-center text-xl font-bold mt-4">
+        New OG: {ogDilutionResult.toFixed(3)}
+      </p>
+    )}
+  </div>
+</div>
+
+<div className="mt-12 p-6 bg-white/5 border border-white/10 rounded-xl">
+  <h2 className="text-2xl font-bold mb-2 text-green-300 text-center">
+    Sugar & Honey ABV Calculator
+  </h2>
+
+  <p className="text-center opacity-70 mb-6">
+    Enter batch size and desired ABV to calculate required sugar or honey.
+  </p>
+
+  {/* Toggle */}
+  <div className="flex justify-center gap-4 mb-6">
+    <button
+      type="button"
+      onClick={() => setAbvMode("sugar")}
+      className={`px-4 py-2 rounded-lg border ${
+        abvMode === "sugar"
+          ? "bg-green-600 border-green-400"
+          : "bg-black/40 border-white/20"
+      }`}
+    >
+      Sugar
+    </button>
+
+    <button
+      type="button"
+      onClick={() => setAbvMode("honey")}
+      className={`px-4 py-2 rounded-lg border ${
+        abvMode === "honey"
+          ? "bg-yellow-600 border-yellow-400"
+          : "bg-black/40 border-white/20"
+      }`}
+    >
+      Honey
+    </button>
+  </div>
+
+  <div className="space-y-6">
+    <div>
+      <label className="block mb-1 opacity-80">Batch volume (L)</label>
+      <input
+        type="number"
+        value={targetAbvVol}
+        onChange={(e) => setTargetAbvVol(e.target.value)}
+        placeholder="e.g. 10"
+        className="w-full p-3 rounded bg-black/40 border border-white/20"
+      />
+    </div>
+
+    <div>
+      <label className="block mb-1 opacity-80">Desired ABV (%)</label>
+      <input
+        type="number"
+        value={targetAbvPercent}
+        onChange={(e) => setTargetAbvPercent(e.target.value)}
+        placeholder="e.g. 12"
+        className="w-full p-3 rounded bg-black/40 border border-white/20"
+      />
+    </div>
+
+    {sugarNeeded !== null && (
+      <p className="text-center text-xl font-bold mt-4">
+        Sugar needed: {smartRound(sugarNeeded / 1000)} kg
+      </p>
+    )}
+
+    {honeyNeeded !== null && (
+      <p className="text-center text-xl font-bold mt-4">
+        Honey needed: {smartRound(honeyNeeded / 1000)} kg
+      </p>
+    )}
+  </div>
+</div>
+
+
+
 
         <p className="text-sm opacity-40 mt-12 text-center">
           © {new Date().getFullYear()} Batchlog
