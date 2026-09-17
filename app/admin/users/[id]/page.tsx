@@ -30,28 +30,23 @@ export default async function UserAdminPage({ params }: any) {
   const email = formData.get("email")?.toString();
   const username = formData.get("username")?.toString();
 
-  // 1. Oppdater e‑post via din egen admin‑route
-  await fetch("/admin/fix-email", {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL!;
+
+  await fetch(`${baseUrl}/admin/fix-email`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      userId,
-      newEmail: email,
-    }),
+    body: JSON.stringify({ userId, newEmail: email }),
   });
 
-  // 2. Oppdater username via en ny route
-  await fetch("/admin/fix-username", {
+  await fetch(`${baseUrl}/admin/fix-username`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      userId,
-      username,
-    }),
+    body: JSON.stringify({ userId, username }),
   });
 
   revalidatePath(`/admin/users/${userId}`);
 }
+
 
 
   return (
