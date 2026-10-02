@@ -35,6 +35,7 @@ export default function DashboardClient() {
   const [selectedKars, setSelectedKars] = useState<string[]>([]);
   const [fadeMessage, setFadeMessage] = useState("");
   const [maxVessels, setMaxVessels] = useState(12);
+  const [creatingKar, setCreatingKar] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
 
 
@@ -156,25 +157,44 @@ useEffect(() => {
   }
 
   async function createKar() {
-    const token = await getToken();
-    if (!token) {
-  await supabaseBrowser.auth.refreshSession();
-  const { data: { session } } = await supabaseBrowser.auth.getSession();
-  if (!session?.access_token) {
-    router.replace("/");
-    return;
-  }
-}
+    if (creatingKar || kar.length >= maxVessels) return;
 
-    const res = await fetch("/kar/create", {
-      method: "POST",
-      credentials: "include",
-    });
+    setCreatingKar(true);
+    try {
+      const token = await getToken();
+      if (!token) {
+        router.replace("/");
+        return;
+      }
 
-    if (res.ok) {
-      await supabaseBrowser.auth.refreshSession();
-      await supabaseBrowser.auth.getSession();
+      const res = await fetch("/kar/create", {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (res.status === 401) {
+        router.replace("/");
+        return;
+      }
+
+      if (res.status === 409) {
+        setFadeMessage(`You have reached your limit of ${maxVessels} vessels`);
+        setTimeout(() => setFadeMessage(""), 2500);
+        await loadDashboardData();
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(`Vessel creation failed (${res.status})`);
+      }
+
       await loadDashboardData();
+    } catch (error) {
+      console.error("Failed to create vessel", error);
+      setFadeMessage("Could not create vessel. Please try again.");
+      setTimeout(() => setFadeMessage(""), 2500);
+    } finally {
+      setCreatingKar(false);
     }
   }
 
@@ -315,9 +335,11 @@ useEffect(() => {
         {!selectMode && kar.length < maxVessels && (
           <button
             onClick={createKar}
-            className="border border-white/10 bg-white/5 hover:bg-white/10 rounded-xl p-4 w-32 h-32 flex items-center justify-center text-white text-3xl font-bold"
+            disabled={creatingKar}
+            aria-label={creatingKar ? "Creating vessel" : "Create vessel"}
+            className="border border-white/10 bg-white/5 hover:bg-white/10 disabled:opacity-60 disabled:cursor-wait rounded-xl p-4 w-32 h-32 flex items-center justify-center text-white text-3xl font-bold"
           >
-            +
+            {creatingKar ? "…" : "+"}
           </button>
         )}
       </div>

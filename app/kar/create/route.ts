@@ -3,56 +3,41 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
 
-export async function POST(req: Request) {
-  console.log("=== /kar/create START ===");
-
+export async function POST() {
   const { supabase } = supabaseServer();
 
   const {
     data: { user },
-    error: userError,
   } = await supabase.auth.getUser();
 
-  console.log("[/kar/create] User:", user);
-  console.log("[/kar/create] UserError:", userError);
-
   if (!user) {
-    console.log("[/kar/create] Ingen bruker → 401");
     return NextResponse.json({ error: "Not logged in" }, { status: 401 });
   }
 
-  // Finn neste nummer (du bruker dette i databasen)
-  const { data: existing } = await supabase
-    .from("kar")
-    .select("nummer")
-    .eq("user_id", user.id)
-    .order("nummer", { ascending: false })
-    .limit(1);
-
-  const nextNummer = existing?.[0]?.nummer ? existing[0].nummer + 1 : 1;
-
-  // ⭐ NYTT: displayNummer basert på antall kar
-  const { data: allKars } = await supabase
-    .from("kar")
-    .select("id")
-    .eq("user_id", user.id);
-
-  const nextDisplayNummer = (allKars?.length ?? 0) + 1;
-
-  const { data, error } = await supabase
-    .from("kar")
-    .insert({
-      user_id: user.id,
-      nummer: nextNummer,
-      displayNummer: nextDisplayNummer,   // ⭐ eneste endringen
-      status: "Ledig",
-    })
-    .select()
-    .single();
+  const { data, error } = await supabase.rpc("create_kar_with_limit");
 
   if (error) {
+    console.error("Failed to create vessel", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true, kar: data });
+  if (!data) {
+    console.error("Vessel creation returned no result");
+    return NextResponse.json(
+      { error: "Vessel creation returned no result" },
+      { status: 500 }
+    );
+  }
+
+  if (!data.created) {
+    return NextResponse.json(
+      {
+        error: `You have reached your limit of ${data.maxVessels} vessels.`,
+        maxVessels: data.maxVessels,
+      },
+      { status: 409 }
+    );
+  }
+
+  return NextResponse.json({ success: true, kar: data.kar });
 }
