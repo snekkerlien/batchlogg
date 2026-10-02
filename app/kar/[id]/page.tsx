@@ -1,36 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
 import * as Actions from "./actions";
 import { KarNotesClient } from "./KarNotesClient";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import VisibilitySwitch from "@/app/components/VisibilitySwitch";
-import { Line } from "react-chartjs-2";
+import BatchSGChart from "@/app/components/BatchSGChart";
+import ConfirmDialog from "@/app/components/ConfirmDialog";
+import PageHeading from "@/app/components/PageHeading";
+import BatchReminders from "./BatchReminders";
 import QRCode from "qrcode";
 
 
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-} from "chart.js";
 import { translateOldRecipe } from "@/lib/translateOldRecipe";
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
 
 type Fruit = { name: string; amount: string; unit: string };
 type Malt = { name: string; amount: string; unit: string };
@@ -83,6 +66,9 @@ export default function KarPage({ params }: { params: { id: string } }) {
   const [openSecondary, setOpenSecondary] = useState(false);
   const [openSecondaryActive, setOpenSecondaryActive] = useState(false);
   const [openFinish, setOpenFinish] = useState(false);
+  const [confirmCancelBatch, setConfirmCancelBatch] = useState(false);
+  const cancelBatchFormRef = useRef<HTMLFormElement>(null);
+  const cancelBatchConfirmedRef = useRef(false);
 
   const [user, setUser] = useState<any>(null);
   const [kar, setKar] = useState<any>(null);
@@ -391,18 +377,16 @@ async function toggleVisibility() {
   </div>
 )}
 
-{/* HEADER */}
-<h1 className="text-4xl font-bold mb-2 text-center">
-  Vessel
-</h1>
-
-<h2 className="text-xl text-center opacity-80 mb-10">
-  {activeBatch
-    ? activeBatch.status === "Sekundær"
-      ? "Secondary fermentation"
-      : "Active fermentation"
-    : ""}
-</h2>
+<PageHeading
+  title="Vessel"
+  subtitle={
+    activeBatch
+      ? activeBatch.status === "Sekundær"
+        ? "Secondary fermentation"
+        : "Active fermentation"
+      : "View vessel details and start a new batch."
+  }
+/>
 
 
 
@@ -1229,47 +1213,11 @@ async function toggleVisibility() {
             </h3>
 
             <div className="bg-black/40 p-4 rounded-lg border border-white/10">
-      <Line
-        data={{
-          labels: sgReadings.map((r) =>
-            new Date(r.created_at).toLocaleDateString()
-          ),
-          datasets: [
-            {
-              data: sgReadings.map((r) => Number(r.sg).toFixed(3)),
-              borderColor: "rgb(75, 192, 192)",
-              tension: 0,
-              pointRadius: 4,
-              pointHoverRadius: 6,
-            },
-          ],
-        }}
-        options={{
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                label: (context) => {
-                  const value = Number(context.raw);
-                  return value.toFixed(3).replace(",", ".");
-                },
-              },
-            },
-          },
-          scales: {
-            y: {
-              ticks: {
-                callback: (value) =>
-                  Number(value).toFixed(3).replace(",", "."),
-              },
-            },
-          },
-        }}
-      />
-    </div>
+              <BatchSGChart readings={sgReadings} />
+            </div>
 
-    {/* ⭐ CURRENT ABV USING LATEST SG */}
-{(() => {
+            {/* Current ABV using latest SG */}
+            {(() => {
               const latestSG =
                 sgReadings.length > 0
                   ? Number(sgReadings[sgReadings.length - 1].sg)
@@ -1357,17 +1305,48 @@ async function toggleVisibility() {
 {/* Cancel batch */}
 {isOwner && hasActive && (
   <>
-    <form action={Actions.cancelBatch} className="mt-8 mb-4">
+    <form
+      ref={cancelBatchFormRef}
+      action={Actions.cancelBatch}
+      onSubmit={(event) => {
+        if (!cancelBatchConfirmedRef.current) {
+          event.preventDefault();
+          setConfirmCancelBatch(true);
+        }
+      }}
+      className="mt-8 mb-4"
+    >
       <input type="hidden" name="batch_id" value={activeBatch.id} />
       <input type="hidden" name="kar_id" value={kar.id} />
 
-      <button className="w-full px-2 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-md text-sm">
+      <button
+        type="submit"
+        className="w-full px-2 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-md text-sm"
+      >
         Cancel batch
       </button>
     </form>
+    <ConfirmDialog
+      open={confirmCancelBatch}
+      title="Cancel this batch?"
+      message="This will cancel the active batch and free the vessel. This action cannot be undone."
+      confirmLabel="Cancel batch"
+      onConfirm={() => {
+        if (!cancelBatchFormRef.current) return false;
+        cancelBatchConfirmedRef.current = true;
+        cancelBatchFormRef.current?.requestSubmit();
+        cancelBatchConfirmedRef.current = false;
+        return true;
+      }}
+      onCancel={() => setConfirmCancelBatch(false)}
+    />
 
     <div className="w-full h-px bg-white/10 my-6"></div>
   </>
+)}
+
+{hasActive && isOwner && (
+  <BatchReminders key={activeBatch.id} batchId={activeBatch.id} />
 )}
 
 {hasActive && (

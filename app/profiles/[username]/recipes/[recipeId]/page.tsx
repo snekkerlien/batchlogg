@@ -5,6 +5,7 @@ export const revalidate = 0;
 import { supabaseServer } from "../../../../../lib/supabase/supabaseServerFinal";
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
+import PageHeading from "@/app/components/PageHeading";
 
 export default async function RecipeNotesPage({
   params,
@@ -82,14 +83,10 @@ export default async function RecipeNotesPage({
           <MenuOverlay />
         </div>
 
-        {/* Header */}
-        <h1 className="text-4xl font-bold mb-6 text-center">
-          {recipe.name.charAt(0).toUpperCase() + recipe.name.slice(1)}
-        </h1>
-
-        <p className="opacity-80 text-center mb-10">
-          Note log and details for this recipe.
-        </p>
+        <PageHeading
+          title={recipe.name.charAt(0).toUpperCase() + recipe.name.slice(1)}
+          subtitle="Note log and details for this recipe."
+        />
 
         {/* Recipe info */}
         <div className="space-y-6">

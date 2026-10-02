@@ -6,6 +6,7 @@ import { supabaseServer } from "../../../../lib/supabase/supabaseServerFinal";
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import { translateOldRecipe } from "@/lib/translateOldRecipe";
+import PageHeading from "@/app/components/PageHeading";
 
 type KarDetailParams = {
   username: string;
@@ -105,17 +106,16 @@ batch = translateOldRecipe(batch);
         </div>
 
         {/* HEADER */}
-        <h1 className="text-4xl font-bold mb-2 text-center">
-          Vessel
-        </h1>
-
-        <h2 className="text-xl text-center opacity-80 mb-10">
-          {!batch
-            ? ""
-            : batch.status === "Sekundær"
-            ? "Secondary fermentation"
-            : "Active fermentation"}
-        </h2>
+        <PageHeading
+          title="Vessel"
+          subtitle={
+            !batch
+              ? "This vessel is currently empty."
+              : batch.status === "Sekundær"
+                ? "Secondary fermentation"
+                : "Active fermentation"
+          }
+        />
 
         {/* EMPTY VESSEL */}
         {!batch && (

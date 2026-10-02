@@ -1,12 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import * as Actions from "../../actions";
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
+import { useRecipePrefill } from "../../../../../lib/recipes/useRecipePrefill";
 
-export default function NewBraggotPage({ params }: { params: { id: string } }) {
+export default function NewBraggotPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams?: { recipe?: string };
+}) {
   const [loading, setLoading] = useState(false);
+  const { recipe, loading: recipeLoading, error: recipeError } =
+    useRecipePrefill(searchParams?.recipe, "Braggot");
 
   // Dynamic malt list
   const [malts, setMalts] = useState<
@@ -38,6 +47,29 @@ function removeHop(index: number) {
   setHops(updated);
 }
 
+useEffect(() => {
+  if (!recipe) return;
+  setMalts(
+    Array.isArray(recipe.malts)
+      ? recipe.malts.map((malt: any) => ({
+          ...malt,
+          amount: String(malt.amount ?? ""),
+          unit: malt.unit ?? "kg",
+        }))
+      : []
+  );
+  setHops(
+    Array.isArray(recipe.hops)
+      ? recipe.hops.map((hop: any) => ({
+          name: hop.name ?? "",
+          amount: String(hop.amount ?? ""),
+          unit: hop.unit ?? "g",
+          boil: String(hop.time ?? hop.boil ?? ""),
+        }))
+      : []
+  );
+}, [recipe]);
+
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
       <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10">
@@ -58,7 +90,9 @@ function removeHop(index: number) {
           Fill out the details below to start a new braggot batch.
         </p>
 
+        {recipeError && <p role="alert" className="text-red-300 mb-4">{recipeError}</p>}
         <form
+          key={recipe?.id ?? "new-batch"}
           action={Actions.createBatch}
           className="flex flex-col gap-6"
           onSubmit={() => setLoading(true)}
@@ -72,6 +106,7 @@ function removeHop(index: number) {
             <label className="block mb-1 font-semibold">Batch name</label>
             <input
               name="name"
+              defaultValue={recipe?.name ?? ""}
               placeholder="Example: Honey Ale Braggot"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
@@ -83,6 +118,7 @@ function removeHop(index: number) {
             <label className="block mb-1 font-semibold">Volume (L)</label>
             <input
               name="volume_l"
+              defaultValue={recipe?.volume ?? ""}
               type="number"
               step="0.1"
               placeholder="Example: 10"
@@ -108,6 +144,7 @@ function removeHop(index: number) {
             <label className="block mb-1 font-semibold">Original Gravity (OG)</label>
             <input
               name="og"
+              defaultValue={recipe?.og ?? ""}
               type="number"
               step="0.001"
               placeholder="Example: 1.070"
@@ -262,6 +299,7 @@ function removeHop(index: number) {
             <label className="block mb-1 font-semibold">Boil time (minutes)</label>
             <input
               name="boil_time"
+              defaultValue={recipe?.boil_time ?? ""}
               type="number"
               step="1"
               placeholder="Example: 60"
@@ -274,6 +312,7 @@ function removeHop(index: number) {
             <label className="block mb-1 font-semibold">Honey amount (kg)</label>
             <input
               name="honey_amount"
+              defaultValue={recipe?.honey_amount ?? ""}
               type="number"
               step="0.1"
               placeholder="Example: 1.5"
@@ -286,6 +325,7 @@ function removeHop(index: number) {
             <label className="block mb-1 font-semibold">Yeast strain</label>
             <input
               name="yeast"
+              defaultValue={recipe?.yeast ?? ""}
               placeholder="Example: US-05 or Kveik"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
@@ -296,6 +336,7 @@ function removeHop(index: number) {
             <label className="block mb-1 font-semibold">Additives</label>
             <textarea
               name="additives"
+              defaultValue={recipe?.additives ?? ""}
               placeholder="DAP, Fermaid O, K2CO3, Irish Moss..."
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
             />
@@ -306,6 +347,7 @@ function removeHop(index: number) {
             <label className="block mb-1 font-semibold">Full process</label>
             <textarea
               name="full_process"
+              defaultValue={recipe?.full_process ?? ""}
               placeholder="Mash schedule, honey addition, fermentation plan..."
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-40"
             />
@@ -316,6 +358,7 @@ function removeHop(index: number) {
             <label className="block mb-1 font-semibold">Notes</label>
             <textarea
               name="notes"
+              defaultValue={recipe?.notes ?? ""}
               placeholder="Any additional notes about the batch..."
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
             />
@@ -323,7 +366,7 @@ function removeHop(index: number) {
 
           {/* Submit */}
           <button
-            disabled={loading}
+            disabled={loading || recipeLoading}
             className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold"
           >
             {loading ? "Creating..." : "Create batch"}

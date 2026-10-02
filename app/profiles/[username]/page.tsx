@@ -5,6 +5,7 @@ import Link from "next/link";
 import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
 import MenuOverlay from "./MenuOverlay";
 import { useRouter } from "next/navigation";
+import PageHeading from "@/app/components/PageHeading";
 
 export default function ProfileDetailPage({ params }: { params: { username: string } }) {
   const router = useRouter();
@@ -165,13 +166,10 @@ const secondary = batchesRaw
   />
 </div>
 
-<h1 className="text-4xl font-bold mb-6 text-center">
-  {profile.username.charAt(0).toUpperCase() + profile.username.slice(1)}
-</h1>
-
-        <p className="opacity-80 text-center mb-10">
-          Overview of this user's vessels, active batches, and public recipes.
-        </p>
+<PageHeading
+  title={profile.username.charAt(0).toUpperCase() + profile.username.slice(1)}
+  subtitle="Overview of this user's vessels, active batches, and public recipes."
+/>
 
         {/* VESSELS */}
         <h2 className="text-2xl font-semibold mb-4 text-center">Vessels</h2>

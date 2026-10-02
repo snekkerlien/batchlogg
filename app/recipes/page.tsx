@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
+import PageHeading from "@/app/components/PageHeading";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import VisibilitySwitch from "../components/VisibilitySwitch";
 
 function ebcToHex(ebc: number | string) {
@@ -55,10 +57,25 @@ type DryHop = {
   contact: string;
 };
 
+const batchFormRoutes: Record<string, string> = {
+  beer: "beer",
+  braggot: "braggot",
+  cider: "cider",
+  mead: "mead",
+  other: "other",
+  seltzer: "hard%20seltzer",
+  "hard seltzer": "hard%20seltzer",
+  wine: "wine",
+};
 
 export default function RecipesPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [recipes, setRecipes] = useState<any[]>([]);
+  const [emptyVessels, setEmptyVessels] = useState<{ id: string; nummer: number }[]>([]);
+  const [vesselsLoaded, setVesselsLoaded] = useState(false);
+  const [startRecipeId, setStartRecipeId] = useState<string | null>(null);
+  const [selectedVesselId, setSelectedVesselId] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [openStyleSelect, setOpenStyleSelect] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -149,6 +166,29 @@ export default function RecipesPage() {
       has_notes: notesMap[r.batch_id] || false,
     }));
 
+    const { data: vessels } = await supabaseBrowser
+      .from("kar")
+      .select("id, nummer")
+      .eq("user_id", session.user.id)
+      .order("created_at", { ascending: true });
+
+    const vesselIds = (vessels ?? []).map((vessel) => vessel.id);
+    let occupiedVesselIds = new Set<string>();
+    if (vesselIds.length > 0) {
+      const { data: activeBatches } = await supabaseBrowser
+        .from("batches")
+        .select("aktivt_kar")
+        .in("aktivt_kar", vesselIds)
+        .in("status", ["Aktiv", "Sekundær"]);
+      occupiedVesselIds = new Set(
+        (activeBatches ?? []).map((batch) => batch.aktivt_kar).filter(Boolean)
+      );
+    }
+
+    setEmptyVessels(
+      (vessels ?? []).filter((vessel) => !occupiedVesselIds.has(vessel.id))
+    );
+    setVesselsLoaded(true);
     setRecipes(recipesWithNotes);
     setLoading(false);
   }
@@ -280,7 +320,7 @@ function removeDryHop(index: number) {
 
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
-      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10 relative pt-16 sm:pt-0">
+      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10 relative pt-16 sm:pt-16">
 
         {/* TOP BAR */}
         <div className="absolute top-2 sm:top-4 right-4 z-40">
@@ -291,8 +331,10 @@ function removeDryHop(index: number) {
           <BackButton />
         </div>
 
-        <h1 className="text-4xl font-bold mb-6 text-center mt-6">My recipes</h1>
-        <p className="opacity-80 text-center mb-10">All your recipes in one place.</p>
+        <PageHeading
+          title="My recipes"
+          subtitle="All your recipes in one place."
+        />
 
         {/* NEW RECIPE BUTTON */}
         <div className="flex justify-center mb-6">
@@ -683,6 +725,73 @@ function removeDryHop(index: number) {
                         </Link>
                       </div>
                     )}
+                    <div
+                      className="pt-4 border-t border-white/10"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {startRecipeId === r.id ? (
+                        <div className="flex flex-col sm:flex-row gap-3">
+                          <select
+                            aria-label={`Select an empty vessel for ${r.name}`}
+                            value={selectedVesselId}
+                            onChange={(e) => setSelectedVesselId(e.target.value)}
+                            className="flex-1 p-3 rounded bg-black/40 border border-white/20"
+                          >
+                            <option value="">
+                              {vesselsLoaded
+                                ? emptyVessels.length
+                                  ? "Select an empty vessel"
+                                  : "No empty vessels available"
+                                : "Loading vessels…"}
+                            </option>
+                            {emptyVessels.map((vessel) => (
+                              <option key={vessel.id} value={vessel.id}>
+                                Vessel {vessel.nummer}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            disabled={
+                              !selectedVesselId ||
+                              !vesselsLoaded ||
+                              !batchFormRoutes[r.type?.toLowerCase()]
+                            }
+                            onClick={() => {
+                              const routeType = batchFormRoutes[r.type?.toLowerCase()];
+                              if (!routeType) return;
+                              router.push(
+                                `/kar/${selectedVesselId}/new/${routeType}?recipe=${encodeURIComponent(r.id)}`
+                              );
+                            }}
+                            className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold disabled:opacity-50"
+                          >
+                            Continue with recipe
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setStartRecipeId(null);
+                              setSelectedVesselId("");
+                            }}
+                            className="px-4 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setStartRecipeId(r.id);
+                            setSelectedVesselId("");
+                          }}
+                          className="px-4 py-2 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold"
+                        >
+                          Start batch from recipe
+                        </button>
+                      )}
+                    </div>
                     </div>
                   </div>
                 </div>

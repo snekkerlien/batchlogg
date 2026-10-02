@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
 import { getNextMotd } from "../../lib/motd/motdList";
 import MenuOverlay from "@/app/components/MenuOverlay";
+import ConfirmDialog from "@/app/components/ConfirmDialog";
+import PageHeading from "@/app/components/PageHeading";
 
 
 interface KarType {
@@ -47,6 +49,7 @@ export default function DashboardClient() {
   const [motd, setMotd] = useState("");
   const [selectMode, setSelectMode] = useState(false);
   const [selectedKars, setSelectedKars] = useState<string[]>([]);
+  const [confirmDeleteVessels, setConfirmDeleteVessels] = useState(false);
   const [fadeMessage, setFadeMessage] = useState("");
   const [maxVessels, setMaxVessels] = useState(12);
   const [creatingKar, setCreatingKar] = useState(false);
@@ -158,9 +161,9 @@ useEffect(() => {
   }
 
   async function deleteSelectedKars() {
-    const token = await getToken();
-
-    await fetch("/kar/delete-multiple", {
+    try {
+      const token = await getToken();
+      const response = await fetch("/kar/delete-multiple", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -170,10 +173,20 @@ useEffect(() => {
       body: JSON.stringify({ ids: selectedKars }),
     });
 
-    await supabaseBrowser.auth.refreshSession();
-    await supabaseBrowser.auth.getSession();
-    await loadDashboardData();
-    toggleSelectMode();
+      if (!response.ok) {
+        throw new Error(`Vessel deletion failed (${response.status})`);
+      }
+
+      await supabaseBrowser.auth.refreshSession();
+      await loadDashboardData();
+      toggleSelectMode();
+      return true;
+    } catch (error) {
+      console.error("Could not delete selected vessels", error);
+      setFadeMessage("Could not delete the selected vessels. Please try again.");
+      setTimeout(() => setFadeMessage(""), 3000);
+      return false;
+    }
   }
 
   async function createKar() {
@@ -257,7 +270,7 @@ useEffect(() => {
   
 
   return (
-    <div className="bg-black/60 backdrop-blur-md p-6 sm:p-8 rounded-xl border border-white/10 max-w-3xl mx-auto mt-20 sm:mt-24 relative">
+    <div className="bg-black/60 backdrop-blur-md p-6 pt-16 sm:p-8 sm:pt-16 rounded-xl border border-white/10 max-w-3xl mx-auto mt-20 sm:mt-24 relative">
       {fadeMessage && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-600/80 text-white px-4 py-2 rounded-lg animate-fadeOut z-50">
           {fadeMessage}
@@ -269,16 +282,12 @@ useEffect(() => {
         <MenuOverlay current="dashboard" />
       </div>
 
-      {/* HEADER */}
-      <h1 className="text-3xl font-bold mb-4 mt-15 text-center">
-        Ferment-station
-      </h1>
+      <PageHeading
+        title="Ferment-station"
+        subtitle={`Logged in as ${username}`}
+      />
 
-      <p className="text-center text-zinc-300 mb-7">
-        Logged in as {username}
-      </p>  
-
-      <p className="text-center text-zinc-300 mb-10 italic">
+      <p className="text-center text-zinc-300 mb-10 -mt-5 italic">
         {motd}
       </p>
 
@@ -401,7 +410,8 @@ useEffect(() => {
         {selectMode && (
           <div className="flex flex-col sm:flex-row gap-4">
             <button
-              onClick={deleteSelectedKars}
+              onClick={() => setConfirmDeleteVessels(true)}
+              type="button"
               disabled={selectedKars.length === 0}
               className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold disabled:opacity-40"
             >
@@ -442,7 +452,14 @@ useEffect(() => {
         © {new Date().getFullYear()} Batchlog
       </p>
 
-      
+      <ConfirmDialog
+        open={confirmDeleteVessels}
+        title="Delete selected vessels?"
+        message={`Delete ${selectedKars.length} selected vessel${selectedKars.length === 1 ? "" : "s"}? This action cannot be undone.`}
+        confirmLabel="Delete vessels"
+        onConfirm={deleteSelectedKars}
+        onCancel={() => setConfirmDeleteVessels(false)}
+      />
 
       <style jsx>{`
         @keyframes shake {

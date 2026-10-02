@@ -41,5 +41,5 @@ body {
 .text-green-800,
 .text-green-900,
 .text-green-950 {
-  color: var(--user-accent);
+  color: color-mix(in srgb, var(--user-accent) 80%, white);
 }

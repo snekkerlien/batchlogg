@@ -1,53 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useInventory } from "../../useInventory";
 import InventoryList from "../../InventoryList";
 import BackButton from "../../BackButton";
 import MenuOverlay from "../../../components/MenuOverlay";
-import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
+import PageHeading from "@/app/components/PageHeading";
 
 export default function CategoryPage({ params }: { params: { name: string } }) {
-  const { items, loading } = useInventory();
+  const {
+    items,
+    loading,
+    profile,
+    profileLoaded,
+    updateItem,
+    deleteItem,
+  } = useInventory();
   const category = params.name;
-
-  const [profile, setProfile] = useState<any>(null);
-
-  // Skjulte kategorier
   const snusCategories = ["snus", "snusessens"];
-
-  // Hent brukerprofil
-  useEffect(() => {
-    async function loadProfile() {
-      const {
-        data: { session },
-      } = await supabaseBrowser.auth.getSession();
-
-      if (!session) return;
-
-      const res = await fetch("/api/profile", {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      const data = await res.json();
-      setProfile(data);
-    }
-
-    loadProfile();
-  }, []);
-
-  // Hvis kategori er snus/snusessens og brukeren IKKE har tilgang → blokkér
   const isRestrictedCategory =
-    snusCategories.includes(category) && !profile?.snus_is_true;
-
-  const filtered = items.filter((i) => i.category === category);
+    profileLoaded &&
+    snusCategories.includes(category) &&
+    !profile?.snus_is_true;
+  const filtered = items.filter((item) => item.category === category);
 
   return (
     <main className="min-h-screen flex flex-col items-center px-6 py-12 text-white">
       <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-5xl border border-white/10 relative pt-16 sm:pt-0">
-
         <div className="absolute top-2 sm:top-4 right-4 z-40">
           <MenuOverlay current="inventory" />
         </div>
@@ -56,31 +34,24 @@ export default function CategoryPage({ params }: { params: { name: string } }) {
           <BackButton />
         </div>
 
-        {/* ACCESS DENIED */}
         {isRestrictedCategory ? (
           <>
             <h1 className="text-4xl font-bold text-center mt-20 sm:mt-6">
               Access denied
             </h1>
-
             <p className="opacity-80 text-center mb-10 mt-6">
               You do not have permission to view this category.
             </p>
-
             <p className="text-sm opacity-40 mt-12 text-center">
               © {new Date().getFullYear()} Batchlog
             </p>
           </>
         ) : (
           <>
-            <h1 className="text-4xl font-bold text-center mt-20 sm:mt-6 capitalize">
-              {category.replace("_", " ")}
-            </h1>
-
-            <p className="opacity-80 text-center mb-10 mt-6">
-              All items in this category.
-            </p>
-
+            <PageHeading
+              title={category.replace("_", " ")}
+              subtitle="All items in this category."
+            />
             {loading ? (
               <p className="opacity-60 text-center mt-10">Loading…</p>
             ) : filtered.length === 0 ? (
@@ -88,9 +59,13 @@ export default function CategoryPage({ params }: { params: { name: string } }) {
                 No items in this category.
               </p>
             ) : (
-              <InventoryList items={filtered} />
+              <InventoryList
+                items={filtered}
+                profile={profile}
+                updateItem={updateItem}
+                deleteItem={deleteItem}
+              />
             )}
-
             <p className="text-sm opacity-40 mt-12 text-center">
               © {new Date().getFullYear()} Batchlog
             </p>

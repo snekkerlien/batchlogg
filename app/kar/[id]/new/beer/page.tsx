@@ -1,13 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import * as Actions from "../../actions";
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
+import { useRecipePrefill } from "../../../../../lib/recipes/useRecipePrefill";
 
 
-export default function NewBeerPage({ params }: { params: { id: string } }) {
+export default function NewBeerPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams?: { recipe?: string };
+}) {
   const [loading, setLoading] = useState(false);
+  const { recipe, loading: recipeLoading, error: recipeError } =
+    useRecipePrefill(searchParams?.recipe, "Beer");
 
   // Dynamic malt list
   const [malts, setMalts] = useState<
@@ -55,6 +64,35 @@ function removeDryHop(index: number) {
 const [boilVolume, setBoilVolume] = useState<number | "">("");
 const [volume, setVolume] = useState("");
 
+useEffect(() => {
+  if (!recipe) return;
+  setVolume(recipe.volume == null ? "" : String(recipe.volume));
+  setBoilVolume(recipe.boil_volume == null ? "" : Number(recipe.boil_volume));
+  setMalts(Array.isArray(recipe.malts) ? recipe.malts : []);
+  setHops(
+    Array.isArray(recipe.hops)
+      ? recipe.hops.map((hop: any) => ({
+          ...hop,
+          amount: String(hop.amount ?? ""),
+          time: String(hop.time ?? ""),
+          alpha: String(hop.alpha ?? ""),
+          year: String(hop.year ?? ""),
+        }))
+      : []
+  );
+  setDryHops(
+    Array.isArray(recipe.dry_hops)
+      ? recipe.dry_hops.map((hop: any) => ({
+          ...hop,
+          amount: String(hop.amount ?? ""),
+          contact: String(hop.contact ?? ""),
+          alpha: String(hop.alpha ?? ""),
+          year: String(hop.year ?? ""),
+        }))
+      : []
+  );
+}, [recipe]);
+
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
       <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10">
@@ -77,7 +115,9 @@ const [volume, setVolume] = useState("");
 
         
 
+        {recipeError && <p role="alert" className="text-red-300 mb-4">{recipeError}</p>}
         <form
+          key={recipe?.id ?? "new-batch"}
           action={Actions.createBatch}
           className="flex flex-col gap-6"
           onSubmit={() => setLoading(true)}
@@ -91,6 +131,7 @@ const [volume, setVolume] = useState("");
             <label className="block mb-1 font-semibold">Batch name</label>
             <input
               name="name"
+              defaultValue={recipe?.name ?? ""}
               placeholder="Example: Pale Ale, IPA, Stout"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
@@ -144,6 +185,7 @@ const [volume, setVolume] = useState("");
             <label className="block mb-1 font-semibold">Original Gravity (OG)</label>
             <input
               name="og"
+              defaultValue={recipe?.og ?? ""}
               type="number"
               step="0.001"
               placeholder="Example: 1.050"
@@ -412,6 +454,7 @@ const [volume, setVolume] = useState("");
             <label className="block mb-1 font-semibold">Total boil time (minutes)</label>
             <input
               name="boil_time"
+              defaultValue={recipe?.boil_time ?? ""}
               type="number"
               step="1"
               placeholder="Example: 60"
@@ -424,6 +467,7 @@ const [volume, setVolume] = useState("");
             <label className="block mb-1 font-semibold">Yeast strain</label>
             <input
               name="yeast"
+              defaultValue={recipe?.yeast ?? ""}
               placeholder="Example: US-05, S-04, Kveik"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
@@ -434,6 +478,7 @@ const [volume, setVolume] = useState("");
             <label className="block mb-1 font-semibold">Additives</label>
             <textarea
               name="additives"
+              defaultValue={recipe?.additives ?? ""}
               placeholder="Irish Moss, gypsum, CaCl₂, nutrient..."
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
             />
@@ -444,6 +489,7 @@ const [volume, setVolume] = useState("");
             <label className="block mb-1 font-semibold">Full process</label>
             <textarea
               name="full_process"
+              defaultValue={recipe?.full_process ?? ""}
               placeholder="Mash schedule, hop schedule, fermentation plan..."
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-40"
             />
@@ -454,6 +500,7 @@ const [volume, setVolume] = useState("");
             <label className="block mb-1 font-semibold">Notes</label>
             <textarea
               name="notes"
+              defaultValue={recipe?.notes ?? ""}
               placeholder="Any additional notes about the batch..."
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
             />
@@ -461,7 +508,7 @@ const [volume, setVolume] = useState("");
 
           {/* Submit */}
           <button
-            disabled={loading}
+            disabled={loading || recipeLoading}
             className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold"
           >
             {loading ? "Creating..." : "Create batch"}
@@ -471,7 +518,4 @@ const [volume, setVolume] = useState("");
       </div>
     </main>
   );
-}
-function useEffect(arg0: () => void, arg1: string[]) {
-  throw new Error("Function not implemented.");
 }

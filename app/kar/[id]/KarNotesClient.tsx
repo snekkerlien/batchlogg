@@ -4,6 +4,7 @@ import { useState } from "react";
 import { deleteNoteServer } from "./deleteNoteServer";
 import { deleteImageServer } from "./deleteImage";
 import { addNote } from "@/app/actions/addNote";
+import ConfirmDialog from "@/app/components/ConfirmDialog";
 
 type NoteType = {
   id: string;
@@ -26,6 +27,11 @@ export function KarNotesClient({
   const [noteText, setNoteText] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{
+    id: string;
+    isImage: boolean;
+  } | null>(null);
+  const [deleteError, setDeleteError] = useState("");
 
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -59,21 +65,37 @@ export function KarNotesClient({
 }
 
 
-  async function handleDeleteNote(noteId: string) {
-    await deleteNoteServer(noteId, karId);
-  }
-
-  async function handleDeleteImage(noteId: string) {
-    await deleteImageServer(noteId, karId);
+  async function confirmDelete() {
+    if (!pendingDelete) return false;
+    try {
+      if (pendingDelete.isImage) {
+        await deleteImageServer(pendingDelete.id, karId);
+      } else {
+        await deleteNoteServer(pendingDelete.id, karId);
+      }
+      setDeleteError("");
+      return true;
+    } catch (error) {
+      console.error("Could not delete batch note or image", error);
+      setDeleteError("Could not delete this item. Please try again.");
+      return false;
+    }
   }
 
   return (
     <div className="p-4 bg-white/5 border border-white/10 rounded-xl mb-10">
 
-      <h3 className="text-xl font-semibold mb-4">Notes & pictures</h3>
+      <h3 className="mb-4 text-xl font-semibold text-green-300">
+        Notes & pictures
+      </h3>
 
       {/* SHOW NOTES */}
       <div className="flex flex-col gap-4 mb-10">
+        {deleteError && (
+          <p role="alert" className="text-center text-sm text-amber-300">
+            {deleteError}
+          </p>
+        )}
         {notes.length === 0 && (
           <p className="opacity-60 text-center">No notes yet.</p>
         )}
@@ -103,14 +125,14 @@ export function KarNotesClient({
             <div className="flex gap-3 mt-4">
               {note.image_url ? (
                 <button
-                  onClick={() => handleDeleteImage(note.id)}
+                  onClick={() => setPendingDelete({ id: note.id, isImage: true })}
                   className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm font-semibold"
                 >
                   Delete picture
                 </button>
               ) : (
                 <button
-                  onClick={() => handleDeleteNote(note.id)}
+                  onClick={() => setPendingDelete({ id: note.id, isImage: false })}
                   className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm font-semibold"
                 >
                   Delete note
@@ -158,6 +180,14 @@ export function KarNotesClient({
           Save note
         </button>
       </form>
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title={pendingDelete?.isImage ? "Delete picture?" : "Delete note?"}
+        message="This action cannot be undone."
+        confirmLabel={pendingDelete?.isImage ? "Delete picture" : "Delete note"}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }

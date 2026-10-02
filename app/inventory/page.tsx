@@ -8,6 +8,7 @@ import AddItemModal from "./AddItemModal";
 import { useInventory } from "./useInventory";
 import Link from "next/link";
 import { useRef } from "react";
+import PageHeading from "@/app/components/PageHeading";
 
 const baseCategories = [
   "honey",
@@ -24,7 +25,14 @@ const baseCategories = [
 const snusCategories = ["snus", "snusessens"];
 
 export default function InventoryPage() {
-  const { items, loading, profile } = useInventory();
+  const {
+    items,
+    loading,
+    profile,
+    addItem,
+    updateItem,
+    deleteItem,
+  } = useInventory();
   const [modalOpen, setModalOpen] = useState(false);
   const [cardWidth, setCardWidth] = useState<number | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -45,12 +53,6 @@ export default function InventoryPage() {
     return current <= minimum;
   });
 
-  console.log("VISIBLE CATEGORIES:", visibleCategories);
-  console.log("PROFILE IN INVENTORY PAGE:", profile);
-  console.log("ITEMS IN INVENTORY PAGE:", items);
-  console.log("HAS SNUS ACCESS:", profile?.snus_is_true);
-  console.log("SNUS ITEMS:", items.filter(i => ["snus","snusessens"].includes(i.category)));
-
 useEffect(() => {
   if (cardRef.current) {
     setCardWidth(cardRef.current.offsetWidth);
@@ -60,7 +62,7 @@ useEffect(() => {
 
   return (
     <main className="min-h-screen flex flex-col items-center px-6 py-12 text-white">
-      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-5xl border border-white/10 relative pt-16 sm:pt-0">
+      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-5xl border border-white/10 relative pt-16 sm:pt-16">
 
         <div className="absolute top-2 sm:top-4 right-4 z-40">
           <MenuOverlay current="inventory" />
@@ -70,13 +72,10 @@ useEffect(() => {
           <BackButton />
         </div>
 
-        <h1 className="text-4xl font-bold text-center mt-20 sm:mt-6">
-          Inventory
-        </h1>
-
-        <p className="opacity-80 text-center mb-10 mt-6">
-          Overview of categories and low‑stock items.
-        </p>
+        <PageHeading
+          title="Inventory"
+          subtitle="Overview of categories and low-stock items."
+        />
 
         <div className="text-center mb-10">
           <button
@@ -183,7 +182,12 @@ useEffect(() => {
         ) : lowItems.length === 0 ? (
           <p className="opacity-60 mb-10 text-center">No low‑stock items.</p>
         ) : (
-          <InventoryList items={lowItems} />
+          <InventoryList
+            items={lowItems}
+            profile={profile}
+            updateItem={updateItem}
+            deleteItem={deleteItem}
+          />
         )}
 
         <p className="text-sm opacity-40 mt-12 text-center">
@@ -195,6 +199,7 @@ useEffect(() => {
   open={modalOpen}
   onClose={() => setModalOpen(false)}
   profile={profile}
+  onAddItem={addItem}
 />
     </main>
   );

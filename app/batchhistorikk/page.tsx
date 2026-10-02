@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
+import BatchSGChart from "../components/BatchSGChart";
+import PageHeading from "../components/PageHeading";
 
 function hasTypeSpecificRecipe(batch: any) {
   return Boolean(
@@ -25,6 +27,7 @@ export default function BatchHistoryPage() {
   const [batches, setBatches] = useState<any[]>([]);
   const [kars, setKars] = useState<any[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [sgReadingsError, setSgReadingsError] = useState("");
 
   // ⭐ NEW: delete confirmation modal state
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -63,6 +66,30 @@ export default function BatchHistoryPage() {
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
 
+      const batchIds = (batchesRaw ?? []).map((batch) => batch.id);
+      let readingsByBatch = new Map<string, any[]>();
+
+      if (batchIds.length > 0) {
+        const { data: readings, error: readingsError } = await supabaseBrowser
+          .from("sg_readings")
+          .select("id, batch_id, sg, created_at")
+          .in("batch_id", batchIds)
+          .order("created_at", { ascending: true });
+
+        if (readingsError) {
+          console.error("Could not load SG readings for batch timelines", readingsError);
+          setSgReadingsError("SG readings could not be loaded.");
+        } else {
+          readingsByBatch = new Map();
+          for (const reading of readings ?? []) {
+            if (!reading.batch_id) continue;
+            const batchReadings = readingsByBatch.get(reading.batch_id) ?? [];
+            batchReadings.push(reading);
+            readingsByBatch.set(reading.batch_id, batchReadings);
+          }
+        }
+      }
+
       const enriched = (batchesRaw ?? []).map((batch) => {
         const index = sortedKars.findIndex((k) => k.id === batch.aktivt_kar);
         const previousKar = sortedKars.find((k) => k.id === batch.aktivt_kar);
@@ -79,6 +106,7 @@ export default function BatchHistoryPage() {
           vesselNumber: index !== -1 ? index + 1 : null,
           previousVesselNumber: previousKarNumber,
           notesLog: batchNotes,
+          sgReadings: readingsByBatch.get(batch.id) ?? [],
         };
       });
 
@@ -118,7 +146,7 @@ export default function BatchHistoryPage() {
 
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
-      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-4xl border border-white/10 relative pt-16 sm:pt-0">
+      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-4xl border border-white/10 relative pt-16 sm:pt-16">
 
         <div className="absolute top-2 sm:top-4 right-4 z-40">
           <MenuOverlay />
@@ -128,9 +156,16 @@ export default function BatchHistoryPage() {
           <BackButton />
         </div>
 
-        <h1 className="text-4xl font-bold mb-6 text-center mt-6">
-          Batch history
-        </h1>
+        <PageHeading
+          title="Batch history"
+          subtitle="Review your batches, fermentation details, and SG readings."
+        />
+
+        {sgReadingsError && (
+          <p role="alert" className="mb-6 text-center text-sm text-amber-300">
+            {sgReadingsError}
+          </p>
+        )}
 
         {batches.length === 0 ? (
           <p className="text-center opacity-70">No batches found.</p>
@@ -222,6 +257,21 @@ export default function BatchHistoryPage() {
                       <strong>Start date:</strong>{" "}
                       {new Date(batch.startdato).toLocaleDateString("en-GB")}
                     </p>
+
+                    <section className="mt-6" aria-label="SG development chart">
+                      <h3 className="text-xl font-bold mb-3 text-green-300">
+                        SG development
+                      </h3>
+                      {batch.sgReadings.length > 0 ? (
+                        <div className="bg-black/40 p-4 rounded-lg border border-white/10">
+                          <BatchSGChart readings={batch.sgReadings} />
+                        </div>
+                      ) : (
+                        <p className="text-sm text-zinc-400">
+                          No SG readings recorded.
+                        </p>
+                      )}
+                    </section>
 
                     {(batch.type === "Beer" || batch.type === "Braggot") && (
                       <>

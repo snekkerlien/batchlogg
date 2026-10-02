@@ -1,16 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { useInventory } from "./useInventory";
 
 type AddItemFormProps = {
   onSubmitComplete?: () => void;
+  onAddItem: (formData: FormData) => Promise<void>;
   profile: any; // du kan stramme inn senere
 };
 
-export default function AddItemForm({ onSubmitComplete, profile }: AddItemFormProps) {
-  const { addItem } = useInventory();
-
+export default function AddItemForm({
+  onSubmitComplete,
+  onAddItem,
+  profile,
+}: AddItemFormProps) {
   const [form, setForm] = useState({
     name: "",
     category: "honey",
@@ -46,13 +48,10 @@ export default function AddItemForm({ onSubmitComplete, profile }: AddItemFormPr
       fd.set(key, value.toString())
     );
 
-    await addItem(fd);
+    await onAddItem(fd);
 
     onSubmitComplete?.();
   }
-
-  console.log("PROFILE IN AddItemForm:", profile);
-
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">

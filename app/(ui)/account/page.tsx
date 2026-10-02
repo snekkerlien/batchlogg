@@ -3,19 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
-import {
-  deleteAccount,
-  downloadUserData,
-  deleteAvatar,
-  saveThemeAccentColor,
-} from "./actions";
+import { deleteAvatar, saveAvatarUrl } from "./actions";
 import MenuOverlay from "../../components/MenuOverlay";
 import VisibilitySwitch from "../../components/VisibilitySwitch";
-import { saveAvatarUrl } from "./actions";
-import {
-  DEFAULT_ACCENT_COLOR,
-  isAccentColor,
-} from "@/lib/theme/accentColor";
+import ConfirmDialog from "../../components/ConfirmDialog";
+import PageHeading from "../../components/PageHeading";
 
 export default function AccountPage() {
   const router = useRouter();
@@ -24,26 +16,11 @@ export default function AccountPage() {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
 
-  const [showPasswordChangeModal, setShowPasswordChangeModal] = useState(false);
-  const [oldPassword, setOldPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deletePassword, setDeletePassword] = useState("");
-  const [deleteError, setDeleteError] = useState("");
-
-  const [showDownloadSpinner, setShowDownloadSpinner] = useState(false);
-  const [showDownloadToast, setShowDownloadToast] = useState(false);
-
   const [showAvatarModal, setShowAvatarModal] = useState(false);
+  const [confirmRemoveAvatar, setConfirmRemoveAvatar] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
   const [pendingAvatar, setPendingAvatar] = useState<string | null>(null);
-  const [themeAccentColor, setThemeAccentColor] = useState(DEFAULT_ACCENT_COLOR);
-  const [savingThemeAccentColor, setSavingThemeAccentColor] = useState(false);
-  const [themeAccentMessage, setThemeAccentMessage] = useState("");
 
 
   console.log("LOGGED IN USER ID:", user?.id);
@@ -105,32 +82,8 @@ export default function AccountPage() {
 
     // ⭐ VIKTIG: dette var feilen
     setProfile(data);
-    setThemeAccentColor(
-      isAccentColor(data.theme_accent_color)
-        ? data.theme_accent_color
-        : DEFAULT_ACCENT_COLOR
-    );
 
     setLoading(false);
-  }
-
-  async function saveAccentColor() {
-    setSavingThemeAccentColor(true);
-    setThemeAccentMessage("");
-
-    try {
-      await saveThemeAccentColor(themeAccentColor);
-      document.documentElement.style.setProperty(
-        "--user-accent",
-        themeAccentColor
-      );
-      setThemeAccentMessage("Accent color saved.");
-    } catch (error) {
-      console.error("Failed to save accent color", error);
-      setThemeAccentMessage("Could not save the accent color. Please try again.");
-    } finally {
-      setSavingThemeAccentColor(false);
-    }
   }
 
   useEffect(() => {
@@ -158,97 +111,6 @@ export default function AccountPage() {
 
     setProfile((prev: any) => ({ ...prev, is_public: newValue }));
   }
-
-
-  async function changePassword() {
-    setPasswordError("");
-
-    if (!oldPassword || !newPassword || !confirmPassword) {
-      setPasswordError("All fields must be filled out");
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setPasswordError("New password does not match confirmation");
-      return;
-    }
-
-    const { error: loginError } = await supabaseBrowser.auth.signInWithPassword({
-      email: user.email,
-      password: oldPassword,
-    });
-
-    if (loginError) {
-      setPasswordError("Old password is incorrect");
-      return;
-    }
-
-    const { error: updateError } = await supabaseBrowser.auth.updateUser({
-      password: newPassword,
-    });
-
-    if (updateError) {
-      setPasswordError("Could not change password");
-      return;
-    }
-
-    setShowPasswordChangeModal(false);
-    alert("Password changed!");
-  }
-
-  async function handleDeleteAccount() {
-    setDeleteError("");
-
-    if (!deletePassword) {
-      setDeleteError("You must enter your password");
-      return;
-    }
-
-    const { error: loginError } = await supabaseBrowser.auth.signInWithPassword({
-      email: user.email,
-      password: deletePassword,
-    });
-
-    if (loginError) {
-      setDeleteError("Incorrect password");
-      return;
-    }
-
-    await deleteAccount();
-    router.replace("/auth/login");
-  }
-
-  async function handleDownload() {
-    setShowDownloadSpinner(true);
-
-    const base64 = await downloadUserData();
-    setShowDownloadSpinner(false);
-
-    if (!base64) return;
-
-    const byteCharacters = atob(base64);
-    const byteNumbers = new Array(byteCharacters.length);
-
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteNumbers[i] = byteCharacters.charCodeAt(i);
-    }
-
-    const byteArray = new Uint8Array(byteNumbers);
-    const blob = new Blob([byteArray], { type: "application/zip" });
-
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-
-    a.href = url;
-    a.download = `${profile.username} profile data - Batchlog.zip`;
-    a.click();
-
-    URL.revokeObjectURL(url);
-
-    setShowDownloadToast(true);
-    setTimeout(() => setShowDownloadToast(false), 3000);
-  }
-
   if (loading) {
   return (
     <main className="min-h-screen flex items-center justify-center text-white">
@@ -261,7 +123,7 @@ export default function AccountPage() {
 
   return (
     <main className="min-h-screen flex flex-col items-center px-6 py-12 text-white">
-      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10 relative pt-16 sm:pt-0">
+      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10 relative pt-16 sm:pt-16">
         {/* MENU BUTTON */}
         <div className="absolute top-2 sm:top-4 right-4 z-40">
           <MenuOverlay current="account" />
@@ -290,7 +152,10 @@ export default function AccountPage() {
           </button>
         </div>
 
-        <h1 className="text-3xl font-bold mb-6 text-center mt-6">My Account</h1>
+        <PageHeading
+          title="My Account"
+          subtitle="Manage your profile and visibility."
+        />
 
         {/* PUBLIC / PRIVATE SLIDER */}
         <div className="flex items-center justify-center gap-4 mb-10">
@@ -306,94 +171,27 @@ export default function AccountPage() {
 
 
         {/* AVATAR SECTION */}
-<div className="flex flex-col items-center mb-10">
-  {/* Avatar preview */}
-  <img
-    src={profile.avatar_url || "/default-avatar.png"}
-    className="w-28 h-28 rounded-full object-cover border border-white/20"
-  />
-  {/* Change button */}
-  <button
-    onClick={() => setShowAvatarModal(true)}
-    className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm mt-6"
-  >
-    Change profile picture
-  </button>
-</div>
-
-        <section className="mb-10 border-y border-white/10 py-5">
-          <h2 className="text-base font-semibold text-center mb-1">
-            Site accent color
-          </h2>
-          <p className="text-sm text-zinc-400 text-center mb-4">
-            Customize the site highlights.
+        <div className="flex flex-col items-center mb-6">
+          <p className="text-3xl font-bold text-center mb-4">
+            {profile.username
+              ? profile.username.charAt(0).toUpperCase() + profile.username.slice(1)
+              : ""}
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <label className="flex items-center gap-2 text-sm text-zinc-300">
-              <span>Color</span>
-              <input
-                type="color"
-                value={themeAccentColor}
-                onChange={(event) => setThemeAccentColor(event.target.value)}
-                aria-label="Choose site accent color"
-                className="h-9 w-12 cursor-pointer rounded border border-white/20 bg-transparent p-1"
-              />
-            </label>
-            <button
-              type="button"
-              onClick={saveAccentColor}
-              disabled={savingThemeAccentColor}
-              className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20 disabled:cursor-wait disabled:opacity-60"
-            >
-              {savingThemeAccentColor ? "Saving…" : "Save color"}
-            </button>
-          </div>
-          {themeAccentMessage && (
-            <p role="status" className="mt-3 text-center text-sm text-zinc-300">
-              {themeAccentMessage}
-            </p>
-          )}
-        </section>
-
-        
-
-        {/* INFO */}
-        <div className="space-y-4 mb-10 text-center">
-          <div>
+          <div className="text-center mb-4">
             <p className="text-zinc-400 text-sm">Registered since</p>
             <p className="font-semibold">
               {new Date(user.created_at).toLocaleDateString("en-GB")}
             </p>
           </div>
-        </div>
-
-        {/* PASSWORD BUTTON */}
-        <div className="flex justify-center mb-6">
+          <img
+            src={profile.avatar_url || "/default-avatar.png"}
+            className="w-28 h-28 rounded-full object-cover border border-white/20"
+          />
           <button
-            onClick={() => setShowPasswordChangeModal(true)}
-            className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm"
+            onClick={() => setShowAvatarModal(true)}
+            className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm mt-6"
           >
-            Change password
-          </button>
-        </div>
-
-        {/* DOWNLOAD DATA BUTTON */}
-        <div className="flex justify-center mb-6">
-          <button
-            onClick={handleDownload}
-            className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm"
-          >
-            Download my data
-          </button>
-        </div>
-
-        {/* DELETE ACCOUNT BUTTON */}
-        <div className="flex justify-center mb-6">
-          <button
-            onClick={() => setShowDeleteModal(true)}
-            className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm"
-          >
-            Delete my account
+            Change profile picture
           </button>
         </div>
 
@@ -402,123 +200,6 @@ export default function AccountPage() {
         </p>
       </div>
 
-      {/* PASSWORD MODAL */}
-      {showPasswordChangeModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-zinc-900 p-6 rounded-xl w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">Change password</h2>
-
-            <input
-              type="password"
-              placeholder="Old password"
-              value={oldPassword}
-              onChange={(e) => setOldPassword(e.target.value)}
-              className="w-full px-3 py-2 rounded bg-zinc-800 border border-zinc-700 mb-3"
-            />
-
-            <input
-              type="password"
-              placeholder="New password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full px-3 py-2 rounded bg-zinc-800 border border-zinc-700 mb-3"
-            />
-
-            <input
-              type="password"
-              placeholder="Confirm new password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full px-3 py-2 rounded bg-zinc-800 border border-zinc-700"
-            />
-
-            {passwordError && (
-              <p className="text-red-500 mt-2">{passwordError}</p>
-            )}
-
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={() => setShowPasswordChangeModal(false)}
-                className="px-3 py-2 bg-zinc-700 rounded"
-              >
-                Cancel
-              </button>
-
-              <button
-                onClick={changePassword}
-                className="px-3 py-2 bg-green-600 rounded"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* DELETE ACCOUNT MODAL */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-zinc-900 p-6 rounded-xl w-full max-w-md border border-white/10">
-            <h2 className="text-xl font-bold mb-4 text-red-400">
-              Delete account
-            </h2>
-
-            <p className="text-sm text-zinc-300 mb-4">
-              This action is permanent. All your batches, recipes, vessels and
-              your profile will be deleted forever.
-            </p>
-
-            <p className="text-sm text-zinc-400 mb-2">
-              To confirm, enter your password:
-            </p>
-
-            <input
-              type="password"
-              value={deletePassword}
-              onChange={(e) => setDeletePassword(e.target.value)}
-              placeholder="Password"
-              className="w-full px-3 py-2 rounded bg-zinc-800 border border-zinc-700"
-            />
-
-            {deleteError && (
-              <p className="text-red-500 mt-2">{deleteError}</p>
-            )}
-
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="px-3 py-2 bg-zinc-700 rounded"
-              >
-                Cancel
-              </button>
-
-              <button
-                onClick={handleDeleteAccount}
-                className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded"
-              >
-                Delete permanently
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* DOWNLOAD SPINNER */}
-      {showDownloadSpinner && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="flex flex-col items-center">
-            <div className="w-10 h-10 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
-            <p className="mt-4 text-white opacity-80">Generating ZIP…</p>
-          </div>
-        </div>
-      )}
-
-      {/* DOWNLOAD TOAST */}
-      {showDownloadToast && (
-        <div className="fixed bottom-6 right-6 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg z-50">
-          Your data export is ready!
-        </div>
-      )}
       {/* AVATAR MODAL */}
 {showAvatarModal && (
   <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
@@ -571,12 +252,7 @@ export default function AccountPage() {
 
       {/* Remove current */}
       <button
-        onClick={async () => {
-          await deleteAvatar();
-          setProfile((prev: any) => ({ ...prev, avatar_url: null }));
-          setAvatarFile(null);
-          setShowAvatarModal(false);
-        }}
+        onClick={() => setConfirmRemoveAvatar(true)}
         className="w-1/2 px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm"
       >
         Remove current picture
@@ -591,6 +267,26 @@ export default function AccountPage() {
       Upload new picture
     </button>
   )}
+
+  <ConfirmDialog
+    open={confirmRemoveAvatar}
+    title="Remove profile picture?"
+    message="Your profile will show the default picture instead."
+    confirmLabel="Remove picture"
+    onConfirm={async () => {
+      try {
+        await deleteAvatar();
+        setProfile((prev: any) => ({ ...prev, avatar_url: null }));
+        setAvatarFile(null);
+        setShowAvatarModal(false);
+        return true;
+      } catch (error) {
+        console.error("Could not remove profile picture", error);
+        return false;
+      }
+    }}
+    onCancel={() => setConfirmRemoveAvatar(false)}
+  />
 
   {/* Save new */}
   {avatarFile && (

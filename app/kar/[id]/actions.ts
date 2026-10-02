@@ -140,6 +140,34 @@ export async function createBatch(formData: FormData) {
 
   if (!karId) throw new Error("Kar-ID mangler.");
 
+  const { data: vessel, error: vesselError } = await supabase
+    .from("kar")
+    .select("id")
+    .eq("id", karId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (vesselError) {
+    throw new Error(`Kunne ikke kontrollere karet: ${vesselError.message}`);
+  }
+  if (!vessel) {
+    throw new Error("Karet finnes ikke eller tilhører ikke denne brukeren.");
+  }
+
+  const { data: activeBatch, error: activeBatchError } = await supabase
+    .from("batches")
+    .select("id")
+    .eq("aktivt_kar", karId)
+    .in("status", ["Aktiv", "Sekundær"])
+    .maybeSingle();
+
+  if (activeBatchError) {
+    throw new Error(`Kunne ikke kontrollere karets status: ${activeBatchError.message}`);
+  }
+  if (activeBatch) {
+    throw new Error("Dette karet har allerede en aktiv batch.");
+  }
+
   // Finn neste batchnummer
   const { data: last } = await supabase
     .from("batches")

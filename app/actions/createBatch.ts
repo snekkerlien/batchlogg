@@ -45,6 +45,32 @@ export async function createBatch(formData: FormData) {
     throw new Error("Fermentation vessel ID is missing or invalid.");
   }
 
+  const { data: vessel, error: vesselError } = await supabase
+    .from("kar")
+    .select("id")
+    .eq("id", karId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (vesselError || !vessel) {
+    throw new Error("Fermentation vessel not found or not owned by this user.");
+  }
+
+  const { data: activeBatch, error: activeBatchError } = await supabase
+    .from("batches")
+    .select("id")
+    .eq("aktivt_kar", karId)
+    .in("status", ["Aktiv", "Sekundær"])
+    .maybeSingle();
+
+  if (activeBatchError) {
+    throw new Error(`Could not verify vessel availability: ${activeBatchError.message}`);
+  }
+
+  if (activeBatch) {
+    throw new Error("This fermentation vessel already contains an active batch.");
+  }
+
   // Find next batch number
   const { data: last } = await supabase
     .from("batches")

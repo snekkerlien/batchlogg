@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import BackButton from "./BackButton";
+import PageHeading from "@/app/components/PageHeading";
 import MenuOverlay from "./MenuOverlay";
 
 export default function ABVCalculatorPage() {
@@ -124,7 +125,7 @@ useEffect(() => {
 
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
-      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-4xl border border-white/10 relative pt-16 sm:pt-0">
+      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-4xl border border-white/10 relative pt-16 sm:pt-16">
 
         {/* ⭐ TOP BAR */}
         <div className="absolute top-2 sm:top-4 left-4 z-40">
@@ -135,9 +136,10 @@ useEffect(() => {
           <MenuOverlay />
         </div>
 
-        <h1 className="text-4xl font-bold mb-6 text-center mt-6">
-          ABV Tools
-        </h1>
+        <PageHeading
+          title="ABV Tools"
+          subtitle="Calculate alcohol strength and plan your brew."
+        />
 
         {/* ⭐ ABV CALCULATOR — MATCHER DE ANDRE SEKSJONENE */}
         <div className="p-6 bg-white/5 border border-white/10 rounded-xl">

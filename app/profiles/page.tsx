@@ -3,10 +3,10 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 import { supabaseServer } from "../../lib/supabase/supabaseServerFinal";
-import Link from "next/link";
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import ProfilesList from "./ProfilesList"; // ← NY
+import PageHeading from "@/app/components/PageHeading";
 
 export default async function ProfilesPage() {
   const { supabase } = await supabaseServer();
@@ -49,27 +49,23 @@ export default async function ProfilesPage() {
 
   return (
     <main className="min-h-screen flex flex-col items-center px-6 py-12 text-white">
-      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10 relative pt-16 sm:pt-0">
+      <div className="relative w-full max-w-3xl rounded-xl border border-white/10 bg-black/60 p-6 pt-16 backdrop-blur-md sm:p-8 sm:pt-16">
 
         {/* MENU BUTTON */}
-        <div className="absolute top-2 sm:top-4 right-4 z-40">
+        <div className="absolute right-4 top-4 z-40">
           <MenuOverlay />
         </div>
 
         {/* BACK BUTTON */}
-        <div className="absolute top-2 sm:top-4 left-4 z-40">
+        <div className="absolute left-4 top-4 z-40">
           <BackButton />
         </div>
 
-        <h1 className="text-4xl font-bold text-center mt-20 sm:mt-6 mt-6">
-          Community
-        </h1>
+        <PageHeading
+          title="Community members"
+          subtitle="Explore the community and follow other brewers’ journeys."
+        />
 
-        <p className="opacity-80 text-center mb-10 mt-6">
-          Explore the community and follow other brewers’ journeys.
-        </p>
-
-        {/* ← NY: søk + liste */}
         <ProfilesList profiles={otherProfiles} favorites={favorites} />
 
         <p className="text-sm opacity-40 mt-12 text-center">

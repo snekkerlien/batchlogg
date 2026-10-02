@@ -75,41 +75,43 @@ export async function saveAvatarUrl(newUrl: string) {
    DOWNLOAD ALL USER DATA (ZIP-format, base64 return)
    ============================================================ */
 export async function downloadUserData() {
-  console.log("=== downloadUserData START ===");
-
-  const { supabase, serviceRole } = await supabaseServer();
+  const { supabase, serviceRole } = supabaseServer();
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    console.log("[downloadUserData] Ingen bruker funnet");
-    return null;
+    throw new Error("Authentication required to export account data");
   }
 
   const userId = user.id;
 
-  const { data: profile } = await serviceRole
+  const { data: profile, error: profileError } = await serviceRole
     .from("profiles")
     .select("*")
     .eq("id", userId)
     .single();
 
-  const { data: batches } = await serviceRole
+  if (profileError) throw new Error(`Could not export profile: ${profileError.message}`);
+
+  const { data: batches, error: batchesError } = await serviceRole
     .from("batches")
     .select("*")
     .eq("user_id", userId);
+  if (batchesError) throw new Error(`Could not export batches: ${batchesError.message}`);
 
-  const { data: kar } = await serviceRole
+  const { data: kar, error: karError } = await serviceRole
     .from("kar")
     .select("*")
     .eq("user_id", userId);
+  if (karError) throw new Error(`Could not export vessels: ${karError.message}`);
 
-  const { data: recipes } = await serviceRole
+  const { data: recipes, error: recipesError } = await serviceRole
     .from("recipes")
     .select("*")
     .eq("user_id", userId);
+  if (recipesError) throw new Error(`Could not export recipes: ${recipesError.message}`);
 
   const zip = new JSZip();
 
@@ -133,8 +135,6 @@ export async function downloadUserData() {
   zip.file("recipes.json", JSON.stringify(recipes ?? [], null, 2));
 
   const zipBase64 = await zip.generateAsync({ type: "base64" });
-
-  console.log("=== downloadUserData END ===");
 
   return zipBase64;
 }

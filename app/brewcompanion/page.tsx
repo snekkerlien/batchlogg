@@ -4,6 +4,7 @@ import { useState } from "react";
 import BrewCompanionModal from "../components/BrewCompanionModal";
 import UniversalMenuOverlay from "@/app/components/MenuOverlay";
 import BackButton from "./BackButton";
+import PageHeading from "@/app/components/PageHeading";
 
 export default function RecipeBuilder() {
   const [recipeId, setRecipeId] = useState<string | null>(null);
@@ -107,12 +108,10 @@ export default function RecipeBuilder() {
           <UniversalMenuOverlay current="companion" />
         </div>
 
-        <h1 className="text-4xl font-bold mb-6 text-center">
-          BrewCompanion (Work in progress)
-        </h1>
-        <p className="opacity-80 text-center mb-10">
-          AI BrewCompanion. Press "Generate Recipe" to start.
-        </p>
+        <PageHeading
+          title="BrewCompanion (Work in progress)"
+          subtitle={'AI BrewCompanion. Press "Generate Recipe" to start.'}
+        />
 
         <div className="flex flex-col gap-6">
 

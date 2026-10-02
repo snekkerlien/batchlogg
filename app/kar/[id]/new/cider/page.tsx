@@ -4,9 +4,18 @@ import { useState } from "react";
 import * as Actions from "../../actions";
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
+import { useRecipePrefill } from "../../../../../lib/recipes/useRecipePrefill";
 
-export default function NewCiderPage({ params }: { params: { id: string } }) {
+export default function NewCiderPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams?: { recipe?: string };
+}) {
   const [loading, setLoading] = useState(false);
+  const { recipe, loading: recipeLoading, error: recipeError } =
+    useRecipePrefill(searchParams?.recipe, "Cider");
 
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
@@ -28,7 +37,9 @@ export default function NewCiderPage({ params }: { params: { id: string } }) {
           Fill out the details below to start a new cider batch.
         </p>
 
+        {recipeError && <p role="alert" className="text-red-300 mb-4">{recipeError}</p>}
         <form
+          key={recipe?.id ?? "new-batch"}
           action={Actions.createBatch}
           className="flex flex-col gap-6"
           onSubmit={() => setLoading(true)}
@@ -42,6 +53,7 @@ export default function NewCiderPage({ params }: { params: { id: string } }) {
             <label className="block mb-1 font-semibold">Batch name</label>
             <input
               name="name"
+              defaultValue={recipe?.name ?? ""}
               placeholder="Example: Hard Apple Cider"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
@@ -53,6 +65,7 @@ export default function NewCiderPage({ params }: { params: { id: string } }) {
             <label className="block mb-1 font-semibold">Volume (L)</label>
             <input
               name="volume_l"
+              defaultValue={recipe?.volume ?? ""}
               type="number"
               step="0.1"
               placeholder="Example: 10"
@@ -78,6 +91,7 @@ export default function NewCiderPage({ params }: { params: { id: string } }) {
             <label className="block mb-1 font-semibold">Original Gravity (OG)</label>
             <input
               name="og"
+              defaultValue={recipe?.og ?? ""}
               type="number"
               step="0.001"
               placeholder="Example: 1.050"
@@ -91,6 +105,7 @@ export default function NewCiderPage({ params }: { params: { id: string } }) {
             <label className="block mb-1 font-semibold">Juice type</label>
             <input
               name="juice_type"
+              defaultValue={recipe?.juice_type ?? ""}
               placeholder="Example: 100% apple juice, no preservatives"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
@@ -101,6 +116,7 @@ export default function NewCiderPage({ params }: { params: { id: string } }) {
             <label className="block mb-1 font-semibold">Yeast strain</label>
             <input
               name="yeast"
+              defaultValue={recipe?.yeast ?? ""}
               placeholder="Example: EC-1118"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
@@ -111,6 +127,7 @@ export default function NewCiderPage({ params }: { params: { id: string } }) {
             <label className="block mb-1 font-semibold">Additives</label>
             <textarea
               name="additives"
+              defaultValue={recipe?.additives ?? ""}
               placeholder="Optional: pectic enzyme, tannin, acid blend, yeast nutrient..."
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
             />
@@ -121,6 +138,7 @@ export default function NewCiderPage({ params }: { params: { id: string } }) {
             <label className="block mb-1 font-semibold">Full process</label>
             <textarea
               name="full_process"
+              defaultValue={recipe?.full_process ?? ""}
               placeholder="Describe the fermentation process, rehydration, temperature, etc."
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-40"
             />
@@ -131,6 +149,7 @@ export default function NewCiderPage({ params }: { params: { id: string } }) {
             <label className="block mb-1 font-semibold">Notes</label>
             <textarea
               name="notes"
+              defaultValue={recipe?.notes ?? ""}
               placeholder="Any additional notes about the batch..."
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
             />
@@ -138,7 +157,7 @@ export default function NewCiderPage({ params }: { params: { id: string } }) {
 
           {/* Submit */}
           <button
-            disabled={loading}
+            disabled={loading || recipeLoading}
             className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold"
           >
             {loading ? "Creating..." : "Create batch"}

@@ -1,8 +1,46 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
+import { supabaseServer } from "../../../../lib/supabase/supabaseServerFinal";
 
 export const runtime = "nodejs";
+
+export async function GET(
+  _req: Request,
+  { params }: { params: { id: string } }
+) {
+  const { supabase } = supabaseServer();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return NextResponse.json({ error: "Ikke innlogget" }, { status: 401 });
+  }
+
+  const { data: recipe, error } = await supabase
+    .from("recipes")
+    .select(
+      "id, type, name, volume, og, honey_type, honey_amount, fruits, juice_type, sugar_amount, malts, hops, dry_hops, boil_time, boil_volume, yeast, additives, full_process, notes, ingredients, steps"
+    )
+    .eq("id", params.id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (error) {
+    return NextResponse.json(
+      { error: "Kunne ikke hente oppskriften" },
+      { status: 500 }
+    );
+  }
+
+  if (!recipe) {
+    return NextResponse.json({ error: "Oppskrift ikke funnet" }, { status: 404 });
+  }
+
+  return NextResponse.json({ recipe });
+}
 
 /* -----------------------------
    DELETE – slett oppskrift

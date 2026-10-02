@@ -1,17 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import * as Actions from "../../actions";
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
+import { useRecipePrefill } from "../../../../../lib/recipes/useRecipePrefill";
 
-export default function NewMeadPage({ params }: { params: { id: string } }) {
+export default function NewMeadPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams?: { recipe?: string };
+}) {
   const [loading, setLoading] = useState(false);
+  const { recipe, loading: recipeLoading, error: recipeError } =
+    useRecipePrefill(searchParams?.recipe, "Mead");
 
   // Dynamic fruit list
   const [fruits, setFruits] = useState<
     { name: string; amount: string; unit: string }[]
   >([]);
+
+  useEffect(() => {
+    if (recipe) setFruits(Array.isArray(recipe.fruits) ? recipe.fruits : []);
+  }, [recipe]);
 
   function addFruit() {
     setFruits([...fruits, { name: "", amount: "", unit: "" }]);
@@ -43,7 +56,9 @@ export default function NewMeadPage({ params }: { params: { id: string } }) {
           Fill out the details below to start a new mead batch.
         </p>
 
+        {recipeError && <p role="alert" className="text-red-300 mb-4">{recipeError}</p>}
         <form
+          key={recipe?.id ?? "new-batch"}
           action={Actions.createBatch}
           className="flex flex-col gap-6"
           onSubmit={() => setLoading(true)}
@@ -57,6 +72,7 @@ export default function NewMeadPage({ params }: { params: { id: string } }) {
             <label className="block mb-1 font-semibold">Batch name</label>
             <input
               name="name"
+              defaultValue={recipe?.name ?? ""}
               placeholder="Example: Mango Melomel"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
@@ -68,6 +84,7 @@ export default function NewMeadPage({ params }: { params: { id: string } }) {
             <label className="block mb-1 font-semibold">Volume (L)</label>
             <input
               name="volume_l"
+              defaultValue={recipe?.volume ?? ""}
               type="number"
               step="0.1"
               placeholder="Example: 10"
@@ -93,6 +110,7 @@ export default function NewMeadPage({ params }: { params: { id: string } }) {
             <label className="block mb-1 font-semibold">Original Gravity (OG)</label>
             <input
               name="og"
+              defaultValue={recipe?.og ?? ""}
               type="number"
               step="0.001"
               placeholder="Example: 1.110"
@@ -106,6 +124,7 @@ export default function NewMeadPage({ params }: { params: { id: string } }) {
             <label className="block mb-1 font-semibold">Honey type</label>
             <input
               name="honey_type"
+              defaultValue={recipe?.honey_type ?? ""}
               placeholder="Example: Wildflower honey"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
@@ -115,6 +134,7 @@ export default function NewMeadPage({ params }: { params: { id: string } }) {
             <label className="block mb-1 font-semibold">Honey amount (kg)</label>
             <input
               name="honey_amount"
+              defaultValue={recipe?.honey_amount ?? ""}
               type="number"
               step="0.1"
               placeholder="Example: 3.5"
@@ -192,6 +212,7 @@ export default function NewMeadPage({ params }: { params: { id: string } }) {
             <label className="block mb-1 font-semibold">Yeast strain</label>
             <input
               name="yeast"
+              defaultValue={recipe?.yeast ?? ""}
               placeholder="Example: Lalvin 71B"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
@@ -202,6 +223,7 @@ export default function NewMeadPage({ params }: { params: { id: string } }) {
             <label className="block mb-1 font-semibold">Additives</label>
             <textarea
               name="additives"
+              defaultValue={recipe?.additives ?? ""}
               placeholder="Water to 10L, 3g Fermaid O, 1g DAP, 1g K2CO3..."
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
             />
@@ -212,6 +234,7 @@ export default function NewMeadPage({ params }: { params: { id: string } }) {
             <label className="block mb-1 font-semibold">Full process</label>
             <textarea
               name="full_process"
+              defaultValue={recipe?.full_process ?? ""}
               placeholder="Rehydration, pitching, degassing schedule, fermentation notes..."
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-40"
             />
@@ -222,6 +245,7 @@ export default function NewMeadPage({ params }: { params: { id: string } }) {
             <label className="block mb-1 font-semibold">Notes</label>
             <textarea
               name="notes"
+              defaultValue={recipe?.notes ?? ""}
               placeholder="Any additional notes about the batch..."
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
             />
@@ -229,7 +253,7 @@ export default function NewMeadPage({ params }: { params: { id: string } }) {
 
           {/* Submit */}
           <button
-            disabled={loading}
+            disabled={loading || recipeLoading}
             className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold"
           >
             {loading ? "Creating..." : "Create batch"}

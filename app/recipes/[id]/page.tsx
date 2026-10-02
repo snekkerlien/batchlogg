@@ -5,6 +5,7 @@ import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
 import MenuOverlay from "../MenuOverlay";
 import BackButton from "../BackButton";
 import { useRouter } from "next/navigation";
+import PageHeading from "@/app/components/PageHeading";
 
 export default function RecipeNotesPage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(true);
@@ -64,14 +65,10 @@ export default function RecipeNotesPage({ params }: { params: { id: string } }) 
           <MenuOverlay />
         </div>
 
-        {/* Header */}
-        <h1 className="text-4xl font-bold mb-6 text-center text-green-300">
-          {recipe.name.charAt(0).toUpperCase() + recipe.name.slice(1)}
-        </h1>
-
-        <p className="opacity-80 text-center mb-10">
-          Full recipe details and brewer's notes.
-        </p>
+        <PageHeading
+          title={recipe.name.charAt(0).toUpperCase() + recipe.name.slice(1)}
+          subtitle="Full recipe details and brewer's notes."
+        />
 
         {/* BASE VALUES OUTSIDE CARD */}
         <div className="space-y-2 mb-10 text-lg">
