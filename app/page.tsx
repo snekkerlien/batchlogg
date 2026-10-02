@@ -77,10 +77,10 @@ export default function Home() {
       </div>
 
       {/* HERO */}
-      <div className="text-center space-y-6 bg-black/40 backdrop-blur-md p-10 rounded-xl border border-white/10 max-w-2xl relative z-10">
-        <h1 className="text-5xl font-bold">Batchlog</h1>
-        <p className="text-lg opacity-80">
-          Brew smarter. Log better. Keep track of vessels, batches, and recipes.
+      <div className="text-center space-y-6 bg-black/40 backdrop-blur-md p-10 rounded-xl border border-white/10 max-w-3xl relative z-10">
+        <h1 className="text-5xl font-bold">Batchlogg</h1>
+        <p className="text-lg opacity-80 max-w-2xl mx-auto">
+          The complete brewing workspace for tracking batches, refining recipes, managing inventory, and connecting with the brewers around you.
         </p>
 
         {/* AUTH BUTTONS */}
@@ -126,48 +126,45 @@ export default function Home() {
       </div>
 
       {/* INFO SECTIONS */}
-      <div className="mt-20 max-w-3xl space-y-16 relative z-10">
+      <div className="mt-20 max-w-4xl space-y-16 relative z-10">
 
         {/* What is Batchlogg */}
         <section className="bg-black/30 backdrop-blur-md p-8 rounded-xl border border-white/10">
-          <h2 className="text-3xl font-bold mb-4 text-center">What is Batchlog?</h2>
-          <p className="text-lg opacity-90 mb-4 text-center">
-            Batchlog is a brewing companion built to give you structure and control over your brewing workflow.
-            It keeps track of every vessel and every batch — including primary fermentation, secondary fermentation, gravity readings, notes, and recipe details.
-            Whether you're experimenting with new ideas or repeating a proven favorite, Batchlog helps you stay organized and consistent throughout the brewing process.
+          <h2 className="text-3xl font-bold mb-4 text-center">What is Batchlogg?</h2>
+          <p className="text-lg opacity-90 mb-6 text-center max-w-3xl mx-auto">
+            Batchlogg is the all-in-one brewing companion for the modern brewer. It lets you manage vessels, log every batch, save and refine recipes, track ingredients and equipment, calculate ABV, and keep a searchable history of everything you brew.
           </p>
           <ul className="space-y-3 text-lg opacity-90 text-center mt-10">
-            <li>• A clear overview of all your brewing vessels</li>
-            <li>• Tracking of active, secondary, and finished batches</li>
-            <li>• Detailed logging of OG, FG, dates, notes, and images</li>
-            <li>• A recipe system for saving and refining your creations</li>
-            <li>• A community section for exploring public recipes and batches</li>
+            <li>• Track active, secondary, and finished batches from brew day to bottle</li>
+            <li>• Log gravity, dates, notes, photos, and brewer insights for every fermentation</li>
+            <li>• Save and revisit recipes, ingredients, and batch details across styles and seasons</li>
+            <li>• Manage your inventory and keep tabs on what you have in stock</li>
+            <li>• Use ABV tools to estimate strength and plan your next brew</li>
+            <li>• Visit the community forum to swap tips, ask questions, and share brewing ideas</li>
           </ul>
         </section>
 
         {/* Why use Batchlogg */}
         <section className="bg-black/30 backdrop-blur-md p-8 rounded-xl border border-white/10">
-          <h2 className="text-3xl font-bold mb-4 text-center">Why use Batchlog?</h2>
-          <p className="text-lg opacity-90 mb-4 text-center">
-            Batchlog removes the chaos from brewing.
-            No more scattered notes, forgotten measurements, or missing photos — everything is stored in one structured, easy‑to‑use system.
-            It helps you improve consistency, learn from past batches, and build a brewing history you can rely on.
+          <h2 className="text-3xl font-bold mb-4 text-center">Everything in one brewing workspace</h2>
+          <p className="text-lg opacity-90 mb-6 text-center max-w-3xl mx-auto">
+            From the dashboard to the batch history, Batchlogg gives you a clear view of the full brewing process. Build a repeatable workflow, spot patterns in your results, and keep all your brewing data in one place instead of scattered across notes, spreadsheets, and messages.
           </p>
           <ul className="space-y-3 text-lg opacity-90 text-center mt-10">
-            <li>• Full control over your brewing process</li>
-            <li>• All your data collected in one place — clean and searchable</li>
-            <li>• Better repeatability and fewer mistakes</li>
-            <li>• Ideal for homebrewers and small craft setups alike</li>
-            <li>• Public/private control for sharing or keeping your batches personal</li>
+            <li>• Dashboard overview for your brewing vessels and current batches</li>
+            <li>• Batch history that keeps your process searchable and easy to revisit</li>
+            <li>• A personal recipe library for building and improving your best brews</li>
+            <li>• Community forums, member profiles, friends, and direct messages</li>
+            <li>• A social brewing space where you can connect, follow brewers, and discuss ideas</li>
+            <li>• Flexible privacy settings so you can share what you want and keep the rest personal</li>
           </ul>
         </section>
 
         {/* For brewers, by brewers */}
         <section className="bg-black/30 backdrop-blur-md p-8 rounded-xl border border-white/10 text-center">
           <h2 className="text-3xl font-bold mb-4">For brewers, by brewers</h2>
-          <p className="text-lg opacity-90 text-center">
-            Batchlog is built for brewers who want structure, clarity, and simplicity.
-            Whether you brew in your garage, your kitchen, or a small craft setup — this is your brewing companion.
+          <p className="text-lg opacity-90 text-center max-w-3xl mx-auto">
+            Batchlogg is built for brewers who want more than a basic logbook. Whether you brew at home, in a garage, or in a small setup, the platform helps you stay organized, learn from each batch, and share your work with the wider brewing community through the forum, member profiles, messages, and friends.
           </p>
         </section>
 

@@ -54,6 +54,7 @@ export default async function UserAdminPage({
 
     const email = formData.get("email")?.toString();
     const username = formData.get("username")?.toString();
+    const canManageKegs = formData.get("can_manage_kegs") === "on";
 
     if (!email || !username) {
       throw new Error("Email and username are required");
@@ -71,7 +72,7 @@ export default async function UserAdminPage({
 
     const { error: profileUpdateError } = await actionServiceRole
       .from("profiles")
-      .update({ email, username })
+      .update({ email, username, can_manage_kegs: canManageKegs })
       .eq("id", userId);
 
     if (profileUpdateError) {
@@ -111,6 +112,16 @@ export default async function UserAdminPage({
             defaultValue={profile?.username ?? ""}
             className="w-full p-3 bg-black/40 border border-white/20 rounded-lg"
           />
+        </label>
+
+        <label className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            name="can_manage_kegs"
+            defaultChecked={profile?.can_manage_kegs === true}
+            className="h-4 w-4 accent-green-600"
+          />
+          <span className="text-sm text-gray-300">Can manage kegs</span>
         </label>
 
         <button

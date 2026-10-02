@@ -16,11 +16,12 @@ export default function Background({ children }: { children: React.ReactNode }) 
         }}
       />
 
-      {/* Perfekt fade som skalerer riktig ved zoom */}
       <div
-        className="fixed inset-0 -z-0 pointer-events-none"
+        className="fixed inset-x-0 top-0 -z-0 pointer-events-none"
         style={{
-          background: "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 100%)",
+          height: "min(100vh, 38.86vw)",
+          background:
+            "linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.12) 62%, rgba(0,0,0,0.35) 75%, rgba(0,0,0,0.72) 88%, #000 100%)",
         }}
       />
 

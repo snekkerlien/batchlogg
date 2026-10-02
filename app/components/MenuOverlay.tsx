@@ -8,10 +8,51 @@ import NotificationBell from "@/app/components/NotificationBell";
 
 export default function MenuOverlay({ current }: { current: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [canManageKegs, setCanManageKegs] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
   useEffect(() => {
+    let active = true;
+
+    async function loadKegPermission() {
+      try {
+        const {
+          data: { session },
+        } = await supabaseBrowser.auth.getSession();
+
+        if (!session) {
+          if (active) {
+            setCanManageKegs(false);
+            setIsAdmin(false);
+          }
+          return;
+        }
+
+        if (active) {
+          setIsAdmin(
+            session.user.email?.toLowerCase() === "mads@snekkerlien.no"
+          );
+        }
+
+        const response = await fetch("/api/profile", {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          cache: "no-store",
+        });
+        if (!response.ok) {
+          throw new Error(`Could not load keg permission (${response.status})`);
+        }
+
+        const profile = await response.json();
+        if (active) setCanManageKegs(profile.can_manage_kegs === true);
+      } catch (error) {
+        console.error("Could not load keg management permission", error);
+      }
+    }
+
+    loadKegPermission();
+
     function handleClickOutside(e: MouseEvent) {
       if (
         menuRef.current &&
@@ -21,7 +62,10 @@ export default function MenuOverlay({ current }: { current: string }) {
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    return () => {
+      active = false;
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
 
   async function logout() {
@@ -31,19 +75,25 @@ export default function MenuOverlay({ current }: { current: string }) {
   }
 
   
+  const brewingItems: { href: string; label: string; key: string }[] = [
+    { href: "/dashboard", label: "Dashboard", key: "dashboard" },
+    { href: "/batchhistorikk", label: "Batch history", key: "batchhistorikk" },
+    { href: "/recipes", label: "My recipes", key: "recipes" },
+    { href: "/inventory", label: "Inventory", key: "inventory" },
+    { href: "/abvtools", label: "ABV Tools", key: "abvtools" },
+  ];
+
+  if (canManageKegs) {
+    brewingItems.push({ href: "/kegs", label: "Kegs", key: "kegs" });
+  }
+
   const groups: {
     label: string;
     items: { href: string; label: string; key: string }[];
   }[] = [
     {
       label: "Brewing",
-      items: [
-        { href: "/dashboard", label: "Dashboard", key: "dashboard" },
-        { href: "/batchhistorikk", label: "Batch history", key: "batchhistorikk" },
-        { href: "/recipes", label: "My recipes", key: "recipes" },
-        { href: "/inventory", label: "Inventory", key: "inventory" },
-        { href: "/abvtools", label: "ABV Tools", key: "abvtools" },
-      ],
+      items: brewingItems,
     },
     {
       label: "Community",
@@ -54,6 +104,14 @@ export default function MenuOverlay({ current }: { current: string }) {
         { href: "/community/forum", label: "Forum", key: "forum" },
       ],
     },
+    ...(isAdmin
+      ? [
+          {
+            label: "Admin",
+            items: [{ href: "/admin", label: "Admin panel", key: "admin" }],
+          },
+        ]
+      : []),
     {
       label: "Account",
       items: [

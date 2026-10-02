@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
 
   const { data: profile, error: profileError } = await serviceRole
     .from("profiles")
-    .select("username, is_public, avatar_url, snus_is_true, theme_accent_color")
+    .select("username, is_public, avatar_url, snus_is_true, can_manage_kegs, theme_accent_color")
     .eq("id", user.id)
     .single();
 
@@ -71,6 +71,7 @@ export async function GET(request: NextRequest) {
     is_public: profile.is_public,
     avatar_url: profile.avatar_url,
     snus_is_true: profile.snus_is_true,
+    can_manage_kegs: profile.can_manage_kegs === true,
     theme_accent_color: profile.theme_accent_color,
   });
 }

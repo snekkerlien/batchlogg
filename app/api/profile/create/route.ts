@@ -13,6 +13,7 @@ export async function POST(req: Request) {
     email,          // ⭐ MÅ MED
     avatar_url: null,
     is_public: true,
+    can_manage_kegs: false,
   });
 
   return NextResponse.json({ ok: true });
