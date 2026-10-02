@@ -41,17 +41,36 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const { data: profile } = await supabase
+  const serviceRole = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    }
+  );
+
+  const { data: profile, error: profileError } = await serviceRole
     .from("profiles")
     .select("username, is_public, avatar_url, snus_is_true, theme_accent_color")
     .eq("id", user.id)
     .single();
 
+  if (profileError) {
+    console.error("Could not load authenticated user's profile", profileError);
+    return NextResponse.json(
+      { error: "Could not load profile" },
+      { status: profileError.code === "PGRST116" ? 404 : 500 }
+    );
+  }
+
   return NextResponse.json({
-    username: profile?.username ?? null,
-    is_public: profile?.is_public ?? false,
-    avatar_url: profile?.avatar_url ?? null,
-    snus_is_true: profile?.snus_is_true ?? false,
-    theme_accent_color: profile?.theme_accent_color ?? null,
+    username: profile.username,
+    is_public: profile.is_public,
+    avatar_url: profile.avatar_url,
+    snus_is_true: profile.snus_is_true,
+    theme_accent_color: profile.theme_accent_color,
   });
 }

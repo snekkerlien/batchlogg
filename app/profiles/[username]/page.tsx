@@ -12,6 +12,7 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
 
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<any>(null);
+  const [canViewContent, setCanViewContent] = useState(false);
   const [kar, setKar] = useState<any[]>([]);
   const [recipes, setRecipes] = useState<any[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -24,21 +25,29 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
 
       if (!session) return;
 
-      const { data: profileData } = await supabaseBrowser
-        .from("profiles")
-        .select("*")
-        .eq("username", params.username)
-        .single();
-
-      if (!profileData) {
+      const response = await fetch(
+        `/api/community/profile?username=${encodeURIComponent(params.username)}`,
+        { cache: "no-store", credentials: "include" }
+      );
+      const profileResult = await response.json();
+      if (!response.ok || !profileResult.profile) {
         setLoading(false);
         return;
       }
 
+      const profileData = profileResult.profile;
       setProfile(profileData);
+      setCanViewContent(profileResult.canViewContent);
 
       const userId = profileData.id;
       const isOwner = session?.user?.id === userId;
+
+      if (!profileResult.canViewContent) {
+        setKar([]);
+        setRecipes([]);
+        setLoading(false);
+        return;
+      }
 
       const { data: karRaw } = await supabaseBrowser
         .from("kar")
@@ -168,10 +177,16 @@ const secondary = batchesRaw
 
 <PageHeading
   title={profile.username.charAt(0).toUpperCase() + profile.username.slice(1)}
-  subtitle="Overview of this user's vessels, active batches, and public recipes."
+  subtitle={
+    canViewContent
+      ? "Overview of this user's vessels, active batches, and public recipes."
+      : "This is a private profile. You can see their name and profile picture because you’re friends."
+  }
 />
 
-        {/* VESSELS */}
+{canViewContent ? (
+  <>
+{/* VESSELS */}
         <h2 className="text-2xl font-semibold mb-4 text-center">Vessels</h2>
 
         <div className="flex flex-wrap justify-center gap-6 mb-12">
@@ -299,7 +314,6 @@ const secondary = batchesRaw
                         Open note log →
                       </Link>
                     </div>
-
                   </div>
                 </div>
               </div>
@@ -308,6 +322,12 @@ const secondary = batchesRaw
             <p className="opacity-60 text-center">No public recipes.</p>
           )}
         </div>
+  </>
+) : (
+  <p className="my-10 text-center text-sm text-white/60">
+    Their vessels and recipes are private.
+  </p>
+)}
 
         <p className="text-sm opacity-40 mt-12 text-center">
           © {new Date().getFullYear()} Batchlog
