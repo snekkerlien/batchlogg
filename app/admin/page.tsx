@@ -34,6 +34,12 @@ export default async function AdminPage() {
         >
           Manage Users
         </a>
+        <a
+          href="/admin/community-reports"
+          className="block text-blue-400 underline text-lg"
+        >
+          Community Reports
+        </a>
       </div>
     </main>
   );

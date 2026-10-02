@@ -26,7 +26,12 @@ export default function SettingsPage() {
   const [themeAccentColor, setThemeAccentColor] = useState(DEFAULT_ACCENT_COLOR);
   const [savingThemeAccentColor, setSavingThemeAccentColor] = useState(false);
   const [themeAccentMessage, setThemeAccentMessage] = useState("");
+  const [showEmailChange, setShowEmailChange] = useState(false);
   const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [savingEmail, setSavingEmail] = useState(false);
+  const [emailError, setEmailError] = useState("");
+  const [emailMessage, setEmailMessage] = useState("");
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -55,6 +60,7 @@ export default function SettingsPage() {
         return;
       }
       setUser(session.user);
+      setNewEmail(session.user.email || "");
 
       const response = await fetch("/api/profile", {
         headers: { Authorization: `Bearer ${session.access_token}` },
@@ -100,6 +106,43 @@ export default function SettingsPage() {
       setThemeAccentMessage("Could not save the accent color. Please try again.");
     } finally {
       setSavingThemeAccentColor(false);
+    }
+  }
+
+  async function changeEmail(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setEmailError("");
+    setEmailMessage("");
+
+    const requestedEmail = newEmail.trim();
+    if (!requestedEmail) {
+      setEmailError("Enter an email address.");
+      return;
+    }
+    if (requestedEmail.toLowerCase() === user?.email?.toLowerCase()) {
+      setEmailError("Enter an email address different from your current one.");
+      return;
+    }
+
+    setSavingEmail(true);
+    try {
+      const { error } = await supabaseBrowser.auth.updateUser({
+        email: requestedEmail,
+      });
+      if (error) throw error;
+      setShowEmailChange(false);
+      setEmailMessage(
+        "Confirmation instructions have been sent. Your email changes after you confirm."
+      );
+    } catch (error) {
+      console.error("Failed to request email change", error);
+      setEmailError(
+        error instanceof Error
+          ? error.message
+          : "Could not update your email address. Please try again."
+      );
+    } finally {
+      setSavingEmail(false);
     }
   }
 
@@ -294,10 +337,75 @@ export default function SettingsPage() {
           )}
         </section>
 
-        <section className="mb-8 border-b border-white/10 pb-6">
+        <section className="mb-8 border-b border-white/10 pb-10">
           <h2 className="text-lg font-semibold text-center mb-4">
             Security
           </h2>
+          {!showEmailChange ? (
+            <div className="mx-auto mb-6 max-w-md text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setNewEmail(user?.email || "");
+                  setEmailError("");
+                  setEmailMessage("");
+                  setShowEmailChange(true);
+                }}
+                className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/20"
+              >
+                Change email address
+              </button>
+              {emailMessage && (
+                <p role="status" className="mt-3 text-sm text-green-300">
+                  {emailMessage}
+                </p>
+              )}
+            </div>
+          ) : (
+            <form
+              onSubmit={changeEmail}
+              className="mx-auto mb-6 max-w-md space-y-3"
+            >
+              <label className="block text-sm text-zinc-300" htmlFor="settings-email">
+                New email address
+              </label>
+              <input
+                id="settings-email"
+                type="email"
+                autoComplete="email"
+                required
+                value={newEmail}
+                onChange={(event) => setNewEmail(event.target.value)}
+                className="w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-2"
+              />
+              {emailError && (
+                <p role="alert" className="text-sm text-red-400">
+                  {emailError}
+                </p>
+              )}
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewEmail(user?.email || "");
+                    setEmailError("");
+                    setShowEmailChange(false);
+                  }}
+                  disabled={savingEmail}
+                  className="rounded border border-white/20 bg-white/10 px-3 py-2 hover:bg-white/20 disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEmail}
+                  className="rounded border border-white/20 bg-white/10 px-3 py-2 font-semibold hover:bg-white/20 disabled:cursor-wait disabled:opacity-60"
+                >
+                  {savingEmail ? "Sending confirmation…" : "Save email"}
+                </button>
+              </div>
+            </form>
+          )}
           {!showPasswordChange ? (
             <div className="text-center">
               <button
@@ -401,9 +509,6 @@ export default function SettingsPage() {
               </p>
             )}
             <div className="mt-3 border-t border-white/10 pt-5 text-center">
-              <p className="text-sm text-zinc-400 mb-3">
-                Permanently remove your account and all associated data.
-              </p>
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirmation(true)}
@@ -411,6 +516,9 @@ export default function SettingsPage() {
               >
                 Delete my account
               </button>
+              <p className="mt-3 text-sm text-zinc-400">
+                Permanently remove your account and all associated data.
+              </p>
             </div>
           </div>
         </section>

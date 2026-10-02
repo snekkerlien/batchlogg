@@ -29,7 +29,22 @@ interface BatchReminderNotification {
   batch_name: string;
 }
 
-type Notification = ForumReplyNotification | BatchReminderNotification;
+interface SocialNotification {
+  kind: "social";
+  id: string;
+  actor_id: string;
+  type: "friend_request" | "message";
+  message_id: string | null;
+  created_at: string;
+  read_at: string | null;
+  actor_name: string;
+  body: string;
+}
+
+type Notification =
+  | ForumReplyNotification
+  | BatchReminderNotification
+  | SocialNotification;
 
 export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
   const [open, setOpen] = useState(false);
@@ -57,7 +72,7 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
       return;
     }
 
-    const [forumResponse, batchResponse] = await Promise.all([
+    const [forumResponse, batchResponse, socialResponse] = await Promise.all([
       fetch("/api/community/notifications", {
         cache: "no-store",
         credentials: "include",
@@ -66,18 +81,27 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
         cache: "no-store",
         credentials: "include",
       }),
+      fetch("/api/community/social-notifications", {
+        cache: "no-store",
+        credentials: "include",
+      }),
     ]);
 
-    if (!forumResponse.ok || !batchResponse.ok) {
+    if (!forumResponse.ok || !batchResponse.ok || !socialResponse.ok) {
       throw new Error(
-        `Notification request failed (${forumResponse.status}, ${batchResponse.status})`
+        `Notification request failed (${forumResponse.status}, ${batchResponse.status}, ${socialResponse.status})`
       );
     }
 
-    const [forumData, batchData]: [
+    const [forumData, batchData, socialData]: [
       { notifications: Omit<ForumReplyNotification, "kind">[]; unreadCount: number },
       { reminders: Omit<BatchReminderNotification, "kind">[]; unreadCount: number },
-    ] = await Promise.all([forumResponse.json(), batchResponse.json()]);
+      { notifications: Omit<SocialNotification, "kind">[]; unreadCount: number },
+    ] = await Promise.all([
+      forumResponse.json(),
+      batchResponse.json(),
+      socialResponse.json(),
+    ]);
     const combined: Notification[] = [
       ...forumData.notifications.map((notification) => ({
         ...notification,
@@ -87,14 +111,22 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
         ...reminder,
         kind: "batch_reminder" as const,
       })),
+      ...socialData.notifications.map((notification) => ({
+        ...notification,
+        kind: "social" as const,
+      })),
     ].sort((a, b) => {
-      const aDate = a.kind === "forum_reply" ? a.created_at : a.remind_at;
-      const bDate = b.kind === "forum_reply" ? b.created_at : b.remind_at;
+      const aDate =
+        a.kind === "batch_reminder" ? a.remind_at : a.created_at;
+      const bDate =
+        b.kind === "batch_reminder" ? b.remind_at : b.created_at;
       return new Date(bDate).getTime() - new Date(aDate).getTime();
     });
 
     setNotifications(combined);
-    setUnreadCount(forumData.unreadCount + batchData.unreadCount);
+    setUnreadCount(
+      forumData.unreadCount + batchData.unreadCount + socialData.unreadCount
+    );
   }, []);
 
   useEffect(() => {
@@ -159,7 +191,9 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
       const endpoint =
         notification.kind === "forum_reply"
           ? "/api/community/notifications"
-          : "/api/batch-reminders";
+          : notification.kind === "batch_reminder"
+            ? "/api/batch-reminders"
+            : "/api/community/social-notifications";
       const response = await fetch(endpoint, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -186,11 +220,17 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
     setOpen(false);
     if (notification.kind === "forum_reply") {
       router.push(`/community/forum#forum-topic-${notification.topic_id}`);
-    } else {
+    } else if (notification.kind === "batch_reminder") {
       router.push(
         notification.kar_id
           ? `/kar/${notification.kar_id}`
           : "/batchhistorikk"
+      );
+    } else {
+      router.push(
+        notification.type === "friend_request"
+          ? "/community/friends"
+          : `/community/messages?peer_id=${notification.actor_id}`
       );
     }
   }
@@ -207,6 +247,12 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
           body: JSON.stringify({ all: true }),
         }),
         fetch("/api/batch-reminders", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ all: true }),
+        }),
+        fetch("/api/community/social-notifications", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -256,6 +302,10 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
           credentials: "include",
         }),
         fetch("/api/batch-reminders?all=true", {
+          method: "DELETE",
+          credentials: "include",
+        }),
+        fetch("/api/community/social-notifications", {
           method: "DELETE",
           credentials: "include",
         }),
@@ -403,7 +453,7 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
                           )}
                         </span>
                       </>
-                    ) : (
+                    ) : notification.kind === "batch_reminder" ? (
                       <>
                         <span className="block text-sm font-semibold text-green-300">
                           {notification.type === "sg_check"
@@ -418,6 +468,28 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
                         </span>
                         <span className="mt-2 block text-xs text-white/45">
                           {new Date(notification.remind_at).toLocaleString(
+                            "en-GB",
+                            { dateStyle: "medium", timeStyle: "short" }
+                          )}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="block text-sm font-semibold text-green-300">
+                          {notification.type === "friend_request"
+                            ? "Friend request"
+                            : "New message"}
+                        </span>
+                        <span className="mt-1 block truncate text-sm font-medium">
+                          {notification.actor_name}
+                        </span>
+                        {notification.body && (
+                          <span className="mt-1 block truncate text-sm text-white/70">
+                            {notification.body}
+                          </span>
+                        )}
+                        <span className="mt-2 block text-xs text-white/45">
+                          {new Date(notification.created_at).toLocaleString(
                             "en-GB",
                             { dateStyle: "medium", timeStyle: "short" }
                           )}

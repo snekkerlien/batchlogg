@@ -49,6 +49,8 @@ export default function MenuOverlay({ current }: { current: string }) {
       label: "Community",
       items: [
         { href: "/profiles", label: "Members", key: "profiles" },
+        { href: "/community/friends", label: "Friends", key: "friends" },
+        { href: "/community/messages", label: "Messages", key: "messages" },
         { href: "/community/forum", label: "Forum", key: "forum" },
       ],
     },
