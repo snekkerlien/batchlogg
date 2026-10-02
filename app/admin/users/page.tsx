@@ -57,13 +57,12 @@ export default async function UsersPage() {
     <main className="min-h-screen p-10">
       <h1 className="text-3xl font-bold mb-6">Manage Users</h1>
 
-      {/* Dashboard knapp */}
       <div className="mb-6">
         <Link
-          href="/dashboard"
-          className="text-blue-400 underline text-lg"
+          href="/admin"
+          className="inline-flex items-center rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold text-white transition hover:bg-white/20"
         >
-          ← Back to Dashboard
+          ← Back to Admin Dashboard
         </Link>
       </div>
 
