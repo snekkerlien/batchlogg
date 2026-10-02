@@ -1,6 +1,9 @@
 import { revalidatePath } from "next/cache";
+import Link from "next/link";
 import { supabaseServer } from "../../../../lib/supabase/supabaseServerFinal";
 import { isAdminUser } from "../../../../lib/auth/isAdminUser";
+import MenuOverlay from "@/app/components/MenuOverlay";
+import PageHeading from "@/app/components/PageHeading";
 import DeleteUserButton from "./DeleteUserButton";
 
 export const runtime = "nodejs";
@@ -18,8 +21,19 @@ export default async function UserAdminPage({
 
   if (!isAdminUser(user)) {
     return (
-      <main className="min-h-screen flex items-center justify-center">
-        <p className="text-red-400 text-xl font-bold">Access denied.</p>
+      <main className="min-h-screen flex items-center justify-center px-6 text-white">
+        <div className="rounded-xl border border-red-500/30 bg-black/60 p-8 text-center backdrop-blur-md">
+          <h1 className="text-2xl font-bold text-red-300">Access denied</h1>
+          <p className="mt-2 text-white/70">
+            This page is only available to administrators.
+          </p>
+          <Link
+            href="/"
+            className="mt-6 inline-block rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold transition hover:bg-white/20"
+          >
+            Go to main site
+          </Link>
+        </div>
       </main>
     );
   }
@@ -82,59 +96,89 @@ export default async function UserAdminPage({
     revalidatePath(`/admin/users/${userId}`);
   }
   return (
-    <main className="min-h-screen p-10">
-      <h1 className="text-3xl font-bold mb-6">Edit User</h1>
+    <main className="min-h-screen px-6 py-12 text-white">
+      <div className="relative mx-auto mt-12 max-w-4xl rounded-xl border border-white/10 bg-black/60 p-6 pt-16 backdrop-blur-md sm:p-10 sm:pt-16">
+        <div className="absolute left-4 top-2 z-40 sm:top-4">
+          <Link
+            href="/admin/users"
+            aria-label="Back to users"
+            className="flex items-center justify-center rounded-lg border border-white/20 bg-white/10 px-3 py-2 transition hover:bg-white/20"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 19l-7-7 7-7" />
+              <path d="M19 12H5" />
+            </svg>
+          </Link>
+        </div>
+        <div className="absolute right-4 top-2 z-40 sm:top-4">
+          <MenuOverlay current="admin" />
+        </div>
 
-      {/* Dashboard knapp */}
-      <div className="mb-6">
-        <a
-          href="/dashboard"
-          className="text-blue-400 underline text-lg"
+        <PageHeading
+          title="Edit user"
+          subtitle="Update account details and keg management access."
+        />
+
+        <section
+          aria-label="User details"
+          className="mx-auto max-w-2xl rounded-xl border border-white/10 bg-white/5 p-5 sm:p-6"
         >
-          ← Back to Dashboard
-        </a>
+          <form action={updateUser} className="space-y-5">
+            <label className="block">
+              <span className="text-sm font-medium text-white/80">Email</span>
+              <input
+                name="email"
+                defaultValue={authUser.user?.email ?? ""}
+                className="mt-2 w-full rounded-lg border border-white/20 bg-black/40 p-3 text-white outline-none transition focus:border-green-400/50"
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-sm font-medium text-white/80">
+                Username
+              </span>
+              <input
+                name="username"
+                defaultValue={profile?.username ?? ""}
+                className="mt-2 w-full rounded-lg border border-white/20 bg-black/40 p-3 text-white outline-none transition focus:border-green-400/50"
+              />
+            </label>
+
+            <label className="flex items-center gap-3 rounded-lg border border-white/10 bg-black/20 p-4">
+              <input
+                type="checkbox"
+                name="can_manage_kegs"
+                defaultChecked={profile?.can_manage_kegs === true}
+                className="h-4 w-4 accent-green-600"
+              />
+              <span className="text-sm text-white/80">Can manage kegs</span>
+            </label>
+
+            <button
+              type="submit"
+              className="rounded-lg border border-green-400/30 bg-green-500/20 px-4 py-3 font-semibold text-green-200 transition hover:bg-green-500/30"
+            >
+              Save changes
+            </button>
+          </form>
+
+          <DeleteUserButton
+            userId={userId}
+            username={profile?.username ?? authUser.user?.email ?? userId}
+          />
+        </section>
       </div>
-
-      <form action={updateUser} className="space-y-4 max-w-md">
-        <label className="block">
-          <span className="text-sm text-gray-300">Email</span>
-          <input
-            name="email"
-            defaultValue={authUser.user?.email ?? ""}
-            className="w-full p-3 bg-black/40 border border-white/20 rounded-lg"
-          />
-        </label>
-
-        <label className="block">
-          <span className="text-sm text-gray-300">Username</span>
-          <input
-            name="username"
-            defaultValue={profile?.username ?? ""}
-            className="w-full p-3 bg-black/40 border border-white/20 rounded-lg"
-          />
-        </label>
-
-        <label className="flex items-center gap-3">
-          <input
-            type="checkbox"
-            name="can_manage_kegs"
-            defaultChecked={profile?.can_manage_kegs === true}
-            className="h-4 w-4 accent-green-600"
-          />
-          <span className="text-sm text-gray-300">Can manage kegs</span>
-        </label>
-
-        <button
-          type="submit"
-          className="bg-blue-600 hover:bg-blue-700 p-3 rounded-lg font-semibold"
-        >
-          Save Changes
-        </button>
-      </form>
-      <DeleteUserButton
-        userId={userId}
-        username={profile?.username ?? authUser.user?.email ?? userId}
-      />
     </main>
   );
 }
