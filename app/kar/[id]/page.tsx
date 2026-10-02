@@ -5,6 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import * as Actions from "./actions";
 import { KarNotesClient } from "./KarNotesClient";
 import MenuOverlay from "@/app/components/MenuOverlay";
+import VisibilitySwitch from "@/app/components/VisibilitySwitch";
 import { Line } from "react-chartjs-2";
 import QRCode from "qrcode";
 
@@ -381,24 +382,12 @@ async function toggleVisibility() {
         {/* ⭐ VESSEL VISIBILITY SLIDER */}
 {isOwner && (
   <div className="flex items-center justify-center gap-4 mb-10">
-    <p className="text-sm opacity-80">Vessel Visibility</p>
-
-    <div
-      onClick={toggleVisibility}
-      className={`w-14 h-7 rounded-full cursor-pointer transition relative ${
-        kar.is_public ? "bg-green-500" : "bg-zinc-600"
-      }`}
-    >
-      <div
-        className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition ${
-          kar.is_public ? "translate-x-7" : ""
-        }`}
-      ></div>
-    </div>
-
-    <p className="text-sm opacity-80">
-      {kar.is_public ? "visible" : "hidden"}
-    </p>
+    <VisibilitySwitch
+      label="Vessel Visibility"
+      checked={kar.is_public}
+      onChange={toggleVisibility}
+      ariaLabel="Vessel visibility"
+    />
   </div>
 )}
 
@@ -879,7 +868,7 @@ async function toggleVisibility() {
                     const updated = activeBatch.malts.filter((m: Malt, idx: number) => idx !== i);
                     setActiveBatch({ ...activeBatch, malts: updated });
                   }}
-                  className="px-2 py-1 bg-red-600/70 hover:bg-red-600 border border-red-500/50 rounded text-sm"
+                  className="px-2 py-1 bg-white/10 hover:bg-white/20 border border-white/20 rounded text-sm"
                 >
                   ✕
                 </button>
@@ -915,7 +904,7 @@ async function toggleVisibility() {
                     const updated = activeBatch.hops.filter((h: Hop, idx: number) => idx !== i);
                     setActiveBatch({ ...activeBatch, hops: updated });
                   }}
-                  className="px-2 py-1 bg-red-600/70 hover:bg-red-600 border border-red-500/50 rounded text-sm"
+                  className="px-2 py-1 bg-white/10 hover:bg-white/20 border border-white/20 rounded text-sm"
                 >
                   ✕
                 </button>
@@ -1372,7 +1361,7 @@ async function toggleVisibility() {
       <input type="hidden" name="batch_id" value={activeBatch.id} />
       <input type="hidden" name="kar_id" value={kar.id} />
 
-      <button className="w-full px-2 py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-md text-sm">
+      <button className="w-full px-2 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-md text-sm">
         Cancel batch
       </button>
     </form>

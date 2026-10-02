@@ -157,7 +157,7 @@ export default function NewOtherPage({ params }: { params: { id: string } }) {
                 <button
                   type="button"
                   onClick={() => removeIngredient(i)}
-                  className="px-3 py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm"
+                  className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
                 >
                   Remove
                 </button>
@@ -196,7 +196,7 @@ export default function NewOtherPage({ params }: { params: { id: string } }) {
                 <button
                   type="button"
                   onClick={() => removeStep(i)}
-                  className="px-3 py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm h-fit"
+                  className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm h-fit"
                 >
                   Remove
                 </button>

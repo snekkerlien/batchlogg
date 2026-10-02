@@ -110,7 +110,7 @@ export default function Home() {
 
             <button
               onClick={logout}
-              className="bg-red-600 hover:bg-red-700 p-3 rounded-lg font-semibold"
+              className="bg-white/10 hover:bg-white/20 border border-white/20 p-3 rounded-lg font-semibold"
             >
               Log out
             </button>

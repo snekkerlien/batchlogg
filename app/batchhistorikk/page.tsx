@@ -164,7 +164,7 @@ export default function BatchHistoryPage() {
                         e.stopPropagation(); // prevent expand
                         setConfirmDeleteId(batch.id); // open modal
                       }}
-                      className="px-4 py-2 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg font-semibold"
+                      className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
                     >
                       Delete
                     </button>
@@ -459,7 +459,7 @@ export default function BatchHistoryPage() {
                     await deleteBatch(confirmDeleteId);
                     setConfirmDeleteId(null);
                   }}
-                  className="px-4 py-2 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg font-semibold"
+                  className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
                 >
                   Delete
                 </button>

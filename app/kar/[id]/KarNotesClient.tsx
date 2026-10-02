@@ -104,14 +104,14 @@ export function KarNotesClient({
               {note.image_url ? (
                 <button
                   onClick={() => handleDeleteImage(note.id)}
-                  className="px-3 py-2 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg text-sm font-semibold"
+                  className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm font-semibold"
                 >
                   Delete picture
                 </button>
               ) : (
                 <button
                   onClick={() => handleDeleteNote(note.id)}
-                  className="px-3 py-2 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg text-sm font-semibold"
+                  className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm font-semibold"
                 >
                   Delete note
                 </button>

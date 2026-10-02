@@ -46,7 +46,7 @@ export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="px-6 py-3 bg-red-600 hover:bg-red-700 rounded-lg font-semibold"
+        className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
       >
         Delete batch
       </button>
@@ -79,7 +79,7 @@ export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-red-600 hover:bg-red-700 p-2 rounded font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full bg-white/10 hover:bg-white/20 border border-white/20 p-2 rounded font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>

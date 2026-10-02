@@ -189,7 +189,7 @@ const [volume, setVolume] = useState("");
     <button
       type="button"
       onClick={() => removeMalt(i)}
-      className="px py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm"
+      className="px py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
     >
       Remove
     </button>
@@ -288,7 +288,7 @@ const [volume, setVolume] = useState("");
     <button
       type="button"
       onClick={() => removeHop(i)}
-      className="px py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm"
+      className="px py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
     >
       Remove
     </button>
@@ -382,7 +382,7 @@ const [volume, setVolume] = useState("");
       <button
         type="button"
         onClick={() => removeDryHop(i)}
-        className="px py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm"
+        className="px py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
       >
         Remove
       </button>
@@ -475,4 +475,3 @@ const [volume, setVolume] = useState("");
 function useEffect(arg0: () => void, arg1: string[]) {
   throw new Error("Function not implemented.");
 }
-

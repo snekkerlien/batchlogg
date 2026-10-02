@@ -50,6 +50,33 @@ export default function DashboardClient() {
   const [fadeMessage, setFadeMessage] = useState("");
   const [maxVessels, setMaxVessels] = useState(12);
   const [creatingKar, setCreatingKar] = useState(false);
+  const [showDashboardInfo, setShowDashboardInfo] = useState(true);
+  const [infoPreferenceLoaded, setInfoPreferenceLoaded] = useState(false);
+
+useEffect(() => {
+  try {
+    setShowDashboardInfo(
+      window.localStorage.getItem("dashboard-info-hidden") !== "true"
+    );
+  } catch (error) {
+    console.error("Could not load dashboard info preference", error);
+  } finally {
+    setInfoPreferenceLoaded(true);
+  }
+}, []);
+
+useEffect(() => {
+  if (!infoPreferenceLoaded) return;
+
+  try {
+    window.localStorage.setItem(
+      "dashboard-info-hidden",
+      String(!showDashboardInfo)
+    );
+  } catch (error) {
+    console.error("Could not save dashboard info preference", error);
+  }
+}, [showDashboardInfo, infoPreferenceLoaded]);
 
 // ⭐ Hent MOTD ved mount
 useEffect(() => {
@@ -334,13 +361,7 @@ useEffect(() => {
 
 
             <span
-              className={
-                k.status === "Aktiv"
-                  ? "text-green-400 font-semibold mt-2 relative z-10"
-                  : k.status === "Sekundær"
-                  ? "text-yellow-400 font-semibold mt-2 relative z-10"
-                  : "text-zinc-400 mt-2 relative z-10"
-              }
+              className="text-zinc-400 font-semibold mt-2 relative z-10"
             >
               {k.status === "Aktiv"
                 ? "Primary"
@@ -371,7 +392,7 @@ useEffect(() => {
         {!selectMode && (
           <button
             onClick={toggleSelectMode}
-            className="px-6 py-3 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg font-semibold mb-5"
+            className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold mb-5"
           >
             Select vessels
           </button>
@@ -382,7 +403,7 @@ useEffect(() => {
             <button
               onClick={deleteSelectedKars}
               disabled={selectedKars.length === 0}
-              className="px-6 py-3 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg font-semibold disabled:opacity-40"
+              className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold disabled:opacity-40"
             >
               Delete selected
             </button>
@@ -397,9 +418,25 @@ useEffect(() => {
         )}
       </div>
 
-      <p className="text-center text-zinc-300 mb-10 italic">
-        The dashboard gives you a simple overview of all your vessels and their current status. Tap a vessel to open its details, check activity, or make adjustments. Use the + button to add new vessels up to your personal limit, and switch to selection mode when you want to manage several at once. Status colors help you quickly see which vessels are active, secondary, or idle, keeping everything easy to follow at a glance.
-      </p>
+      <div className="mt-8 text-center">
+        <button
+          type="button"
+          aria-expanded={showDashboardInfo}
+          aria-controls="dashboard-info"
+          onClick={() => setShowDashboardInfo((visible) => !visible)}
+          className="text-sm text-zinc-400 hover:text-white underline underline-offset-4"
+        >
+          {showDashboardInfo ? "Hide dashboard info" : "Show dashboard info"}
+        </button>
+        {showDashboardInfo && (
+          <p
+            id="dashboard-info"
+            className="text-center text-zinc-300 mt-4 mb-10 italic"
+          >
+            The dashboard gives you a simple overview of all your vessels and their current status. Tap a vessel to open its details, check activity, or make adjustments. Use the + button to add new vessels up to your personal limit, and switch to selection mode when you want to manage several at once.
+          </p>
+        )}
+      </div>
 
       <p className="text-sm opacity-40 mb-2 mt-12 text-center">
         © {new Date().getFullYear()} Batchlog

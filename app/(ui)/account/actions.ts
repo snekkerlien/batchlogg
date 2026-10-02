@@ -1,8 +1,38 @@
 "use server";
 
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
+import { isAccentColor } from "@/lib/theme/accentColor";
 import JSZip from "jszip";
 
+export async function saveThemeAccentColor(color: string) {
+  if (!isAccentColor(color)) {
+    throw new Error("Invalid accent color");
+  }
+
+  const { supabase } = supabaseServer();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    throw new Error("Authentication required to save the accent color");
+  }
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({ theme_accent_color: color })
+    .eq("id", user.id)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Could not save accent color: ${error.message}`);
+  }
+  if (!data) {
+    throw new Error("Could not find the profile to save the accent color");
+  }
+}
 
 export async function saveAvatarUrl(newUrl: string) {
   const { supabase, serviceRole } = await supabaseServer();

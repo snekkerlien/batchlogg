@@ -179,7 +179,7 @@ export default function BrewCompanionModal({
             </button>
             <button
               onClick={handleGenerateNo}
-              className="px-4 py-3 bg-red-700 hover:bg-red-600 rounded-lg font-semibold"
+              className="px-4 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
             >
               No
             </button>
@@ -210,7 +210,7 @@ export default function BrewCompanionModal({
         </button>
         <button
           onClick={onClose}
-          className="px-4 py-3 bg-red-700 hover:bg-red-600 rounded-lg font-semibold"
+          className="px-4 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
         >
           Close
         </button>

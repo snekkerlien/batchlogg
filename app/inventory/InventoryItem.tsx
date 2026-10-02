@@ -172,7 +172,7 @@ if (profile !== null && !profile.snus_is_true && snusCategories.includes(item.ca
 
           <button
             onClick={() => deleteItem(item.id)}
-            className="px-4 py-2 bg-red-700 hover:bg-red-600 rounded border border-red-500 text-sm font-semibold"
+            className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded border border-white/20 text-sm font-semibold"
           >
             Delete
           </button>

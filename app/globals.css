@@ -1,26 +1,45 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --user-accent: #22c55e;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-green-50: color-mix(in srgb, var(--user-accent) 8%, white);
+  --color-green-100: color-mix(in srgb, var(--user-accent) 16%, white);
+  --color-green-200: color-mix(in srgb, var(--user-accent) 32%, white);
+  --color-green-300: color-mix(in srgb, var(--user-accent) 48%, white);
+  --color-green-400: color-mix(in srgb, var(--user-accent) 72%, white);
+  --color-green-500: var(--user-accent);
+  --color-green-600: color-mix(in srgb, var(--user-accent) 88%, black);
+  --color-green-700: color-mix(in srgb, var(--user-accent) 72%, black);
+  --color-green-800: color-mix(in srgb, var(--user-accent) 56%, black);
+  --color-green-900: color-mix(in srgb, var(--user-accent) 40%, black);
+  --color-green-950: color-mix(in srgb, var(--user-accent) 28%, black);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+.text-green-50,
+.text-green-100,
+.text-green-200,
+.text-green-300,
+.text-green-400,
+.text-green-500,
+.text-green-600,
+.text-green-700,
+.text-green-800,
+.text-green-900,
+.text-green-950 {
+  color: var(--user-accent);
 }

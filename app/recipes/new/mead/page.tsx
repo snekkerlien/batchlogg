@@ -200,7 +200,7 @@ export default function NewMeadRecipePage() {
                 <button
                   type="button"
                   onClick={() => removeFruit(i)}
-                  className="px-3 py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm self-start md:self-auto"
+                  className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm self-start md:self-auto"
                 >
                   Remove
                 </button>

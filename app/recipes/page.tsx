@@ -5,6 +5,7 @@ import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import Link from "next/link";
+import VisibilitySwitch from "../components/VisibilitySwitch";
 
 function ebcToHex(ebc: number | string) {
   const value = Number(ebc);
@@ -379,6 +380,16 @@ function removeDryHop(index: number) {
   {/* Knapper + pil (PC) */}
 <div className="hidden sm:flex flex-row items-center justify-end gap-2 sm:mt-[6px]">
 
+  <span onClick={(e) => e.stopPropagation()}>
+    <VisibilitySwitch
+      checked={r.is_public}
+      onChange={() => togglePublic(r.id, r.is_public)}
+      publicText="Public"
+      privateText="Private"
+      ariaLabel={`Recipe ${r.name} visibility`}
+    />
+  </span>
+
   {/* ⭐ EDIT RECIPE BUTTON */}
   <button
     onClick={(e) => {
@@ -404,23 +415,9 @@ function removeDryHop(index: number) {
   <button
     onClick={(e) => {
       e.stopPropagation();
-      togglePublic(r.id, r.is_public);
-    }}
-    className={`px-4 py-2 rounded-lg font-semibold border ${
-      r.is_public
-        ? "bg-green-600 hover:bg-green-700 border-green-400"
-        : "bg-zinc-700 hover:bg-zinc-600 border-zinc-500"
-    }`}
-  >
-    {r.is_public ? "Public" : "Private"}
-  </button>
-
-  <button
-    onClick={(e) => {
-      e.stopPropagation();
       setConfirmDeleteId(r.id);
     }}
-    className="px-4 py-2 rounded-lg font-semibold border bg-red-700 hover:bg-red-600 border-red-500"
+    className="px-4 py-2 rounded-lg font-semibold border bg-white/10 hover:bg-white/20 border-white/20"
   >
     Delete
   </button>
@@ -467,26 +464,22 @@ function removeDryHop(index: number) {
 {/* Mobil-knapper + pil */}
 <div className="flex sm:hidden justify-between items-center mt-3">
   <div className="flex gap-2">
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        togglePublic(r.id, r.is_public);
-      }}
-      className={`px-4 py-2 rounded-lg font-semibold border ${
-        r.is_public
-          ? "bg-green-600 hover:bg-green-700 border-green-400"
-          : "bg-zinc-700 hover:bg-zinc-600 border-zinc-500"
-      }`}
-    >
-      {r.is_public ? "Public" : "Private"}
-    </button>
+    <span onClick={(e) => e.stopPropagation()}>
+      <VisibilitySwitch
+        checked={r.is_public}
+        onChange={() => togglePublic(r.id, r.is_public)}
+        publicText="Public"
+        privateText="Private"
+        ariaLabel={`Recipe ${r.name} visibility`}
+      />
+    </span>
 
     <button
       onClick={(e) => {
         e.stopPropagation();
         setConfirmDeleteId(r.id);
       }}
-      className="px-4 py-2 rounded-lg font-semibold border bg-red-700 hover:bg-red-600 border-red-500"
+      className="px-4 py-2 rounded-lg font-semibold border bg-white/10 hover:bg-white/20 border-white/20"
     >
       Delete
     </button>
@@ -823,7 +816,7 @@ function removeDryHop(index: number) {
         <button
           type="button"
           onClick={() => removeFruit(i)}
-          className="px-3 py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm self-start md:self-auto"
+          className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm self-start md:self-auto"
         >
           Remove
         </button>
@@ -910,7 +903,7 @@ function removeDryHop(index: number) {
           <button
             type="button"
             onClick={() => removeMalt(i)}
-            className="px-3 py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm"
+            className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
           >
             Remove
           </button>
@@ -973,7 +966,7 @@ function removeDryHop(index: number) {
           <button
             type="button"
             onClick={() => removeHop(i)}
-            className="px-3 py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm"
+            className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
           >
             Remove
           </button>
@@ -1022,7 +1015,7 @@ function removeDryHop(index: number) {
           <button
             type="button"
             onClick={() => removeDryHop(i)}
-            className="px-3 py-2 bg-red-700/70 hover:bg-red-600/70 border border-red-500/50 rounded-lg text-sm"
+            className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
           >
             Remove
           </button>
@@ -1180,7 +1173,7 @@ function removeDryHop(index: number) {
                     await deleteRecipe(confirmDeleteId);
                     setConfirmDeleteId(null);
                   }}
-                  className="px-4 py-2 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg font-semibold"
+                  className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
                 >
                   Delete
                 </button>

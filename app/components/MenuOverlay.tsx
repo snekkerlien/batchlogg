@@ -107,8 +107,8 @@ export default function MenuOverlay({ current }: { current: string }) {
             onClick={logout}
             className="
               px-2 py-2
-              text-red-400 font-semibold
-              hover:text-red-300
+              text-white font-semibold
+              hover:text-zinc-300
               rounded-md
               whitespace-nowrap
             "

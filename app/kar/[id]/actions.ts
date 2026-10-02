@@ -477,12 +477,67 @@ export async function cancelBatch(formData: FormData) {
   const batchId = formData.get("batch_id") as string;
   const karId = formData.get("kar_id") as string;
 
-  if (!batchId || !karId) return;
+  if (!batchId || !karId) {
+    throw new Error("Batch ID and vessel ID are required");
+  }
 
-  await supabase.from("batch_notes").delete().eq("batch_id", batchId);
-  await supabase.from("batches").delete().eq("id", batchId);
-  await supabase.from("kar").update({ status: "Ledig" }).eq("id", karId);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
+  if (!user) {
+    throw new Error("Authentication required");
+  }
+
+  const { data: batch, error: batchLookupError } = await supabase
+    .from("batches")
+    .select("id")
+    .eq("id", batchId)
+    .eq("aktivt_kar", karId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (batchLookupError) {
+    throw new Error(`Could not verify batch: ${batchLookupError.message}`);
+  }
+  if (!batch) {
+    throw new Error("Batch not found or access denied");
+  }
+
+  const { error: notesError } = await supabase
+    .from("batch_notes")
+    .delete()
+    .eq("batch_id", batch.id);
+  if (notesError) {
+    throw new Error(`Could not delete batch notes: ${notesError.message}`);
+  }
+
+  const { error: deleteBatchError } = await supabase
+    .from("batches")
+    .delete()
+    .eq("id", batch.id)
+    .eq("user_id", user.id);
+  if (deleteBatchError) {
+    throw new Error(`Could not cancel batch: ${deleteBatchError.message}`);
+  }
+
+  const { data: updatedKar, error: updateKarError } = await supabase
+    .from("kar")
+    .update({ status: "Ledig" })
+    .eq("id", karId)
+    .eq("user_id", user.id)
+    .select("id")
+    .maybeSingle();
+
+  if (updateKarError) {
+    throw new Error(`Could not update vessel status: ${updateKarError.message}`);
+  }
+  if (!updatedKar) {
+    throw new Error("Could not find the vessel to update");
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath(`/kar/${karId}`);
   redirect(`/kar/${karId}`);
 }
 

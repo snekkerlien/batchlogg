@@ -3,9 +3,19 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
-import { deleteAccount, downloadUserData, deleteAvatar } from "./actions";
+import {
+  deleteAccount,
+  downloadUserData,
+  deleteAvatar,
+  saveThemeAccentColor,
+} from "./actions";
 import MenuOverlay from "../../components/MenuOverlay";
+import VisibilitySwitch from "../../components/VisibilitySwitch";
 import { saveAvatarUrl } from "./actions";
+import {
+  DEFAULT_ACCENT_COLOR,
+  isAccentColor,
+} from "@/lib/theme/accentColor";
 
 export default function AccountPage() {
   const router = useRouter();
@@ -31,6 +41,9 @@ export default function AccountPage() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
   const [pendingAvatar, setPendingAvatar] = useState<string | null>(null);
+  const [themeAccentColor, setThemeAccentColor] = useState(DEFAULT_ACCENT_COLOR);
+  const [savingThemeAccentColor, setSavingThemeAccentColor] = useState(false);
+  const [themeAccentMessage, setThemeAccentMessage] = useState("");
 
 
   console.log("LOGGED IN USER ID:", user?.id);
@@ -92,8 +105,32 @@ export default function AccountPage() {
 
     // ⭐ VIKTIG: dette var feilen
     setProfile(data);
+    setThemeAccentColor(
+      isAccentColor(data.theme_accent_color)
+        ? data.theme_accent_color
+        : DEFAULT_ACCENT_COLOR
+    );
 
     setLoading(false);
+  }
+
+  async function saveAccentColor() {
+    setSavingThemeAccentColor(true);
+    setThemeAccentMessage("");
+
+    try {
+      await saveThemeAccentColor(themeAccentColor);
+      document.documentElement.style.setProperty(
+        "--user-accent",
+        themeAccentColor
+      );
+      setThemeAccentMessage("Accent color saved.");
+    } catch (error) {
+      console.error("Failed to save accent color", error);
+      setThemeAccentMessage("Could not save the accent color. Please try again.");
+    } finally {
+      setSavingThemeAccentColor(false);
+    }
   }
 
   useEffect(() => {
@@ -257,20 +294,14 @@ export default function AccountPage() {
 
         {/* PUBLIC / PRIVATE SLIDER */}
         <div className="flex items-center justify-center gap-4 mb-10">
-          <p className="text-sm opacity-80">Public profile</p>
-
-          <div
-            onClick={toggleVisibility}
-            className={`w-14 h-7 rounded-full cursor-pointer transition relative ${
-              profile.is_public ? "bg-green-500" : "bg-zinc-600"
-            }`}
-          >
-            <div
-              className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition ${
-                profile.is_public ? "translate-x-7" : ""
-              }`}
-            ></div>
-          </div>
+          <VisibilitySwitch
+            label="Public profile"
+            checked={profile.is_public}
+            onChange={toggleVisibility}
+            publicText="Public"
+            privateText="Private"
+            ariaLabel="Profile visibility"
+          />
         </div>
 
 
@@ -290,6 +321,39 @@ export default function AccountPage() {
   </button>
 </div>
 
+        <section className="mb-10 border-y border-white/10 py-5">
+          <h2 className="text-base font-semibold text-center mb-1">
+            Site accent color
+          </h2>
+          <p className="text-sm text-zinc-400 text-center mb-4">
+            Customize the site highlights.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <label className="flex items-center gap-2 text-sm text-zinc-300">
+              <span>Color</span>
+              <input
+                type="color"
+                value={themeAccentColor}
+                onChange={(event) => setThemeAccentColor(event.target.value)}
+                aria-label="Choose site accent color"
+                className="h-9 w-12 cursor-pointer rounded border border-white/20 bg-transparent p-1"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={saveAccentColor}
+              disabled={savingThemeAccentColor}
+              className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20 disabled:cursor-wait disabled:opacity-60"
+            >
+              {savingThemeAccentColor ? "Saving…" : "Save color"}
+            </button>
+          </div>
+          {themeAccentMessage && (
+            <p role="status" className="mt-3 text-center text-sm text-zinc-300">
+              {themeAccentMessage}
+            </p>
+          )}
+        </section>
 
         
 
@@ -327,7 +391,7 @@ export default function AccountPage() {
         <div className="flex justify-center mb-6">
           <button
             onClick={() => setShowDeleteModal(true)}
-            className="px-3 py-2 bg-red-600 hover:bg-red-700 border border-red-700 rounded-lg font-semibold text-sm"
+            className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm"
           >
             Delete my account
           </button>
@@ -430,7 +494,7 @@ export default function AccountPage() {
 
               <button
                 onClick={handleDeleteAccount}
-                className="px-3 py-2 bg-red-600 rounded"
+                className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded"
               >
                 Delete permanently
               </button>
@@ -513,7 +577,7 @@ export default function AccountPage() {
           setAvatarFile(null);
           setShowAvatarModal(false);
         }}
-        className="w-1/2 px-3 py-2 bg-red-600 hover:bg-red-700 border border-red-700 rounded-lg font-semibold text-sm"
+        className="w-1/2 px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm"
       >
         Remove current picture
       </button>
