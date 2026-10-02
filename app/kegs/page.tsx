@@ -1,6 +1,5 @@
 "use client";
 
-import QRCode from "qrcode";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import PageHeading from "@/app/components/PageHeading";
@@ -35,8 +34,6 @@ export default function KegTrackerPage() {
   const [loading, setLoading] = useState(true);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [qrSrc, setQrSrc] = useState<string | null>(null);
-  const [qrKegId, setQrKegId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
@@ -154,21 +151,6 @@ export default function KegTrackerPage() {
     }
   }
 
-  async function generateQr(keg: Keg) {
-    const qrUrl = new URL(`/kegs/${keg.id}`, window.location.origin).toString();
-    const png = await QRCode.toDataURL(qrUrl, {
-      width: 600,
-      margin: 2,
-      color: {
-        dark: "#000000",
-        light: "#ffffff",
-      },
-    });
-
-    setQrSrc(png);
-    setQrKegId(keg.id);
-  }
-
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
@@ -215,7 +197,7 @@ export default function KegTrackerPage() {
         ) : null}
         <PageHeading
           title="Keg Overview"
-          subtitle="Select a keg to register its brew, or scan its QR code to update it."
+          subtitle="Select a keg to view or update its brew details."
         />
 
         {loadError && (
@@ -311,14 +293,6 @@ export default function KegTrackerPage() {
                     )}
                   </Link>
                 )}
-
-                <button
-                  type="button"
-                  onClick={() => generateQr(keg)}
-                  className="px-3 py-1 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm font-semibold"
-                >
-                  QR code
-                </button>
               </div>
             );
           })}
@@ -363,40 +337,6 @@ export default function KegTrackerPage() {
 
       </div>
 
-      {qrSrc && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
-          onClick={() => setQrSrc(null)}
-        >
-          <div
-            className="w-full max-w-lg rounded-xl border border-white/10 bg-black/60 p-6 text-center backdrop-blur-md"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <h3 className="mb-4 text-2xl font-bold">Keg QR code</h3>
-            <div className="rounded-2xl bg-white p-4">
-              <img src={qrSrc} alt="QR code for keg" className="mx-auto h-auto w-full max-w-xs" />
-            </div>
-
-            <div className="mt-5 flex justify-center gap-3">
-              <a
-                href={qrSrc}
-                download={`keg-${qrKegId ?? "qr"}.png`}
-                className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
-              >
-                Save PNG
-              </a>
-
-              <button
-                type="button"
-                onClick={() => setQrSrc(null)}
-                className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </main>
   );
 }

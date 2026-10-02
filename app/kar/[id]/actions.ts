@@ -158,7 +158,7 @@ export async function createBatch(formData: FormData) {
     .from("batches")
     .select("id")
     .eq("aktivt_kar", karId)
-    .in("status", ["Aktiv", "Sekundær"])
+    .in("status", ["Aktiv", "Sekundær", "secondary"])
     .maybeSingle();
 
   if (activeBatchError) {
@@ -586,7 +586,7 @@ export async function moveToSecondary(formData: FormData) {
   await supabase
     .from("batches")
     .update({
-      status: "Sekundær",
+      status: "secondary",
       secondary_startdate: new Date().toISOString(),
       secondary_additions: additions,
       secondary_notes: notes,
@@ -638,7 +638,7 @@ export async function finishBatch(formData: FormData) {
   await supabase
     .from("batches")
     .update({
-      status: "Avsluttet",
+      status: "finished",
       fg,
       abv,
       finished_notes,

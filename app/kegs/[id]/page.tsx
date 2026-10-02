@@ -1,5 +1,6 @@
 "use client";
 
+import QRCode from "qrcode";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -42,6 +43,8 @@ export default function KegPublicPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [qrSrc, setQrSrc] = useState<string | null>(null);
+  const [qrError, setQrError] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -129,6 +132,26 @@ export default function KegPublicPage() {
       setSaveError("Could not save keg details. Please try again.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function generateQr() {
+    if (!rawId) return;
+    setQrError("");
+    try {
+      const qrUrl = new URL(`/kegs/${rawId}`, window.location.origin).toString();
+      const png = await QRCode.toDataURL(qrUrl, {
+        width: 600,
+        margin: 2,
+        color: {
+          dark: "#000000",
+          light: "#ffffff",
+        },
+      });
+      setQrSrc(png);
+    } catch (error) {
+      console.error("Could not generate keg QR code", error);
+      setQrError("Could not generate the QR code. Please try again.");
     }
   }
 
@@ -231,6 +254,14 @@ export default function KegPublicPage() {
             {saving ? "Saving…" : "Save keg details"}
           </button>
 
+          <button
+            type="button"
+            onClick={generateQr}
+            className="px-6 py-3 border border-white/20 bg-white/10 hover:bg-white/20 rounded-lg font-semibold"
+          >
+            QR code
+          </button>
+
           {saved && (
             <span className="rounded-full border border-emerald-400/60 bg-emerald-500/10 px-3 py-1 text-sm font-medium text-emerald-200">
               Saved
@@ -242,7 +273,55 @@ export default function KegPublicPage() {
             {saveError}
           </p>
         )}
+        {qrError && (
+          <p role="alert" className="mt-4 text-center text-red-300">
+            {qrError}
+          </p>
+        )}
       </div>
+
+      {qrSrc && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setQrSrc(null);
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="keg-qr-title"
+            className="w-full max-w-lg rounded-xl border border-white/10 bg-black/80 p-6 text-center backdrop-blur-md"
+          >
+            <h2 id="keg-qr-title" className="mb-4 text-2xl font-bold">
+              Keg QR code
+            </h2>
+            <div className="rounded-2xl bg-white p-4">
+              <img
+                src={qrSrc}
+                alt={`QR code for ${keg.name}`}
+                className="mx-auto h-auto w-full max-w-xs"
+              />
+            </div>
+            <div className="mt-5 flex justify-center gap-3">
+              <a
+                href={qrSrc}
+                download={`keg-${keg.id}.png`}
+                className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold hover:bg-white/20"
+              >
+                Save PNG
+              </a>
+              <button
+                type="button"
+                onClick={() => setQrSrc(null)}
+                className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold hover:bg-white/20"
+              >
+                Close
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </main>
   );
 }

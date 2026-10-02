@@ -179,7 +179,7 @@ export default function RecipesPage() {
         .from("batches")
         .select("aktivt_kar")
         .in("aktivt_kar", vesselIds)
-        .in("status", ["Aktiv", "Sekundær"]);
+        .in("status", ["Aktiv", "Sekundær", "secondary"]);
       occupiedVesselIds = new Set(
         (activeBatches ?? []).map((batch) => batch.aktivt_kar).filter(Boolean)
       );

@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
       .from("batches")
       .select("aktivt_kar, status, name, startdato")
       .in("aktivt_kar", vesselIds)
-      .in("status", ["Aktiv", "Sekundær"])
+      .in("status", ["Aktiv", "Sekundær", "secondary"])
       .order("startdato", { ascending: false });
 
     if (batchesError) {
@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
           nummer: vessel.nummer,
           created_at: vessel.created_at,
           status:
-            batch?.status === "Sekundær"
+            batch?.status === "Sekundær" || batch?.status === "secondary"
               ? "Sekundær"
               : batch
                 ? "Aktiv"

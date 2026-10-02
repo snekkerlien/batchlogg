@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     .from("batches")
     .select("id, name, startdato, created_at")
     .eq("user_id", user.id)
-    .in("status", ["Aktiv", "Sekundær"]);
+    .in("status", ["Aktiv", "Sekundær", "secondary"]);
 
   if (batchesError) {
     console.error("Could not load active batches for SG reminders", batchesError);
@@ -217,7 +217,7 @@ export async function POST(request: NextRequest) {
     .select("id")
     .eq("id", body.batchId)
     .eq("user_id", user.id)
-    .in("status", ["Aktiv", "Sekundær"])
+    .in("status", ["Aktiv", "Sekundær", "secondary"])
     .maybeSingle();
 
   if (batchError) {

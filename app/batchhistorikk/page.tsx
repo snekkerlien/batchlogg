@@ -21,6 +21,20 @@ function hasTypeSpecificRecipe(batch: any) {
   );
 }
 
+function getCurrentAbv(og: unknown, readings: Array<{ sg: unknown }>) {
+  if (og === null || og === undefined || og === "" || readings.length === 0) {
+    return null;
+  }
+
+  const originalGravity = Number(og);
+  const currentGravity = Number(readings[readings.length - 1].sg);
+  if (!Number.isFinite(originalGravity) || !Number.isFinite(currentGravity)) {
+    return null;
+  }
+
+  return ((originalGravity - currentGravity) * 131.25).toFixed(2);
+}
+
 export default function BatchHistoryPage() {
 
   const [loading, setLoading] = useState(true);
@@ -171,11 +185,22 @@ export default function BatchHistoryPage() {
           <p className="text-center opacity-70">No batches found.</p>
         ) : (
           <div className="space-y-4">
-            {batches.map((batch) => (
-              <div
-                key={batch.id}
-                className="bg-white/10 border border-white/20 rounded-xl p-4"
-              >
+            {batches.map((batch) => {
+              const isFinished =
+                Boolean(batch.finished_date) ||
+                ["finished", "avsluttet"].includes(
+                  String(batch.status ?? "").toLowerCase()
+                );
+              const currentAbv = isFinished
+                ? null
+                : getCurrentAbv(batch.og, batch.sgReadings);
+              const status = String(batch.status ?? "");
+
+              return (
+                <div
+                  key={batch.id}
+                  className="bg-white/10 border border-white/20 rounded-xl p-4"
+                >
                 {/* HEADER — ONLY THIS AREA EXPANDS */}
                 <div
                   className="w-full flex justify-between items-center mb-2 cursor-pointer"
@@ -226,7 +251,12 @@ export default function BatchHistoryPage() {
                     </p>
 
                     <p className="text-sm">
-                      <strong>Status:</strong> {batch.status}
+                      <strong>Status:</strong>{" "}
+                      {status.toLowerCase() === "avsluttet"
+                        ? "Finished"
+                        : ["sekundær", "secondary"].includes(status.toLowerCase())
+                          ? "Secondary"
+                          : status}
                     </p>
 
                     <p className="text-sm">
@@ -247,9 +277,9 @@ export default function BatchHistoryPage() {
                       </p>
                     )}
 
-                    {batch.abv && (
+                    {batch.abv !== null && batch.abv !== undefined && (
                       <p className="text-sm">
-                        <strong>ABV:</strong> {batch.abv.toFixed(2)}%
+                        <strong>Final ABV:</strong> {Number(batch.abv).toFixed(2)}%
                       </p>
                     )}
 
@@ -269,6 +299,11 @@ export default function BatchHistoryPage() {
                       ) : (
                         <p className="text-sm text-zinc-400">
                           No SG readings recorded.
+                        </p>
+                      )}
+                      {currentAbv !== null && (
+                        <p className="mt-4 text-center text-lg font-semibold text-green-300">
+                          Current ABV: {currentAbv}%
                         </p>
                       )}
                     </section>
@@ -481,8 +516,9 @@ export default function BatchHistoryPage() {
 
                   </div>
                 </div>
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         )}
 

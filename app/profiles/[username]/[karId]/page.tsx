@@ -86,7 +86,9 @@ export default async function KarDetailPage({
   .eq("aktivt_kar", kar.id);
 
   const activeBatch = batches?.find((b) => b.status === "Aktiv");
-const secondaryBatch = batches?.find((b) => b.status === "Sekundær");
+const secondaryBatch = batches?.find((b) =>
+  ["Sekundær", "secondary"].includes(b.status)
+);
 
 // Choose batch (active → secondary)
 let batch = activeBatch || secondaryBatch;
@@ -111,7 +113,7 @@ batch = translateOldRecipe(batch);
           subtitle={
             !batch
               ? "This vessel is currently empty."
-              : batch.status === "Sekundær"
+              : ["Sekundær", "secondary"].includes(batch.status)
                 ? "Secondary fermentation"
                 : "Active fermentation"
           }
@@ -144,7 +146,7 @@ batch = translateOldRecipe(batch);
             <p className="opacity-80">Volume: {batch.volume_l} L</p>
             <p className="opacity-80">OG: {batch.og}</p>
 
-            {batch.status === "Sekundær" && (
+            {["Sekundær", "secondary"].includes(batch.status) && (
               <p className="opacity-80 mt-2">
                 Secondary since:{" "}
                 {new Date(batch.secondary_startdate).toLocaleDateString("en-US")}

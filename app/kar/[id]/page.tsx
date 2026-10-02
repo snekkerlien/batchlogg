@@ -126,7 +126,7 @@ export default function KarPage({ params }: { params: { id: string } }) {
       .from("batches")
       .select("*")
       .eq("aktivt_kar", kar.id)
-      .in("status", ["Aktiv", "Sekundær"])
+      .in("status", ["Aktiv", "Sekundær", "secondary"])
       .order("created_at", { ascending: false })
       .maybeSingle()
       .then(({ data }) => setActiveBatch(data));
@@ -381,7 +381,7 @@ async function toggleVisibility() {
   title="Vessel"
   subtitle={
     activeBatch
-      ? activeBatch.status === "Sekundær"
+      ? ["Sekundær", "secondary"].includes(activeBatch.status)
         ? "Secondary fermentation"
         : "Active fermentation"
       : "View vessel details and start a new batch."
@@ -449,7 +449,7 @@ async function toggleVisibility() {
 
 
 {/* SECONDARY FERMENTATION */}
-{hasActive && activeBatch?.status === "Sekundær" && (
+{hasActive && ["Sekundær", "secondary"].includes(activeBatch?.status) && (
   <>
     <h2 className="text-2xl font-semibold mb-4 text-center">
       Secondary fermentation

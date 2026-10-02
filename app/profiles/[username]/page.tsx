@@ -88,7 +88,7 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
 
 const secondary = batchesRaw
   ?.filter((b: any) =>
-    b.aktivt_kar === k.id && b.status === "Sekundær"
+    b.aktivt_kar === k.id && ["Sekundær", "secondary"].includes(b.status)
   )
   .sort(
     (a: any, b: any) =>
@@ -128,7 +128,9 @@ const secondary = batchesRaw
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
-        Loading…
+        <div className="bg-black/60 backdrop-blur-md px-6 py-4 rounded-xl border border-white/10">
+          Loading…
+        </div>
       </main>
     );
   }
@@ -136,7 +138,9 @@ const secondary = batchesRaw
   if (!profile) {
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
-        <h1 className="text-2xl font-bold">Profile not found</h1>
+        <div className="bg-black/60 backdrop-blur-md px-6 py-4 rounded-xl border border-white/10">
+          <h1 className="text-2xl font-bold text-green-300">Profile not found</h1>
+        </div>
       </main>
     );
   }
@@ -240,7 +244,7 @@ const secondary = batchesRaw
         ? profile.avatar_url
         : "/default-avatar.png"
     }
-    className="w-24 h-24 rounded-full object-cover object-center border border-white/20"
+    className="w-44 h-44 rounded-full object-cover object-center border border-white/20"
   />
 </div>
 
@@ -263,7 +267,7 @@ const secondary = batchesRaw
         className={`rounded-lg border px-4 py-2 text-sm font-semibold disabled:cursor-default disabled:opacity-80 ${
           isFriend || friendRequest
             ? "border-white/20 bg-white/10 text-white/80"
-            : "border-green-500/40 bg-green-800/60 hover:bg-green-700 disabled:hover:bg-green-800/60"
+            : "border-white/20 bg-white/10 text-white hover:bg-white/20"
         }`}
       >
         {isFriend
@@ -290,13 +294,13 @@ const secondary = batchesRaw
     {isFriend && (
       <Link
         href={`/community/messages?peer_id=${encodeURIComponent(profile.id)}`}
-        className="rounded-lg border border-green-500/40 bg-green-800/60 px-4 py-2 text-sm font-semibold hover:bg-green-700"
+        className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20"
       >
         Send message
       </Link>
     )}
     {friendRequestError && (
-      <p role="alert" className="w-full text-center text-sm text-amber-300">
+      <p role="alert" className="w-full text-center text-sm text-red-400">
         {friendRequestError}
       </p>
     )}
@@ -306,7 +310,9 @@ const secondary = batchesRaw
 {canViewContent ? (
   <>
 {/* VESSELS */}
-        <h2 className="text-2xl font-semibold mb-4 text-center">Vessels</h2>
+        <h2 className="text-2xl font-semibold mb-4 text-center text-green-300">
+          Vessels
+        </h2>
 
         <div className="flex flex-wrap justify-center gap-6 mb-12">
           {kar.length > 0 ? (
@@ -314,7 +320,7 @@ const secondary = batchesRaw
               <Link
                 key={k.id}
                 href={`/profiles/${params.username}/${k.id}`}
-                className="relative border border-white/10 rounded-xl p-4 bg-white/5 w-32 h-32 flex flex-col items-center justify-center hover:bg-white/10 transition overflow-hidden"
+                className="relative border border-white/10 rounded-xl p-4 bg-white/5 w-32 h-32 flex flex-col items-center justify-center transition overflow-hidden hover:bg-white/10"
               >
                 {(k.status === "Primary" || k.status === "Secondary") && (
                   <div className="bubble-container">
@@ -335,20 +341,12 @@ const secondary = batchesRaw
                 )}
 
                 <span
-                  className="text-lg font-bold text-green-300 text-center leading-tight line-clamp-2"
+                  className="relative z-10 text-lg font-bold text-green-300 text-center leading-tight line-clamp-2"
                 >
                   {k.batchName ?? `Vessel`}
                 </span>
 
-                <span
-                  className={
-                    k.status === "Primary"
-                      ? "text-green-400 font-semibold mt-2"
-                      : k.status === "Secondary"
-                      ? "text-yellow-400 font-semibold mt-2"
-                      : "text-zinc-400 mt-2"
-                  }
-                >
+                <span className="relative z-10 text-zinc-400 font-semibold mt-2">
                   {k.status}
                 </span>
               </Link>
@@ -359,7 +357,7 @@ const secondary = batchesRaw
         </div>
 
         {/* RECIPES */}
-        <h2 className="text-2xl font-semibold mb-4 text-center">
+        <h2 className="text-2xl font-semibold mb-4 text-center text-green-300">
           Public recipes
         </h2>
 
