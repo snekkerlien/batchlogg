@@ -20,11 +20,34 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Valid username is required" }, { status: 400 });
   }
 
-  const { data: profile, error: profileError } = await serviceRole
-    .from("profiles")
-    .select("id, username, avatar_url, is_public, allow_friend_requests")
-    .eq("username", username)
-    .maybeSingle();
+  const usernames = [username];
+  try {
+    const decodedUsername = decodeURIComponent(username);
+    if (decodedUsername !== username && decodedUsername.length <= 64) {
+      usernames.push(decodedUsername);
+    }
+  } catch {
+    // Keep the supplied username as-is when it is not a valid encoded value.
+  }
+
+  let profile = null;
+  let profileError = null;
+  for (const candidate of usernames) {
+    const result = await serviceRole
+      .from("profiles")
+      .select("id, username, avatar_url, is_public, allow_friend_requests")
+      .eq("username", candidate)
+      .maybeSingle();
+
+    if (result.error) {
+      profileError = result.error;
+      break;
+    }
+    if (result.data) {
+      profile = result.data;
+      break;
+    }
+  }
 
   if (profileError) {
     console.error("Could not load community profile", profileError);

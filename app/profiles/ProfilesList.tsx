@@ -130,7 +130,11 @@ export default function ProfilesList({
               )}
 
               <Link
-                href={p.id === userId ? "/dashboard" : `/profiles/${p.username}`}
+                href={
+                  p.id === userId
+                    ? "/dashboard"
+                    : `/profiles/${encodeURIComponent(p.username)}`
+                }
                 className="flex flex-col items-center justify-center gap-3"
             >
                 <img

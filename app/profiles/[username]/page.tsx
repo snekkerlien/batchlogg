@@ -9,6 +9,12 @@ import PageHeading from "@/app/components/PageHeading";
 
 export default function ProfileDetailPage({ params }: { params: { username: string } }) {
   const router = useRouter();
+  let routeUsername = params.username;
+  try {
+    routeUsername = decodeURIComponent(routeUsername);
+  } catch {
+    // Keep the original route value if it is not a valid encoded component.
+  }
 
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<any>(null);
@@ -34,7 +40,7 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
       if (!session) return;
 
       const response = await fetch(
-        `/api/community/profile?username=${encodeURIComponent(params.username)}`,
+        `/api/community/profile?username=${encodeURIComponent(routeUsername)}`,
         { cache: "no-store", credentials: "include" }
       );
       const profileResult = await response.json();
@@ -123,7 +129,7 @@ const secondary = batchesRaw
     }
 
     load();
-  }, [params.username]);
+  }, [routeUsername]);
 
   if (loading) {
     return (
@@ -319,7 +325,7 @@ const secondary = batchesRaw
             kar.map((k, index) => (
               <Link
                 key={k.id}
-                href={`/profiles/${params.username}/${k.id}`}
+                href={`/profiles/${encodeURIComponent(profile.username)}/${k.id}`}
                 className="relative border border-white/10 rounded-xl p-4 bg-white/5 w-32 h-32 flex flex-col items-center justify-center transition overflow-hidden hover:bg-white/10"
               >
                 {(k.status === "Primary" || k.status === "Secondary") && (
@@ -425,7 +431,7 @@ const secondary = batchesRaw
 
                     <div className="flex justify-end pt-4">
                       <Link
-                        href={`/profiles/${params.username}/recipes/${r.id}`}
+                        href={`/profiles/${encodeURIComponent(profile.username)}/recipes/${r.id}`}
                         className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm font-semibold"
                       >
                         Open note log →

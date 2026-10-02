@@ -33,6 +33,12 @@ export default async function KarDetailPage({
   params: KarDetailParams;
 }) {
   const { supabase } = supabaseServer();
+  let username = params.username;
+  try {
+    username = decodeURIComponent(username);
+  } catch {
+    // Keep the original route value if it is not a valid encoded component.
+  }
 
   // Check login
   const {
@@ -51,7 +57,7 @@ export default async function KarDetailPage({
   const { data: profile } = await supabase
     .from("profiles")
     .select("*")
-    .eq("username", params.username)
+    .eq("username", username)
     .single();
 
   if (!profile) {
