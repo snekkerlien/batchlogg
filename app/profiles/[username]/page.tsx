@@ -6,6 +6,8 @@ import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
 import MenuOverlay from "./MenuOverlay";
 import { useRouter } from "next/navigation";
 import PageHeading from "@/app/components/PageHeading";
+import type { Fruit, Malt, Hop, Ingredient } from "@/app/types/batchTypes";
+
 
 export default function ProfileDetailPage({ params }: { params: { username: string } }) {
   const router = useRouter();
@@ -31,6 +33,8 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
   const [recipes, setRecipes] = useState<any[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
 
+
+  
   useEffect(() => {
     async function load() {
       const {
@@ -363,88 +367,175 @@ const secondary = batchesRaw
         </div>
 
         {/* RECIPES */}
-        <h2 className="text-2xl font-semibold mb-4 text-center text-green-300">
-          Public recipes
-        </h2>
+<h2 className="text-2xl font-semibold mb-4 text-center text-green-300">
+  Public recipes
+</h2>
 
-        <div className="space-y-4">
-          {recipes.length > 0 ? (
-            recipes.map((r) => (
-              <div
-                key={r.id}
-                className="bg-white/10 border border-white/20 rounded-xl p-4"
-              >
-                <button
-                  onClick={() => toggle(r.id)}
-                  className="w-full flex justify-between items-center text-left"
-                >
-                  <span className="text-xl font-bold text-green-300">
-                    {r.name.charAt(0).toUpperCase() + r.name.slice(1)}
-                  </span>
+<div className="space-y-4">
+  {recipes.length > 0 ? (
+    recipes.map((r) => (
+      <div
+        key={r.id}
+        className="bg-white/10 border border-white/20 rounded-xl p-4"
+      >
+        {/* Header */}
+        <button
+          onClick={() => toggle(r.id)}
+          className="w-full flex justify-between items-center text-left"
+        >
+          <span className="text-xl font-bold text-green-300">
+            {r.name.charAt(0).toUpperCase() + r.name.slice(1)}
+          </span>
 
-                  <span
-                    className={`text-white text-2xl transition-transform duration-200 ${
-                      expanded === r.id ? "rotate-90" : "rotate-180"
-                    }`}
-                  >
-                    ▶
-                  </span>
-                </button>
+          <span
+            className={`text-white text-2xl transition-transform duration-200 ${
+              expanded === r.id ? "rotate-90" : "rotate-180"
+            }`}
+          >
+            ▶
+          </span>
+        </button>
 
-                <div
-                  className={`transition-all duration-300 ease-in-out overflow-hidden ${
-                    expanded === r.id ? "max-h-[2000px] mt-4" : "max-h-0"
-                  }`}
-                >
-                  <div className="space-y-3 opacity-90">
+        {/* Slide-down content */}
+        <div
+          className={`transition-all duration-300 ease-in-out overflow-hidden ${
+            expanded === r.id ? "max-h-[3000px] mt-4" : "max-h-0"
+          }`}
+        >
+          <div className="space-y-4 opacity-90 text-sm whitespace-pre-wrap">
 
-                    <p className="text-sm">
-                      <strong>OG:</strong> {r.og}
-                      <strong className="ml-4">FG:</strong> {r.fg}
-                      <strong className="ml-4">ABV:</strong> {r.abv.toFixed(1)}%
-                    </p>
+            {/* Basic stats */}
+            <p>
+              <strong>OG:</strong> {r.og}
+              <strong className="ml-4">FG:</strong> {r.fg}
+              <strong className="ml-4">ABV:</strong> {r.abv?.toFixed?.(1)}%
+            </p>
 
-                    <p className="text-sm">
-                      <strong>Volume:</strong> {r.volume} L
-                    </p>
+            <p><strong>Volume:</strong> {r.volume} L</p>
 
-                    {r.ingredients && (
-                      <p className="whitespace-pre-line">
-                        <strong>Ingredients:</strong>{"\n"}
-                        {r.ingredients}
-                      </p>
-                    )}
+            {/* MEAD */}
+            {r.type === "Mead" && (
+              <>
+                <p><strong>Honey type:</strong> {r.honey_type}</p>
+                <p><strong>Honey amount:</strong> {r.honey_amount} kg</p>
 
-                    {r.method && (
-                      <p className="whitespace-pre-line">
-                        <strong>Method:</strong>{"\n"}
-                        {r.method}
-                      </p>
-                    )}
-
-                    {r.notes && (
-                      <p className="whitespace-pre-line">
-                        <strong>Notes:</strong>{"\n"}
-                        {r.notes}
-                      </p>
-                    )}
-
-                    <div className="flex justify-end pt-4">
-                      <Link
-                        href={`/profiles/${encodeURIComponent(profile.username)}/recipes/${r.id}`}
-                        className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm font-semibold"
-                      >
-                        Open note log →
-                      </Link>
-                    </div>
+                {r.fruits?.length > 0 && (
+                  <div>
+                    <strong>Fruits:</strong>
+                    {r.fruits.map((f: Fruit, i: number) => (
+                      <p key={i}>{f.name}: {f.amount}{f.unit}</p>
+                    ))}
                   </div>
-                </div>
-              </div>
-            ))
-          ) : (
-            <p className="opacity-60 text-center">No public recipes.</p>
-          )}
+                )}
+              </>
+            )}
+
+            {/* BEER */}
+            {r.type === "Beer" && (
+              <>
+                {r.malts?.length > 0 && (
+                  <div>
+                    <strong>Malt additions:</strong>
+                    {r.malts.map((m: Malt, i: number) => (
+                      <p key={i}>{m.name}: {m.amount}{m.unit}</p>
+                    ))}
+                  </div>
+                )}
+
+                {r.hops?.length > 0 && (
+                  <div>
+                    <strong>Hop schedule:</strong>
+                    {r.hops.map((h: Hop, i: number) => (
+                      <p key={i}>{h.name}: {h.amount}{h.unit} @ {h.time} min</p>
+                    ))}
+                  </div>
+                )}
+
+                <p><strong>Total boil time:</strong> {r.boil_time} min</p>
+              </>
+            )}
+
+            {/* BRAGGOT */}
+            {r.type === "Braggot" && (
+              <>
+                {r.malts?.length > 0 && (
+                  <div>
+                    <strong>Malt additions:</strong>
+                    {r.malts.map((m: Malt, i: number) => (
+                      <p key={i}>{m.name}: {m.amount}{m.unit}</p>
+                    ))}
+                  </div>
+                )}
+
+                <p><strong>Boil time:</strong> {r.boil_time} min</p>
+                <p><strong>Honey:</strong> {r.honey_amount} kg</p>
+              </>
+            )}
+
+            {/* CIDER / WINE / SELTZER */}
+            {["Cider", "Wine", "Seltzer"].includes(r.type) && (
+              <>
+                <p><strong>Juice type:</strong> {r.juice_type}</p>
+                <p><strong>Sugar added:</strong> {r.sugar_amount} kg</p>
+              </>
+            )}
+
+            {/* OTHER */}
+            {r.type === "Other" && (
+              <>
+                {r.ingredients?.length > 0 && (
+                  <div>
+                    <strong>Ingredients:</strong>
+                    {r.ingredients.map((ing: Ingredient, idx: number) => (
+                      <p key={idx}>{ing.name}: {ing.amount}{ing.unit}</p>
+                    ))}
+                  </div>
+                )}
+
+                {r.steps?.length > 0 && (
+                  <div>
+                    <strong>Process steps:</strong>
+                    {r.steps.map((s: string, idx: number) => (
+                      <p key={idx}>{idx + 1}. {s}</p>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Shared fields */}
+            {r.additives && (
+              <p><strong>Additives:</strong><br />{r.additives}</p>
+            )}
+
+            {r.full_process && (
+              <p><strong>Full process:</strong><br />{r.full_process}</p>
+            )}
+
+            {r.notes && (
+              <p><strong>Notes:</strong><br />{r.notes}</p>
+            )}
+
+            {/* Link to full recipe */}
+            <div className="flex justify-end pt-4">
+              <Link
+                href={`/profiles/${encodeURIComponent(profile.username)}/recipes/${r.id}`}
+                className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm font-semibold"
+              >
+                Open full recipe →
+              </Link>
+            </div>
+
+          </div>
         </div>
+      </div>
+    ))
+  ) : (
+    <p className="opacity-60 text-center">No public recipes.</p>
+  )}
+</div>
+
+
   </>
 ) : (
   <p className="my-10 text-center text-sm text-white/60">

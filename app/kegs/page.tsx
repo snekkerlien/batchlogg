@@ -6,6 +6,8 @@ import PageHeading from "@/app/components/PageHeading";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import BackButton from "@/app/batchhistorikk/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
+import ConfirmDialog from "@/app/components/ConfirmDialog";
+
 
 type Keg = {
   id: string;
@@ -37,6 +39,9 @@ export default function KegTrackerPage() {
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  
+
 
   async function loadKegs() {
     setLoading(true);
@@ -165,36 +170,52 @@ export default function KegTrackerPage() {
     <main className="min-h-screen px-6 py-12 text-white">
       <div className="bg-black/60 backdrop-blur-md p-6 pt-16 sm:p-8 sm:pt-16 rounded-xl border border-white/10 max-w-3xl mx-auto mt-20 sm:mt-24 relative">
         {isLoggedIn === true ? (
-          <>
-            <div className="absolute top-2 left-4 z-40 sm:top-4">
-              <BackButton />
-            </div>
-            <div className="absolute top-2 right-4 z-40 sm:top-4">
-              <MenuOverlay current="kegs" />
-            </div>
-          </>
-        ) : isLoggedIn === false ? (
-          <>
-            {!selectMode && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectMode(true);
-                  setSelectedIds([]);
-                }}
-                className="absolute top-2 left-4 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold sm:top-4"
-              >
-                Select kegs
-              </button>
-            )}
-            <Link
-              href="/"
-              className="absolute top-2 right-4 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold sm:top-4"
-            >
-              Go to main site
-            </Link>
-          </>
-        ) : null}
+  <>
+    <div className="absolute top-2 left-4 z-40 sm:top-4 flex gap-3">
+      <BackButton />
+
+      {!selectMode && (
+        <button
+          type="button"
+          onClick={() => {
+            setSelectMode(true);
+            setSelectedIds([]);
+          }}
+          className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
+        >
+          Select kegs
+        </button>
+      )}
+    </div>
+
+    <div className="absolute top-2 right-4 z-40 sm:top-4">
+      <MenuOverlay current="kegs" />
+    </div>
+  </>
+) : isLoggedIn === false ? (
+  <>
+    {!selectMode && (
+      <button
+        type="button"
+        onClick={() => {
+          setSelectMode(true);
+          setSelectedIds([]);
+        }}
+        className="absolute top-2 left-4 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold sm:top-4"
+      >
+        Select kegs
+      </button>
+    )}
+
+    <Link
+      href="/"
+      className="absolute top-2 right-4 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold sm:top-4"
+    >
+      Go to main site
+    </Link>
+  </>
+) : null}
+
         <PageHeading
           title="Keg Overview"
           subtitle="Select a keg to view or update its brew details."
@@ -311,31 +332,48 @@ export default function KegTrackerPage() {
         </section>
 
         {selectMode && (
-          <div className="flex justify-center mt-10 mb-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <button
-                type="button"
-                onClick={deleteSelectedKegs}
-                disabled={selectedIds.length === 0 || saving}
-                className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold disabled:opacity-40"
-              >
-                Delete selected
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectMode(false);
-                  setSelectedIds([]);
-                }}
-                className="px-6 py-3 bg-zinc-700 hover:bg-zinc-600 border border-zinc-500 rounded-lg font-semibold"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
+  <div className="flex justify-center mt-10 mb-6">
+    <div className="flex flex-col sm:flex-row gap-4">
+
+      {/* DELETE BUTTON WITH CONFIRMATION */}
+      <button
+        type="button"
+        onClick={() => setConfirmOpen(true)}
+        disabled={selectedIds.length === 0 || saving}
+        className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold disabled:opacity-40"
+      >
+        Delete selected
+      </button>
+
+      <button
+        type="button"
+        onClick={() => {
+          setSelectMode(false);
+          setSelectedIds([]);
+        }}
+        className="px-6 py-3 bg-zinc-700 hover:bg-zinc-600 border border-zinc-500 rounded-lg font-semibold"
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
+)}
+<ConfirmDialog
+  open={confirmOpen}
+  title="Delete selected kegs?"
+  message="Are you sure you want to delete the selected kegs? This action cannot be undone."
+  confirmLabel="Delete"
+  onConfirm={async () => {
+    await deleteSelectedKegs();
+    return true;
+  }}
+  onCancel={() => setConfirmOpen(false)}
+/>
+
 
       </div>
+
+
 
     </main>
   );

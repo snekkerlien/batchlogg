@@ -187,22 +187,22 @@ export default function KegPublicPage() {
 
       <div className="mt-6 space-y-5">
         <label className="block">
-          <span className="mb-2 block text-sm font-medium text-zinc-300">Keg name</span>
+          <span className="mb-2 block text-sm font-medium text-zinc-300">Brew name</span>
           <input
-            value={kegName}
-            onChange={(event) => setKegName(event.target.value)}
+            value={brewName}
+            onChange={(event) => setBrewName(event.target.value)}
             className="w-full rounded-lg border border-white/20 bg-black/30 px-3 py-3 outline-none focus:border-green-400"
-            placeholder="Example: Keg 1"
+            placeholder="Example: Hazy IPA"
           />
         </label>
 
         <label className="block">
-            <span className="mb-2 block text-sm font-medium text-zinc-300">Brew name</span>
+            <span className="mb-2 block text-sm font-medium text-zinc-300">Keg number</span>
             <input
-              value={brewName}
-              onChange={(event) => setBrewName(event.target.value)}
+              value={kegName}
+              onChange={(event) => setKegName(event.target.value)}
               className="w-full rounded-lg border border-white/20 bg-black/30 px-3 py-3 outline-none focus:border-green-400"
-              placeholder="Example: Hazy Pale"
+              placeholder="Example: Keg 1"
             />
           </label>
 

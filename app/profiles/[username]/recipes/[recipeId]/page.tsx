@@ -6,6 +6,7 @@ import { supabaseServer } from "../../../../../lib/supabase/supabaseServerFinal"
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import PageHeading from "@/app/components/PageHeading";
+import type { Fruit, Malt, Hop, Ingredient } from "@/app/types/batchTypes";
 
 export default async function RecipeNotesPage({
   params,
@@ -89,49 +90,184 @@ export default async function RecipeNotesPage({
         />
 
         {/* Recipe info */}
-        <div className="space-y-6">
+<div className="p-4 bg-white/5 border border-white/10 rounded-xl space-y-4">
 
-          <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
-            <h2 className="text-2xl font-semibold mb-3">Base values</h2>
+  <h2 className="text-2xl font-semibold mb-3 text-green-300">
+    Recipe details
+  </h2>
 
-            <p className="text-lg">
-              <strong>OG:</strong> {recipe.og}
-            </p>
+  {/* Base values */}
+  <p className="text-sm opacity-90">
+  <strong>OG:</strong> {Number(recipe.og).toFixed(3)}
+</p>
 
-            <p className="text-lg mt-2">
-              <strong>FG:</strong> {recipe.fg}
-            </p>
+<p className="text-sm opacity-90">
+  <strong>FG:</strong> {Number(recipe.fg).toFixed(3)}
+</p>
 
-            <p className="text-lg mt-2">
-              <strong>ABV:</strong> {recipe.abv.toFixed(1)}%
-            </p>
+  <p className="text-sm opacity-90"><strong>ABV:</strong> {recipe.abv.toFixed(1)}%</p>
+  <p className="text-sm opacity-90"><strong>Volume:</strong> {recipe.volume} L</p>
 
-            <p className="text-lg mt-2">
-              <strong>Volume:</strong> {recipe.volume} L
-            </p>
-          </div>
+  {/* MEAD */}
+  {recipe.type === "Mead" && (
+    <>
+      {recipe.honey_type && recipe.honey_amount && (
+        <p><strong>Honey:</strong> {recipe.honey_type} – {recipe.honey_amount} kg</p>
+      )}
 
-          {recipe.ingredients && (
-            <div className="p-4 bg-white/5 border border-white/10 rounded-xl whitespace-pre-line">
-              <h2 className="text-2xl font-semibold mb-3">Ingredients</h2>
-              {recipe.ingredients}
-            </div>
-          )}
-
-          {recipe.method && (
-            <div className="p-4 bg-white/5 border border-white/10 rounded-xl whitespace-pre-line">
-              <h2 className="text-2xl font-semibold mb-3">Method</h2>
-              {recipe.method}
-            </div>
-          )}
-
-          <div className="p-4 bg-white/5 border border-white/10 rounded-xl whitespace-pre-line">
-            <h2 className="text-2xl font-semibold mb-3">Notes</h2>
-            {recipe.notes || "No notes added"}
-          </div>
-
+      {recipe.fruits?.length > 0 && (
+        <div>
+          <strong>Fruits:</strong>
+          {recipe.fruits.map((f: Fruit, i: number) => (
+            <p key={i}>{f.name}: {f.amount}{f.unit}</p>
+          ))}
         </div>
+      )}
 
+      {recipe.additives && (
+        <p><strong>Additives:</strong><br />{recipe.additives}</p>
+      )}
+
+      {recipe.full_process && (
+        <p><strong>Full process:</strong><br />{recipe.full_process}</p>
+      )}
+
+      {recipe.notes && (
+        <p><strong>Notes:</strong><br />{recipe.notes}</p>
+      )}
+    </>
+  )}
+
+  {/* BEER */}
+  {recipe.type === "Beer" && (
+    <>
+      {recipe.malts?.length > 0 && (
+        <div>
+          <strong>Malt additions:</strong>
+          {recipe.malts.map((m: Malt, i: number) => (
+            <p key={i}>{m.name}: {m.amount}{m.unit}</p>
+          ))}
+        </div>
+      )}
+
+      {recipe.hops?.length > 0 && (
+        <div>
+          <strong>Hop schedule:</strong>
+          {recipe.hops.map((h: Hop, i: number) => (
+            <p key={i}>{h.name}: {h.amount}{h.unit} @ {h.time} min</p>
+          ))}
+        </div>
+      )}
+
+      {recipe.boil_time && (
+        <p><strong>Total boil time:</strong> {recipe.boil_time} min</p>
+      )}
+
+      {recipe.additives && (
+        <p><strong>Additives:</strong><br />{recipe.additives}</p>
+      )}
+
+      {recipe.full_process && (
+        <p><strong>Full process:</strong><br />{recipe.full_process}</p>
+      )}
+
+      {recipe.notes && (
+        <p><strong>Notes:</strong><br />{recipe.notes}</p>
+      )}
+    </>
+  )}
+
+  {/* BRAGGOT */}
+  {recipe.type === "Braggot" && (
+    <>
+      {recipe.malts?.length > 0 && (
+        <div>
+          <strong>Malt additions:</strong>
+          {recipe.malts.map((m: Malt, i: number) => (
+            <p key={i}>{m.name}: {m.amount}{m.unit}</p>
+          ))}
+        </div>
+      )}
+
+      {recipe.boil_time && (
+        <p><strong>Boil time:</strong> {recipe.boil_time} min</p>
+      )}
+
+      {recipe.honey_amount && (
+        <p><strong>Honey:</strong> {recipe.honey_amount} kg</p>
+      )}
+
+      {recipe.additives && (
+        <p><strong>Additives:</strong><br />{recipe.additives}</p>
+      )}
+
+      {recipe.full_process && (
+        <p><strong>Full process:</strong><br />{recipe.full_process}</p>
+      )}
+
+      {recipe.notes && (
+        <p><strong>Notes:</strong><br />{recipe.notes}</p>
+      )}
+    </>
+  )}
+
+  {/* CIDER / WINE / SELTZER */}
+  {(recipe.type === "Cider" || recipe.type === "Wine" || recipe.type === "Seltzer") && (
+    <>
+      {recipe.juice_type && (
+        <p><strong>Juice type:</strong> {recipe.juice_type}</p>
+      )}
+
+      {recipe.sugar_amount && (
+        <p><strong>Sugar added:</strong> {recipe.sugar_amount} kg</p>
+      )}
+
+      {recipe.additives && (
+        <p><strong>Additives:</strong><br />{recipe.additives}</p>
+      )}
+
+      {recipe.full_process && (
+        <p><strong>Full process:</strong><br />{recipe.full_process}</p>
+      )}
+
+      {recipe.notes && (
+        <p><strong>Notes:</strong><br />{recipe.notes}</p>
+      )}
+    </>
+  )}
+
+  {/* OTHER */}
+  {recipe.type === "Other" && (
+    <>
+      {recipe.ingredients?.length > 0 && (
+        <div>
+          <strong>Ingredients:</strong>
+          {recipe.ingredients.map((ing: Ingredient, idx: number) => (
+            <p key={idx}>{ing.name}: {ing.amount}{ing.unit}</p>
+          ))}
+        </div>
+      )}
+
+      {recipe.steps?.length > 0 && (
+        <div>
+          <strong>Process steps:</strong>
+          {recipe.steps.map((s: string, idx: number) => (
+            <p key={idx}>{idx + 1}. {s}</p>
+          ))}
+        </div>
+      )}
+
+      {recipe.additives && (
+        <p><strong>Additives:</strong><br />{recipe.additives}</p>
+      )}
+
+      {recipe.notes && (
+        <p><strong>Notes:</strong><br />{recipe.notes}</p>
+      )}
+    </>
+  )}
+
+</div>
         {/* ⭐ NOTE LOG */}
         <h2 className="text-2xl font-semibold mt-12 mb-4 text-center">
           Note log

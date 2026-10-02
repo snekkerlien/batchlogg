@@ -1,6 +1,12 @@
 "use client";
 
-export default function Background({ children }: { children: React.ReactNode }) {
+export default function Background({
+  children,
+  background = "/background1.png", // default
+}: {
+  children: React.ReactNode;
+  background?: string;
+}) {
   return (
     <div className="min-h-screen text-white relative">
 
@@ -8,7 +14,7 @@ export default function Background({ children }: { children: React.ReactNode }) 
       <div
         className="fixed inset-0 -z-10"
         style={{
-          backgroundImage: "url('/background3.png')",
+          backgroundImage: `url('${background}')`,
           backgroundRepeat: "no-repeat",
           backgroundPosition: "center top",
           backgroundSize: "contain",
@@ -16,6 +22,7 @@ export default function Background({ children }: { children: React.ReactNode }) 
         }}
       />
 
+      {/* Fade overlay */}
       <div
         className="fixed inset-x-0 top-0 -z-0 pointer-events-none"
         style={{
