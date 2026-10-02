@@ -81,6 +81,11 @@ export async function GET() {
   const friendIds = (friendships ?? []).map((friendship) =>
     friendship.user_a === user.id ? friendship.user_b : friendship.user_a
   );
+  const requestedUserIds = new Set(
+    (requests ?? []).map((request) =>
+      request.requester_id === user.id ? request.recipient_id : request.requester_id
+    )
+  );
   const profileIds = [...new Set([
     ...friendIds,
     ...(blocks ?? [])
@@ -133,7 +138,10 @@ export async function GET() {
         return person ? [person] : [];
       }),
     discoverable: (discoverable ?? []).filter(
-      (person) => !blockedUserIds.has(person.id) && !friendIds.includes(person.id)
+      (person) =>
+        !blockedUserIds.has(person.id) &&
+        !friendIds.includes(person.id) &&
+        !requestedUserIds.has(person.id)
     ),
   });
 }

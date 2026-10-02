@@ -4,6 +4,9 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import PageHeading from "@/app/components/PageHeading";
+import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
+import BackButton from "@/app/batchhistorikk/BackButton";
+import MenuOverlay from "@/app/components/MenuOverlay";
 
 type Keg = {
   id: string;
@@ -35,9 +38,35 @@ export default function KegPublicPage() {
   const [brewDate, setBrewDate] = useState("");
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+
+    supabaseBrowser.auth
+      .getSession()
+      .then(({ data, error }) => {
+        if (error) throw error;
+        if (active) setIsLoggedIn(Boolean(data.session));
+      })
+      .catch((error) => {
+        console.error("Could not determine login status", error);
+      });
+
+    const { data: listener } = supabaseBrowser.auth.onAuthStateChange(
+      (_event, session) => {
+        if (active) setIsLoggedIn(Boolean(session));
+      }
+    );
+
+    return () => {
+      active = false;
+      listener.subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     async function load() {
@@ -117,20 +146,7 @@ export default function KegPublicPage() {
     return (
       <main className="min-h-screen px-6 py-12 text-white">
         <div className="bg-black/60 backdrop-blur-md p-6 pt-16 sm:p-8 sm:pt-16 rounded-xl border border-white/10 max-w-3xl mx-auto mt-20 sm:mt-24 relative">
-          <div className="absolute top-4 left-4 right-4 flex justify-between gap-3">
-            <Link
-              href="/kegs"
-              className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
-            >
-              Back to kegs
-            </Link>
-            <Link
-              href="/"
-              className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
-            >
-              Go to main site
-            </Link>
-          </div>
+          <KegPageTopBar isLoggedIn={isLoggedIn} />
           <PageHeading title="Keg not found" subtitle="This keg is not registered in the database yet." />
         </div>
       </main>
@@ -140,20 +156,7 @@ export default function KegPublicPage() {
   return (
     <main className="min-h-screen px-6 py-12 text-white">
       <div className="bg-black/60 backdrop-blur-md p-6 pt-16 sm:p-8 sm:pt-16 rounded-xl border border-white/10 max-w-3xl mx-auto mt-20 sm:mt-24 relative">
-        <div className="absolute top-4 left-4 right-4 flex justify-between gap-3">
-          <Link
-            href="/kegs"
-            className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
-          >
-            Back to kegs
-          </Link>
-          <Link
-            href="/"
-            className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
-          >
-            Go to main site
-          </Link>
-        </div>
+        <KegPageTopBar isLoggedIn={isLoggedIn} />
         <PageHeading
           title={keg.name}
           subtitle={keg.brew_name || "No brew registered yet"}
@@ -242,4 +245,40 @@ export default function KegPublicPage() {
       </div>
     </main>
   );
+}
+
+function KegPageTopBar({ isLoggedIn }: { isLoggedIn: boolean | null }) {
+  if (isLoggedIn === true) {
+    return (
+      <>
+        <div className="absolute top-2 left-4 z-40 sm:top-4">
+          <BackButton />
+        </div>
+        <div className="absolute top-2 right-4 z-40 sm:top-4">
+          <MenuOverlay current="kegs" />
+        </div>
+      </>
+    );
+  }
+
+  if (isLoggedIn === false) {
+    return (
+      <div className="absolute top-2 left-4 right-4 flex justify-between gap-3 sm:top-4">
+        <Link
+          href="/kegs"
+          className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
+        >
+          Back to kegs
+        </Link>
+        <Link
+          href="/"
+          className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
+        >
+          Go to main site
+        </Link>
+      </div>
+    );
+  }
+
+  return null;
 }

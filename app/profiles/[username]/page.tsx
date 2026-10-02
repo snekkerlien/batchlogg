@@ -13,6 +13,14 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<any>(null);
   const [canViewContent, setCanViewContent] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
+  const [isFriend, setIsFriend] = useState(false);
+  const [friendRequest, setFriendRequest] = useState<{
+    id: string;
+    status: "sent" | "received";
+  } | null>(null);
+  const [friendRequestBusy, setFriendRequestBusy] = useState(false);
+  const [friendRequestError, setFriendRequestError] = useState("");
   const [kar, setKar] = useState<any[]>([]);
   const [recipes, setRecipes] = useState<any[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -38,6 +46,9 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
       const profileData = profileResult.profile;
       setProfile(profileData);
       setCanViewContent(profileResult.canViewContent);
+      setIsOwner(session.user.id === profileData.id);
+      setIsFriend(profileResult.isFriend);
+      setFriendRequest(profileResult.friendRequest);
 
       const userId = profileData.id;
       const isOwner = session?.user?.id === userId;
@@ -134,6 +145,64 @@ const secondary = batchesRaw
     setExpanded(expanded === id ? null : id);
   }
 
+  async function sendFriendRequest() {
+    if (!profile || friendRequestBusy) return;
+    setFriendRequestBusy(true);
+    setFriendRequestError("");
+
+    try {
+      const response = await fetch("/api/community/friends", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ action: "request", userId: profile.id }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Could not send friend request");
+      }
+      setFriendRequest({ id: result.id, status: "sent" });
+    } catch (requestError) {
+      console.error("Could not send profile friend request", requestError);
+      setFriendRequestError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Could not send friend request."
+      );
+    } finally {
+      setFriendRequestBusy(false);
+    }
+  }
+
+  async function cancelFriendRequest() {
+    if (!friendRequest || friendRequest.status !== "sent" || friendRequestBusy) return;
+    setFriendRequestBusy(true);
+    setFriendRequestError("");
+
+    try {
+      const response = await fetch("/api/community/friends", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ action: "cancel", requestId: friendRequest.id }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Could not cancel friend request");
+      }
+      setFriendRequest(null);
+    } catch (requestError) {
+      console.error("Could not cancel profile friend request", requestError);
+      setFriendRequestError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Could not cancel friend request."
+      );
+    } finally {
+      setFriendRequestBusy(false);
+    }
+  }
+
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
       <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10">
@@ -183,6 +252,56 @@ const secondary = batchesRaw
       : "This is a private profile. You can see their name and profile picture because you’re friends."
   }
 />
+
+{!isOwner && (
+  <div className="mb-8 flex flex-wrap justify-center gap-3">
+    {(isFriend || friendRequest || profile.allow_friend_requests) && (
+      <button
+        type="button"
+        onClick={!isFriend && !friendRequest ? sendFriendRequest : undefined}
+        disabled={isFriend || !!friendRequest || friendRequestBusy || !profile.is_public}
+        className={`rounded-lg border px-4 py-2 text-sm font-semibold disabled:cursor-default disabled:opacity-80 ${
+          isFriend || friendRequest
+            ? "border-white/20 bg-white/10 text-white/80"
+            : "border-green-500/40 bg-green-800/60 hover:bg-green-700 disabled:hover:bg-green-800/60"
+        }`}
+      >
+        {isFriend
+          ? "Friends"
+          : friendRequest?.status === "sent"
+            ? "Request sent"
+            : friendRequest?.status === "received"
+              ? "Request received"
+              : friendRequestBusy
+                ? "Sending…"
+                : "Add friend"}
+      </button>
+    )}
+    {friendRequest?.status === "sent" && (
+      <button
+        type="button"
+        onClick={cancelFriendRequest}
+        disabled={friendRequestBusy}
+        className="rounded-lg border border-white/20 px-4 py-2 text-sm font-semibold hover:bg-white/10 disabled:cursor-wait disabled:opacity-60"
+      >
+        {friendRequestBusy ? "Canceling…" : "Cancel request"}
+      </button>
+    )}
+    {isFriend && (
+      <Link
+        href={`/community/messages?peer_id=${encodeURIComponent(profile.id)}`}
+        className="rounded-lg border border-green-500/40 bg-green-800/60 px-4 py-2 text-sm font-semibold hover:bg-green-700"
+      >
+        Send message
+      </Link>
+    )}
+    {friendRequestError && (
+      <p role="alert" className="w-full text-center text-sm text-amber-300">
+        {friendRequestError}
+      </p>
+    )}
+  </div>
+)}
 
 {canViewContent ? (
   <>

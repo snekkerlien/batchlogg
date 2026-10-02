@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
 
   const { data: profile, error: profileError } = await serviceRole
     .from("profiles")
-    .select("id, username, avatar_url, is_public")
+    .select("id, username, avatar_url, is_public, allow_friend_requests")
     .eq("username", username)
     .maybeSingle();
 
@@ -36,12 +36,14 @@ export async function GET(request: NextRequest) {
 
   const isOwner = profile.id === user.id;
   let isFriend = false;
-  if (!isOwner && !profile.is_public) {
+  let friendRequest: { id: string; status: "sent" | "received" } | null = null;
+  if (!isOwner) {
     const [user_a, user_b] =
       user.id < profile.id ? [user.id, profile.id] : [profile.id, user.id];
     const [
       { data: friendship, error: friendshipError },
       { data: blocks, error: blocksError },
+      { data: requests, error: requestsError },
     ] = await Promise.all([
       serviceRole
         .from("community_friendships")
@@ -55,16 +57,29 @@ export async function GET(request: NextRequest) {
         .or(
           `and(blocker_id.eq.${user.id},blocked_id.eq.${profile.id}),and(blocker_id.eq.${profile.id},blocked_id.eq.${user.id})`
         ),
+      serviceRole
+        .from("community_friend_requests")
+        .select("id, requester_id, recipient_id")
+        .or(
+          `and(requester_id.eq.${user.id},recipient_id.eq.${profile.id}),and(requester_id.eq.${profile.id},recipient_id.eq.${user.id})`
+        ),
     ]);
 
-    if (friendshipError || blocksError) {
+    if (friendshipError || blocksError || requestsError) {
       console.error(
-        "Could not verify private profile access",
-        friendshipError || blocksError
+        "Could not verify community profile relationship",
+        friendshipError || blocksError || requestsError
       );
       return NextResponse.json({ error: "Could not verify profile access" }, { status: 500 });
     }
     isFriend = !!friendship && !(blocks?.length);
+    const pendingRequest = requests?.[0];
+    if (pendingRequest) {
+      friendRequest = {
+        id: pendingRequest.id,
+        status: pendingRequest.requester_id === user.id ? "sent" : "received",
+      };
+    }
   }
 
   if (!profile.is_public && !isOwner && !isFriend) {
@@ -74,5 +89,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     profile,
     canViewContent: isOwner || profile.is_public,
+    isFriend,
+    friendRequest,
   });
 }
