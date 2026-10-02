@@ -169,21 +169,22 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  async function toggleOpen() {
-    if (!open) {
-      onOpen();
-      setLoading(true);
-      try {
-        await loadNotifications();
-        setError("");
-      } catch (loadError) {
+  function toggleOpen() {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+
+    onOpen();
+    setOpen(true);
+    setLoading(true);
+    void loadNotifications()
+      .then(() => setError(""))
+      .catch((loadError) => {
         console.error("Could not refresh notifications", loadError);
         setError("Notifications could not be loaded.");
-      } finally {
-        setLoading(false);
-      }
-    }
-    setOpen((current) => !current);
+      })
+      .finally(() => setLoading(false));
   }
 
   async function openNotification(notification: Notification) {
@@ -418,7 +419,7 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
               {error}
             </p>
           )}
-          {loading ? (
+          {loading && notifications.length === 0 ? (
             <p className="px-2 py-4 text-sm text-white/60">Loading…</p>
           ) : notifications.length === 0 ? (
             <p className="px-2 py-4 text-sm text-white/60">
