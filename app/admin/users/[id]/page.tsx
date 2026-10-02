@@ -1,54 +1,80 @@
-import { createClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
+import { supabaseServer } from "../../../../lib/supabase/supabaseServerFinal";
+import { isAdminUser } from "../../../../lib/auth/isAdminUser";
 
 export const runtime = "nodejs";
 
 export default async function UserAdminPage({ params }: any) {
   const userId = params.id;
+  const { supabase, serviceRole } = supabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  // Hent data på server (trygt)
-  const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      auth: { persistSession: false, autoRefreshToken: false }
-    }
-  );
+  if (!isAdminUser(user)) {
+    return (
+      <main className="min-h-screen flex items-center justify-center">
+        <p className="text-red-400 text-xl font-bold">Access denied.</p>
+      </main>
+    );
+  }
 
-  const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId);
+  const { data: authUser, error: authUserError } =
+    await serviceRole.auth.admin.getUserById(userId);
+  if (authUserError) {
+    throw new Error(`Failed to load user: ${authUserError.message}`);
+  }
 
-  const { data: profile } = await supabaseAdmin
+  const { data: profile, error: profileError } = await serviceRole
     .from("profiles")
     .select("*")
     .eq("id", userId)
     .single();
+  if (profileError) {
+    throw new Error(`Failed to load user profile: ${profileError.message}`);
+  }
 
-  // ⭐ SERVER ACTION — bruker din fix-email route
   async function updateUser(formData: FormData) {
-  "use server";
+    "use server";
 
-  const email = formData.get("email")?.toString();
-  const username = formData.get("username")?.toString();
+    const { supabase: actionSupabase, serviceRole: actionServiceRole } =
+      supabaseServer();
+    const {
+      data: { user: actionUser },
+    } = await actionSupabase.auth.getUser();
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL!;
+    if (!isAdminUser(actionUser)) {
+      throw new Error("Forbidden");
+    }
 
-  await fetch(`${baseUrl}/admin/fix-email`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ userId, newEmail: email }),
-  });
+    const email = formData.get("email")?.toString();
+    const username = formData.get("username")?.toString();
 
-  await fetch(`${baseUrl}/admin/fix-username`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ userId, username }),
-  });
+    if (!email || !username) {
+      throw new Error("Email and username are required");
+    }
 
-  revalidatePath(`/admin/users/${userId}`);
-}
+    const { error: authUpdateError } =
+      await actionServiceRole.auth.admin.updateUserById(userId, {
+        email,
+        email_confirm: true,
+      });
 
+    if (authUpdateError) {
+      throw new Error(`Failed to update email: ${authUpdateError.message}`);
+    }
 
+    const { error: profileUpdateError } = await actionServiceRole
+      .from("profiles")
+      .update({ email, username })
+      .eq("id", userId);
 
+    if (profileUpdateError) {
+      throw new Error(`Failed to update profile: ${profileUpdateError.message}`);
+    }
+
+    revalidatePath(`/admin/users/${userId}`);
+  }
   return (
     <main className="min-h-screen p-10">
       <h1 className="text-3xl font-bold mb-6">Edit User</h1>

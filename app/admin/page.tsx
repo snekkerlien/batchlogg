@@ -1,11 +1,12 @@
 import { supabaseServer } from "../../lib/supabase/supabaseServerFinal";
+import { isAdminUser } from "../../lib/auth/isAdminUser";
 
 export default async function AdminPage() {
   const { supabase } = supabaseServer();
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user || user.email !== "mads@snekkerlien.no") {
+  if (!isAdminUser(user)) {
     return (
       <main className="min-h-screen flex items-center justify-center">
         <p className="text-red-400 text-xl font-bold">

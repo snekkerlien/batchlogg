@@ -63,8 +63,8 @@ export function KarNotesClient({
     await deleteNoteServer(noteId, karId);
   }
 
-  async function handleDeleteImage(noteId: string, imageUrl: string) {
-    await deleteImageServer(noteId, imageUrl, karId);
+  async function handleDeleteImage(noteId: string) {
+    await deleteImageServer(noteId, karId);
   }
 
   return (
@@ -103,7 +103,7 @@ export function KarNotesClient({
             <div className="flex gap-3 mt-4">
               {note.image_url ? (
                 <button
-                  onClick={() => handleDeleteImage(note.id, note.image_url!)}
+                  onClick={() => handleDeleteImage(note.id)}
                   className="px-3 py-2 bg-red-700 hover:bg-red-600 border border-red-500 rounded-lg text-sm font-semibold"
                 >
                   Delete picture

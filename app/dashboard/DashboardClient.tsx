@@ -188,6 +188,14 @@ useEffect(() => {
         throw new Error(`Vessel creation failed (${res.status})`);
       }
 
+      const { error: refreshError } = await supabaseBrowser.auth.refreshSession();
+      if (refreshError) {
+        console.error("Vessel created, but session refresh failed", refreshError);
+        setFadeMessage("Vessel created, but the dashboard could not refresh your session. Please reload.");
+        setTimeout(() => setFadeMessage(""), 4000);
+        return;
+      }
+
       await loadDashboardData();
     } catch (error) {
       console.error("Failed to create vessel", error);

@@ -2,11 +2,27 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
+import { isAdminUser } from "../../../lib/auth/isAdminUser";
 
 export async function POST(req: Request) {
+  const { supabase } = supabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!isAdminUser(user)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const { userId, newEmail } = await req.json();
 
-  if (!userId || !newEmail) {
+  if (
+    typeof userId !== "string" ||
+    typeof newEmail !== "string" ||
+    !userId ||
+    !newEmail
+  ) {
     return NextResponse.json({ error: "Missing userId or newEmail" }, { status: 400 });
   }
 
@@ -28,7 +44,7 @@ export async function POST(req: Request) {
   });
 
   if (error) {
-    console.log("Email update error:", error);
+    console.error("Email update error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
@@ -39,7 +55,7 @@ export async function POST(req: Request) {
     .eq("id", userId);
 
   if (profileError) {
-    console.log("Profile update error:", profileError);
+    console.error("Profile update error:", profileError);
     return NextResponse.json({ error: profileError.message }, { status: 500 });
   }
 

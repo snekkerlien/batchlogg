@@ -2,11 +2,27 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
+import { isAdminUser } from "../../../lib/auth/isAdminUser";
 
 export async function POST(req: Request) {
+  const { supabase } = supabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!isAdminUser(user)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const { userId, username, email } = await req.json();
 
-  if (!userId || !username) {
+  if (
+    typeof userId !== "string" ||
+    typeof username !== "string" ||
+    !userId ||
+    !username
+  ) {
     return NextResponse.json({ error: "Missing userId or username" }, { status: 400 });
   }
 
@@ -27,7 +43,7 @@ export async function POST(req: Request) {
     .eq("id", userId);
 
   if (error) {
-    console.log("Username update error:", error);
+    console.error("Username update error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 

@@ -1,9 +1,24 @@
 import { createClient } from "@supabase/supabase-js";
 import Link from "next/link";
+import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
+import { isAdminUser } from "../../../lib/auth/isAdminUser";
 
 export const runtime = "nodejs";
 
 export default async function UsersPage() {
+  const { supabase } = supabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!isAdminUser(user)) {
+    return (
+      <main className="min-h-screen flex items-center justify-center">
+        <p className="text-red-400 text-xl font-bold">Access denied.</p>
+      </main>
+    );
+  }
+
   // Admin client (bypasser RLS)
   const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

@@ -20,7 +20,7 @@ export default function Background({ children }: { children: React.ReactNode }) 
       <div
         className="fixed inset-0 -z-0 pointer-events-none"
         style={{
-          background: "linear-gradient(to bottom, rgba(0,0,0,0) 40%, rgba(0,0,0,1) 100%)",
+          background: "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 100%)",
         }}
       />
 
