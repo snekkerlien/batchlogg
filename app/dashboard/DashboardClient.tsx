@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
 import { getNextMotd } from "../../lib/motd/motdList";
@@ -21,6 +21,21 @@ interface DashboardResponse {
   kar: KarType[];
 }
 
+function isCreatedKar(
+  value: unknown
+): value is Pick<KarType, "id" | "nummer" | "created_at"> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "id" in value &&
+    typeof value.id === "string" &&
+    "nummer" in value &&
+    typeof value.nummer === "number" &&
+    "created_at" in value &&
+    typeof value.created_at === "string"
+  );
+}
+
 export default function DashboardClient() {
  
   const router = useRouter();
@@ -29,22 +44,12 @@ export default function DashboardClient() {
   const [loadError, setLoadError] = useState("");
   const [username, setUsername] = useState("");
   const [kar, setKar] = useState<KarType[]>([]);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [motd, setMotd] = useState("");
   const [selectMode, setSelectMode] = useState(false);
   const [selectedKars, setSelectedKars] = useState<string[]>([]);
   const [fadeMessage, setFadeMessage] = useState("");
   const [maxVessels, setMaxVessels] = useState(12);
   const [creatingKar, setCreatingKar] = useState(false);
-  const [showHelp, setShowHelp] = useState(false);
-
-
-  const menuRef = useRef<HTMLDivElement | null>(null);
-
-  async function logout() {
-    await supabaseBrowser.auth.signOut();
-    router.replace("/");
-  }
 
 // ⭐ Hent MOTD ved mount
 useEffect(() => {
@@ -54,18 +59,6 @@ useEffect(() => {
 // ⭐ Last dashboard-data når router endres
 useEffect(() => {
   loadDashboardData();
-}, []);
-
-// ⭐ Klikk utenfor menyen lukker den
-useEffect(() => {
-  function handleClickOutside(e: MouseEvent) {
-    if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-      setMenuOpen(false);
-    }
-  }
-
-  document.addEventListener("mousedown", handleClickOutside);
-  return () => document.removeEventListener("mousedown", handleClickOutside);
 }, []);
 
   async function getToken() {
@@ -188,15 +181,33 @@ useEffect(() => {
         throw new Error(`Vessel creation failed (${res.status})`);
       }
 
-      const { error: refreshError } = await supabaseBrowser.auth.refreshSession();
-      if (refreshError) {
-        console.error("Vessel created, but session refresh failed", refreshError);
-        setFadeMessage("Vessel created, but the dashboard could not refresh your session. Please reload.");
+      const payload: unknown = await res.json();
+      const createdKar =
+        typeof payload === "object" && payload !== null && "kar" in payload
+          ? payload.kar
+          : null;
+
+      if (!isCreatedKar(createdKar)) {
+        console.error("Vessel creation response did not include the created vessel");
+        setFadeMessage("Vessel was created, but could not be displayed. Please reload.");
         setTimeout(() => setFadeMessage(""), 4000);
         return;
       }
 
-      await loadDashboardData();
+      setKar((current) =>
+        current.some((vessel) => vessel.id === createdKar.id)
+          ? current
+          : [
+              ...current,
+              {
+                id: createdKar.id,
+                nummer: createdKar.nummer,
+                created_at: createdKar.created_at,
+                status: "Ledig",
+                batchName: null,
+              },
+            ]
+      );
     } catch (error) {
       console.error("Failed to create vessel", error);
       setFadeMessage("Could not create vessel. Please try again.");
@@ -264,7 +275,7 @@ useEffect(() => {
       </h2>
 
       <div className="flex flex-wrap justify-center gap-6">
-        {kar.map((k, index) => (
+        {kar.map((k) => (
           <a
             key={k.id}
             href={selectMode ? "#" : `/kar/${k.id}`}
