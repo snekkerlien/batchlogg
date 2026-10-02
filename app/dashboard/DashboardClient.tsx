@@ -10,10 +10,15 @@ import MenuOverlay from "@/app/components/MenuOverlay";
 interface KarType {
   id: string;
   nummer: number;
-  user_id: string;
   created_at: string;
   status: "Aktiv" | "Ledig" | "Sekundær";
   batchName?: string | null;
+}
+
+interface DashboardResponse {
+  username: string;
+  maxVessels: number;
+  kar: KarType[];
 }
 
 export default function DashboardClient() {
@@ -21,6 +26,7 @@ export default function DashboardClient() {
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [username, setUsername] = useState("");
   const [kar, setKar] = useState<KarType[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -70,94 +76,46 @@ useEffect(() => {
 }
 
   async function loadDashboardData() {
-    const token = await getToken();
-    if (!token) {
-      router.replace("/");
-      return;
-    }
+    setLoading(true);
+    setLoadError("");
 
-    const profileRes = await fetch("/api/profile", {
-      headers: { Authorization: `Bearer ${token}` },
-      credentials: "include",
-    });
-
-    if (!profileRes.ok) {
-      router.replace("/");
-      return;
-    }
-
-    const profileJson = await profileRes.json();
-    setUsername(profileJson.username ?? "Unknown");
-
-    const {
-      data: { session },
-    } = await supabaseBrowser.auth.getSession();
-
-    const currentUserId = session?.user?.id;
-
-    if (currentUserId) {
-      const { data: profile } = await supabaseBrowser
-        .from("profiles")
-        .select("max_vessels")
-        .eq("id", currentUserId)
-        .single();
-
-      setMaxVessels(profile?.max_vessels ?? 12);
-    }
-
-    const karRes = await fetch("/api/kar", {
-      headers: { Authorization: `Bearer ${token}` },
-      credentials: "include",
-    });
-
-    const karJson: KarType[] = await karRes.json();
-
-    const owned = karJson.filter((k) => k.user_id === currentUserId);
-
-    const batchRes = await fetch("/api/batches", {
-      headers: { Authorization: `Bearer ${token}` },
-      credentials: "include",
-    });
-
-    const batches = batchRes.ok ? await batchRes.json() : [];
-
-    const karWithStatus = owned.map((k) => {
-      const batch = batches
-        .filter((b: any) => 
-          b.aktivt_kar === k.id &&
-          (b.status === "Aktiv" || b.status === "Sekundær")
-        )
-          .sort((a: any, b: any) =>
-            new Date(b.startdato).getTime() -
-            new Date(a.startdato).getTime()
-          )[0];
-
-      let status: "Ledig" | "Aktiv" | "Sekundær" = "Ledig";
-
-      if (batch) {
-        if (batch.status === "Avsluttet") {
-          status = "Ledig";
-        } else if (batch.status === "Sekundær") {
-          status = "Sekundær";
-        } else {
-          status = "Aktiv";
-        }
+    try {
+      const token = await getToken();
+      if (!token) {
+        router.replace("/");
+        return;
       }
 
-      return { ...k, status, batchName: batch?.name ?? null };
-    });
+      const response = await fetch("/api/dashboard", {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+        cache: "no-store",
+      });
 
-    const sorted = [...karWithStatus].sort(
-      (a, b) =>
-        new Date(a.created_at).getTime() -
-        new Date(b.created_at).getTime()
-    );
+      if (response.status === 401) {
+        router.replace("/");
+        return;
+      }
 
-    setKar(sorted);
-    setLoading(false);
+      if (!response.ok) {
+        throw new Error(`Dashboard request failed (${response.status})`);
+      }
+
+      const data: DashboardResponse = await response.json();
+      if (!Array.isArray(data.kar)) {
+        throw new Error("Dashboard response did not include vessel data");
+      }
+
+      setUsername(data.username ?? "Unknown");
+      setMaxVessels(data.maxVessels ?? 12);
+      setKar(data.kar);
+    } catch (error) {
+      console.error("Failed to load dashboard data", error);
+      setLoadError("Could not load your dashboard. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
-
-
 
   function toggleSelectMode() {
     setSelectMode(!selectMode);
@@ -258,6 +216,21 @@ useEffect(() => {
         {motd}
       </p>
 
+      {loadError && (
+        <div
+          role="alert"
+          className="mb-6 rounded-lg border border-red-500/50 bg-red-700/30 p-4 text-center"
+        >
+          <p>{loadError}</p>
+          <button
+            onClick={loadDashboardData}
+            className="mt-3 rounded-lg border border-white/20 bg-white/10 px-4 py-2 hover:bg-white/20"
+          >
+            Try again
+          </button>
+        </div>
+      )}
+
       <h2 className="text-2xl font-semibold mb-4 text-center">
         Vessel Overview
       </h2>
@@ -297,16 +270,16 @@ useEffect(() => {
             {/* ⭐ Only show bubbles when the vessel has an active batch */}
 {(k.status === "Aktiv" || k.status === "Sekundær") && (
   <div className="bubble-container">
-    {[...Array(12)].map((_, i) => (
+    {[...Array(6)].map((_, i) => (
       <span
         key={i}
         className="bubble"
         style={{
-          left: `${Math.random() * 100}%`,
-          animationDuration: `${2 + Math.random() * 3}s`,
-          animationDelay: `${Math.random() * 2}s`,
-          width: `${4 + Math.random() * 6}px`,
-          height: `${4 + Math.random() * 6}px`,
+          left: `${(i * 37 + 11) % 100}%`,
+          animationDuration: `${2 + (i % 3)}s`,
+          animationDelay: `${((i * 7) % 20) / 10}s`,
+          width: `${4 + (i % 3) * 2}px`,
+          height: `${4 + (i % 3) * 2}px`,
         }}
       />
     ))}

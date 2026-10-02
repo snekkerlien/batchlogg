@@ -36,13 +36,24 @@ export async function addInventoryItem(formData: FormData) {
 /**
  * UPDATE INVENTORY AMOUNT
  */
-export async function updateInventoryAmount(id: string, newAmount: number) {
+export async function updateInventoryAmount(
+  id: string,
+  newAmount: number,
+  newMinimumAmount: number
+) {
   const { supabase } = await supabaseServer();
 
-  await supabase
+  const { error } = await supabase
     .from("inventory_items")
-    .update({ amount: newAmount })
+    .update({
+      amount: newAmount,
+      minimum_amount: newMinimumAmount,
+    })
     .eq("id", id);
+
+  if (error) {
+    throw new Error(`Failed to update inventory item: ${error.message}`);
+  }
 
   revalidatePath("/inventory");
 }

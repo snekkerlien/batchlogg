@@ -260,6 +260,7 @@ export const MALT_ALIASES: Record<string, string> = {
   "wheat": "Hvetemalt",
   "hvetemalt": "Hvetemalt",
   "hvete malt": "Hvetemalt",
+  "wheat malt": "Hvetemalt",
 
   "dark wheat": "Dark Wheat Malt",
   "dark wheat malt": "Dark Wheat Malt",

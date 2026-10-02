@@ -9,6 +9,7 @@ export default function InventoryItem({ item }: { item: any }) {
 
   const [editMode, setEditMode] = useState(false);
   const [amount, setAmount] = useState(item.amount);
+  const [minimumAmount, setMinimumAmount] = useState(item.minimum_amount ?? "");
 
   const [profile, setProfile] = useState<any>(null);
 
@@ -58,16 +59,18 @@ if (profile !== null && !profile.snus_is_true && snusCategories.includes(item.ca
 
   function startEdit() {
     setAmount(item.amount);
+    setMinimumAmount(item.minimum_amount ?? "");
     setEditMode(true);
   }
 
   function cancelEdit() {
     setEditMode(false);
     setAmount(item.amount);
+    setMinimumAmount(item.minimum_amount ?? "");
   }
 
   async function confirmEdit() {
-    await updateItem(item.id, Number(amount));
+    await updateItem(item.id, Number(amount), Number(minimumAmount));
     setEditMode(false);
   }
 
@@ -81,7 +84,8 @@ if (profile !== null && !profile.snus_is_true && snusCategories.includes(item.ca
         shadow 
         flex flex-col 
         justify-between
-        h-48
+        min-h-48
+        gap-3
       "
     >
 
@@ -117,15 +121,28 @@ if (profile !== null && !profile.snus_is_true && snusCategories.includes(item.ca
 
       {/* EDIT MODE */}
       {editMode && (
-        <div className="flex items-center justify-between gap-3 mt-1">
-          <input
-            type="number"
-            className="p-2 bg-black/40 border border-white/20 rounded w-20 text-base"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
+        <div className="flex flex-col gap-3 mt-1">
+          <label className="flex items-center justify-between gap-2 text-sm">
+            Amount
+            <input
+              type="number"
+              className="p-2 bg-black/40 border border-white/20 rounded w-24 text-base"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+          </label>
 
-          <div className="flex gap-2">
+          <label className="flex items-center justify-between gap-2 text-sm">
+            Minimum amount
+            <input
+              type="number"
+              className="p-2 bg-black/40 border border-white/20 rounded w-24 text-base"
+              value={minimumAmount}
+              onChange={(e) => setMinimumAmount(e.target.value)}
+            />
+          </label>
+
+          <div className="flex justify-end gap-2">
             <button
               onClick={confirmEdit}
               className="px-4 py-2 bg-green-700 hover:bg-green-600 rounded border border-green-500 text-sm font-semibold"

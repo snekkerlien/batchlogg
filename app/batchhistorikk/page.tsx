@@ -5,6 +5,20 @@ import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 
+function hasTypeSpecificRecipe(batch: any) {
+  return Boolean(
+    batch.honey_type ||
+      batch.fruits?.length ||
+      batch.malts?.length ||
+      batch.hops?.length ||
+      batch.boil_time ||
+      batch.juice_type ||
+      batch.sugar_amount ||
+      batch.ingredients?.length ||
+      batch.steps?.length
+  );
+}
+
 export default function BatchHistoryPage() {
 
   const [loading, setLoading] = useState(true);
@@ -64,7 +78,7 @@ export default function BatchHistoryPage() {
           ...batch,
           vesselNumber: index !== -1 ? index + 1 : null,
           previousVesselNumber: previousKarNumber,
-          notes: batchNotes,
+          notesLog: batchNotes,
         };
       });
 
@@ -181,6 +195,10 @@ export default function BatchHistoryPage() {
                     </p>
 
                     <p className="text-sm">
+                      <strong>Type:</strong> {batch.type}
+                    </p>
+
+                    <p className="text-sm">
                       <strong>Volume:</strong> {batch.volume_l} L
                     </p>
 
@@ -205,21 +223,27 @@ export default function BatchHistoryPage() {
                       {new Date(batch.startdato).toLocaleDateString("en-GB")}
                     </p>
 
+                    {(batch.type === "Beer" || batch.type === "Braggot") && (
+                      <>
+                        {batch.ibu !== null && batch.ibu !== undefined && (
+                          <p className="text-sm">
+                            <strong>IBU:</strong> {Number(batch.ibu).toFixed(0)}
+                          </p>
+                        )}
+                        {batch.ebc !== null && batch.ebc !== undefined && (
+                          <p className="text-sm">
+                            <strong>EBC:</strong> {Number(batch.ebc).toFixed(0)}
+                          </p>
+                        )}
+                      </>
+                    )}
+
                     {batch.finished_date && (
                       <p className="text-sm">
                         <strong>Finished:</strong>{" "}
                         {new Date(batch.finished_date).toLocaleDateString("en-GB")}
                       </p>
                     )}
-
-                    <p className="text-sm">
-                      <strong>Vessel:</strong>{" "}
-                      {batch.vesselNumber
-                        ? `Vessel ${batch.vesselNumber}`
-                        : batch.previousVesselNumber
-                        ? `No longer linked (previously Vessel ${batch.previousVesselNumber})`
-                        : "No longer linked"}
-                    </p>
 
                     {batch.finished_notes && (
                       <p className="text-sm whitespace-pre-line">
@@ -228,8 +252,9 @@ export default function BatchHistoryPage() {
                       </p>
                     )}
 
-                    {batch.status === "Sekundær" && (
+                    {(batch.secondary_startdate || batch.had_secondary) && (
                       <>
+                        
                         {batch.secondary_startdate && (
                           <p className="text-sm">
                             <strong>Secondary since:</strong>{" "}
@@ -244,55 +269,140 @@ export default function BatchHistoryPage() {
                           </p>
                         )}
 
-                        {batch.secondary_notes && (
-                          <p className="text-sm whitespace-pre-line">
-                            <strong>Secondary notes:</strong>{"\n"}
-                            {batch.secondary_notes}
-                          </p>
-                        )}
+                        <p className="text-sm whitespace-pre-line">
+                          <strong>Secondary notes:</strong>{"\n"}
+                          {batch.secondary_notes?.trim() || "No notes"}
+                        </p>
                       </>
                     )}
 
-                    {batch.oppskrift && (
-                      <div className="mt-4 p-4 bg-white/5 border border-white/10 rounded-lg">
-                        <h3 className="text-xl font-bold mb-3 text-green-300">Recipe</h3>
+                    <div className="mt-4 p-4 bg-white/5 border border-white/10 rounded-lg">
+                      <h3 className="text-xl font-bold mb-3 text-green-300">Recipe</h3>
 
-                        <div className="space-y-4 text-sm whitespace-pre-wrap">
-                          <div>
-                            <h4 className="font-semibold text-white/90 mb-1">Ingredients</h4>
-                            <p className="opacity-80">
+                      <div className="space-y-4 text-sm whitespace-pre-wrap">
+                        {batch.type === "Mead" && (
+                          <>
+                            <p><strong>Honey:</strong> {batch.honey_type} – {batch.honey_amount} kg</p>
+                            {batch.fruits?.length > 0 && (
+                              <div>
+                                <strong>Fruits:</strong>
+                                {batch.fruits.map((fruit: any, index: number) => (
+                                  <p key={index}>{fruit.name}: {fruit.amount}{fruit.unit}</p>
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        )}
+
+                        {batch.type === "Beer" && (
+                          <>
+                            {batch.malts?.length > 0 && (
+                              <div>
+                                <strong>Malt additions:</strong>
+                                {batch.malts.map((malt: any, index: number) => (
+                                  <p key={index}>{malt.name}: {malt.amount} {malt.unit}</p>
+                                ))}
+                              </div>
+                            )}
+                            {batch.hops?.length > 0 && (
+                              <div>
+                                <strong>Hop schedule:</strong>
+                                {batch.hops.map((hop: any, index: number) => (
+                                  <p key={index}>{hop.name}: {hop.amount}{hop.unit} @ {hop.time} min</p>
+                                ))}
+                              </div>
+                            )}
+                            <p><strong>Total boil time:</strong> {batch.boil_time} min</p>
+                          </>
+                        )}
+
+                        {batch.type === "Braggot" && (
+                          <>
+                            {batch.malts?.length > 0 && (
+                              <div>
+                                <strong>Malt additions:</strong>
+                                {batch.malts.map((malt: any, index: number) => (
+                                  <p key={index}>{malt.name}: {malt.amount}{malt.unit}</p>
+                                ))}
+                              </div>
+                            )}
+                            <p><strong>Boil time:</strong> {batch.boil_time} min</p>
+                            <p><strong>Honey:</strong> {batch.honey_amount} kg</p>
+                          </>
+                        )}
+
+                        {(batch.type === "Cider" || batch.type === "Wine" || batch.type === "Seltzer") && (
+                          <>
+                            <p><strong>Juice type:</strong> {batch.juice_type}</p>
+                            <p><strong>Sugar added:</strong> {batch.sugar_amount} kg</p>
+                          </>
+                        )}
+
+                        {batch.type === "Other" && (
+                          <>
+                            {batch.ingredients?.length > 0 && (
+                              <div>
+                                <strong>Ingredients:</strong>
+                                {batch.ingredients.map((ingredient: any, index: number) => (
+                                  <p key={index}>{ingredient.name}: {ingredient.amount}{ingredient.unit}</p>
+                                ))}
+                              </div>
+                            )}
+                            {batch.steps?.length > 0 && (
+                              <div>
+                                <strong>Process steps:</strong>
+                                {batch.steps.map((step: string, index: number) => (
+                                  <p key={index}>{index + 1}. {step}</p>
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        )}
+
+                        {batch.additives && (
+                          <p><strong>Additives:</strong><br />{batch.additives}</p>
+                        )}
+                        {batch.full_process && (
+                          <p><strong>Full process:</strong><br />{batch.full_process}</p>
+                        )}
+                        {batch.notes && typeof batch.notes === "string" && (
+                          <p><strong>Recipe notes:</strong><br />{batch.notes}</p>
+                        )}
+
+                        {batch.oppskrift && !hasTypeSpecificRecipe(batch) && (
+                          <div className="space-y-4">
+                            <p><strong>Legacy recipe:</strong></p>
+                            <p>
                               {batch.oppskrift
                                 .split("Ingredients:")[1]
                                 ?.split("Full process:")[0]
-                                ?.trim()}
+                                ?.trim() || batch.oppskrift}
                             </p>
+                            {batch.oppskrift.includes("Full process:") && (
+                              <p>
+                                <strong>Full process:</strong><br />
+                                {batch.oppskrift
+                                  .split("Full process:")[1]
+                                  ?.split("Notes:")[0]
+                                  ?.trim()}
+                              </p>
+                            )}
+                            {batch.oppskrift.includes("Notes:") && (
+                              <p>
+                                <strong>Recipe notes:</strong><br />
+                                {batch.oppskrift.split("Notes:")[1]?.trim()}
+                              </p>
+                            )}
                           </div>
-
-                          <div>
-                            <h4 className="font-semibold text-white/90 mb-1">Full Process</h4>
-                            <p className="opacity-80">
-                              {batch.oppskrift
-                                .split("Full process:")[1]
-                                ?.split("Notes:")[0]
-                                ?.trim()}
-                            </p>
-                          </div>
-
-                          <div>
-                            <h4 className="font-semibold text-white/90 mb-1">Recipe notes</h4>
-                            <p className="opacity-80">
-                              {batch.oppskrift.split("Notes:")[1]?.trim()}
-                            </p>
-                          </div>
-                        </div>
+                        )}
                       </div>
-                    )}
+                    </div>
 
                     <div className="mt-6">
                       <h3 className="text-xl font-bold mb-3 text-green-300">Batch notes</h3>
 
-                      {batch.notes && batch.notes.length > 0 ? (
-                        batch.notes.map((n: any) => (
+                      {batch.notesLog && batch.notesLog.length > 0 ? (
+                        batch.notesLog.map((n: any) => (
                           <div
                             key={n.id}
                             className="p-4 bg-white/10 border border-white/20 rounded-xl mb-4"

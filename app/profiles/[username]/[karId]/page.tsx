@@ -94,19 +94,6 @@ let batch = activeBatch || secondaryBatch;
 batch = translateOldRecipe(batch);
 
 
-  // Fetch notes from batch_notes
-  let notes: any[] = [];
-
-  if (batch) {
-    const { data: notesData } = await supabase
-      .from("batch_notes")
-      .select("*")
-      .eq("batch_id", batch.id)
-      .order("created_at", { ascending: false });
-
-    notes = notesData || [];
-  }
-
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
       <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10 relative">
@@ -309,44 +296,6 @@ batch = translateOldRecipe(batch);
 
 
           </div>
-        )}
-
-        {/* NOTES & IMAGES */}
-        {batch && (
-          <>
-            <h2 className="text-2xl font-semibold mt-12 mb-4 text-center">
-              Notes & images
-            </h2>
-
-            <div className="space-y-4">
-              {notes.length > 0 ? (
-                notes.map((n) => (
-                  <div
-                    key={n.id}
-                    className="p-4 bg-white/10 border border-white/20 rounded-xl"
-                  >
-                    <p className="text-sm opacity-60">
-                      {new Date(n.created_at).toLocaleDateString("en-US")}
-                    </p>
-
-                    {n.note_type === "image" && n.image_url && (
-                      <img
-                        src={n.image_url}
-                        alt="Note image"
-                        className="rounded-lg mt-3"
-                      />
-                    )}
-
-                    {n.note && (
-                      <p className="mt-3 whitespace-pre-line">{n.note}</p>
-                    )}
-                  </div>
-                ))
-              ) : (
-                <p className="opacity-60 text-center">No notes yet.</p>
-              )}
-            </div>
-          </>
         )}
 
         <p className="text-sm opacity-40 mt-12 text-center">

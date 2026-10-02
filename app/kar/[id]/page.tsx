@@ -145,13 +145,6 @@ export default function KarPage({ params }: { params: { id: string } }) {
       .then(({ data }) => setActiveBatch(data));
   }, [kar]);
 
-  // ⭐ Oversett gamle batches til moderne format
-useEffect(() => {
-  if (!activeBatch) return;
-
-  const translated = translateOldRecipe(activeBatch);
-  setActiveBatch(translated);
-}, [activeBatch]);
 
 
   useEffect(() => {
@@ -305,6 +298,7 @@ async function toggleVisibility() {
 
           <MenuOverlay current="kar" />
         </div>
+      
 
 {isOwner && (
   <button
@@ -481,840 +475,721 @@ async function toggleVisibility() {
 )}
 
 
-
-        {/* SECONDARY FERMENTATION */}
-        {hasActive && activeBatch?.status === "Sekundær" && (
-          <>
-            <h2 className="text-2xl font-semibold mb-4 text-center">
-              Secondary fermentation
-            </h2>
-
-            <div className="p-4 bg-white/10 border border-white/20 rounded-xl mb-10">
-              <div className="flex items-center justify-between mb-2">
-  <h3 className="text-xl font-bold text-green-300">
-    {activeBatch.name}
-  </h3>
-
-  {isOwner && (
-    <button
-      type="button"
-      onClick={() => setOpenEdit(!openEdit)}
-      className="font-semibold text-green-300 cursor-pointer"
-    >
-      Edit batch
-    </button>
-  )}
-</div>
-
-{openEdit && (
-  <div className="p-4 bg-white/5 border border-white/10 rounded-lg mb-4">
-    <form action={Actions.updateBatch} className="flex flex-col gap-4">
-      <input type="hidden" name="batch_id" value={activeBatch.id} />
-      <input type="hidden" name="kar_id" value={kar.id} />
-
-      {/* COMMON FIELDS */}
-      <label className="font-semibold">Batch name</label>
-      <input
-        name="name"
-        defaultValue={activeBatch.name}
-        className="p-3 rounded bg-black/40 border border-white/20"
-      />
-
-      <label className="font-semibold">Volume (L)</label>
-      <input
-        name="volume_l"
-        type="number"
-        step="0.1"
-        defaultValue={activeBatch.volume_l}
-        className="p-3 rounded bg-black/40 border border-white/20"
-      />
-
-      <label className="font-semibold">Start date</label>
-      <input
-        name="startdato"
-        type="date"
-        defaultValue={activeBatch.startdato.split("T")[0]}
-        className="p-3 rounded bg-black/40 border border-white/20"
-      />
-
-      <label className="font-semibold">Original Gravity (OG)</label>
-      <input
-        name="og"
-        type="number"
-        step="0.001"
-        defaultValue={activeBatch.og}
-        className="p-3 rounded bg-black/40 border border-white/20"
-      />
-
-      {/* TYPE-SPECIFIC FIELDS */}
-      {activeBatch.type === "Mead" && (
-        <>
-          <label className="font-semibold">Honey type</label>
-          <input
-            name="honey_type"
-            defaultValue={activeBatch.honey_type}
-            className="p-3 rounded bg-black/40 border border-white/20"
-          />
-
-          <label className="font-semibold">Honey amount (kg)</label>
-          <input
-            name="honey_amount"
-            type="number"
-            step="0.01"
-            defaultValue={activeBatch.honey_amount}
-            className="p-3 rounded bg-black/40 border border-white/20"
-          />
-
-          <label className="font-semibold">Additives</label>
-          <textarea
-            name="additives"
-            defaultValue={activeBatch.additives}
-            className="p-3 rounded bg-black/40 border border-white/20"
-          />
-
-          <label className="font-semibold">Full process</label>
-          <textarea
-            name="full_process"
-            defaultValue={activeBatch.full_process}
-            className="p-3 rounded bg-black/40 border border-white/20"
-          />
-
-          <label className="font-semibold">Notes</label>
-          <textarea
-            name="notes"
-            defaultValue={activeBatch.notes}
-            className="p-3 rounded bg-black/40 border border-white/20"
-          />
-        </>
-      )}
-
-      {activeBatch.type === "Wine" && (
-        <>
-          <label className="font-semibold">Juice type</label>
-          <input
-            name="juice_type"
-            defaultValue={activeBatch.juice_type}
-            className="p-3 rounded bg-black/40 border border-white/20"
-          />
-
-          <label className="font-semibold">Sugar added (kg)</label>
-          <input
-            name="sugar_amount"
-            type="number"
-            step="0.01"
-            defaultValue={activeBatch.sugar_amount}
-            className="p-3 rounded bg-black/40 border border-white/20"
-          />
-
-          <label className="font-semibold">Additives</label>
-          <textarea
-            name="additives"
-            defaultValue={activeBatch.additives}
-            className="p-3 rounded bg-black/40 border border-white/20"
-          />
-
-          <label className="font-semibold">Full process</label>
-          <textarea
-            name="full_process"
-            defaultValue={activeBatch.full_process}
-            className="p-3 rounded bg-black/40 border border-white/20"
-          />
-
-          <label className="font-semibold">Notes</label>
-          <textarea
-            name="notes"
-            defaultValue={activeBatch.notes}
-            className="p-3 rounded bg-black/40 border border-white/20"
-          />
-        </>
-      )}
-
-      {activeBatch.type === "Beer" && (
+{/* SECONDARY FERMENTATION */}
+{hasActive && activeBatch?.status === "Sekundær" && (
   <>
-    {/* ⭐ Malt additions */}
-<div className="flex flex-col gap-2">
-  <label className="font-semibold">Malt additions</label>
+    <h2 className="text-2xl font-semibold mb-4 text-center">
+      Secondary fermentation
+    </h2>
 
-  {activeBatch.malts?.map((m: Malt, i: number) => (
-    <div key={i} className="flex gap-2 items-center">
-      <input
-        name={`malts[${i}][name]`}
-        defaultValue={m.name}
-        placeholder="Malt name"
-        className="p-2 rounded bg-black/40 border border-white/20 w-1/2"
-      />
-      <input
-        name={`malts[${i}][amount]`}
-        defaultValue={m.amount}
-        placeholder="Amount"
-        className="p-2 rounded bg-black/40 border border-white/20 w-1/4"
-      />
-      <input
-        name={`malts[${i}][unit]`}
-        defaultValue={m.unit}
-        placeholder="Unit"
-        className="p-2 rounded bg-black/40 border border-white/20 w-1/4"
-      />
+    <div className="p-4 bg-white/10 border border-white/20 rounded-xl mb-10">
 
-      {/* ⭐ Remove malt */}
-      <button
-  type="button"
-  onClick={() => {
-    const updated = activeBatch.malts.filter((m: Malt, idx: number) => idx !== i);
-    setActiveBatch({ ...activeBatch, malts: updated });
-  }}
-  className="px-2 py-1 bg-red-600/70 hover:bg-red-600 border border-red-500/50 rounded text-sm"
->
-  ✕
-</button>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-xl font-bold text-green-300">
+          {activeBatch.name}
+        </h3>
 
-    </div>
-  ))}
-
-  <button
-    type="button"
-    onClick={() => {
-      const updated = [...activeBatch.malts, { name: "", amount: "", unit: "" }];
-      setActiveBatch({ ...activeBatch, malts: updated });
-    }}
-    className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm"
-  >
-    + Add malt
-  </button>
-</div>
-
-
-    {/* ⭐ Hop schedule */}
-<div className="flex flex-col gap-2 mt-4">
-  <label className="font-semibold">Hop schedule</label>
-
-  {activeBatch.hops?.map((h: Hop, i: number) => (
-    <div key={i} className="flex gap-2 items-center">
-      <input
-        name={`hops[${i}][name]`}
-        defaultValue={h.name}
-        placeholder="Hop name"
-        className="p-2 rounded bg-black/40 border border-white/20 w-1/3"
-      />
-      <input
-        name={`hops[${i}][amount]`}
-        defaultValue={h.amount}
-        placeholder="Amount"
-        className="p-2 rounded bg-black/40 border border-white/20 w-1/4"
-      />
-      <input
-        name={`hops[${i}][unit]`}
-        defaultValue={h.unit}
-        placeholder="Unit"
-        className="p-2 rounded bg-black/40 border border-white/20 w-1/4"
-      />
-      <input
-        name={`hops[${i}][boil]`}
-        defaultValue={h.time}
-        placeholder="Boil time"
-        className="p-2 rounded bg-black/40 border border-white/20 w-1/4"
-      />
-
-      {/* ⭐ Remove hop */}
-      <button
-  type="button"
-  onClick={() => {
-    const updated = activeBatch.hops.filter((h: Hop, idx: number) => idx !== i);
-    setActiveBatch({ ...activeBatch, hops: updated });
-  }}
-  className="px-2 py-1 bg-red-600/70 hover:bg-red-600 border border-red-500/50 rounded text-sm"
->
-  ✕
-</button>
-    </div>
-  ))}
-
-  <button
-    type="button"
-    onClick={() => {
-      const updated = [...activeBatch.hops, { name: "", amount: "", unit: "", boil: "" }];
-      setActiveBatch({ ...activeBatch, hops: updated });
-    }}
-    className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm"
-  >
-    + Add hop
-  </button>
-</div>
-
-
-    {/* ⭐ Boil time */}
-    <label className="font-semibold mt-4">Total boil time (min)</label>
-    <input
-      name="boil_time"
-      type="number"
-      defaultValue={activeBatch.boil_time}
-      className="p-3 rounded bg-black/40 border border-white/20"
-    />
-
-    {/* ⭐ Additives */}
-    <label className="font-semibold">Additives</label>
-    <textarea
-      name="additives"
-      defaultValue={activeBatch.additives}
-      className="p-3 rounded bg-black/40 border border-white/20"
-    />
-
-    {/* ⭐ Full process */}
-    <label className="font-semibold">Full process</label>
-    <textarea
-      name="full_process"
-      defaultValue={activeBatch.full_process}
-      className="p-3 rounded bg-black/40 border border-white/20"
-    />
-
-    {/* ⭐ Notes */}
-    <label className="font-semibold">Notes</label>
-    <textarea
-      name="notes"
-      defaultValue={activeBatch.notes}
-      className="p-3 rounded bg-black/40 border border-white/20"
-    />
-  </>
-)}
-
-
-      {activeBatch.type === "Other" && (
-        <>
-          <label className="font-semibold">Additives</label>
-          <textarea
-            name="additives"
-            defaultValue={activeBatch.additives}
-            className="p-3 rounded bg-black/40 border border-white/20"
-          />
-
-          <label className="font-semibold">Notes</label>
-          <textarea
-            name="notes"
-            defaultValue={activeBatch.notes}
-            className="p-3 rounded bg-black/40 border border-white/20"
-          />
-        </>
-      )}
-
-      <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
-        Save changes
-      </button>
-    </form>
-  </div>
-)}
-
-
-
-              <p className="opacity-80">Batch ID: {activeBatch.batchnummer}</p>
-              <p className="opacity-80">
-                Start date: {new Date(activeBatch.startdato).toLocaleDateString("en-US")}
-                <span className="ml-2 opacity-70">
-                  ({daysSince(activeBatch.startdato)} {dayLabel(daysSince(activeBatch.startdato))})
-                </span>
-              </p>
-
-              <p className="opacity-80">Batch volume: {activeBatch.volume_l} L</p>
-              <p className="opacity-80">Original Gravity (OG): {activeBatch.og}</p>
-
-              <p className="opacity-80 mt-2">
-                Racked to secondary on{" "}
-                {new Date(activeBatch.secondary_startdate).toLocaleDateString("en-US")}
-              </p>
-
-              {activeBatch.secondary_additions && (
-                <p className="opacity-80 mt-2 whitespace-pre-wrap">
-                  Secondary additions:<br />
-                  {activeBatch.secondary_additions}
-                </p>
-              )}
-
-              {activeBatch.secondary_notes && (
-                <p className="opacity-80 mt-2 whitespace-pre-wrap">
-                  Secondary notes:<br />
-                  {activeBatch.secondary_notes}
-                </p>
-              )}
-              </div>
-          </>
+        {isOwner && (
+          <button
+            type="button"
+            onClick={() => setOpenEdit(!openEdit)}
+            className="font-semibold text-green-300 cursor-pointer"
+          >
+            Edit batch
+          </button>
         )}
+      </div>
 
-            {/* Rack to secondary REMOVED in secondary */}
+      {/* Edit form */}
+      {openEdit && (
+        <div className="p-4 bg-white/5 border border-white/10 rounded-lg mb-4">
+          <form action={Actions.updateBatch} className="flex flex-col gap-4">
+            <input type="hidden" name="batch_id" value={activeBatch.id} />
+            <input type="hidden" name="kar_id" value={kar.id} />
 
-            {/* Finish batch */}
+            {/* Common fields */}
+            <label className="font-semibold">Batch name</label>
+            <input name="name" defaultValue={activeBatch.name}
+              className="p-3 rounded bg-black/40 border border-white/20" />
 
+            <label className="font-semibold">Volume (L)</label>
+            <input name="volume_l" type="number" step="0.1"
+              defaultValue={activeBatch.volume_l}
+              className="p-3 rounded bg-black/40 border border-white/20" />
 
+            <label className="font-semibold">Start date</label>
+            <input name="startdato" type="date"
+              defaultValue={activeBatch.startdato.split("T")[0]}
+              className="p-3 rounded bg-black/40 border border-white/20" />
 
+            <label className="font-semibold">Original Gravity (OG)</label>
+            <input name="og" type="number" step="0.001"
+              defaultValue={activeBatch.og}
+              className="p-3 rounded bg-black/40 border border-white/20" />
 
-        {/* PRIMARY FERMENTATION */}
-        {hasActive && activeBatch?.status === "Aktiv" && (
-          <>
-            <h2 className="text-2xl font-semibold mb-4 text-center">
-              Primary fermentation
-            </h2>
+            {/* Type-specific fields */}
+            {/* (Honey, Wine, Beer, etc. — behold samme struktur som primary) */}
 
-            <div className="p-4 bg-white/10 border border-white/20 rounded-xl mb-10">
-              <div className="flex items-center justify-between mb-2">
-  <h3 className="text-xl font-bold text-green-300">
-    {activeBatch.name}
-  </h3>
-
-  {isOwner && (
-    <button
-      type="button"
-      onClick={() => setOpenEdit(!openEdit)}
-      className="font-semibold text-green-300 cursor-pointer"
-    >
-      Edit batch
-    </button>
-  )}
-</div>
-
-{openEdit && (
-  <div className="p-4 bg-white/5 border border-white/10 rounded-lg mb-4">
-    <form action={Actions.updateBatch} className="flex flex-col gap-4">
-      <input type="hidden" name="batch_id" value={activeBatch.id} />
-      <input type="hidden" name="kar_id" value={kar.id} />
-
-      {/* COMMON FIELDS */}
-      <label className="font-semibold">Batch name</label>
-      <input
-        name="name"
-        defaultValue={activeBatch.name}
-        className="p-3 rounded bg-black/40 border border-white/20"
-      />
-
-      <label className="font-semibold">Volume (L)</label>
-      <input
-        name="volume_l"
-        type="number"
-        step="0.1"
-        defaultValue={activeBatch.volume_l}
-        className="p-3 rounded bg-black/40 border border-white/20"
-      />
-
-      <label className="font-semibold">Start date</label>
-      <input
-        name="startdato"
-        type="date"
-        defaultValue={activeBatch.startdato.split("T")[0]}
-        className="p-3 rounded bg-black/40 border border-white/20"
-      />
-
-      <label className="font-semibold">Original Gravity (OG)</label>
-      <input
-        name="og"
-        type="number"
-        step="0.001"
-        defaultValue={activeBatch.og}
-        className="p-3 rounded bg-black/40 border border-white/20"
-      />
-
-      {/* TYPE-SPECIFIC FIELDS */}
-      {activeBatch.type === "Mead" && (
-        <>
-          <label className="font-semibold">Honey type</label>
-          <input
-            name="honey_type"
-            defaultValue={activeBatch.honey_type}
-            className="p-3 rounded bg-black/40 border border-white/20"
-          />
-
-          <label className="font-semibold">Honey amount (kg)</label>
-          <input
-            name="honey_amount"
-            type="number"
-            step="0.01"
-            defaultValue={activeBatch.honey_amount}
-            className="p-3 rounded bg-black/40 border border-white/20"
-          />
-
-          <label className="font-semibold">Additives</label>
-          <textarea
-            name="additives"
-            defaultValue={activeBatch.additives}
-            className="p-3 rounded bg-black/40 border border-white/20"
-          />
-
-          <label className="font-semibold">Full process</label>
-          <textarea
-            name="full_process"
-            defaultValue={activeBatch.full_process}
-            className="p-3 rounded bg-black/40 border border-white/20"
-          />
-
-          <label className="font-semibold">Notes</label>
-          <textarea
-            name="notes"
-            defaultValue={activeBatch.notes}
-            className="p-3 rounded bg-black/40 border border-white/20"
-          />
-        </>
-      )}
-
-      {activeBatch.type === "Wine" && (
-        <>
-          <label className="font-semibold">Juice type</label>
-          <input
-            name="juice_type"
-            defaultValue={activeBatch.juice_type}
-            className="p-3 rounded bg-black/40 border border-white/20"
-          />
-
-          <label className="font-semibold">Sugar added (kg)</label>
-          <input
-            name="sugar_amount"
-            type="number"
-            step="0.01"
-            defaultValue={activeBatch.sugar_amount}
-            className="p-3 rounded bg-black/40 border border-white/20"
-          />
-
-          <label className="font-semibold">Additives</label>
-          <textarea
-            name="additives"
-            defaultValue={activeBatch.additives}
-            className="p-3 rounded bg-black/40 border border-white/20"
-          />
-
-          <label className="font-semibold">Full process</label>
-          <textarea
-            name="full_process"
-            defaultValue={activeBatch.full_process}
-            className="p-3 rounded bg-black/40 border border-white/20"
-          />
-
-          <label className="font-semibold">Notes</label>
-          <textarea
-            name="notes"
-            defaultValue={activeBatch.notes}
-            className="p-3 rounded bg-black/40 border border-white/20"
-          />
-        </>
-      )}
-
-      {activeBatch.type === "Beer" && (
-  <>
-    {/* ⭐ Malt additions */}
-    <div className="flex flex-col gap-2">
-      <label className="font-semibold">Malt additions</label>
-
-      {activeBatch.malts?.map((m: Malt, i: number) => (
-        <div key={i} className="flex gap-2 items-center">
-          <input name={`malts[${i}][name]`} defaultValue={m.name} className="p-2 rounded bg-black/40 border border-white/20 w-1/2" />
-          <input name={`malts[${i}][amount]`} defaultValue={m.amount} className="p-2 rounded bg-black/40 border border-white/20 w-1/4" />
-          <input name={`malts[${i}][unit]`} defaultValue={m.unit} className="p-2 rounded bg-black/40 border border-white/20 w-1/4" />
-
-          <button
-            type="button"
-            onClick={() => {
-              const updated = activeBatch.malts.filter((m: Malt, idx: number) => idx !== i);
-              setActiveBatch({ ...activeBatch, malts: updated });
-            }}
-            className="px-2 py-1 bg-red-600/70 hover:bg-red-600 border border-red-500/50 rounded text-sm"
-          >
-            ✕
-          </button>
+            <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
+              Save changes
+            </button>
+          </form>
         </div>
-      ))}
-
-      <button
-        type="button"
-        onClick={() => {
-          const updated = [...activeBatch.malts, { name: "", amount: "", unit: "" }];
-          setActiveBatch({ ...activeBatch, malts: updated });
-        }}
-        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm"
-      >
-        + Add malt
-      </button>
-    </div>
-
-    {/* ⭐ Hop schedule */}
-    <div className="flex flex-col gap-2 mt-4">
-      <label className="font-semibold">Hop schedule</label>
-
-      {activeBatch.hops?.map((h: Hop, i: number) => (
-        <div key={i} className="flex gap-2 items-center">
-          <input name={`hops[${i}][name]`} defaultValue={h.name} className="p-2 rounded bg-black/40 border border-white/20 w-1/3" />
-          <input name={`hops[${i}][amount]`} defaultValue={h.amount} className="p-2 rounded bg-black/40 border border-white/20 w-1/4" />
-          <input name={`hops[${i}][unit]`} defaultValue={h.unit} className="p-2 rounded bg-black/40 border border-white/20 w-1/4" />
-          <input name={`hops[${i}][boil]`} defaultValue={h.time} className="p-2 rounded bg-black/40 border border-white/20 w-1/4" />
-
-          <button
-            type="button"
-            onClick={() => {
-              const updated = activeBatch.hops.filter((h: Hop, idx: number) => idx !== i);
-              setActiveBatch({ ...activeBatch, hops: updated });
-            }}
-            className="px-2 py-1 bg-red-600/70 hover:bg-red-600 border border-red-500/50 rounded text-sm"
-          >
-            ✕
-          </button>
-        </div>
-      ))}
-
-      <button
-        type="button"
-        onClick={() => {
-          const updated = [...activeBatch.hops, { name: "", amount: "", unit: "", boil: "" }];
-          setActiveBatch({ ...activeBatch, hops: updated });
-        }}
-        className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm"
-      >
-        + Add hop
-      </button>
-    </div>
-
-    {/* ⭐ Boil time */}
-    <label className="font-semibold mt-4">Total boil time (min)</label>
-    <input name="boil_time" type="number" defaultValue={activeBatch.boil_time} className="p-3 rounded bg-black/40 border border-white/20" />
-
-    {/* ⭐ Additives */}
-    <label className="font-semibold">Additives</label>
-    <textarea name="additives" defaultValue={activeBatch.additives} className="p-3 rounded bg-black/40 border border-white/20" />
-
-    {/* ⭐ Full process */}
-    <label className="font-semibold">Full process</label>
-    <textarea name="full_process" defaultValue={activeBatch.full_process} className="p-3 rounded bg-black/40 border border-white/20" />
-
-    {/* ⭐ Notes */}
-    <label className="font-semibold">Notes</label>
-    <textarea name="notes" defaultValue={activeBatch.notes} className="p-3 rounded bg-black/40 border border-white/20" />
-  </>
-)}
-
-
-{activeBatch.type === "Other" && (
-        <>
-          <label className="font-semibold">Additives</label>
-          <textarea
-            name="additives"
-            defaultValue={activeBatch.additives}
-            className="p-3 rounded bg-black/40 border border-white/20"
-          />
-
-          <label className="font-semibold">Notes</label>
-          <textarea
-            name="notes"
-            defaultValue={activeBatch.notes}
-            className="p-3 rounded bg-black/40 border border-white/20"
-          />
-        </>
       )}
 
-      <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
-        Save changes
-      </button>
-    </form>
-  </div>
-)}
+      
 
-
-            
-              <p className="opacity-80">Batch ID: {activeBatch.batchnummer}</p>
-              <p className="opacity-80">
-                Start date: {new Date(activeBatch.startdato).toLocaleDateString("en-US")}
-                <span className="ml-2 opacity-70">
-                  ({daysSince(activeBatch.startdato)} {dayLabel(daysSince(activeBatch.startdato))})
-                </span>
-              </p>
-              <p className="opacity-80">Original Gravity (OG): {activeBatch.og}</p>
-              <p className="opacity-80">Batch volume: {activeBatch.volume_l} L</p>
-              <p className="opacity-80">Status: Primary fermentation</p>
-
-              {(activeBatch.type === "Beer" || activeBatch.type === "Braggot") && (
-  <>
-    {activeBatch.ibu !== null && (
+      {/* Batch info */}
+      <p className="opacity-80">Batch ID: {activeBatch.batchnummer}</p>
       <p className="opacity-80">
-        IBU: {Number(activeBatch.ibu).toFixed(0)}
+        Start date: {new Date(activeBatch.startdato).toLocaleDateString("en-US")}
+        <span className="ml-2 opacity-70">
+          ({daysSince(activeBatch.startdato)} {dayLabel(daysSince(activeBatch.startdato))})
+        </span>
       </p>
+
+      <p className="opacity-80">Batch volume: {activeBatch.volume_l} L</p>
+      <p className="opacity-80">Original Gravity (OG): {activeBatch.og}</p>
+
+      {(activeBatch.type === "Beer" || activeBatch.type === "Braggot") && (
+        <>
+          {activeBatch.ibu !== null && (
+            <p className="opacity-80">
+              IBU: {Number(activeBatch.ibu).toFixed(0)}
+            </p>
+          )}
+
+          {activeBatch.ebc !== null && (
+            <div className="flex items-center gap-2 opacity-80">
+              <p>EBC (calculated): {Number(activeBatch.ebc).toFixed(0)}</p>
+              <span
+                className="inline-block w-6 h-6 rounded border border-white/30"
+                style={{ backgroundColor: ebcToHex(Number(activeBatch.ebc)) }}
+              ></span>
+            </div>
+          )}
+        </>
+      )}
+
+      <p className="opacity-80">
+        Racked to secondary on{" "}
+        {new Date(activeBatch.secondary_startdate).toLocaleDateString("en-US")}
+      </p>
+
+      {activeBatch.secondary_additions && (
+        <p className="opacity-80 mt-2 whitespace-pre-wrap">
+          Secondary additions:<br />
+          {activeBatch.secondary_additions}
+        </p>
+      )}
+
+      <p className="opacity-80 mt-2 whitespace-pre-wrap">
+        Secondary notes:<br />
+        {activeBatch.secondary_notes?.trim() || "No secondary notes recorded."}
+      </p>
+
+      {/* Recipe */}
+      <div className="mt-6 p-4 bg-white/5 border border-white/10 rounded-lg">
+        <h3 className="text-xl font-bold mb-3 text-green-300">Recipe</h3>
+        <div className="space-y-4 text-sm whitespace-pre-wrap">
+
+{/* MEAD */}
+{activeBatch.type === "Mead" && (
+  <>
+    <p><strong>Honey:</strong> {activeBatch.honey_type} – {activeBatch.honey_amount} kg</p>
+
+    {activeBatch.fruits?.length > 0 && (
+      <div>
+        <strong>Fruits:</strong>
+        {activeBatch.fruits.map((f: Fruit, i: number) => (
+          <p key={i}>{f.name}: {f.amount}{f.unit}</p>
+        ))}
+      </div>
     )}
 
-    {activeBatch.ebc !== null && (
-  <div className="flex items-center gap-2 opacity-80">
-    <p>EBC (calculated): {Number(activeBatch.ebc).toFixed(0)}</p>
-    <span
-      className="inline-block w-6 h-6 rounded border border-white/30"
-      style={{ backgroundColor: ebcToHex(Number(activeBatch.ebc)) }}
-    ></span>
-  </div>
+    <p><strong>Additives:</strong><br />{activeBatch.additives}</p>
+    <p><strong>Full process:</strong><br />{activeBatch.full_process}</p>
+    <p><strong>Notes:</strong><br />{activeBatch.notes}</p>
+  </>
 )}
+
+{/* BEER */}
+{activeBatch.type === "Beer" && (
+  <>
+    {activeBatch.malts?.length > 0 && (
+      <div>
+        <strong>Malt additions:</strong>
+        {activeBatch.malts.map((m: Malt, i: number) => (
+          <p key={i}>{m.name}: {m.amount} kg</p>
+        ))}
+      </div>
+    )}
+
+    {activeBatch.hops?.length > 0 && (
+      <div>
+        <strong>Hop schedule:</strong>
+        {activeBatch.hops.map((h: Hop, i: number) => (
+          <p key={i}>{h.name}: {h.amount}{h.unit} @ {h.time} min</p>
+        ))}
+      </div>
+    )}
+
+    <p><strong>Total boil time:</strong> {activeBatch.boil_time} min</p>
+    <p><strong>Additives:</strong><br />{activeBatch.additives}</p>
+    <p><strong>Full process:</strong><br />{activeBatch.full_process}</p>
+    <p><strong>Notes:</strong><br />{activeBatch.notes}</p>
+  </>
+)}
+
+{/* BRAGGOT */}
+{activeBatch.type === "Braggot" && (
+  <>
+    {activeBatch.malts?.length > 0 && (
+      <div>
+        <strong>Malt additions:</strong>
+        {activeBatch.malts.map((m: Malt, i: number) => (
+          <p key={i}>{m.name}: {m.amount}{m.unit}</p>
+        ))}
+      </div>
+    )}
+
+    <p><strong>Boil time:</strong> {activeBatch.boil_time} min</p>
+    <p><strong>Honey:</strong> {activeBatch.honey_amount} kg</p>
+    <p><strong>Additives:</strong><br />{activeBatch.additives}</p>
+    <p><strong>Full process:</strong><br />{activeBatch.full_process}</p>
+    <p><strong>Notes:</strong><br />{activeBatch.notes}</p>
+  </>
+)}
+
+{/* CIDER / WINE / SELTZER */}
+{(activeBatch.type === "Cider" || activeBatch.type === "Wine" || activeBatch.type === "Seltzer") && (
+  <>
+    <p><strong>Juice type:</strong> {activeBatch.juice_type}</p>
+    <p><strong>Sugar added:</strong> {activeBatch.sugar_amount} kg</p>
+    <p><strong>Additives:</strong><br />{activeBatch.additives}</p>
+    <p><strong>Full process:</strong><br />{activeBatch.full_process}</p>
+    <p><strong>Notes:</strong><br />{activeBatch.notes}</p>
+  </>
+)}
+
+{/* OTHER */}
+{activeBatch.type === "Other" && (
+  <>
+    {activeBatch.ingredients?.length > 0 && (
+      <div>
+        <strong>Ingredients:</strong>
+        {activeBatch.ingredients.map((ing: Ingredient, idx: number) => (
+          <p key={idx}>{ing.name}: {ing.amount}{ing.unit}</p>
+        ))}
+      </div>
+    )}
+
+    {activeBatch.steps?.length > 0 && (
+      <div>
+        <strong>Process steps:</strong>
+        {activeBatch.steps.map((s: string, idx: number) => (
+          <p key={idx}>{idx + 1}. {s}</p>
+        ))}
+      </div>
+    )}
+
+    <p><strong>Additives:</strong><br />{activeBatch.additives}</p>
+    <p><strong>Notes:</strong><br />{activeBatch.notes}</p>
+  </>
+)}
+
+</div>
+
+      </div>
+      <p className="opacity-80 mt-4">
+        Created: {new Date(activeBatch.created_at).toLocaleDateString("en-US")}
+      </p>
+    </div>
   </>
 )}
 
 
-              <div className="mt-6 p-4 bg-white/5 border border-white/10 rounded-lg">
-  <h3 className="text-xl font-bold mb-3 text-green-300">
-    Recipe
-  </h3>
+{/* PRIMARY FERMENTATION */}
+{hasActive && activeBatch?.status === "Aktiv" && (
+  <>
+    <h2 className="text-2xl font-semibold mb-4 text-center">
+      Primary fermentation
+    </h2>
 
-  <div className="space-y-4 text-sm whitespace-pre-wrap">
+    <div className="p-4 bg-white/10 border border-white/20 rounded-xl mb-10">
 
-    {/* MEAD */}
-    {activeBatch.type === "Mead" && (
-      <>
-        <p><strong>Honey:</strong> {activeBatch.honey_type} – {activeBatch.honey_amount} kg</p>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-xl font-bold text-green-300">
+          {activeBatch.name}
+        </h3>
 
-        {activeBatch.fruits?.length > 0 && (
-          <div>
-            <strong>Fruits:</strong>
-            {activeBatch.fruits.map((f: Fruit, i: number) => (
-              <p key={i}>{f.name}: {f.amount}{f.unit}</p>
-            ))}
-          </div>
+        {isOwner && (
+          <button
+            type="button"
+            onClick={() => setOpenEdit(!openEdit)}
+            className="font-semibold text-green-300 cursor-pointer"
+          >
+            Edit batch
+          </button>
         )}
+      </div>
 
-        <p><strong>Additives:</strong><br />{activeBatch.additives}</p>
-        <p><strong>Full process:</strong><br />{activeBatch.full_process}</p>
-        <p><strong>Notes:</strong><br />{activeBatch.notes}</p>
-      </>
+
+      {/* Edit form */}
+      {openEdit && (
+        <div className="p-4 bg-white/5 border border-white/10 rounded-lg mb-4">
+          <form action={Actions.updateBatch} className="flex flex-col gap-4">
+            <input type="hidden" name="batch_id" value={activeBatch.id} />
+            <input type="hidden" name="kar_id" value={kar.id} />
+      
+            {/* COMMON FIELDS */}
+            <label className="font-semibold">Batch name</label>
+            <input
+              name="name"
+              defaultValue={activeBatch.name}
+              className="p-3 rounded bg-black/40 border border-white/20"
+            />
+      
+            <label className="font-semibold">Volume (L)</label>
+            <input
+              name="volume_l"
+              type="number"
+              step="0.1"
+              defaultValue={activeBatch.volume_l}
+              className="p-3 rounded bg-black/40 border border-white/20"
+            />
+      
+            <label className="font-semibold">Start date</label>
+            <input
+              name="startdato"
+              type="date"
+              defaultValue={activeBatch.startdato.split("T")[0]}
+              className="p-3 rounded bg-black/40 border border-white/20"
+            />
+      
+            <label className="font-semibold">Original Gravity (OG)</label>
+            <input
+              name="og"
+              type="number"
+              step="0.001"
+              defaultValue={activeBatch.og}
+              className="p-3 rounded bg-black/40 border border-white/20"
+            />
+      
+            {/* TYPE-SPECIFIC FIELDS */}
+            {activeBatch.type === "Mead" && (
+              <>
+                <label className="font-semibold">Honey type</label>
+                <input
+                  name="honey_type"
+                  defaultValue={activeBatch.honey_type}
+                  className="p-3 rounded bg-black/40 border border-white/20"
+                />
+      
+                <label className="font-semibold">Honey amount (kg)</label>
+                <input
+                  name="honey_amount"
+                  type="number"
+                  step="0.01"
+                  defaultValue={activeBatch.honey_amount}
+                  className="p-3 rounded bg-black/40 border border-white/20"
+                />
+      
+                <label className="font-semibold">Additives</label>
+                <textarea
+                  name="additives"
+                  defaultValue={activeBatch.additives}
+                  className="p-3 rounded bg-black/40 border border-white/20"
+                />
+      
+                <label className="font-semibold">Full process</label>
+                <textarea
+                  name="full_process"
+                  defaultValue={activeBatch.full_process}
+                  className="p-3 rounded bg-black/40 border border-white/20"
+                />
+      
+                <label className="font-semibold">Notes</label>
+                <textarea
+                  name="notes"
+                  defaultValue={activeBatch.notes}
+                  className="p-3 rounded bg-black/40 border border-white/20"
+                />
+              </>
+            )}
+      
+            {activeBatch.type === "Wine" && (
+              <>
+                <label className="font-semibold">Juice type</label>
+                <input
+                  name="juice_type"
+                  defaultValue={activeBatch.juice_type}
+                  className="p-3 rounded bg-black/40 border border-white/20"
+                />
+      
+                <label className="font-semibold">Sugar added (kg)</label>
+                <input
+                  name="sugar_amount"
+                  type="number"
+                  step="0.01"
+                  defaultValue={activeBatch.sugar_amount}
+                  className="p-3 rounded bg-black/40 border border-white/20"
+                />
+      
+                <label className="font-semibold">Additives</label>
+                <textarea
+                  name="additives"
+                  defaultValue={activeBatch.additives}
+                  className="p-3 rounded bg-black/40 border border-white/20"
+                />
+      
+                <label className="font-semibold">Full process</label>
+                <textarea
+                  name="full_process"
+                  defaultValue={activeBatch.full_process}
+                  className="p-3 rounded bg-black/40 border border-white/20"
+                />
+      
+                <label className="font-semibold">Notes</label>
+                <textarea
+                  name="notes"
+                  defaultValue={activeBatch.notes}
+                  className="p-3 rounded bg-black/40 border border-white/20"
+                />
+              </>
+            )}
+      
+            {activeBatch.type === "Beer" && (
+        <>
+          {/* ⭐ Malt additions */}
+          <div className="flex flex-col gap-2">
+            <label className="font-semibold">Malt additions</label>
+      
+            {activeBatch.malts?.map((m: Malt, i: number) => (
+              <div key={i} className="flex gap-2 items-center">
+                <input name={`malts[${i}][name]`} defaultValue={m.name} className="p-2 rounded bg-black/40 border border-white/20 w-1/2" />
+                <input name={`malts[${i}][amount]`} defaultValue={m.amount} className="p-2 rounded bg-black/40 border border-white/20 w-1/4" />
+                <input name={`malts[${i}][unit]`} defaultValue={m.unit} className="p-2 rounded bg-black/40 border border-white/20 w-1/4" />
+      
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updated = activeBatch.malts.filter((m: Malt, idx: number) => idx !== i);
+                    setActiveBatch({ ...activeBatch, malts: updated });
+                  }}
+                  className="px-2 py-1 bg-red-600/70 hover:bg-red-600 border border-red-500/50 rounded text-sm"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+      
+            <button
+              type="button"
+              onClick={() => {
+                const updated = [...activeBatch.malts, { name: "", amount: "", unit: "" }];
+                setActiveBatch({ ...activeBatch, malts: updated });
+              }}
+              className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm"
+            >
+              + Add malt
+            </button>
+          </div>
+      
+          {/* ⭐ Hop schedule */}
+          <div className="flex flex-col gap-2 mt-4">
+            <label className="font-semibold">Hop schedule</label>
+      
+            {activeBatch.hops?.map((h: Hop, i: number) => (
+              <div key={i} className="flex gap-2 items-center">
+                <input name={`hops[${i}][name]`} defaultValue={h.name} className="p-2 rounded bg-black/40 border border-white/20 w-1/3" />
+                <input name={`hops[${i}][amount]`} defaultValue={h.amount} className="p-2 rounded bg-black/40 border border-white/20 w-1/4" />
+                <input name={`hops[${i}][unit]`} defaultValue={h.unit} className="p-2 rounded bg-black/40 border border-white/20 w-1/4" />
+                <input name={`hops[${i}][boil]`} defaultValue={h.time} className="p-2 rounded bg-black/40 border border-white/20 w-1/4" />
+      
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updated = activeBatch.hops.filter((h: Hop, idx: number) => idx !== i);
+                    setActiveBatch({ ...activeBatch, hops: updated });
+                  }}
+                  className="px-2 py-1 bg-red-600/70 hover:bg-red-600 border border-red-500/50 rounded text-sm"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+      
+            <button
+              type="button"
+              onClick={() => {
+                const updated = [...activeBatch.hops, { name: "", amount: "", unit: "", boil: "" }];
+                setActiveBatch({ ...activeBatch, hops: updated });
+              }}
+              className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm"
+            >
+              + Add hop
+            </button>
+          </div>
+      
+          {/* ⭐ Boil time */}
+          <label className="font-semibold mt-4">Total boil time (min)</label>
+          <input name="boil_time" type="number" defaultValue={activeBatch.boil_time} className="p-3 rounded bg-black/40 border border-white/20" />
+      
+          {/* ⭐ Additives */}
+          <label className="font-semibold">Additives</label>
+          <textarea name="additives" defaultValue={activeBatch.additives} className="p-3 rounded bg-black/40 border border-white/20" />
+      
+          {/* ⭐ Full process */}
+          <label className="font-semibold">Full process</label>
+          <textarea name="full_process" defaultValue={activeBatch.full_process} className="p-3 rounded bg-black/40 border border-white/20" />
+      
+          {/* ⭐ Notes */}
+          <label className="font-semibold">Notes</label>
+          <textarea name="notes" defaultValue={activeBatch.notes} className="p-3 rounded bg-black/40 border border-white/20" />
+        </>
+      )}
+      
+      {activeBatch.type === "Other" && (
+              <>
+                <label className="font-semibold">Additives</label>
+                <textarea
+                  name="additives"
+                  defaultValue={activeBatch.additives}
+                  className="p-3 rounded bg-black/40 border border-white/20"
+                />
+      
+                <label className="font-semibold">Notes</label>
+                <textarea
+                  name="notes"
+                  defaultValue={activeBatch.notes}
+                  className="p-3 rounded bg-black/40 border border-white/20"
+                />
+              </>
+            )}
+      
+            <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
+              Save changes
+            </button>
+          </form>
+        </div>
+      )}
+      
+                  
+                    <p className="opacity-80">Batch ID: {activeBatch.batchnummer}</p>
+                    <p className="opacity-80">
+                      Start date: {new Date(activeBatch.startdato).toLocaleDateString("en-US")}
+                      <span className="ml-2 opacity-70">
+                        ({daysSince(activeBatch.startdato)} {dayLabel(daysSince(activeBatch.startdato))})
+                      </span>
+                    </p>
+                    <p className="opacity-80">Original Gravity (OG): {activeBatch.og}</p>
+                    <p className="opacity-80">Batch volume: {activeBatch.volume_l} L</p>
+                    <p className="opacity-80">Status: Primary fermentation</p>
+      
+                    {(activeBatch.type === "Beer" || activeBatch.type === "Braggot") && (
+        <>
+          {activeBatch.ibu !== null && (
+            <p className="opacity-80">
+              IBU: {Number(activeBatch.ibu).toFixed(0)}
+            </p>
+          )}
+      
+          {activeBatch.ebc !== null && (
+        <div className="flex items-center gap-2 opacity-80">
+          <p>EBC (calculated): {Number(activeBatch.ebc).toFixed(0)}</p>
+          <span
+            className="inline-block w-6 h-6 rounded border border-white/30"
+            style={{ backgroundColor: ebcToHex(Number(activeBatch.ebc)) }}
+          ></span>
+        </div>
+      )}
+        </>
+      )}
+      
+                    <div className="mt-6 p-4 bg-white/5 border border-white/10 rounded-lg">
+        <h3 className="text-xl font-bold mb-3 text-green-300">
+          Recipe
+        </h3>
+      
+        <div className="space-y-4 text-sm whitespace-pre-wrap">
+          
+
+{/* MEAD */}
+{activeBatch.type === "Mead" && (
+  <>
+    <p><strong>Honey:</strong> {activeBatch.honey_type} – {activeBatch.honey_amount} kg</p>
+
+    {activeBatch.fruits?.length > 0 && (
+      <div>
+        <strong>Fruits:</strong>
+        {activeBatch.fruits.map((f: Fruit, i: number) => (
+          <p key={i}>{f.name}: {f.amount}{f.unit}</p>
+        ))}
+      </div>
     )}
 
-    {/* BEER */}
-    {activeBatch.type === "Beer" && (
-      <>
-        {activeBatch.malts?.length > 0 && (
-          <div>
-            <strong>Malt additions:</strong>
-            {activeBatch.malts.map((m: Malt, i: number) => (
-              <p key={i}>{m.name}: {m.amount} kg</p>
-            ))}
-          </div>
-        )}
+    <p><strong>Additives:</strong><br />{activeBatch.additives}</p>
+    <p><strong>Full process:</strong><br />{activeBatch.full_process}</p>
+    <p><strong>Notes:</strong><br />{activeBatch.notes}</p>
+  </>
+)}
 
-        {activeBatch.hops?.length > 0 && (
-          <div>
-            <strong>Hop schedule:</strong>
-            {activeBatch.hops.map((h: Hop, i: number) => (
-              <p key={i}>{h.name}: {h.amount}{h.unit} @ {h.time} min</p>
-            ))}
-          </div>
-        )}
-
-        <p><strong>Total boil time:</strong> {activeBatch.boil_time} min</p>
-
-        <p><strong>Additives:</strong><br />{activeBatch.additives}</p>
-        <p><strong>Full process:</strong><br />{activeBatch.full_process}</p>
-        <p><strong>Notes:</strong><br />{activeBatch.notes}</p>
-      </>
+{/* BEER */}
+{activeBatch.type === "Beer" && (
+  <>
+    {activeBatch.malts?.length > 0 && (
+      <div>
+        <strong>Malt additions:</strong>
+        {activeBatch.malts.map((m: Malt, i: number) => (
+          <p key={i}>{m.name}: {m.amount} kg</p>
+        ))}
+      </div>
     )}
 
-    {/* BRAGGOT */}
-    {activeBatch.type === "Braggot" && (
-      <>
-        {activeBatch.malts?.length > 0 && (
-          <div>
-            <strong>Malt additions:</strong>
-            {activeBatch.malts.map((m: Malt, i: number) => (
-              <p key={i}>{m.name}: {m.amount}{m.unit}</p>
-            ))}
-          </div>
-        )}
-
-        <p><strong>Boil time:</strong> {activeBatch.boil_time} min</p>
-        <p><strong>Honey:</strong> {activeBatch.honey_amount} kg</p>
-
-        <p><strong>Additives:</strong><br />{activeBatch.additives}</p>
-        <p><strong>Full process:</strong><br />{activeBatch.full_process}</p>
-        <p><strong>Notes:</strong><br />{activeBatch.notes}</p>
-      </>
+    {activeBatch.hops?.length > 0 && (
+      <div>
+        <strong>Hop schedule:</strong>
+        {activeBatch.hops.map((h: Hop, i: number) => (
+          <p key={i}>{h.name}: {h.amount}{h.unit} @ {h.time} min</p>
+        ))}
+      </div>
     )}
 
-    {/* CIDER / WINE / SELTZER */}
-    {(activeBatch.type === "Cider" ||
-      activeBatch.type === "Wine" ||
-      activeBatch.type === "Seltzer") && (
-      <>
-        <p><strong>Juice type:</strong> {activeBatch.juice_type}</p>
-        <p><strong>Sugar added:</strong> {activeBatch.sugar_amount} kg</p>
+    <p><strong>Total boil time:</strong> {activeBatch.boil_time} min</p>
+    <p><strong>Additives:</strong><br />{activeBatch.additives}</p>
+    <p><strong>Full process:</strong><br />{activeBatch.full_process}</p>
+    <p><strong>Notes:</strong><br />{activeBatch.notes}</p>
+  </>
+)}
 
-        <p><strong>Additives:</strong><br />{activeBatch.additives}</p>
-        <p><strong>Full process:</strong><br />{activeBatch.full_process}</p>
-        <p><strong>Notes:</strong><br />{activeBatch.notes}</p>
-      </>
+{/* BRAGGOT */}
+{activeBatch.type === "Braggot" && (
+  <>
+    {activeBatch.malts?.length > 0 && (
+      <div>
+        <strong>Malt additions:</strong>
+        {activeBatch.malts.map((m: Malt, i: number) => (
+          <p key={i}>{m.name}: {m.amount}{m.unit}</p>
+        ))}
+      </div>
     )}
 
-    {/* OTHER */}
-    {activeBatch.type === "Other" && (
-      <>
-        {activeBatch.ingredients?.length > 0 && (
-          <div>
-            <strong>Ingredients:</strong>
-            {activeBatch.ingredients.map((ing: Ingredient, idx: number) => (
-              <p key={idx}>{ing.name}: {ing.amount}{ing.unit}</p>
-            ))}
-          </div>
-        )}
+    <p><strong>Boil time:</strong> {activeBatch.boil_time} min</p>
+    <p><strong>Honey:</strong> {activeBatch.honey_amount} kg</p>
+    <p><strong>Additives:</strong><br />{activeBatch.additives}</p>
+    <p><strong>Full process:</strong><br />{activeBatch.full_process}</p>
+    <p><strong>Notes:</strong><br />{activeBatch.notes}</p>
+  </>
+)}
 
-        {activeBatch.steps?.length > 0 && (
-          <div>
-            <strong>Process steps:</strong>
-            {activeBatch.steps.map((s: string, idx: number) => (
-              <p key={idx}>{idx + 1}. {s}</p>
-            ))}
-          </div>
-        )}
+{/* CIDER / WINE / SELTZER */}
+{(activeBatch.type === "Cider" || activeBatch.type === "Wine" || activeBatch.type === "Seltzer") && (
+  <>
+    <p><strong>Juice type:</strong> {activeBatch.juice_type}</p>
+    <p><strong>Sugar added:</strong> {activeBatch.sugar_amount} kg</p>
+    <p><strong>Additives:</strong><br />{activeBatch.additives}</p>
+    <p><strong>Full process:</strong><br />{activeBatch.full_process}</p>
+    <p><strong>Notes:</strong><br />{activeBatch.notes}</p>
+  </>
+)}
 
-        <p><strong>Additives:</strong><br />{activeBatch.additives}</p>
-        <p><strong>Notes:</strong><br />{activeBatch.notes}</p>
-      </>
+{/* OTHER */}
+{activeBatch.type === "Other" && (
+  <>
+    {activeBatch.ingredients?.length > 0 && (
+      <div>
+        <strong>Ingredients:</strong>
+        {activeBatch.ingredients.map((ing: Ingredient, idx: number) => (
+          <p key={idx}>{ing.name}: {ing.amount}{ing.unit}</p>
+        ))}
+      </div>
     )}
 
-  </div>
+    {activeBatch.steps?.length > 0 && (
+      <div>
+        <strong>Process steps:</strong>
+        {activeBatch.steps.map((s: string, idx: number) => (
+          <p key={idx}>{idx + 1}. {s}</p>
+        ))}
+      </div>
+    )}
+
+    <p><strong>Additives:</strong><br />{activeBatch.additives}</p>
+    <p><strong>Notes:</strong><br />{activeBatch.notes}</p>
+  </>
+)}
+
 </div>
+  </div>
+    </div>
+
+      <p className="opacity-80 mt-4">
+        Created: {new Date(activeBatch.created_at).toLocaleDateString("en-US")}
+      </p>
+    </>
+  )}
 
 
-              <p className="opacity-80 mt-4">
-                Created: {new Date(activeBatch.created_at).toLocaleDateString("en-US")}
-              </p>
 
-              {activeBatch.secondary_startdate && (
-                <p className="opacity-80 mt-2">
-                  Racked to secondary on{" "}
-                  {new Date(activeBatch.secondary_startdate).toLocaleDateString("en-US")}
-                </p>
-              )}
+    {/* ⭐ Rack to secondary */}
+{hasActive && isOwner && activeBatch.status === "Aktiv" && (
+  <div className="mt-6 bg-white/5 border border-white/10 rounded-lg p-4">
+    <button
+      type="button"
+      onClick={() => setOpenSecondaryActive(!openSecondaryActive)}
+      className="w-full flex items-center justify-between font-semibold text-green-300 cursor-pointer"
+    >
+      Rack to secondary
+      <span
+        className={`text-white text-xl transition-transform duration-300 ${
+          openSecondaryActive ? "rotate-90" : "rotate-180"
+        }`}
+      >
+        ▶
+      </span>
+    </button>
 
-              {activeBatch.secondary_notes && (
-                <p className="opacity-80 mt-2 whitespace-pre-wrap">
-                  Secondary notes:<br />
-                  {activeBatch.secondary_notes}
-                </p>
-              )}
+    <div
+      className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+        openSecondaryActive ? "[grid-template-rows:1fr]" : "[grid-template-rows:0fr]"
+      }`}
+    >
+      <div className="overflow-hidden">
+        <form
+          action={Actions.moveToSecondary}
+          className="mt-4 flex flex-col gap-4"
+        >
+          <input type="hidden" name="batch_id" value={activeBatch.id} />
+          <input type="hidden" name="kar_id" value={kar.id} />
 
-              {activeBatch.secondary_additions && (
-                <p className="opacity-80 mt-2 whitespace-pre-wrap">
-                  Secondary additions:<br />
-                  {activeBatch.secondary_additions}
-                </p>
-              )}
+          <textarea
+            name="secondary_additions"
+            placeholder="Secondary additions"
+            className="p-3 rounded bg-black/40 border border-white/20"
+          />
 
-              {activeBatch.fg && (
-                <p className="opacity-80 mt-2">Final Gravity (FG): {activeBatch.fg}</p>
-              )}
+          <textarea
+            name="secondary_notes"
+            placeholder="Secondary notes"
+            className="p-3 rounded bg-black/40 border border-white/20"
+          />
 
-              {activeBatch.abv && (
-                <p className="opacity-80 mt-2">
-                  ABV: {activeBatch.abv.toFixed(2)}%
-                </p>
-              )}
+          <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
+            Confirm rack to secondary
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+)}
 
-              {activeBatch.finished_date && (
-                <p className="opacity-80 mt-2">
-                  Finished:{" "}
-                  {new Date(activeBatch.finished_date).toLocaleDateString("en-US")}
-                </p>
-              )}
 
-              {activeBatch.finished_notes && (
-                <p className="opacity-80 mt-2 whitespace-pre-wrap">
-                  Finish notes:<br />
-                  {activeBatch.finished_notes}
-                </p>
-              )}
-            </div>
+        
 
-            {isOwner && (
+           {hasActive && isOwner && (
   <div className="bg-white/5 border border-white/10 rounded-lg p-4 mt-6 mb-6">
     <button
       type="button"
@@ -1337,6 +1212,7 @@ async function toggleVisibility() {
       }`}
     >
       <div className="overflow-hidden">
+
         {/* SG input */}
         <div className="mt-4 flex flex-col gap-4">
           <input
@@ -1357,13 +1233,13 @@ async function toggleVisibility() {
         </div>
 
         {/* SG graph */}
-{sgReadings.length > 0 && (
-  <div className="mt-6">
-    <h3 className="text-xl font-bold mb-3 text-green-300">
-      Development graph
-    </h3>
+        {sgReadings.length > 0 && (
+          <div className="mt-6">
+            <h3 className="text-xl font-bold mb-3 text-green-300">
+              Development graph
+            </h3>
 
-    <div className="bg-black/40 p-4 rounded-lg border border-white/10">
+            <div className="bg-black/40 p-4 rounded-lg border border-white/10">
       <Line
         data={{
           labels: sgReadings.map((r) =>
@@ -1405,86 +1281,30 @@ async function toggleVisibility() {
 
     {/* ⭐ CURRENT ABV USING LATEST SG */}
 {(() => {
-  const latestSG =
-    sgReadings.length > 0
-      ? Number(sgReadings[sgReadings.length - 1].sg)
-      : null;
+              const latestSG =
+                sgReadings.length > 0
+                  ? Number(sgReadings[sgReadings.length - 1].sg)
+                  : null;
 
-  const currentAbv =
-    activeBatch?.og && latestSG && !isNaN(latestSG)
-      ? ((Number(activeBatch.og) - latestSG) * 131.25).toFixed(2)
-      : null;
+              const currentAbv =
+                activeBatch?.og && latestSG && !isNaN(latestSG)
+                  ? ((Number(activeBatch.og) - latestSG) * 131.25).toFixed(2)
+                  : null;
 
-  return currentAbv ? (
-    <p className="text-center text-lg font-semibold mt-4 text-green-300">
-      Current ABV: {currentAbv}%
-    </p>
-  ) : null;
-})()}
-
-  </div>
-)}
-      </div>
+              return currentAbv ? (
+                <p className="text-center text-lg font-semibold mt-4 text-green-300">
+                  Current ABV: {currentAbv}%
+                </p>
+              ) : null;
+            })()}
+          </div>
+        )}
+        </div>
     </div>
   </div>
 )}
 
-            {/* Rack to secondary */}
-{isOwner && hasActive && (
-  <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-    <button
-      type="button"
-      onClick={() => setOpenSecondaryActive(!openSecondaryActive)}
-      className="w-full flex items-center justify-between font-semibold text-green-300 cursor-pointer"
-    >
-      Rack to secondary
-      <span
-        className={`text-white text-xl transition-transform duration-300 ${
-          openSecondaryActive ? "rotate-90" : "rotate-180"
-        }`}
-      >
-        ▶
-      </span>
-    </button>
-
-    <div
-      className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
-        openSecondaryActive
-          ? "[grid-template-rows:1fr]"
-          : "[grid-template-rows:0fr]"
-      }`}
-    >
-      <div className="overflow-hidden">
-        <form
-          action={Actions.moveToSecondary}
-          className="mt-4 flex flex-col gap-4"
-        >
-          <input type="hidden" name="batch_id" value={activeBatch.id} />
-          <input type="hidden" name="kar_id" value={kar.id} />
-
-          <textarea
-            name="secondary_additions"
-            placeholder="Secondary additions"
-            className="p-3 rounded bg-black/40 border border-white/20"
-          />
-
-          <textarea
-            name="secondary_notes"
-            placeholder="Secondary notes"
-            className="p-3 rounded bg-black/40 border border-white/20"
-          />
-
-          <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
-            Confirm rack to secondary
-          </button>
-        </form>
-      </div>
-    </div>
-  </div>
-)}
-
-
-            {/* Finish batch under Rack to secondary */}
+{/* Finish batch under Rack to secondary */}
 {isOwner && hasActive && (
   <div className="bg-white/5 border border-white/10 rounded-lg p-4 mt-6">
     <button
@@ -1545,7 +1365,7 @@ async function toggleVisibility() {
 )}
 
 
-            {/* Cancel batch */}
+{/* Cancel batch */}
 {isOwner && hasActive && (
   <>
     <form action={Actions.cancelBatch} className="mt-8 mb-4">
@@ -1561,7 +1381,7 @@ async function toggleVisibility() {
   </>
 )}
 
-            {hasActive && (
+{hasActive && (
   <KarNotesClient
     batchId={activeBatch.id}
     karId={kar.id}
@@ -1569,12 +1389,7 @@ async function toggleVisibility() {
     notes={notes}
   />
 )}
-
-          </>
-        )}
-      
-
-      </div>
+  </div>
     </main>
   );
 }

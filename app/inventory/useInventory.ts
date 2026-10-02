@@ -86,8 +86,8 @@ useEffect(() => {
     await loadItems();
   }
 
-  async function updateItem(id: string, amount: number) {
-    await updateInventoryAmount(id, amount);
+  async function updateItem(id: string, amount: number, minimumAmount: number) {
+    await updateInventoryAmount(id, amount, minimumAmount);
     await loadItems();
   }
 
