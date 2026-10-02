@@ -16,16 +16,26 @@ export default function CategoryPage({ params }: { params: { name: string } }) {
     deleteItem,
   } = useInventory();
   const category = params.name;
+  const categoryTitle = category.replace(/_/g, " ");
+  const formattedCategoryTitle =
+    categoryTitle.charAt(0).toUpperCase() + categoryTitle.slice(1);
   const snusCategories = ["snus", "snusessens"];
   const isRestrictedCategory =
     profileLoaded &&
     snusCategories.includes(category) &&
     !profile?.snus_is_true;
-  const filtered = items.filter((item) => item.category === category);
+  const filtered = items
+    .filter((item) => item.category === category)
+    .sort((a, b) =>
+      String(a.name ?? "").localeCompare(String(b.name ?? ""), undefined, {
+        sensitivity: "base",
+        numeric: true,
+      })
+    );
 
   return (
     <main className="min-h-screen flex flex-col items-center px-6 py-12 text-white">
-      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-5xl border border-white/10 relative pt-16 sm:pt-0">
+      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-5xl border border-white/10 relative pt-16 sm:pt-16">
         <div className="absolute top-2 sm:top-4 right-4 z-40">
           <MenuOverlay current="inventory" />
         </div>
@@ -49,7 +59,7 @@ export default function CategoryPage({ params }: { params: { name: string } }) {
         ) : (
           <>
             <PageHeading
-              title={category.replace("_", " ")}
+              title={formattedCategoryTitle}
               subtitle="All items in this category."
             />
             {loading ? (

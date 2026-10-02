@@ -304,7 +304,7 @@ export default function SettingsPage() {
         )}
 
         <section className="mb-8 border-y border-white/10 py-5">
-          <h2 className="text-lg font-semibold text-center mb-1">
+          <h2 className="text-lg font-semibold text-center mb-1 text-green-300">
             Site accent color
           </h2>
           <p className="text-sm text-zinc-400 text-center mb-4">
@@ -338,7 +338,7 @@ export default function SettingsPage() {
         </section>
 
         <section className="mb-8 border-b border-white/10 pb-10">
-          <h2 className="text-lg font-semibold text-center mb-4">
+          <h2 className="text-lg font-semibold text-center mb-4 text-green-300">
             Security
           </h2>
           {!showEmailChange ? (
@@ -470,7 +470,7 @@ export default function SettingsPage() {
         </section>
 
         <section className="border-b border-white/10 pb-6">
-          <h2 className="text-lg font-semibold text-center mb-4">
+          <h2 className="text-lg font-semibold text-center mb-4 text-green-300">
             Data &amp; account
           </h2>
           <div className="flex flex-col items-center gap-4">

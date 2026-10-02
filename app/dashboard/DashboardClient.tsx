@@ -306,7 +306,7 @@ useEffect(() => {
         </div>
       )}
 
-      <h2 className="text-2xl font-semibold mb-4 text-center">
+      <h2 className="text-2xl font-semibold mb-4 text-center text-green-300">
         Vessel Overview
       </h2>
 

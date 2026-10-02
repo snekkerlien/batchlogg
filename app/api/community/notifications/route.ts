@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
+import { decodeForumContent } from "@/lib/community/forumContent";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -105,11 +106,14 @@ export async function GET() {
       const reply = repliesById.get(notification.reply_id);
       if (!topic || !reply) return [];
       const author = authorsById.get(reply.author_id);
+      const replyContent = decodeForumContent(reply.body);
 
       return [{
         ...notification,
         topic_title: topic.title,
-        reply_body: reply.body,
+        reply_body:
+          replyContent.body ||
+          (replyContent.imagePaths.length ? "Image attachment" : ""),
         reply_author: author?.username || "Community member",
       }];
     }),

@@ -86,7 +86,7 @@ useEffect(() => {
           </button>
         </div>
 
-        <h2 className="text-2xl font-bold mt-2 mb-4 text-center">Categories</h2>
+        <h2 className="text-2xl font-bold mt-2 mb-4 text-center text-green-300">Categories</h2>
 
 {/* Vanlige kategorier */}
 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-12">

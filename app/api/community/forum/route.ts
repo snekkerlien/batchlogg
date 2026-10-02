@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
+import { decodeForumContent } from "@/lib/community/forumContent";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -69,14 +70,38 @@ export async function GET() {
   );
   const authorFor = (id: string) =>
     authors.get(id) ?? { id, username: "Community member" };
+  const imageFor = (path: string, authorId: string) => {
+    if (!path.startsWith(`${authorId}/`)) return null;
+    return {
+      path,
+      url: serviceRole.storage.from("forum-images").getPublicUrl(path).data.publicUrl,
+    };
+  };
 
   return NextResponse.json({
-    topics: topics.map((topic) => ({
-      ...topic,
-      author: authorFor(topic.author_id),
-      replies: replies
-        .filter((reply) => reply.topic_id === topic.id)
-        .map((reply) => ({ ...reply, author: authorFor(reply.author_id) })),
-    })),
+    topics: topics.map((topic) => {
+      const content = decodeForumContent(topic.body);
+      return {
+        ...topic,
+        body: content.body,
+        images: content.imagePaths
+          .map((path) => imageFor(path, topic.author_id))
+          .filter((image) => image !== null),
+        author: authorFor(topic.author_id),
+        replies: replies
+          .filter((reply) => reply.topic_id === topic.id)
+          .map((reply) => {
+            const replyContent = decodeForumContent(reply.body);
+            return {
+              ...reply,
+              body: replyContent.body,
+              images: replyContent.imagePaths
+                .map((path) => imageFor(path, reply.author_id))
+                .filter((image) => image !== null),
+              author: authorFor(reply.author_id),
+            };
+          }),
+      };
+    }),
   });
 }
