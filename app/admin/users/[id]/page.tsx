@@ -1,10 +1,15 @@
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "../../../../lib/supabase/supabaseServerFinal";
 import { isAdminUser } from "../../../../lib/auth/isAdminUser";
+import DeleteUserButton from "./DeleteUserButton";
 
 export const runtime = "nodejs";
 
-export default async function UserAdminPage({ params }: any) {
+export default async function UserAdminPage({
+  params,
+}: {
+  params: { id: string };
+}) {
   const userId = params.id;
   const { supabase, serviceRole } = supabaseServer();
   const {
@@ -115,6 +120,10 @@ export default async function UserAdminPage({ params }: any) {
           Save Changes
         </button>
       </form>
+      <DeleteUserButton
+        userId={userId}
+        username={profile?.username ?? authUser.user?.email ?? userId}
+      />
     </main>
   );
 }

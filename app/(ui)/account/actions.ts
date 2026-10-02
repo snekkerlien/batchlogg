@@ -1,6 +1,7 @@
 "use server";
 
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
+import { deleteUserData } from "@/lib/supabase/deleteUserData";
 import { isAccentColor } from "@/lib/theme/accentColor";
 import JSZip from "jszip";
 
@@ -185,49 +186,20 @@ export async function deleteAvatar() {
    DELETE ACCOUNT (inkl. sletting av alt innhold + avatar + auth)
    ============================================================ */
 export async function deleteAccount() {
-  console.log("=== deleteAccount START ===");
-
   const { supabase, serviceRole } = await supabaseServer();
-
   const {
     data: { user },
+    error: userError,
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    console.log("[deleteAccount] Ingen bruker funnet");
-    return;
+  if (userError || !user) {
+    throw new Error("Authentication required to delete account");
   }
 
-  const userId = user.id;
+  await deleteUserData(serviceRole, user.id);
 
-  const { data: profile } = await serviceRole
-    .from("profiles")
-    .select("avatar_url")
-    .eq("id", userId)
-    .single();
-
-  if (profile?.avatar_url) {
-  const parts = profile.avatar_url.split("/");
-  const fileName = parts[parts.length - 1];
-
-  await serviceRole.storage.from("avatars").remove([fileName]);
-  console.log("[deleteAccount] Avatar slettet:", fileName);
-}
-
-  await serviceRole.from("batches").delete().eq("user_id", userId);
-  await serviceRole.from("kar").delete().eq("user_id", userId);
-  await serviceRole.from("recipes").delete().eq("user_id", userId);
-  await serviceRole.from("profiles").delete().eq("id", userId);
-
-  console.log("[deleteAccount] Alt innhold slettet");
-
-  const { error: deleteError } = await serviceRole.auth.admin.deleteUser(userId);
-
+  const { error: deleteError } = await serviceRole.auth.admin.deleteUser(user.id);
   if (deleteError) {
-    console.log("[deleteAccount] Auth sletting feilet:", deleteError);
-    return;
+    throw new Error(`Could not delete Auth user: ${deleteError.message}`);
   }
-
-  console.log("[deleteAccount] Auth bruker slettet");
-  console.log("=== deleteAccount END ===");
 }
