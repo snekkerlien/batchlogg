@@ -2,7 +2,7 @@
 
 export default function Background({
   children,
-  background = "/background1.png", // default
+  background = "/background6.png", // default
 }: {
   children: React.ReactNode;
   background?: string;
