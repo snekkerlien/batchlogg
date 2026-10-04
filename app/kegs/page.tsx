@@ -135,12 +135,14 @@ export default function KegTrackerPage() {
 
   useEffect(() => {
     if (!accessLoaded) return;
-    if (canManageKegs) {
-      void loadKegs();
-    } else {
-      setLoading(false);
-    }
+    void loadKegs();
   }, [accessLoaded, canManageKegs]);
+
+  useEffect(() => {
+    if (canManageKegs) return;
+    setSelectMode(false);
+    setSelectedIds([]);
+  }, [canManageKegs]);
 
   async function addKeg() {
     setSaving(true);
@@ -237,6 +239,18 @@ export default function KegTrackerPage() {
   </>
 ) : isLoggedIn === false ? (
   <>
+    {!selectMode && (
+      <button
+        type="button"
+        onClick={() => {
+          setSelectMode(true);
+          setSelectedIds([]);
+        }}
+        className="absolute top-2 left-4 z-40 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold sm:top-4"
+      >
+        Select kegs
+      </button>
+    )}
     <Link
       href="/"
       className="absolute top-2 right-4 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold sm:top-4"
@@ -269,11 +283,7 @@ export default function KegTrackerPage() {
           </div>
         )}
 
-        {!canManageKegs ? (
-          <p className="py-8 text-center text-white/70">
-            Access denied. Keg management permission is required.
-          </p>
-        ) : <section className="flex flex-wrap justify-center gap-6">
+        <section className="flex flex-wrap justify-center gap-6">
           {kegs.map((keg) => {
             const isSelected = selectedIds.includes(keg.id);
             const tileClass = `relative border border-white/10 rounded-xl p-4 bg-white/5 w-32 h-32 flex flex-col items-center justify-center transition overflow-hidden hover:bg-white/10 ${
@@ -372,9 +382,9 @@ export default function KegTrackerPage() {
               {saving ? "…" : "+"}
             </button>
           )}
-        </section>}
+        </section>
 
-        {selectMode && (
+        {selectMode && (canManageKegs || isLoggedIn === false) && (
   <div className="flex justify-center mt-10 mb-6">
     <div className="flex flex-col sm:flex-row gap-4">
 
