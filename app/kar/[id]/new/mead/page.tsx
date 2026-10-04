@@ -171,7 +171,7 @@ export default function NewMeadPage({
   {fruits.map((f, i) => (
     <div
       key={i}
-      className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full"
+      className="flex w-full items-start gap-2 mb-2"
     >
       <InventoryIngredientSelect
         selectionKey={`fruit:${i}`}
@@ -185,11 +185,20 @@ export default function NewMeadPage({
           updated[i].name = value;
           setFruits(updated);
         }}
+        onItemSelect={(item) => {
+          if (!item) return;
+          setFruits((current) =>
+            current.map((fruit, index) =>
+              index === i ? { ...fruit, unit: item.unit } : fruit
+            )
+          );
+        }}
       />
 
+      <div className="contents">
       <input
         placeholder="Amount"
-        className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-24"
+        className="p-3 rounded bg-black/40 border border-white/20 w-20 sm:w-28 shrink-0"
         value={f.amount}
         onChange={(e) => {
           const updated = [...fruits];
@@ -200,7 +209,7 @@ export default function NewMeadPage({
 
       <input
         placeholder="Unit"
-        className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-20"
+        className="p-3 rounded bg-black/40 border border-white/20 w-16 sm:w-24 shrink-0"
         value={f.unit}
         onChange={(e) => {
           const updated = [...fruits];
@@ -212,10 +221,11 @@ export default function NewMeadPage({
       <button
         type="button"
         onClick={() => removeFruit(i)}
-        className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm self-start md:self-auto"
+        className="shrink-0 px-2 sm:px-3 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-xs sm:text-sm"
       >
         Remove
       </button>
+      </div>
     </div>
   ))}
 

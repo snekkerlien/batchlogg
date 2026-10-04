@@ -7,7 +7,7 @@ import { INVENTORY_CATEGORIES, SNUS_CATEGORIES } from "@/lib/inventory/categorie
 /**
  * ADD INVENTORY ITEM
  */
-export async function addInventoryItem(formData: FormData) {
+export async function addInventoryItem(formData: FormData, shouldRevalidate = true) {
   const { supabase } = await supabaseServer();
 
   const name = formData.get("name")?.toString();
@@ -83,7 +83,7 @@ export async function addInventoryItem(formData: FormData) {
     .single();
   if (error) throw new Error(`Failed to add inventory item: ${error.message}`);
 
-  revalidatePath("/inventory");
+  if (shouldRevalidate) revalidatePath("/inventory");
   return data;
 }
 

@@ -118,7 +118,7 @@ export function BatchInventoryProvider({ children }: { children: ReactNode }) {
   }
 
   async function addItem(formData: FormData) {
-    const item = await addInventoryItem(formData);
+    const item = await addInventoryItem(formData, false);
     const inventoryItem: InventoryItem = {
       ...item,
       amount: Number(item.amount),
@@ -280,7 +280,7 @@ export function InventoryIngredientSelect({
               onChange?.(item?.name ?? "");
               onItemSelect?.(item ?? null);
             }}
-            className={`${inputClassName} w-full disabled:opacity-60`}
+            className={`${inputClassName} min-h-[3.125rem] w-full disabled:opacity-60`}
           >
             <option value="">
               {context.error
@@ -457,7 +457,15 @@ function InventoryItemCreator({
   }
 
   return (
-    <div className="grid gap-2 rounded-lg border border-white/15 bg-black/30 p-3 sm:grid-cols-2">
+    <div
+      className="grid gap-2 rounded-lg border border-white/15 bg-black/30 p-3 sm:grid-cols-2"
+      onKeyDown={(event) => {
+        if (event.key === "Enter" && event.target instanceof HTMLInputElement) {
+          event.preventDefault();
+          void saveItem();
+        }
+      }}
+    >
       <input
         aria-label="New inventory item name"
         autoFocus
