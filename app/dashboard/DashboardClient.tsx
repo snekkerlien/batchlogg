@@ -313,7 +313,7 @@ useEffect(() => {
         >
           <p>{loadError}</p>
           <button
-            onClick={loadDashboardData}
+            onClick={() => loadDashboardData()}
             className="mt-3 rounded-lg border border-white/20 bg-white/10 px-4 py-2 hover:bg-white/20"
           >
             Try again
