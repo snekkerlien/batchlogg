@@ -29,7 +29,7 @@ export default function SiteStatusBanner() {
 
   if (!message) return null;
   return (
-    <aside role="status" className="sticky top-0 z-[80] border-b border-amber-300/30 bg-amber-950/95 px-4 py-2 text-center text-sm text-amber-100">
+    <aside role="status" className="rounded-xl border border-amber-300/20 bg-black/60 px-4 py-2 text-center text-sm text-amber-100 backdrop-blur-md">
       <span className="font-semibold">Service notice:</span> {message}
     </aside>
   );

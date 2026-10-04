@@ -8,6 +8,7 @@ import { useSupabaseSessionSync } from "../../lib/supabase/syncSession";
 import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
 import ChangelogNotice from "../components/ChangelogNotice";
 import FirstLoginSetup from "../components/FirstLoginSetup";
+import SiteAnnouncementBanner from "../components/SiteAnnouncementBanner";
 import { UnitsProvider } from "../components/Units";
 import SiteStatusBanner from "../components/SiteStatusBanner";
 import {
@@ -76,7 +77,10 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
       <UserAccentTheme>
         <UnitsProvider>
         <FirstLoginSetup />
-        <SiteStatusBanner />
+        <div className="relative z-[80] mx-auto -mb-8 max-w-3xl space-y-2 px-3 pt-12 empty:hidden">
+          <SiteAnnouncementBanner />
+          <SiteStatusBanner />
+        </div>
         <ChangelogNotice />
         <Toaster
           position="top-center"

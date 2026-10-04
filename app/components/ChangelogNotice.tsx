@@ -12,16 +12,9 @@ interface ChangelogEntry {
   body: string;
 }
 
-interface Announcement {
-  id: string;
-  title: string;
-  body: string;
-}
-
 export default function ChangelogNotice() {
   const { user } = useAuthContext();
   const [changelog, setChangelog] = useState<ChangelogEntry | null>(null);
-  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -32,7 +25,6 @@ export default function ChangelogNotice() {
     if (!user) {
       setVisible(false);
       setChangelog(null);
-      setAnnouncement(null);
       return;
     }
     setLoading(true);
@@ -52,17 +44,14 @@ export default function ChangelogNotice() {
       if (profileError) throw profileError;
       const updates: {
         changelog: ChangelogEntry | null;
-        announcement: Announcement | null;
       } = await updatesResponse.json();
       if (!active) return;
       const nextChangelog =
         updates.changelog?.version !== profile?.last_viewed_changelog_version
           ? updates.changelog
           : null;
-      const nextAnnouncement = updates.announcement;
       setChangelog(nextChangelog);
-      setAnnouncement(nextAnnouncement);
-      setVisible(!!nextChangelog || !!nextAnnouncement);
+      setVisible(!!nextChangelog);
       setError("");
     }
 
@@ -86,10 +75,10 @@ export default function ChangelogNotice() {
     }
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
-  }, [visible, changelog, announcement, user?.id]);
+  }, [visible, changelog, user?.id]);
 
   async function closeNotice() {
-    if (!user || (!changelog && !announcement) || saving) return;
+    if (!user || !changelog || saving) return;
     setSaving(true);
     setError("");
     const updates: Record<string, string> = {};
@@ -131,12 +120,12 @@ export default function ChangelogNotice() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-green-300">
-              {announcement ? "Announcement" : `What’s new · ${changelog?.version}`}
+              What’s new · {changelog?.version}
             </p>
             <h2 id="site-updates-title" className="mt-2 text-2xl font-bold">
-              {announcement?.title ?? changelog?.title}
+              {changelog?.title}
             </h2>
-            {changelog && !announcement && (
+            {changelog && (
               <p className="mt-1 text-sm text-white/50">{changelog.date}</p>
             )}
           </div>
@@ -153,15 +142,7 @@ export default function ChangelogNotice() {
 
         {error && <p role="alert" className="mt-4 text-sm text-amber-300">{error}</p>}
         <div className="mt-5 space-y-5 text-sm leading-6 text-white/80 [&_a]:text-green-300 [&_a]:underline [&_h1]:mt-5 [&_h1]:text-xl [&_h1]:font-bold [&_h2]:mt-5 [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:font-semibold [&_li]:ml-5 [&_li]:list-disc [&_ol_li]:list-decimal [&_p]:mt-3 [&_strong]:font-semibold [&_ul]:space-y-1">
-          {announcement && <ReactMarkdown>{announcement.body}</ReactMarkdown>}
-          {announcement && changelog && <hr className="border-white/10" />}
-          {changelog && (
-            <section>
-              {announcement && <h3 className="font-semibold text-green-200">What’s new · {changelog.version}</h3>}
-              {!announcement && <p className="text-xs text-white/50">{changelog.date}</p>}
-              <ReactMarkdown>{changelog.body}</ReactMarkdown>
-            </section>
-          )}
+          {changelog && <ReactMarkdown>{changelog.body}</ReactMarkdown>}
         </div>
       </section>
     </div>
