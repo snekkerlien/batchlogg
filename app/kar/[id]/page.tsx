@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import * as Actions from "./actions";
 import { KarNotesClient } from "./KarNotesClient";
@@ -64,6 +65,8 @@ function dayLabel(days: number) {
 
 
 export default function KarPage({ params }: { params: { id: string } }) {
+  const searchParams = useSearchParams();
+  const inventoryError = searchParams.get("inventory_error");
   const { label } = useUnits();
   const [openSecondary, setOpenSecondary] = useState(false);
   const [openSecondaryActive, setOpenSecondaryActive] = useState(false);
@@ -389,6 +392,12 @@ async function toggleVisibility() {
       : "View vessel details and start a new batch."
   }
 />
+
+{inventoryError && (
+  <p role="alert" className="mb-6 rounded-lg border border-amber-400/40 bg-amber-950/40 p-3 text-center text-amber-200">
+    {inventoryError}
+  </p>
+)}
 
 
 

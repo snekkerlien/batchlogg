@@ -12,6 +12,8 @@ import {
   downloadUserData,
   saveThemeAccentColor,
 } from "../my-account/actions";
+import { saveUserPreferences } from "@/app/actions/userPreferences";
+import { useUnits } from "@/app/components/Units";
 import {
   DEFAULT_ACCENT_COLOR,
   isAccentColor,
@@ -19,6 +21,7 @@ import {
 
 export default function SettingsPage() {
   const router = useRouter();
+  const { system } = useUnits();
   const restoreInputRef = useRef<HTMLInputElement | null>(null);
   const [user, setUser] = useState<any>(null);
   const [username, setUsername] = useState("account");
@@ -27,6 +30,11 @@ export default function SettingsPage() {
   const [themeAccentColor, setThemeAccentColor] = useState(DEFAULT_ACCENT_COLOR);
   const [savingThemeAccentColor, setSavingThemeAccentColor] = useState(false);
   const [themeAccentMessage, setThemeAccentMessage] = useState("");
+  const [useInventory, setUseInventory] = useState(false);
+  const [publicProfile, setPublicProfile] = useState(true);
+  const [remindersEnabled, setRemindersEnabled] = useState(true);
+  const [savingPreferences, setSavingPreferences] = useState(false);
+  const [preferencesMessage, setPreferencesMessage] = useState("");
   const [showEmailChange, setShowEmailChange] = useState(false);
   const [showPasswordChange, setShowPasswordChange] = useState(false);
   const [newEmail, setNewEmail] = useState("");
@@ -79,6 +87,9 @@ export default function SettingsPage() {
           ? profile.theme_accent_color
           : DEFAULT_ACCENT_COLOR
       );
+      setUseInventory(profile.use_inventory_for_batches === true);
+      setPublicProfile(profile.is_public !== false);
+      setRemindersEnabled(profile.batch_reminders_enabled !== false);
       setLoading(false);
     }
 
@@ -101,12 +112,35 @@ export default function SettingsPage() {
     try {
       await saveThemeAccentColor(themeAccentColor);
       document.documentElement.style.setProperty("--user-accent", themeAccentColor);
+      window.dispatchEvent(new Event("batchlogg-preferences-saved"));
       setThemeAccentMessage("Accent color saved.");
     } catch (error) {
       console.error("Failed to save accent color", error);
       setThemeAccentMessage("Could not save the accent color. Please try again.");
     } finally {
       setSavingThemeAccentColor(false);
+    }
+  }
+
+  async function savePreferences() {
+    setSavingPreferences(true);
+    setPreferencesMessage("");
+    try {
+      await saveUserPreferences({
+        theme_accent_color: themeAccentColor,
+        preferred_unit_system: system,
+        use_inventory_for_batches: useInventory,
+        batch_reminders_enabled: remindersEnabled,
+        is_public: publicProfile,
+      });
+      document.documentElement.style.setProperty("--user-accent", themeAccentColor);
+      window.dispatchEvent(new Event("batchlogg-preferences-saved"));
+      setPreferencesMessage("Preferences saved.");
+    } catch (error) {
+      console.error("Could not save account preferences", error);
+      setPreferencesMessage("Could not save preferences. Please try again.");
+    } finally {
+      setSavingPreferences(false);
     }
   }
 
@@ -346,6 +380,74 @@ export default function SettingsPage() {
               {themeAccentMessage}
             </p>
           )}
+        </section>
+
+        <section className="mb-8 border-b border-white/10 pb-6">
+          <h2 className="text-lg font-semibold text-center mb-1 text-green-300">
+            Brewing preferences
+          </h2>
+          <p className="text-sm text-zinc-400 text-center mb-5">
+            Choose how Batchlogg handles inventory, reminders, and your public profile.
+          </p>
+          <div className="mx-auto max-w-xl space-y-4">
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                checked={useInventory}
+                onChange={(event) => setUseInventory(event.target.checked)}
+                className="mt-1 h-4 w-4 accent-green-500"
+              />
+              <span>
+                <span className="block font-medium">Use inventory when creating batches</span>
+                <span className="text-sm text-white/60">
+                  Opt in to ingredient tracking and stock deductions as the batch integration is added.
+                </span>
+              </span>
+            </label>
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                checked={remindersEnabled}
+                onChange={(event) => setRemindersEnabled(event.target.checked)}
+                className="mt-1 h-4 w-4 accent-green-500"
+              />
+              <span>
+                <span className="block font-medium">Enable brew reminders</span>
+                <span className="text-sm text-white/60">
+                  Allow scheduled reminders and gravity-check reminders.
+                </span>
+              </span>
+            </label>
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                checked={publicProfile}
+                onChange={(event) => setPublicProfile(event.target.checked)}
+                className="mt-1 h-4 w-4 accent-green-500"
+              />
+              <span>
+                <span className="block font-medium">Make my profile visible to the community</span>
+                <span className="text-sm text-white/60">
+                  This does not change the visibility of individual fermentation vessels.
+                </span>
+              </span>
+            </label>
+          </div>
+          <div className="mt-5 flex flex-col items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void savePreferences()}
+              disabled={savingPreferences}
+              className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20 disabled:cursor-wait disabled:opacity-60"
+            >
+              {savingPreferences ? "Saving…" : "Save brewing preferences"}
+            </button>
+            {preferencesMessage && (
+              <p role="status" className="text-center text-sm text-zinc-300">
+                {preferencesMessage}
+              </p>
+            )}
+          </div>
         </section>
 
         <section className="mb-8 border-b border-white/10 pb-10">

@@ -6,6 +6,11 @@ import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import { useRecipePrefill } from "../../../../../lib/recipes/useRecipePrefill";
 import { UnitInput, UnitSymbol, useUnits } from "../../../../components/Units";
+import InventoryUsageFields, {
+  BatchInventoryProvider,
+  InventoryAdditiveFields,
+  InventoryIngredientSelect,
+} from "@/app/components/InventoryUsageFields";
 
 export default function NewBraggotPage({
   params,
@@ -36,11 +41,11 @@ export default function NewBraggotPage({
 
   // Dynamic hop list
 const [hops, setHops] = useState<
-  { name: string; amount: string; unit: string; boil: string }[]
+  { name: string; amount: string; unit: string; boil: string; alpha: string; year: string }[]
 >([]);
 
 function addHop() {
-  setHops([...hops, { name: "", amount: "", unit: "g", boil: "" }]);
+  setHops([...hops, { name: "", amount: "", unit: "g", boil: "", alpha: "", year: "" }]);
 }
 
 function removeHop(index: number) {
@@ -67,6 +72,8 @@ useEffect(() => {
           amount: String(hop.amount ?? ""),
           unit: "g",
           boil: String(hop.time ?? hop.boil ?? ""),
+          alpha: String(hop.alpha ?? ""),
+          year: String(hop.year ?? ""),
         }))
       : []
   );
@@ -99,6 +106,7 @@ useEffect(() => {
           className="flex flex-col gap-6"
           onSubmit={() => setLoading(true)}
         >
+          <BatchInventoryProvider>
           {/* Hidden fields */}
           <input type="hidden" name="kar" value={params.id} />
           <input type="hidden" name="type" value="Braggot" />
@@ -161,15 +169,18 @@ useEffect(() => {
   {malts.map((m, i) => (
     <div
       key={i}
-      className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full"
+      className="flex flex-col md:flex-row md:flex-wrap md:items-start gap-2 mb-2 w-full"
     >
-      <input
+      <InventoryIngredientSelect
+        selectionKey={`malt:${i}`}
         placeholder="Malt type (e.g. Pale Ale, Munich)"
-        className="p-3 rounded bg-black/40 border border-white/20 w-full md:flex-1"
+        category="fermentables"
+        subcategories={["Base Malt", "Specialty Malt"]}
+        className="p-3 rounded bg-black/40 border border-white/20 w-full"
         value={m.name}
-        onChange={(e) => {
+        onChange={(value) => {
           const updated = [...malts];
-          updated[i].name = e.target.value;
+          updated[i].name = value;
           setMalts(updated);
         }}
       />
@@ -213,15 +224,55 @@ useEffect(() => {
   {hops.map((h, i) => (
     <div
       key={i}
-      className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full"
+      className="w-full mb-4 space-y-2"
     >
-      <input
+      <InventoryIngredientSelect
+        selectionKey={`hop:${i}`}
         placeholder="Hop type (e.g. Citra, Mosaic)"
-        className="p-3 rounded bg-black/40 border border-white/20 w-full md:flex-1"
+        category="hops"
+        className="p-3 rounded bg-black/40 border border-white/20 w-full"
         value={h.name}
+        onChange={(value) => {
+          const updated = [...hops];
+          updated[i].name = value;
+          setHops(updated);
+        }}
+        onItemSelect={(item) => {
+          if (!item) return;
+          setHops((current) =>
+            current.map((hop, index) =>
+              index === i
+                ? {
+                    ...hop,
+                    alpha: item.alpha_acid != null ? String(item.alpha_acid) : hop.alpha,
+                    year: item.hop_year != null ? String(item.hop_year) : hop.year,
+                  }
+                : hop
+            )
+          );
+        }}
+      />
+
+<div className="grid grid-cols-2 gap-2 sm:grid-cols-[5rem_5rem_minmax(0,1fr)_minmax(0,1.4fr)_auto]">
+
+      <input
+        placeholder="Alpha (%)"
+        className="p-3 rounded bg-black/40 border border-white/20 w-full"
+        value={h.alpha}
         onChange={(e) => {
           const updated = [...hops];
-          updated[i].name = e.target.value;
+          updated[i].alpha = e.target.value;
+          setHops(updated);
+        }}
+      />
+
+      <input
+        placeholder="Year"
+        className="p-3 rounded bg-black/40 border border-white/20 w-full"
+        value={h.year}
+        onChange={(e) => {
+          const updated = [...hops];
+          updated[i].year = e.target.value;
           setHops(updated);
         }}
       />
@@ -229,7 +280,7 @@ useEffect(() => {
       <UnitInput
         kind="g"
         placeholder={`Amount (${label("g")})`}
-        className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-20"
+        className="p-3 rounded bg-black/40 border border-white/20 w-full"
         value={h.amount}
         onValueChange={(value) => {
           const updated = [...hops];
@@ -241,7 +292,7 @@ useEffect(() => {
 
       <input
         placeholder="Boil (min)"
-        className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-20"
+        className="p-3 rounded bg-black/40 border border-white/20 w-full"
         value={h.boil}
         onChange={(e) => {
           const updated = [...hops];
@@ -253,10 +304,11 @@ useEffect(() => {
       <button
         type="button"
         onClick={() => removeHop(i)}
-        className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm self-start md:self-auto"
+        className="col-span-2 sm:col-span-1 px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
       >
         Remove
       </button>
+</div>
     </div>
   ))}
 
@@ -270,7 +322,7 @@ useEffect(() => {
 </div>
 
 {/* Hidden JSON field */}
-<input type="hidden" name="hops_json" value={JSON.stringify(hops)} />
+<input type="hidden" name="hops_json" value={JSON.stringify(hops.map((hop) => ({ ...hop, time: hop.boil })))} />
 
 
 
@@ -292,6 +344,16 @@ useEffect(() => {
 
           {/* Honey amount */}
           <div>
+            <label className="block mb-1 font-semibold">Honey type</label>
+            <InventoryIngredientSelect
+              name="honey_type"
+              selectionKey="honey"
+              defaultValue={recipe?.honey_type ?? ""}
+              placeholder="Honey type"
+              category="fermentables"
+              subcategory="Honey"
+              className="w-full p-3 rounded bg-black/40 border border-white/20"
+            />
             <label className="block mb-1 font-semibold">Honey amount (<UnitSymbol kind="kg" />)</label>
             <UnitInput
               name="honey_amount"
@@ -305,10 +367,13 @@ useEffect(() => {
           {/* Yeast */}
           <div>
             <label className="block mb-1 font-semibold">Yeast strain</label>
-            <input
+            <InventoryIngredientSelect
               name="yeast"
+              selectionKey="yeast"
+              trackAmount
               defaultValue={recipe?.yeast ?? ""}
-              placeholder="Example: US-05 or Kveik"
+              placeholder="Yeast strain"
+              category="yeast"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
@@ -316,12 +381,7 @@ useEffect(() => {
           {/* Additives */}
           <div>
             <label className="block mb-1 font-semibold">Additives</label>
-            <textarea
-              name="additives"
-              defaultValue={recipe?.additives ?? ""}
-              placeholder="DAP, Fermaid O, K2CO3, Irish Moss..."
-              className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
-            />
+            <InventoryAdditiveFields defaultValue={recipe?.additives ?? ""} />
           </div>
 
           {/* Full process */}
@@ -346,6 +406,8 @@ useEffect(() => {
             />
           </div>
 
+          <InventoryUsageFields />
+
           {/* Submit */}
           <button
             disabled={loading || recipeLoading}
@@ -353,6 +415,8 @@ useEffect(() => {
           >
             {loading ? "Creating..." : "Create batch"}
           </button>
+
+          </BatchInventoryProvider>
         </form>
       </div>
     </main>

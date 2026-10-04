@@ -1,12 +1,13 @@
 "use client";
 
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider, useAuthContext } from "../providers/AuthProvider";
 import { useSupabaseSessionSync } from "../../lib/supabase/syncSession";
 import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
 import ChangelogNotice from "../components/ChangelogNotice";
+import FirstLoginSetup from "../components/FirstLoginSetup";
 import { UnitsProvider } from "../components/Units";
 import SiteStatusBanner from "../components/SiteStatusBanner";
 import {
@@ -16,6 +17,17 @@ import {
 
 function UserAccentTheme({ children }: { children: ReactNode }) {
   const { user } = useAuthContext();
+  const [preferencesRevision, setPreferencesRevision] = useState(0);
+
+  useEffect(() => {
+    function onPreferencesSaved() {
+      setPreferencesRevision((current) => current + 1);
+    }
+    window.addEventListener("batchlogg-preferences-saved", onPreferencesSaved);
+    return () => {
+      window.removeEventListener("batchlogg-preferences-saved", onPreferencesSaved);
+    };
+  }, []);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -51,7 +63,7 @@ function UserAccentTheme({ children }: { children: ReactNode }) {
     return () => {
       current = false;
     };
-  }, [user?.id]);
+  }, [user?.id, preferencesRevision]);
 
   return <>{children}</>;
 }
@@ -63,6 +75,7 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
     <AuthProvider>
       <UserAccentTheme>
         <UnitsProvider>
+        <FirstLoginSetup />
         <SiteStatusBanner />
         <ChangelogNotice />
         <Toaster

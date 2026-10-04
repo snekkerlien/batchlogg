@@ -20,6 +20,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
 
+  const { data: profile, error: profileError } = await serviceRole
+    .from("profiles")
+    .select("batch_reminders_enabled")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (profileError) {
+    console.error("Could not load reminder preferences", profileError);
+    return NextResponse.json({ error: "Could not load reminder preferences" }, { status: 500 });
+  }
+  if (profile?.batch_reminders_enabled === false) {
+    return NextResponse.json({ unreadCount: 0, reminders: [] });
+  }
+
   const requestedBatchId = request.nextUrl.searchParams.get("batch_id");
   if (requestedBatchId && !UUID_PATTERN.test(requestedBatchId)) {
     return NextResponse.json({ error: "Invalid batch ID" }, { status: 400 });
@@ -186,6 +199,19 @@ export async function POST(request: NextRequest) {
 
   if (authError || !user) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
+
+  const { data: profile, error: profileError } = await serviceRole
+    .from("profiles")
+    .select("batch_reminders_enabled")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (profileError) {
+    console.error("Could not load reminder preferences", profileError);
+    return NextResponse.json({ error: "Could not load reminder preferences" }, { status: 500 });
+  }
+  if (profile?.batch_reminders_enabled === false) {
+    return NextResponse.json({ error: "Brew reminders are disabled in your settings" }, { status: 403 });
   }
 
   let body: { batchId?: unknown; remindAt?: unknown; message?: unknown };

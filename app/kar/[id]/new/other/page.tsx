@@ -6,6 +6,11 @@ import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import { useRecipePrefill } from "../../../../../lib/recipes/useRecipePrefill";
 import { UnitInput, UnitSymbol } from "../../../../components/Units";
+import InventoryUsageFields, {
+  BatchInventoryProvider,
+  InventoryAdditiveFields,
+  InventoryIngredientSelect,
+} from "@/app/components/InventoryUsageFields";
 
 
 export default function NewOtherPage({
@@ -80,6 +85,7 @@ export default function NewOtherPage({
           className="flex flex-col gap-6"
           onSubmit={() => setLoading(true)}
         >
+          <BatchInventoryProvider>
           {/* Hidden fields */}
           <input type="hidden" name="kar" value={params.id} />
           <input type="hidden" name="type" value="Other" />
@@ -141,13 +147,14 @@ export default function NewOtherPage({
 
             {ingredients.map((ing, i) => (
               <div key={i} className="flex gap-2 mb-2 items-center">
-                <input
+                <InventoryIngredientSelect
+                  selectionKey={`ingredient:${i}`}
                   placeholder="Ingredient name"
                   className="flex-1 p-3 rounded bg-black/40 border border-white/20"
                   value={ing.name}
-                  onChange={(e) => {
+                  onChange={(value) => {
                     const updated = [...ingredients];
-                    updated[i].name = e.target.value;
+                    updated[i].name = value;
                     setIngredients(updated);
                   }}
                 />
@@ -238,12 +245,7 @@ export default function NewOtherPage({
           {/* Additives */}
           <div>
             <label className="block mb-1 font-semibold">Additives</label>
-            <textarea
-              name="additives"
-              defaultValue={recipe?.additives ?? ""}
-              placeholder="Optional additives, chemicals, nutrients..."
-              className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
-            />
+            <InventoryAdditiveFields defaultValue={recipe?.additives ?? ""} />
           </div>
 
           {/* Notes */}
@@ -257,6 +259,8 @@ export default function NewOtherPage({
             />
           </div>
 
+          <InventoryUsageFields />
+
           {/* Submit */}
           <button
             disabled={loading || recipeLoading}
@@ -264,6 +268,7 @@ export default function NewOtherPage({
           >
             {loading ? "Creating..." : "Create batch"}
           </button>
+          </BatchInventoryProvider>
         </form>
       </div>
     </main>

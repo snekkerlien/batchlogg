@@ -21,6 +21,9 @@ import {
   type UnitKind,
   type UnitSystem,
 } from "@/lib/units";
+import { useAuthContext } from "@/app/providers/AuthProvider";
+import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
+import { savePreferredUnitSystem } from "@/app/actions/userPreferences";
 
 // Several providers can be mounted at once (nested layouts), so keep them in sync within the same tab.
 const UNIT_CHANGE_EVENT = "batchlog-unit-change";
@@ -28,17 +31,21 @@ const UNIT_CHANGE_EVENT = "batchlog-unit-change";
 type UnitsContextValue = {
   system: UnitSystem;
   setSystem: (system: UnitSystem) => void;
+  saveError: string;
   label: (kind: UnitKind) => string;
 };
 
 const UnitsContext = createContext<UnitsContextValue>({
   system: "metric",
   setSystem: () => {},
+  saveError: "",
   label: (kind) => unitLabel(kind, "metric"),
 });
 
 export function UnitsProvider({ children }: { children: ReactNode }) {
   const [system, setSystemState] = useState<UnitSystem>("metric");
+  const [saveError, setSaveError] = useState("");
+  const { user } = useAuthContext();
 
   useEffect(() => {
     const stored = window.localStorage.getItem(UNIT_STORAGE_KEY);
@@ -61,15 +68,54 @@ export function UnitsProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    if (!user) return;
+
+    supabaseBrowser
+      .from("profiles")
+      .select("preferred_unit_system")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error) {
+          console.error("Could not load preferred unit system", error);
+          setSaveError("Could not load your saved unit preference.");
+          return;
+        }
+        if (isUnitSystem(data?.preferred_unit_system)) {
+          setSystemState(data.preferred_unit_system);
+          window.localStorage.setItem(UNIT_STORAGE_KEY, data.preferred_unit_system);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user?.id]);
+
   const setSystem = useCallback((next: UnitSystem) => {
     setSystemState(next);
+    setSaveError("");
     window.localStorage.setItem(UNIT_STORAGE_KEY, next);
     window.dispatchEvent(new CustomEvent(UNIT_CHANGE_EVENT, { detail: next }));
-  }, []);
+    if (user) {
+      void savePreferredUnitSystem(next).catch((error) => {
+        console.error("Could not save preferred unit system", error);
+        setSaveError("Your unit preference could not be saved.");
+      });
+    }
+  }, [user]);
 
   const value = useMemo(
-    () => ({ system, setSystem, label: (kind: UnitKind) => unitLabel(kind, system) }),
-    [system, setSystem]
+    () => ({
+      system,
+      setSystem,
+      saveError,
+      label: (kind: UnitKind) => unitLabel(kind, system),
+    }),
+    [system, setSystem, saveError]
   );
 
   return <UnitsContext.Provider value={value}>{children}</UnitsContext.Provider>;
@@ -186,13 +232,14 @@ export function UnitInput({
 
 
 export function UnitToggle({ className = "" }: { className?: string }) {
-  const { system, setSystem } = useUnits();
+  const { system, setSystem, saveError } = useUnits();
   const options: { value: UnitSystem; label: string }[] = [
     { value: "metric", label: "Metric (L, kg)" },
     { value: "imperial", label: "Imperial (gal, lb)" },
   ];
   return (
-    <div role="group" aria-label="Unit system" className={`flex justify-center gap-2 ${className}`}>
+    <div className={className}>
+    <div role="group" aria-label="Unit system" className="flex justify-center gap-2">
       {options.map((option) => (
         <button
           key={option.value}
@@ -208,6 +255,8 @@ export function UnitToggle({ className = "" }: { className?: string }) {
           {option.label}
         </button>
       ))}
+    </div>
+    {saveError && <p role="alert" className="mt-2 text-center text-sm text-red-300">{saveError}</p>}
     </div>
   );
 }

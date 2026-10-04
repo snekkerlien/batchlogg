@@ -150,6 +150,7 @@ export default function SignupClient() {
         return;
       }
 
+      window.dispatchEvent(new Event("batchlogg-profile-created"));
       router.replace("/dashboard");
     } catch (signupError) {
       console.error("Could not complete signup", signupError);

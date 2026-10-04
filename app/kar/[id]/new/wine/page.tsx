@@ -6,6 +6,11 @@ import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import { useRecipePrefill } from "../../../../../lib/recipes/useRecipePrefill";
 import { UnitInput, UnitSymbol } from "../../../../components/Units";
+import InventoryUsageFields, {
+  BatchInventoryProvider,
+  InventoryAdditiveFields,
+  InventoryIngredientSelect,
+} from "@/app/components/InventoryUsageFields";
 
 export default function NewWinePage({
   params,
@@ -45,6 +50,7 @@ export default function NewWinePage({
           className="flex flex-col gap-6"
           onSubmit={() => setLoading(true)}
         >
+          <BatchInventoryProvider>
           {/* Hidden fields */}
           <input type="hidden" name="kar" value={params.id} />
           <input type="hidden" name="type" value="Wine" />
@@ -103,10 +109,11 @@ export default function NewWinePage({
           {/* Grape / Juice type */}
           <div>
             <label className="block mb-1 font-semibold">Grape / Juice type</label>
-            <input
+            <InventoryIngredientSelect
               name="juice_type"
+              selectionKey="juice"
               defaultValue={recipe?.juice_type ?? ""}
-              placeholder="Example: Cabernet Sauvignon grapes, or 100% grape juice"
+              placeholder="Grape / Juice type"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
@@ -114,6 +121,14 @@ export default function NewWinePage({
           {/* Sugar (optional) */}
           <div>
             <label className="block mb-1 font-semibold">Sugar added (optional) (<UnitSymbol kind="kg" />)</label>
+            <InventoryIngredientSelect
+              selectionKey="sugar"
+              placeholder="Sugar inventory item"
+              category="fermentables"
+              subcategory="Sugar"
+              enabledOnly
+              className="w-full p-3 rounded bg-black/40 border border-white/20 mb-2"
+            />
             <UnitInput
               name="sugar_amount"
               kind="kg"
@@ -126,10 +141,13 @@ export default function NewWinePage({
           {/* Yeast */}
           <div>
             <label className="block mb-1 font-semibold">Yeast strain</label>
-            <input
+            <InventoryIngredientSelect
               name="yeast"
+              selectionKey="yeast"
+              trackAmount
               defaultValue={recipe?.yeast ?? ""}
-              placeholder="Example: EC-1118, BM4x4, QA23"
+              placeholder="Yeast strain"
+              category="yeast"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
@@ -137,12 +155,7 @@ export default function NewWinePage({
           {/* Additives */}
           <div>
             <label className="block mb-1 font-semibold">Additives</label>
-            <textarea
-              name="additives"
-              defaultValue={recipe?.additives ?? ""}
-              placeholder="Tannin, acid blend, pectic enzyme, nutrient, oak chips..."
-              className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
-            />
+            <InventoryAdditiveFields defaultValue={recipe?.additives ?? ""} />
           </div>
 
           {/* Full process */}
@@ -167,6 +180,8 @@ export default function NewWinePage({
             />
           </div>
 
+          <InventoryUsageFields />
+
           {/* Submit */}
           <button
             disabled={loading || recipeLoading}
@@ -174,6 +189,7 @@ export default function NewWinePage({
           >
             {loading ? "Creating..." : "Create batch"}
           </button>
+          </BatchInventoryProvider>
         </form>
       </div>
     </main>

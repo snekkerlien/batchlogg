@@ -6,6 +6,12 @@ import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import { useRecipePrefill } from "../../../../../lib/recipes/useRecipePrefill";
 import { UnitInput, UnitSymbol } from "../../../../components/Units";
+import InventoryUsageFields, {
+  BatchInventoryProvider,
+  InventoryAdditiveFields,
+  InventoryPreferenceFallback,
+  InventoryIngredientSelect,
+} from "@/app/components/InventoryUsageFields";
 
 export default function NewMeadPage({
   params,
@@ -17,6 +23,11 @@ export default function NewMeadPage({
   const [loading, setLoading] = useState(false);
   const { recipe, loading: recipeLoading, error: recipeError } =
     useRecipePrefill(searchParams?.recipe, "Mead");
+  const [honeyType, setHoneyType] = useState(recipe?.honey_type ?? "");
+
+  useEffect(() => {
+    if (recipe?.honey_type) setHoneyType(recipe.honey_type);
+  }, [recipe?.honey_type]);
 
   // Dynamic fruit list
   const [fruits, setFruits] = useState<
@@ -25,6 +36,9 @@ export default function NewMeadPage({
 
   useEffect(() => {
     if (recipe) setFruits(Array.isArray(recipe.fruits) ? recipe.fruits : []);
+  }, [recipe]);
+  useEffect(() => {
+    if (recipe) setHoneyType(recipe.honey_type ?? "");
   }, [recipe]);
 
   function addFruit() {
@@ -64,6 +78,7 @@ export default function NewMeadPage({
           className="flex flex-col gap-6"
           onSubmit={() => setLoading(true)}
         >
+          <BatchInventoryProvider>
           {/* Hidden fields */}
           <input type="hidden" name="kar" value={params.id} />
           <input type="hidden" name="type" value="Mead" />
@@ -122,24 +137,32 @@ export default function NewMeadPage({
           {/* Honey */}
           <div>
             <label className="block mb-1 font-semibold">Honey type</label>
-            <input
-              name="honey_type"
-              defaultValue={recipe?.honey_type ?? ""}
-              placeholder="Example: Wildflower honey"
+            <input type="hidden" name="honey_type" value={honeyType} />
+            <InventoryIngredientSelect
+              selectionKey="honey"
+              trackAmount
+              amountFieldName="inventory_honey_amount"
+              value={honeyType}
+              onChange={setHoneyType}
+              placeholder="Honey type"
+              category="fermentables"
+              subcategory="Honey"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
 
-          <div>
-            <label className="block mb-1 font-semibold">Honey amount (<UnitSymbol kind="kg" />)</label>
-            <UnitInput
-              name="honey_amount"
-              kind="kg"
-              defaultValue={recipe?.honey_amount == null ? "" : String(recipe.honey_amount)}
-              placeholder="Example: 3.5"
-              className="w-full p-3 rounded bg-black/40 border border-white/20"
-            />
-          </div>
+          <InventoryPreferenceFallback>
+            <div>
+              <label className="block mb-1 font-semibold">Honey amount (<UnitSymbol kind="kg" />)</label>
+              <UnitInput
+                name="honey_amount"
+                kind="kg"
+                defaultValue={recipe?.honey_amount == null ? "" : String(recipe.honey_amount)}
+                placeholder="Example: 3.5"
+                className="w-full p-3 rounded bg-black/40 border border-white/20"
+              />
+            </div>
+          </InventoryPreferenceFallback>
 
           {/* Dynamic fruit additions */}
           <div>
@@ -150,13 +173,16 @@ export default function NewMeadPage({
       key={i}
       className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full"
     >
-      <input
+      <InventoryIngredientSelect
+        selectionKey={`fruit:${i}`}
         placeholder="Fruit"
+        category="flavorings"
+        subcategory="Fruit"
         className="p-3 rounded bg-black/40 border border-white/20 w-full md:flex-1"
         value={f.name}
-        onChange={(e) => {
+        onChange={(value) => {
           const updated = [...fruits];
-          updated[i].name = e.target.value;
+          updated[i].name = value;
           setFruits(updated);
         }}
       />
@@ -209,10 +235,13 @@ export default function NewMeadPage({
           {/* Yeast */}
           <div>
             <label className="block mb-1 font-semibold">Yeast strain</label>
-            <input
+            <InventoryIngredientSelect
               name="yeast"
+              selectionKey="yeast"
+              trackAmount
               defaultValue={recipe?.yeast ?? ""}
-              placeholder="Example: Lalvin 71B"
+              placeholder="Yeast strain"
+              category="yeast"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
@@ -220,12 +249,7 @@ export default function NewMeadPage({
           {/* Additives */}
           <div>
             <label className="block mb-1 font-semibold">Additives</label>
-            <textarea
-              name="additives"
-              defaultValue={recipe?.additives ?? ""}
-              placeholder="Water to 10L, 3g Fermaid O, 1g DAP, 1g K2CO3..."
-              className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
-            />
+            <InventoryAdditiveFields defaultValue={recipe?.additives ?? ""} />
           </div>
 
           {/* Full process */}
@@ -250,6 +274,8 @@ export default function NewMeadPage({
             />
           </div>
 
+          <InventoryUsageFields />
+
           {/* Submit */}
           <button
             disabled={loading || recipeLoading}
@@ -257,6 +283,7 @@ export default function NewMeadPage({
           >
             {loading ? "Creating..." : "Create batch"}
           </button>
+          </BatchInventoryProvider>
         </form>
       </div>
     </main>

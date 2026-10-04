@@ -59,6 +59,7 @@ export async function POST(req: Request) {
   const profileData = {
     username: username.trim().toLowerCase(),
     email: email.trim(),
+    onboarding_completed: false,
   };
   const { data: updatedProfile, error: updateError } = await serviceRole
     .from("profiles")
@@ -90,6 +91,7 @@ export async function POST(req: Request) {
       avatar_url: null,
       is_public: true,
       can_manage_kegs: false,
+      onboarding_completed: false,
     });
 
     if (insertError) {

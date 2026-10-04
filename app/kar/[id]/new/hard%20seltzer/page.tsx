@@ -6,6 +6,11 @@ import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import { useRecipePrefill } from "../../../../../lib/recipes/useRecipePrefill";
 import { UnitInput, UnitSymbol } from "../../../../components/Units";
+import InventoryUsageFields, {
+  BatchInventoryProvider,
+  InventoryAdditiveFields,
+  InventoryIngredientSelect,
+} from "@/app/components/InventoryUsageFields";
 
 export default function NewSeltzerPage({
   params,
@@ -45,6 +50,7 @@ export default function NewSeltzerPage({
           className="flex flex-col gap-6"
           onSubmit={() => setLoading(true)}
         >
+          <BatchInventoryProvider>
           {/* Hidden fields */}
           <input type="hidden" name="kar" value={params.id} />
           <input type="hidden" name="type" value="Seltzer" />
@@ -103,6 +109,14 @@ export default function NewSeltzerPage({
           {/* Sugar amount */}
           <div>
             <label className="block mb-1 font-semibold">Sugar amount (<UnitSymbol kind="kg" />)</label>
+            <InventoryIngredientSelect
+              selectionKey="sugar"
+              placeholder="Sugar inventory item"
+              category="fermentables"
+              subcategory="Sugar"
+              enabledOnly
+              className="w-full p-3 rounded bg-black/40 border border-white/20 mb-2"
+            />
             <UnitInput
               name="sugar_amount"
               kind="kg"
@@ -115,10 +129,13 @@ export default function NewSeltzerPage({
           {/* Yeast */}
           <div>
             <label className="block mb-1 font-semibold">Yeast strain</label>
-            <input
+            <InventoryIngredientSelect
               name="yeast"
+              selectionKey="yeast"
+              trackAmount
               defaultValue={recipe?.yeast ?? ""}
-              placeholder="Example: EC-1118 or Kveik"
+              placeholder="Yeast strain"
+              category="yeast"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
@@ -126,12 +143,7 @@ export default function NewSeltzerPage({
           {/* Additives */}
           <div>
             <label className="block mb-1 font-semibold">Additives</label>
-            <textarea
-              name="additives"
-              defaultValue={recipe?.additives ?? ""}
-              placeholder="DAP, Fermaid O, K2CO3, pH adjustments..."
-              className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
-            />
+            <InventoryAdditiveFields defaultValue={recipe?.additives ?? ""} />
           </div>
 
           {/* Full process */}
@@ -156,6 +168,8 @@ export default function NewSeltzerPage({
             />
           </div>
 
+          <InventoryUsageFields />
+
           {/* Submit */}
           <button
             disabled={loading || recipeLoading}
@@ -163,6 +177,7 @@ export default function NewSeltzerPage({
           >
             {loading ? "Creating..." : "Create batch"}
           </button>
+          </BatchInventoryProvider>
         </form>
       </div>
     </main>

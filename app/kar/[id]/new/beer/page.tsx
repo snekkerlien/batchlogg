@@ -6,6 +6,11 @@ import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import { useRecipePrefill } from "../../../../../lib/recipes/useRecipePrefill";
 import { UnitInput, UnitSymbol, useUnits } from "../../../../components/Units";
+import InventoryUsageFields, {
+  BatchInventoryProvider,
+  InventoryAdditiveFields,
+  InventoryIngredientSelect,
+} from "@/app/components/InventoryUsageFields";
 
 
 export default function NewBeerPage({
@@ -131,6 +136,7 @@ useEffect(() => {
           className="flex flex-col gap-6"
           onSubmit={() => setLoading(true)}
         >
+          <BatchInventoryProvider>
           {/* Hidden fields */}
           <input type="hidden" name="kar" value={params.id} />
           <input type="hidden" name="type" value="Beer" />
@@ -209,16 +215,19 @@ useEffect(() => {
   {malts.map((m, i) => (
   <div
     key={i}
-    className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full"
+    className="flex flex-col md:flex-row md:flex-wrap md:items-start gap-2 mb-2 w-full"
   >
     {/* Malt type */}
-    <input
+    <InventoryIngredientSelect
+      selectionKey={`malt:${i}`}
       placeholder="Malt type"
+      category="fermentables"
+      subcategories={["Base Malt", "Specialty Malt"]}
       className="p-3 rounded bg-black/40 border border-white/20 flex-1 min-w-[240px]"
       value={m.name}
-      onChange={(e) => {
+      onChange={(value) => {
         const updated = [...malts];
-        updated[i].name = e.target.value;
+        updated[i].name = value;
         setMalts(updated);
       }}
     />
@@ -269,24 +278,42 @@ useEffect(() => {
   {hops.map((h, i) => (
   <div
     key={i}
-    className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full"
+    className="w-full mb-4 space-y-2"
   >
     {/* Hop type */}
-    <input
+    <InventoryIngredientSelect
+      selectionKey={`hop:${i}`}
       placeholder="Hop type"
+      category="hops"
       className="p-3 rounded bg-black/40 border border-white/20 flex-1 min-w-[200px]"
       value={h.name}
-      onChange={(e) => {
+      onChange={(value) => {
         const updated = [...hops];
-        updated[i].name = e.target.value;
+        updated[i].name = value;
         setHops(updated);
       }}
+      onItemSelect={(item) => {
+        if (!item) return;
+        setHops((current) =>
+          current.map((hop, index) =>
+            index === i
+              ? {
+                  ...hop,
+                  alpha: item.alpha_acid != null ? String(item.alpha_acid) : hop.alpha,
+                  year: item.hop_year != null ? String(item.hop_year) : hop.year,
+                }
+              : hop
+          )
+        );
+      }}
     />
+
+<div className="grid grid-cols-2 gap-2 sm:grid-cols-[5rem_5rem_minmax(0,1fr)_minmax(0,1.4fr)_auto]">
 
     <input
   placeholder="Alpha (%)"
   type="text"
-  className="p-3 rounded bg-black/40 border border-white/20 w-24"
+  className="p-3 rounded bg-black/40 border border-white/20 w-full"
   value={h.alpha}
   onChange={(e) => {
     const updated = [...hops];
@@ -299,7 +326,7 @@ useEffect(() => {
 <input
   placeholder="Year"
   type="text"
-  className="p-3 rounded bg-black/40 border border-white/20 w-24"
+  className="p-3 rounded bg-black/40 border border-white/20 w-full"
   value={h.year}
   onChange={(e) => {
     const updated = [...hops];
@@ -313,7 +340,7 @@ useEffect(() => {
     <UnitInput
       kind="g"
       placeholder={`Amount (${label("g")})`}
-      className="p-3 rounded bg-black/40 border border-white/20 w-26"
+      className="p-3 rounded bg-black/40 border border-white/20 w-full"
       value={h.amount}
       onValueChange={(value) => {
         const updated = [...hops];
@@ -326,7 +353,7 @@ useEffect(() => {
     <input
       placeholder="Boil time (min)"
       type="text"
-      className="p-3 rounded bg-black/40 border border-white/20 w-32"
+      className="p-3 rounded bg-black/40 border border-white/20 w-full"
       value={h.time}
       onChange={(e) => {
         const updated = [...hops];
@@ -339,10 +366,11 @@ useEffect(() => {
     <button
       type="button"
       onClick={() => removeHop(i)}
-      className="px py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
+      className="col-span-2 sm:col-span-1 px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
     >
       Remove
     </button>
+</div>
   </div>
 ))}
 
@@ -363,25 +391,43 @@ useEffect(() => {
   {dryHops.map((h, i) => (
     <div
       key={i}
-      className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full"
+      className="w-full mb-4 space-y-2"
     >
       {/* Hop type */}
-      <input
+      <InventoryIngredientSelect
+        selectionKey={`dryhop:${i}`}
         placeholder="Hop type"
+        category="hops"
         className="p-3 rounded bg-black/40 border border-white/20 flex-1 min-w-[200px]"
         value={h.name}
-        onChange={(e) => {
+        onChange={(value) => {
           const updated = [...dryHops];
-          updated[i].name = e.target.value;
+          updated[i].name = value;
           setDryHops(updated);
         }}
+        onItemSelect={(item) => {
+          if (!item) return;
+          setDryHops((current) =>
+            current.map((hop, index) =>
+              index === i
+                ? {
+                    ...hop,
+                    alpha: item.alpha_acid != null ? String(item.alpha_acid) : hop.alpha,
+                    year: item.hop_year != null ? String(item.hop_year) : hop.year,
+                  }
+                : hop
+            )
+          );
+        }}
       />
+
+<div className="grid grid-cols-2 gap-2 sm:grid-cols-[5rem_5rem_minmax(0,1fr)_minmax(0,1.4fr)_auto]">
 
       {/* Alpha (%) */}
       <input
         placeholder="Alpha (%)"
         type="text"
-        className="p-3 rounded bg-black/40 border border-white/20 w-24"
+        className="p-3 rounded bg-black/40 border border-white/20 w-full"
         value={h.alpha}
         onChange={(e) => {
           const updated = [...dryHops];
@@ -394,7 +440,7 @@ useEffect(() => {
       <input
         placeholder="Year"
         type="text"
-        className="p-3 rounded bg-black/40 border border-white/20 w-19"
+        className="p-3 rounded bg-black/40 border border-white/20 w-full"
         value={h.year}
         onChange={(e) => {
           const updated = [...dryHops];
@@ -407,7 +453,7 @@ useEffect(() => {
       <UnitInput
         kind="g"
         placeholder={`Amount (${label("g")})`}
-        className="p-3 rounded bg-black/40 border border-white/20 w-26"
+        className="p-3 rounded bg-black/40 border border-white/20 w-full"
         value={h.amount}
         onValueChange={(value) => {
           const updated = [...dryHops];
@@ -420,7 +466,7 @@ useEffect(() => {
       <input
         placeholder="Contact time (days)"
         type="text"
-        className="p-3 rounded bg-black/40 border border-white/20 w-39"
+        className="p-3 rounded bg-black/40 border border-white/20 w-full"
         value={h.contact}
         onChange={(e) => {
           const updated = [...dryHops];
@@ -433,10 +479,11 @@ useEffect(() => {
       <button
         type="button"
         onClick={() => removeDryHop(i)}
-        className="px py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
+        className="col-span-2 sm:col-span-1 px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
       >
         Remove
       </button>
+</div>
     </div>
   ))}
 
@@ -474,10 +521,13 @@ useEffect(() => {
           {/* Yeast */}
           <div>
             <label className="block mb-1 font-semibold">Yeast strain</label>
-            <input
+            <InventoryIngredientSelect
               name="yeast"
+              selectionKey="yeast"
+              trackAmount
               defaultValue={recipe?.yeast ?? ""}
-              placeholder="Example: US-05, S-04, Kveik"
+              placeholder="Yeast strain"
+              category="yeast"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
@@ -485,12 +535,7 @@ useEffect(() => {
           {/* Additives */}
           <div>
             <label className="block mb-1 font-semibold">Additives</label>
-            <textarea
-              name="additives"
-              defaultValue={recipe?.additives ?? ""}
-              placeholder="Irish Moss, gypsum, CaCl₂, nutrient..."
-              className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
-            />
+            <InventoryAdditiveFields defaultValue={recipe?.additives ?? ""} />
           </div>
 
           {/* Full process */}
@@ -515,6 +560,8 @@ useEffect(() => {
             />
           </div>
 
+          <InventoryUsageFields />
+
           {/* Submit */}
           <button
             disabled={loading || recipeLoading}
@@ -522,6 +569,7 @@ useEffect(() => {
           >
             {loading ? "Creating..." : "Create batch"}
           </button>
+          </BatchInventoryProvider>
           
         </form>
       </div>

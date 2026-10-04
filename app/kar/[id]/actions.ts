@@ -18,6 +18,45 @@ type DryHop = { name: string; amount: string; contact: string; alpha: string; ye
 
 type Ingredient = { name: string; amount: string; unit: string };
 
+function normalizeInventoryName(value: string) {
+  return value.trim().toLocaleLowerCase().replace(/\s+/g, " ");
+}
+
+function convertIngredientAmount(
+  amount: number,
+  fromUnit: string,
+  toUnit: string
+): number | null {
+  const normalizeUnit = (unit: string) =>
+    unit.trim().toLocaleLowerCase().replace(/[.\s]/g, "");
+  const from = normalizeUnit(fromUnit);
+  const to = normalizeUnit(toUnit);
+  const unitFactors: Record<string, { family: string; factor: number }> = {
+    kg: { family: "mass", factor: 1000 },
+    g: { family: "mass", factor: 1 },
+    mg: { family: "mass", factor: 0.001 },
+    lb: { family: "mass", factor: 453.59237 },
+    lbs: { family: "mass", factor: 453.59237 },
+    oz: { family: "mass", factor: 28.349523125 },
+    l: { family: "volume", factor: 1000 },
+    ml: { family: "volume", factor: 1 },
+    gal: { family: "volume", factor: 3785.411784 },
+    gallon: { family: "volume", factor: 3785.411784 },
+    gallons: { family: "volume", factor: 3785.411784 },
+    pcs: { family: "count", factor: 1 },
+    pc: { family: "count", factor: 1 },
+    piece: { family: "count", factor: 1 },
+    pieces: { family: "count", factor: 1 },
+    each: { family: "count", factor: 1 },
+  };
+
+  if (from === to) return amount;
+  const fromFactor = unitFactors[from];
+  const toFactor = unitFactors[to];
+  if (!fromFactor || !toFactor || fromFactor.family !== toFactor.family) return null;
+  return (amount * fromFactor.factor) / toFactor.factor;
+}
+
 function levenshtein(a: string, b: string): number {
   const m = a.length;
   const n = b.length;
@@ -106,7 +145,7 @@ function calcEBC(malts: any[], volumeL: number) {
   const warnings: string[] = [];
 
   for (const malt of malts) {
-    const match = fuzzyMatchMalt(malt.name);
+    const match = malt.ebc > 0 ? { lovibond: (malt.ebc / 1.97 + 0.76) / 1.3546, warning: false } : fuzzyMatchMalt(malt.name);
 
     if (match.warning) {
       warnings.push(malt.name);
@@ -139,6 +178,71 @@ export async function createBatch(formData: FormData) {
   const karId = formData.get("kar") as string;
 
   if (!karId) throw new Error("Kar-ID mangler.");
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("use_inventory_for_batches")
+    .eq("id", userId)
+    .maybeSingle();
+  if (profileError || !profile) {
+    throw new Error("Could not load the inventory preference for this account.");
+  }
+  const useInventory = profile.use_inventory_for_batches === true;
+  let inventoryUsage: unknown[] = [];
+  let inventorySelections: Record<string, string> = {};
+  if (useInventory) {
+    if (formData.get("inventory_load_error") === "true") {
+      redirect(
+        `/kar/${karId}?inventory_error=${encodeURIComponent(
+          "Inventory could not be loaded. Refresh the page and try again."
+        )}`
+      );
+    }
+    try {
+      const rawUsage = formData.get("inventory_usage_json");
+      inventoryUsage = JSON.parse(typeof rawUsage === "string" ? rawUsage : "[]");
+    } catch {
+      throw new Error("Invalid inventory usage selection.");
+    }
+    if (!Array.isArray(inventoryUsage)) {
+      throw new Error("Invalid inventory usage selection.");
+    }
+    try {
+      const rawSelections = formData.get("inventory_item_selections_json");
+      const parsedSelections = JSON.parse(
+        typeof rawSelections === "string" ? rawSelections : "{}"
+      );
+      if (
+        !parsedSelections ||
+        typeof parsedSelections !== "object" ||
+        Array.isArray(parsedSelections) ||
+        Object.values(parsedSelections).some((id) => typeof id !== "string")
+      ) {
+        throw new Error("Invalid inventory item selections.");
+      }
+      inventorySelections = parsedSelections as Record<string, string>;
+    } catch {
+      throw new Error("Invalid inventory item selections.");
+    }
+    const validUsage = inventoryUsage.every((entry) => {
+      if (!entry || typeof entry !== "object") return false;
+      const item = entry as Record<string, unknown>;
+      const amount = Number(item.amount);
+      return (
+        typeof item.inventory_item_id === "string" &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          item.inventory_item_id
+        ) &&
+        typeof item.amount === "string" &&
+        item.amount.trim() !== "" &&
+        Number.isFinite(amount) &&
+        amount > 0
+      );
+    });
+    if (!validUsage) {
+      redirect(`/kar/${karId}?inventory_error=${encodeURIComponent("Choose an inventory item and enter an amount greater than zero for every row.")}`);
+    }
+  }
 
   const { data: vessel, error: vesselError } = await supabase
     .from("kar")
@@ -192,7 +296,7 @@ export async function createBatch(formData: FormData) {
 
   // Mead fields
   const honey_type = (formData.get("honey_type") as string) || "";
-  const honey_amount = (formData.get("honey_amount") as string) || "";
+  let honey_amount = (formData.get("honey_amount") as string) || "";
   const yeast = (formData.get("yeast") as string) || "";
 
   const fruits_json = formData.get("fruits_json") as string;
@@ -262,6 +366,362 @@ if (type === "Beer" || type === "Braggot") {
   // Other fields
   const ingredients_json = formData.get("ingredients_json") as string;
   const ingredients: Ingredient[] = ingredients_json ? JSON.parse(ingredients_json) : [];
+
+  if (useInventory) {
+    let measuredUsage: unknown[];
+    try {
+      const rawMeasuredUsage = formData.get("batch_measured_usage_json");
+      measuredUsage = JSON.parse(
+        typeof rawMeasuredUsage === "string" ? rawMeasuredUsage : "[]"
+      );
+    } catch {
+      throw new Error("Invalid measured ingredient usage.");
+    }
+    if (!Array.isArray(measuredUsage)) {
+      throw new Error("Invalid measured ingredient usage.");
+    }
+    const validMeasuredUsage = measuredUsage.every((entry) => {
+      if (!entry || typeof entry !== "object") return false;
+      const measured = entry as Record<string, unknown>;
+      const amount = Number(measured.amount);
+      return (
+        typeof measured.inventory_item_id === "string" &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          measured.inventory_item_id
+        ) &&
+        typeof measured.amount === "string" &&
+        measured.amount.trim() !== "" &&
+        Number.isFinite(amount) &&
+        amount > 0
+      );
+    });
+    if (!validMeasuredUsage) {
+      redirect(
+        `/kar/${karId}?inventory_error=${encodeURIComponent(
+          "Choose a yeast item and enter the amount you will use."
+        )}`
+      );
+    }
+
+    let batchAdditives: unknown[];
+    try {
+      const rawAdditives = formData.get("batch_additives_json");
+      batchAdditives = JSON.parse(
+        typeof rawAdditives === "string" ? rawAdditives : "[]"
+      );
+    } catch {
+      throw new Error("Invalid batch additive usage.");
+    }
+    if (!Array.isArray(batchAdditives)) {
+      throw new Error("Invalid batch additive usage.");
+    }
+    const validAdditives = batchAdditives.every((entry) => {
+      if (!entry || typeof entry !== "object") return false;
+      const additive = entry as Record<string, unknown>;
+      const amount = Number(additive.amount);
+      return (
+        typeof additive.inventory_item_id === "string" &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          additive.inventory_item_id
+        ) &&
+        typeof additive.amount === "string" &&
+        additive.amount.trim() !== "" &&
+        Number.isFinite(amount) &&
+        amount > 0
+      );
+    });
+    if (!validAdditives) {
+      redirect(
+        `/kar/${karId}?inventory_error=${encodeURIComponent(
+          "Choose an additive and enter an amount greater than zero for each selected additive."
+        )}`
+      );
+    }
+
+    const { data: inventoryItems, error: inventoryError } = await supabase
+      .from("inventory_items")
+      .select("id, name, unit, category, subcategory, alpha_acid, ebc, hop_year")
+      .eq("user_id", userId);
+    if (inventoryError) {
+      throw new Error(`Could not load inventory items: ${inventoryError.message}`);
+    }
+
+    const ingredientUses: {
+      name: string;
+      amount: number;
+      unit: string;
+      selectionKey: string;
+      category?: string;
+      subcategory?: string;
+    }[] = [];
+    const addIngredientUse = (
+      name: unknown,
+      amount: unknown,
+      unit: unknown,
+      selectionKey: string,
+      category?: string,
+      subcategory?: string
+    ) => {
+      if (typeof name === "string" && /\bwater\b/i.test(name)) return;
+      if (typeof amount === "string" && amount.trim() === "") return;
+      const numericAmount = Number(amount);
+      if (!Number.isFinite(numericAmount) || numericAmount <= 0) return;
+      ingredientUses.push({
+        name: typeof name === "string" ? name : "",
+        amount: numericAmount,
+        unit: typeof unit === "string" && unit.trim() ? unit : "kg",
+        selectionKey,
+        category,
+        subcategory,
+      });
+    };
+
+    const inventoryHoneyAmount = formData.get("inventory_honey_amount");
+    const selectedHoneyId = inventorySelections.honey;
+    const hasHoneyInventoryAmount =
+      typeof inventoryHoneyAmount === "string" &&
+      inventoryHoneyAmount.trim() !== "";
+    if (selectedHoneyId || hasHoneyInventoryAmount) {
+      const honeyItem = (inventoryItems ?? []).find(
+        (item) =>
+          item.id === selectedHoneyId &&
+          item.category === "fermentables" &&
+          item.subcategory?.toLocaleLowerCase() === "honey"
+      );
+      const amount = Number(inventoryHoneyAmount);
+      if (
+        !honeyItem ||
+        !hasHoneyInventoryAmount ||
+        !Number.isFinite(amount) ||
+        amount <= 0
+      ) {
+        redirect(
+          `/kar/${karId}?inventory_error=${encodeURIComponent(
+            "Select a honey inventory item and enter the amount in the unit shown beside it."
+          )}`
+        );
+      }
+      const amountInKg = convertIngredientAmount(amount, honeyItem.unit, "kg");
+      if (amountInKg === null) {
+        redirect(
+          `/kar/${karId}?inventory_error=${encodeURIComponent(
+            `Honey inventory unit ${honeyItem.unit} cannot be converted to kilograms for the batch record.`
+          )}`
+        );
+      }
+      honey_amount = String(amountInKg);
+      addIngredientUse(
+        honey_type || honeyItem.name,
+        amount,
+        honeyItem.unit,
+        "honey",
+        "fermentables",
+        "Honey"
+      );
+    } else if (honey_amount) {
+      redirect(
+        `/kar/${karId}?inventory_error=${encodeURIComponent(
+          "Select a honey inventory item before entering its amount."
+        )}`
+      );
+    }
+    addIngredientUse("sugar", sugar_amount, "kg", "sugar", "fermentables", "Sugar");
+    if ((type === "Cider" || type === "Wine") && juice_type) {
+      addIngredientUse(juice_type, volume_l, "l", "juice");
+    }
+    for (const [index, malt] of malts.entries()) {
+      addIngredientUse(malt.name, malt.amount, malt.unit || "kg", `malt:${index}`, "fermentables");
+    }
+    for (const [index, hop] of hops.entries()) {
+      addIngredientUse(hop.name, hop.amount, hop.unit || "g", `hop:${index}`, "hops");
+    }
+    for (const [index, hop] of dryHops.entries()) {
+      addIngredientUse(hop.name, hop.amount, "g", `dryhop:${index}`, "hops");
+    }
+    for (const [index, fruit] of fruits.entries()) {
+      addIngredientUse(fruit.name, fruit.amount, fruit.unit, `fruit:${index}`, "flavorings", "Fruit");
+    }
+    for (const [index, ingredient] of ingredients.entries()) {
+      addIngredientUse(
+        ingredient.name,
+        ingredient.amount,
+        ingredient.unit,
+        `ingredient:${index}`
+      );
+    }
+
+    const autoUsage = new Map<string, number>();
+    const matchedBySelectionKey = new Map<string, { alpha_acid?: number | null; ebc?: number | null; hop_year?: number | null }>();
+    for (const ingredient of ingredientUses) {
+      const selectedItemId = inventorySelections[ingredient.selectionKey];
+      let matchingItems = selectedItemId
+        ? (inventoryItems ?? []).filter(
+            (item) =>
+              item.id === selectedItemId &&
+              !/\bwater\b/i.test(item.name) &&
+              (!ingredient.category || item.category === ingredient.category) &&
+              (!ingredient.subcategory ||
+                item.subcategory?.toLocaleLowerCase() ===
+                  ingredient.subcategory.toLocaleLowerCase())
+          )
+        : (inventoryItems ?? []).filter(
+            (item) =>
+              normalizeInventoryName(item.name) === normalizeInventoryName(ingredient.name) &&
+              !/\bwater\b/i.test(item.name) &&
+              (!ingredient.category || item.category === ingredient.category) &&
+              (!ingredient.subcategory ||
+                item.subcategory?.toLocaleLowerCase() ===
+                  ingredient.subcategory.toLocaleLowerCase()) &&
+              convertIngredientAmount(ingredient.amount, ingredient.unit, item.unit) !== null
+          );
+      if (!selectedItemId && matchingItems.length === 0 && ingredient.subcategory) {
+        const normalizedIngredient = normalizeInventoryName(ingredient.name);
+        matchingItems = (inventoryItems ?? []).filter((item) => {
+          const normalizedItemName = normalizeInventoryName(item.name);
+          const sameSubcategory =
+            item.subcategory?.toLocaleLowerCase() ===
+            ingredient.subcategory?.toLocaleLowerCase();
+          const sameCategory =
+            !ingredient.category || item.category === ingredient.category;
+          const isWater = /\bwater\b/i.test(item.name);
+          const isGeneric = normalizedIngredient === "honey" || normalizedIngredient === "sugar";
+          const nameMatches =
+            normalizedItemName.includes(normalizedIngredient) ||
+            normalizedIngredient.includes(normalizedItemName);
+          return (
+            sameCategory &&
+            !isWater &&
+            (isGeneric
+              ? sameSubcategory || normalizedItemName.includes(normalizedIngredient)
+              : nameMatches) &&
+            convertIngredientAmount(ingredient.amount, ingredient.unit, item.unit) !== null
+          );
+        });
+      }
+      if (matchingItems.length !== 1) {
+        redirect(
+          `/kar/${karId}?inventory_error=${encodeURIComponent(
+            `Select a matching inventory item for ${ingredient.name || "each batch ingredient"}.`
+          )}`
+        );
+      }
+      const item = matchingItems[0];
+      const convertedAmount = convertIngredientAmount(
+        ingredient.amount,
+        ingredient.unit,
+        item.unit
+      );
+      if (convertedAmount === null) {
+        redirect(
+          `/kar/${karId}?inventory_error=${encodeURIComponent(
+            `The batch amount for ${ingredient.name} cannot be converted to the inventory unit (${item.unit}).`
+          )}`
+        );
+      }
+      autoUsage.set(item.id, (autoUsage.get(item.id) ?? 0) + convertedAmount);
+      matchedBySelectionKey.set(ingredient.selectionKey, item);
+    }
+
+    // Inventory alpha acid / EBC values take precedence over typed values
+    if (type === "Beer" || type === "Braggot") {
+      resolvedHops.forEach((hop, index) => {
+        const alpha = Number(matchedBySelectionKey.get(`hop:${index}`)?.alpha_acid);
+        if (alpha > 0) hop.alpha = alpha;
+        const year = Number(matchedBySelectionKey.get(`hop:${index}`)?.hop_year);
+        if (year > 0) hop.year = year;
+      });
+      resolvedDryHops.forEach((hop, index) => {
+        const alpha = Number(matchedBySelectionKey.get(`dryhop:${index}`)?.alpha_acid);
+        if (alpha > 0) hop.alpha = alpha;
+        const year = Number(matchedBySelectionKey.get(`dryhop:${index}`)?.hop_year);
+        if (year > 0) hop.year = year;
+      });
+      const maltsWithEbc = malts.map((malt, index) => ({
+        ...malt,
+        ebc: Number(matchedBySelectionKey.get(`malt:${index}`)?.ebc) || 0,
+      }));
+      ibu = calcIBU(resolvedHops, og, boil_volume_l || volume_l);
+      ebc = calcEBC(maltsWithEbc, boil_volume_l || volume_l).ebc;
+    }
+
+    for (const entry of batchAdditives) {
+      const additive = entry as { inventory_item_id: string; amount: string };
+      const item = (inventoryItems ?? []).find(
+        (inventoryItem) =>
+          inventoryItem.id === additive.inventory_item_id &&
+          inventoryItem.category === "additives" &&
+          !/\bwater\b/i.test(inventoryItem.name)
+      );
+      if (!item) {
+        redirect(
+          `/kar/${karId}?inventory_error=${encodeURIComponent(
+            "Choose a valid additive from your inventory. Water is not tracked."
+          )}`
+        );
+      }
+      autoUsage.set(
+        item.id,
+        (autoUsage.get(item.id) ?? 0) + Number(additive.amount)
+      );
+    }
+
+    for (const entry of measuredUsage) {
+      const measured = entry as { inventory_item_id: string; amount: string };
+      const item = (inventoryItems ?? []).find(
+        (inventoryItem) =>
+          inventoryItem.id === measured.inventory_item_id &&
+          inventoryItem.category === "yeast" &&
+          !/\bwater\b/i.test(inventoryItem.name)
+      );
+      if (!item) {
+        redirect(
+          `/kar/${karId}?inventory_error=${encodeURIComponent(
+            "Choose a valid yeast item from your inventory."
+          )}`
+        );
+      }
+      autoUsage.set(
+        item.id,
+        (autoUsage.get(item.id) ?? 0) + Number(measured.amount)
+      );
+    }
+
+    const manualUsage = inventoryUsage
+      .filter(
+        (entry) =>
+          !entry ||
+          typeof entry !== "object" ||
+          !("inventory_item_id" in entry) ||
+          typeof entry.inventory_item_id !== "string" ||
+          !autoUsage.has(entry.inventory_item_id)
+      )
+      .filter((entry) => {
+        if (!entry || typeof entry !== "object" || !("inventory_item_id" in entry)) {
+          return true;
+        }
+        const item = (inventoryItems ?? []).find(
+          (inventoryItem) => inventoryItem.id === entry.inventory_item_id
+        );
+        return !item || !/\bwater\b/i.test(item.name);
+      });
+
+    const combinedUsage = [
+      ...[...autoUsage.entries()].map(([inventory_item_id, amount]) => ({
+        inventory_item_id,
+        amount: String(amount),
+      })),
+      ...manualUsage,
+    ];
+
+    if (combinedUsage.length === 0) {
+      redirect(
+        `/kar/${karId}?inventory_error=${encodeURIComponent(
+          "No inventory items were matched to this batch. Check that ingredient names match your inventory, or add the items in the inventory usage section."
+        )}`
+      );
+    }
+    inventoryUsage = combinedUsage;
+  }
 
   const steps_json = formData.get("steps_json") as string;
   const steps: string[] = steps_json ? JSON.parse(steps_json) : [];
@@ -429,9 +889,7 @@ ${notes}
   // Insert batch
   // ---------------------------------------------------------
 
-  const { data: batch, error } = await supabase
-    .from("batches")
-    .insert({
+  const batchPayload = {
       batchnummer: formattedBatchnummer,
       aktivt_kar: karId,
       user_id: userId,
@@ -472,21 +930,50 @@ ${notes}
       steps,
 
       status: "Aktiv",
-    })
-    .select()
-    .single();
+    };
 
-  if (error) throw new Error("Insert failed: " + error.message);
+  let batch: any;
+  if (useInventory) {
+    const { data, error } = await supabase.rpc("create_batch_with_inventory", {
+      p_batch: batchPayload,
+      p_inventory_usage: inventoryUsage,
+    });
+    if (error) {
+      if (error.message.includes("INSUFFICIENT_STOCK:")) {
+        redirect(
+          `/kar/${karId}?inventory_error=${encodeURIComponent(
+            error.message.replace("INSUFFICIENT_STOCK:", "")
+          )}`
+        );
+      }
+      if (error.message.includes("NO_INVENTORY_USAGE")) {
+        redirect(`/kar/${karId}?inventory_error=${encodeURIComponent("Add each inventory item used in this batch before creating it.")}`);
+      }
+      throw new Error(`Could not create batch with inventory: ${error.message}`);
+    }
+    batch = data?.batch;
+    if (!batch?.id) throw new Error("Batch creation returned no batch record.");
+  } else {
+    const { data, error } = await supabase
+      .from("batches")
+      .insert(batchPayload)
+      .select()
+      .single();
+    if (error) throw new Error("Insert failed: " + error.message);
+    batch = data;
+  }
 
-  // SG reading
-  await supabase.from("sg_readings").insert({
-    batch_id: batch.id,
-    sg: og,
-    created_at: startdato,
-  });
+  if (!useInventory) {
+    // SG reading
+    await supabase.from("sg_readings").insert({
+      batch_id: batch.id,
+      sg: og,
+      created_at: startdato,
+    });
 
-  // Update kar status
-  await supabase.from("kar").update({ status: "Aktiv" }).eq("id", karId);
+    // Update kar status
+    await supabase.from("kar").update({ status: "Aktiv" }).eq("id", karId);
+  }
 
   revalidatePath(`/kar/${karId}`);
   redirect(`/kar/${karId}`);

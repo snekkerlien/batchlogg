@@ -6,6 +6,11 @@ import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import { useRecipePrefill } from "../../../../../lib/recipes/useRecipePrefill";
 import { UnitInput, UnitSymbol } from "../../../../components/Units";
+import InventoryUsageFields, {
+  BatchInventoryProvider,
+  InventoryAdditiveFields,
+  InventoryIngredientSelect,
+} from "@/app/components/InventoryUsageFields";
 
 export default function NewCiderPage({
   params,
@@ -45,6 +50,7 @@ export default function NewCiderPage({
           className="flex flex-col gap-6"
           onSubmit={() => setLoading(true)}
         >
+          <BatchInventoryProvider>
           {/* Hidden fields */}
           <input type="hidden" name="kar" value={params.id} />
           <input type="hidden" name="type" value="Cider" />
@@ -103,10 +109,11 @@ export default function NewCiderPage({
           {/* Juice type */}
           <div>
             <label className="block mb-1 font-semibold">Juice type</label>
-            <input
+            <InventoryIngredientSelect
               name="juice_type"
+              selectionKey="juice"
               defaultValue={recipe?.juice_type ?? ""}
-              placeholder="Example: 100% apple juice, no preservatives"
+              placeholder="Juice type"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
@@ -114,10 +121,13 @@ export default function NewCiderPage({
           {/* Yeast */}
           <div>
             <label className="block mb-1 font-semibold">Yeast strain</label>
-            <input
+            <InventoryIngredientSelect
               name="yeast"
+              selectionKey="yeast"
+              trackAmount
               defaultValue={recipe?.yeast ?? ""}
-              placeholder="Example: EC-1118"
+              placeholder="Yeast strain"
+              category="yeast"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
@@ -125,12 +135,7 @@ export default function NewCiderPage({
           {/* Additives */}
           <div>
             <label className="block mb-1 font-semibold">Additives</label>
-            <textarea
-              name="additives"
-              defaultValue={recipe?.additives ?? ""}
-              placeholder="Optional: pectic enzyme, tannin, acid blend, yeast nutrient..."
-              className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
-            />
+            <InventoryAdditiveFields defaultValue={recipe?.additives ?? ""} />
           </div>
 
           {/* Full process */}
@@ -155,6 +160,8 @@ export default function NewCiderPage({
             />
           </div>
 
+          <InventoryUsageFields />
+
           {/* Submit */}
           <button
             disabled={loading || recipeLoading}
@@ -162,6 +169,7 @@ export default function NewCiderPage({
           >
             {loading ? "Creating..." : "Create batch"}
           </button>
+          </BatchInventoryProvider>
         </form>
       </div>
     </main>

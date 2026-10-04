@@ -21,7 +21,14 @@ export default function AddItemForm({
     amount: "",
     unit: "kg",
     minimum_amount: "",
+    alpha_acid: "",
+    ebc: "",
+    hop_year: "",
   });
+  const isHop = form.category === "hops";
+  const isMalt =
+    form.category === "fermentables" &&
+    (form.subcategory === "Base Malt" || form.subcategory === "Specialty Malt");
 
   const visibleCategories =
     profile?.snus_is_true
@@ -113,6 +120,46 @@ export default function AddItemForm({
           setForm({ ...form, minimum_amount: e.target.value })
         }
       />
+
+      {isHop && (
+        <input
+          required
+          className="p-3 bg-black/40 border border-white/20 rounded"
+          placeholder="Alpha acid (%)"
+          type="number"
+          min="0"
+          max="100"
+          step="any"
+          value={form.alpha_acid}
+          onChange={(e) => setForm({ ...form, alpha_acid: e.target.value })}
+        />
+      )}
+
+      {isHop && (
+        <input
+          className="p-3 bg-black/40 border border-white/20 rounded"
+          placeholder="Harvest year (e.g. 2025)"
+          type="number"
+          min="1900"
+          max="2200"
+          step="1"
+          value={form.hop_year}
+          onChange={(e) => setForm({ ...form, hop_year: e.target.value })}
+        />
+      )}
+
+      {isMalt && (
+        <input
+          required
+          className="p-3 bg-black/40 border border-white/20 rounded"
+          placeholder="Color (EBC)"
+          type="number"
+          min="0"
+          step="any"
+          value={form.ebc}
+          onChange={(e) => setForm({ ...form, ebc: e.target.value })}
+        />
+      )}
 
       <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
         Add item

@@ -16,6 +16,14 @@ export async function addInventoryItem(formData: FormData) {
   const amount = Number(formData.get("amount"));
   const unit = formData.get("unit")?.toString();
   const minimum = Number(formData.get("minimum_amount"));
+  const alphaRaw = formData.get("alpha_acid")?.toString().trim().replace(",", ".") ?? "";
+  const ebcRaw = formData.get("ebc")?.toString().trim().replace(",", ".") ?? "";
+  const isHop = category === "hops";
+  const isMalt = category === "fermentables" && (subcategory === "Base Malt" || subcategory === "Specialty Malt");
+  const yearRaw = formData.get("hop_year")?.toString().trim() ?? "";
+  const hopYear = isHop && yearRaw ? Number(yearRaw) : null;
+  const alphaAcid = isHop ? Number(alphaRaw) : null;
+  const ebc = isMalt ? Number(ebcRaw) : null;
 
   const {
     data: { user },
@@ -38,6 +46,15 @@ export async function addInventoryItem(formData: FormData) {
   ) {
     throw new Error("Invalid inventory item");
   }
+  if (isHop && (!alphaRaw || !Number.isFinite(alphaAcid) || alphaAcid! <= 0 || alphaAcid! > 100)) {
+    throw new Error("Enter the alpha acid percentage (0-100) for hops.");
+  }
+  if (hopYear !== null && (!Number.isInteger(hopYear) || hopYear < 1900 || hopYear > 2200)) {
+    throw new Error("Enter a valid harvest year for hops.");
+  }
+  if (isMalt && (!ebcRaw || !Number.isFinite(ebc) || ebc! < 0)) {
+    throw new Error("Enter the EBC color value for malts.");
+  }
   if (SNUS_CATEGORIES.some((value) => value === category)) {
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
@@ -48,18 +65,26 @@ export async function addInventoryItem(formData: FormData) {
     if (!profile?.snus_is_true) throw new Error("Forbidden inventory category");
   }
 
-  const { error } = await supabase.from("inventory_items").insert({
-    user_id: user.id,
-    name: name.trim(),
-    category,
-    subcategory: subcategory || null,
-    amount,
-    unit: unit.trim(),
-    minimum_amount: minimum,
-  });
+  const { data, error } = await supabase
+    .from("inventory_items")
+    .insert({
+      user_id: user.id,
+      name: name.trim(),
+      category,
+      subcategory: subcategory || null,
+      amount,
+      unit: unit.trim(),
+      minimum_amount: minimum,
+      alpha_acid: alphaAcid,
+      ebc,
+      hop_year: hopYear,
+    })
+    .select("id, name, amount, unit, minimum_amount, category, subcategory, alpha_acid, ebc, hop_year")
+    .single();
   if (error) throw new Error(`Failed to add inventory item: ${error.message}`);
 
   revalidatePath("/inventory");
+  return data;
 }
 
 /**
