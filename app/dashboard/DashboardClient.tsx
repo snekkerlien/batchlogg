@@ -89,6 +89,21 @@ useEffect(() => {
 // ⭐ Last dashboard-data når router endres
 useEffect(() => {
   loadDashboardData();
+
+  // Page may be kept alive by the router cache/bfcache, so refetch when it becomes visible again
+  const refresh = () => {
+    if (document.visibilityState === "visible") loadDashboardData(true);
+  };
+  const onPageShow = () => loadDashboardData(true);
+
+  window.addEventListener("focus", refresh);
+  window.addEventListener("pageshow", onPageShow);
+  document.addEventListener("visibilitychange", refresh);
+  return () => {
+    window.removeEventListener("focus", refresh);
+    window.removeEventListener("pageshow", onPageShow);
+    document.removeEventListener("visibilitychange", refresh);
+  };
 }, []);
 
   async function getToken() {
@@ -99,8 +114,8 @@ useEffect(() => {
   return session?.access_token || null;
 }
 
-  async function loadDashboardData() {
-    setLoading(true);
+  async function loadDashboardData(silent = false) {
+    if (!silent) setLoading(true);
     setLoadError("");
 
     try {

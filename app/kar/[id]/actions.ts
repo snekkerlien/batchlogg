@@ -1210,6 +1210,8 @@ export async function finishBatch(formData: FormData) {
     });
   }
 
+  revalidatePath("/dashboard");
+  revalidatePath(`/kar/${karId}`);
   redirect(`/kar/${karId}`);
 }
 
