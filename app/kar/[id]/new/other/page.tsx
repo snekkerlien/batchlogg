@@ -5,6 +5,7 @@ import * as Actions from "../../actions";
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import { useRecipePrefill } from "../../../../../lib/recipes/useRecipePrefill";
+import { UnitInput, UnitSymbol } from "../../../../components/Units";
 
 
 export default function NewOtherPage({
@@ -97,12 +98,11 @@ export default function NewOtherPage({
 
           {/* Volume */}
           <div>
-            <label className="block mb-1 font-semibold">Volume (L)</label>
-            <input
+            <label className="block mb-1 font-semibold">Volume (<UnitSymbol kind="volume" />)</label>
+            <UnitInput
               name="volume_l"
-              defaultValue={recipe?.volume ?? ""}
-              type="number"
-              step="0.1"
+              kind="volume"
+              defaultValue={recipe?.volume == null ? "" : String(recipe.volume)}
               placeholder="Example: 5"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required

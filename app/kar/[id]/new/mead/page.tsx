@@ -5,6 +5,7 @@ import * as Actions from "../../actions";
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import { useRecipePrefill } from "../../../../../lib/recipes/useRecipePrefill";
+import { UnitInput, UnitSymbol } from "../../../../components/Units";
 
 export default function NewMeadPage({
   params,
@@ -81,12 +82,11 @@ export default function NewMeadPage({
 
           {/* Volume */}
           <div>
-            <label className="block mb-1 font-semibold">Volume (L)</label>
-            <input
+            <label className="block mb-1 font-semibold">Volume (<UnitSymbol kind="volume" />)</label>
+            <UnitInput
               name="volume_l"
-              defaultValue={recipe?.volume ?? ""}
-              type="number"
-              step="0.1"
+              kind="volume"
+              defaultValue={recipe?.volume == null ? "" : String(recipe.volume)}
               placeholder="Example: 10"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
@@ -131,12 +131,11 @@ export default function NewMeadPage({
           </div>
 
           <div>
-            <label className="block mb-1 font-semibold">Honey amount (kg)</label>
-            <input
+            <label className="block mb-1 font-semibold">Honey amount (<UnitSymbol kind="kg" />)</label>
+            <UnitInput
               name="honey_amount"
-              defaultValue={recipe?.honey_amount ?? ""}
-              type="number"
-              step="0.1"
+              kind="kg"
+              defaultValue={recipe?.honey_amount == null ? "" : String(recipe.honey_amount)}
               placeholder="Example: 3.5"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />

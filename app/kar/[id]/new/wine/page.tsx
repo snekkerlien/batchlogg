@@ -5,6 +5,7 @@ import * as Actions from "../../actions";
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import { useRecipePrefill } from "../../../../../lib/recipes/useRecipePrefill";
+import { UnitInput, UnitSymbol } from "../../../../components/Units";
 
 export default function NewWinePage({
   params,
@@ -62,12 +63,11 @@ export default function NewWinePage({
 
           {/* Volume */}
           <div>
-            <label className="block mb-1 font-semibold">Volume (L)</label>
-            <input
+            <label className="block mb-1 font-semibold">Volume (<UnitSymbol kind="volume" />)</label>
+            <UnitInput
               name="volume_l"
-              defaultValue={recipe?.volume ?? ""}
-              type="number"
-              step="0.1"
+              kind="volume"
+              defaultValue={recipe?.volume == null ? "" : String(recipe.volume)}
               placeholder="Example: 20"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
@@ -113,12 +113,11 @@ export default function NewWinePage({
 
           {/* Sugar (optional) */}
           <div>
-            <label className="block mb-1 font-semibold">Sugar added (optional)</label>
-            <input
+            <label className="block mb-1 font-semibold">Sugar added (optional) (<UnitSymbol kind="kg" />)</label>
+            <UnitInput
               name="sugar_amount"
-              defaultValue={recipe?.sugar_amount ?? ""}
-              type="number"
-              step="0.1"
+              kind="kg"
+              defaultValue={recipe?.sugar_amount == null ? "" : String(recipe.sugar_amount)}
               placeholder="Example: 1.5 kg"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />

@@ -1,5 +1,7 @@
 "use client";
 
+import { Qty } from "@/app/components/Units";
+
 type ActiveBatchProps = {
   karId: string;
   batch: {
@@ -23,7 +25,7 @@ export function ActiveBatch({ karId, batch }: ActiveBatchProps) {
 
       <p><strong>Batch ID:</strong> {batch.batchnummer}</p>
       <p><strong>Name:</strong> {batch.name}</p>
-      <p><strong>Volume:</strong> {batch.volume_l} L</p>
+      <p><strong>Volume:</strong> <Qty kind="volume" value={batch.volume_l} /></p>
       <p><strong>Brew date:</strong> {batch.startdato}</p>
       <p><strong>Original Gravity (OG):</strong> {batch.og}</p>
 

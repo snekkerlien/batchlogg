@@ -1,0 +1,389 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import BackButton from "./BackButton";
+import PageHeading from "@/app/components/PageHeading";
+import MenuOverlay from "./MenuOverlay";
+import { Qty, UnitInput, UnitSymbol } from "@/app/components/Units";
+import {
+  calculateAbvFromGravity,
+  calculateDilutedAbv,
+  calculateDilutedGravity,
+  calculateFermentableForAbv,
+  calculateOgForAbv,
+  calculateVolumeForTargetAbv,
+} from "@/lib/brewing/calculators";
+
+export default function ABVCalculatorPage() {
+  const [og, setOg] = useState("");
+  const [fg, setFg] = useState("");
+  const [abv, setAbv] = useState<number | null>(null);
+
+  // ⭐ Blend/Fortify states
+  const [dilutionAbv, setDilutionAbv] = useState("");
+  const [dilutionVol, setDilutionVol] = useState("");
+  const [dilutionAddedVol, setDilutionAddedVol] = useState("");
+  const [dilutionResult, setDilutionResult] = useState<number | null>(null);
+
+
+  // ⭐ Target ABV states
+  const [targetBatchAbv, setTargetBatchAbv] = useState("");
+  const [targetBatchVol, setTargetBatchVol] = useState("");
+  const [targetAddAbv, setTargetAddAbv] = useState("");
+  const [targetDesiredAbv, setTargetDesiredAbv] = useState("");
+  const [targetResult, setTargetResult] = useState<number | null>(null);
+
+  // ⭐ OG Dilution states
+const [ogDilutionOg, setOgDilutionOg] = useState("");
+const [ogDilutionVol, setOgDilutionVol] = useState("");
+const [ogDilutionAddedVol, setOgDilutionAddedVol] = useState("");
+const [ogDilutionResult, setOgDilutionResult] = useState<number | null>(null);
+
+const [targetAbvVol, setTargetAbvVol] = useState("");
+const [targetAbvPercent, setTargetAbvPercent] = useState("");
+const [sugarNeeded, setSugarNeeded] = useState<number | null>(null);
+const [honeyNeeded, setHoneyNeeded] = useState<number | null>(null);
+const [abvMode, setAbvMode] = useState<"sugar" | "honey">("sugar");
+
+useEffect(() => {
+  const volume = Number.parseFloat(targetAbvVol);
+  const abvTarget = Number.parseFloat(targetAbvPercent);
+  const grams = calculateFermentableForAbv(volume, abvTarget, abvMode);
+  setSugarNeeded(abvMode === "sugar" ? grams : null);
+  setHoneyNeeded(abvMode === "honey" ? grams : null);
+}, [targetAbvVol, targetAbvPercent, abvMode]);
+
+
+
+  // ⭐ Live ABV calculation
+  useEffect(() => {
+    const ogNum = parseFloat(og);
+    const fgNum = parseFloat(fg);
+
+    setAbv(calculateAbvFromGravity(ogNum, fgNum));
+  }, [og, fg]);
+
+  // ⭐ Live Blend/Fortify calculation
+  useEffect(() => {
+  const A1 = parseFloat(dilutionAbv);
+  const V1 = parseFloat(dilutionVol);
+  const V2 = parseFloat(dilutionAddedVol);
+
+  setDilutionResult(calculateDilutedAbv(A1, V1, V2));
+}, [dilutionAbv, dilutionVol, dilutionAddedVol]);
+
+  // ⭐ Live Target ABV calculation
+  useEffect(() => {
+    const A1 = parseFloat(targetBatchAbv);
+    const V1 = parseFloat(targetBatchVol);
+    const A2 = parseFloat(targetAddAbv);
+    const AT = parseFloat(targetDesiredAbv);
+
+    setTargetResult(calculateVolumeForTargetAbv(A1, V1, A2, AT));
+  }, [targetBatchAbv, targetBatchVol, targetAddAbv, targetDesiredAbv]);
+
+  // ⭐ Live OG Dilution calculation
+useEffect(() => {
+  const OG1 = parseFloat(ogDilutionOg);
+  const V1 = parseFloat(ogDilutionVol);
+  const V2 = parseFloat(ogDilutionAddedVol);
+
+  setOgDilutionResult(calculateDilutedGravity(OG1, V1, V2));
+}, [ogDilutionOg, ogDilutionVol, ogDilutionAddedVol]);
+
+
+  return (
+    <main className="min-h-screen px-6 py-12 text-white flex justify-center">
+      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-4xl border border-white/10 relative pt-16 sm:pt-16">
+
+        {/* ⭐ TOP BAR */}
+        <div className="absolute top-2 sm:top-4 left-4 z-40">
+          <BackButton />
+        </div>
+
+        <div className="absolute top-2 sm:top-4 right-4 z-40">
+          <MenuOverlay />
+        </div>
+
+        <PageHeading
+          title="ABV Tools"
+          subtitle="Calculate alcohol strength and plan your brew."
+        />
+
+        {/* ⭐ ABV CALCULATOR — MATCHER DE ANDRE SEKSJONENE */}
+        <div className="p-6 bg-white/5 border border-white/10 rounded-xl">
+          <h2 className="text-2xl font-bold mb-2 text-green-300 text-center">
+  ABV Calculator
+</h2>
+<p className="text-center opacity-70 mb-6">
+  Calculate ABV from Original Gravity (OG) and Final Gravity (FG).
+</p>
+
+          <div className="space-y-6">
+
+            <div>
+              <label className="block mb-1 opacity-80">Original Gravity (OG)</label>
+              <input
+                value={og}
+                onChange={(e) => setOg(e.target.value)}
+                placeholder="e.g. 1.100"
+                className="w-full p-3 rounded bg-black/40 border border-white/20"
+              />
+            </div>
+
+            <div>
+              <label className="block mb-1 opacity-80">Final Gravity (FG)</label>
+              <input
+                value={fg}
+                onChange={(e) => setFg(e.target.value)}
+                placeholder="e.g. 1.000"
+                className="w-full p-3 rounded bg-black/40 border border-white/20"
+              />
+            </div>
+
+            {abv !== null && (
+              <p className="text-center text-xl font-bold mt-4">
+                ABV: {abv.toFixed(2)}%
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* ⭐ DILUTION CALCULATOR */}
+<div className="mt-12 p-6 bg-white/5 border border-white/10 rounded-xl">
+  <h2 className="text-2xl font-bold mb-2 text-green-300 text-center">
+  Dilution Calculator
+</h2>
+<p className="text-center opacity-70 mb-6">
+  Find your new ABV after adding juice or other liquids
+</p>
+
+
+  <div className="space-y-6">
+
+    {/* Your batch */}
+    <div>
+      <h3 className="text-xl font-semibold mb-2">Your batch</h3>
+
+      <label className="block mb-1 opacity-80">Current ABV (%)</label>
+      <input
+        type="text"
+        value={dilutionAbv}
+        onChange={(e) => setDilutionAbv(e.target.value)}
+        placeholder="e.g. 10"
+        className="w-full p-3 rounded bg-black/40 border border-white/20"
+      />
+
+      <label className="block mt-4 mb-1 opacity-80">Volume (<UnitSymbol kind="volume" />)</label>
+      <UnitInput kind="volume" value={dilutionVol} onValueChange={setDilutionVol} placeholder="e.g. 20" className="w-full p-3 rounded bg-black/40 border border-white/20" />
+    </div>
+
+    {/* Added volume */}
+    <div>
+      <label className="block mb-1 opacity-80">Volume added (<UnitSymbol kind="volume" />)</label>
+      <UnitInput kind="volume" value={dilutionAddedVol} onValueChange={setDilutionAddedVol} placeholder="e.g. 5" className="w-full p-3 rounded bg-black/40 border border-white/20" />
+    </div>
+
+    {/* Result */}
+    {dilutionResult !== null && (
+      <p className="text-center text-xl font-bold mt-4">
+        New ABV: {dilutionResult.toFixed(2)}%
+      </p>
+    )}
+  </div>
+</div>
+
+
+        {/* ⭐ TARGET ABV SECTION */}
+        <div className="mt-12 p-6 bg-white/5 border border-white/10 rounded-xl">
+          <h2 className="text-2xl font-bold mb-2 text-green-300 text-center">
+  Target ABV Calculator
+</h2>
+<p className="text-center opacity-70 mb-6">
+  Calculate how much liquid you must add to reach a specific ABV.
+</p>
+
+
+          <div className="space-y-6">
+
+            {/* Current batch */}
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Your batch</h3>
+
+              <label className="block mb-1 opacity-80">Current ABV (%)</label>
+              <input
+                type="text"
+                value={targetBatchAbv}
+                onChange={(e) => setTargetBatchAbv(e.target.value)}
+                placeholder="e.g. 10"
+                className="w-full p-3 rounded bg-black/40 border border-white/20"
+              />
+
+              <label className="block mt-4 mb-1 opacity-80">Volume (<UnitSymbol kind="volume" />)</label>
+              <UnitInput kind="volume" value={targetBatchVol} onValueChange={setTargetBatchVol} placeholder="e.g. 20" className="w-full p-3 rounded bg-black/40 border border-white/20" />
+            </div>
+
+            {/* Addition ABV */}
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Addition</h3>
+
+              <label className="block mb-1 opacity-80">ABV (%)</label>
+              <input
+                type="number"
+                value={targetAddAbv}
+                onChange={(e) => setTargetAddAbv(e.target.value)}
+                placeholder="ABV for your addition of choice (e.g. 0 for juice, 40 for vodka)"
+                className="w-full p-3 rounded bg-black/40 border border-white/20"
+              />
+            </div>
+
+            {/* Desired ABV */}
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Desired ABV</h3>
+
+              <label className="block mb-1 opacity-80">Target ABV (%)</label>
+              <input
+                type="number"
+                value={targetDesiredAbv}
+                onChange={(e) => setTargetDesiredAbv(e.target.value)}
+                placeholder="Desired ABV you want to achieve (e.g. 20)"
+                className="w-full p-3 rounded bg-black/40 border border-white/20"
+              />
+            </div>
+
+            {/* Result */}
+            {targetResult !== null && (
+              <p className="text-center text-xl font-bold mt-4">
+                Required addition: <Qty kind="volume" value={targetResult} />
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* ⭐ OG DILUTION CALCULATOR */}
+<div className="mt-12 p-6 bg-white/5 border border-white/10 rounded-xl">
+  <h2 className="text-2xl font-bold mb-2 text-green-300 text-center">
+    OG Dilution Calculator
+  </h2>
+
+  <p className="text-center opacity-70 mb-6">
+    Calculate your new OG after adding water or other non‑sugar liquids.
+  </p>
+
+  <div className="space-y-6">
+
+    {/* Original batch */}
+    <div>
+      <h3 className="text-xl font-semibold mb-2">Your batch</h3>
+
+      <label className="block mb-1 opacity-80">Original OG</label>
+      <input
+        type="text"
+        value={ogDilutionOg}
+        onChange={(e) => setOgDilutionOg(e.target.value)}
+        placeholder="e.g. 1.100"
+        className="w-full p-3 rounded bg-black/40 border border-white/20"
+      />
+
+      <label className="block mt-4 mb-1 opacity-80">Volume (<UnitSymbol kind="volume" />)</label>
+      <UnitInput kind="volume" value={ogDilutionVol} onValueChange={setOgDilutionVol} placeholder="e.g. 4" className="w-full p-3 rounded bg-black/40 border border-white/20" />
+    </div>
+
+    {/* Added water */}
+    <div>
+      <label className="block mb-1 opacity-80">Water added (<UnitSymbol kind="volume" />)</label>
+      <UnitInput kind="volume" value={ogDilutionAddedVol} onValueChange={setOgDilutionAddedVol} placeholder="e.g. 1" className="w-full p-3 rounded bg-black/40 border border-white/20" />
+    </div>
+
+    {/* Result */}
+    {ogDilutionResult !== null && (
+      <p className="text-center text-xl font-bold mt-4">
+        New OG: {ogDilutionResult.toFixed(3)}
+      </p>
+    )}
+  </div>
+</div>
+
+<div className="mt-12 p-6 bg-white/5 border border-white/10 rounded-xl">
+  <h2 className="text-2xl font-bold mb-2 text-green-300 text-center">
+    Sugar & Honey ABV Calculator
+  </h2>
+
+  <p className="text-center opacity-70 mb-6">
+    Enter final batch volume and desired ABV to calculate the sugar or honey needed (46 PPG sugar, 35 PPG honey, fermenting out to 1.000).
+  </p>
+
+  {/* Toggle */}
+  <div className="flex justify-center gap-4 mb-6">
+    <button
+      type="button"
+      onClick={() => setAbvMode("sugar")}
+      className={`px-4 py-2 rounded-lg border ${
+        abvMode === "sugar"
+          ? "bg-green-600 border-green-400"
+          : "bg-black/40 border-white/20"
+      }`}
+    >
+      Sugar
+    </button>
+
+    <button
+      type="button"
+      onClick={() => setAbvMode("honey")}
+      className={`px-4 py-2 rounded-lg border ${
+        abvMode === "honey"
+          ? "bg-yellow-600 border-yellow-400"
+          : "bg-black/40 border-white/20"
+      }`}
+    >
+      Honey
+    </button>
+  </div>
+
+  <div className="space-y-6">
+    <div>
+      <label className="block mb-1 opacity-80">Batch volume (<UnitSymbol kind="volume" />)</label>
+      <UnitInput kind="volume" value={targetAbvVol} onValueChange={setTargetAbvVol} placeholder="e.g. 10" className="w-full p-3 rounded bg-black/40 border border-white/20" />
+    </div>
+
+    <div>
+      <label className="block mb-1 opacity-80">Desired ABV (%)</label>
+      <input
+        type="number"
+        value={targetAbvPercent}
+        onChange={(e) => setTargetAbvPercent(e.target.value)}
+        placeholder="e.g. 12"
+        className="w-full p-3 rounded bg-black/40 border border-white/20"
+      />
+    </div>
+
+    {sugarNeeded !== null && (
+      <p className="text-center text-xl font-bold mt-4">
+        Sugar needed: <Qty kind="kg" value={sugarNeeded / 1000} />
+      </p>
+    )}
+
+    {(sugarNeeded !== null || honeyNeeded !== null) && calculateOgForAbv(Number.parseFloat(targetAbvPercent)) !== null && (
+      <p className="text-center text-sm opacity-70">
+        Estimated starting gravity: {calculateOgForAbv(Number.parseFloat(targetAbvPercent))!.toFixed(3)}
+      </p>
+    )}
+
+    {honeyNeeded !== null && (
+      <p className="text-center text-xl font-bold mt-4">
+        Honey needed: <Qty kind="kg" value={honeyNeeded / 1000} />
+      </p>
+    )}
+  </div>
+</div>
+
+
+
+
+        <p className="text-sm opacity-40 mt-12 text-center">
+          © {new Date().getFullYear()} Batchlog
+        </p>
+      </div>
+    </main>
+  );
+}

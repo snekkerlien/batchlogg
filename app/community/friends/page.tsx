@@ -317,7 +317,7 @@ export default function FriendsPage() {
 
 function PersonLink({ person }: { person: Person }) {
   return (
-    <Link href={`/profiles/${encodeURIComponent(person.username)}`} className="flex min-w-0 items-center gap-3">
+    <Link href={`/members/${encodeURIComponent(person.username)}`} className="flex min-w-0 items-center gap-3">
       <img
         src={person.avatar_url || "/default-avatar.png"}
         alt=""

@@ -44,6 +44,9 @@ export async function POST(req: Request) {
   const { data, error } = await supabaseAuth.auth.signUp({
     email,
     password,
+    options: {
+      data: { username: username.trim().toLowerCase() },
+    },
   });
 
   if (error) {
@@ -60,16 +63,16 @@ export async function POST(req: Request) {
     );
   }
 
-  // Create profile row
+  // The auth trigger creates the profile row; upsert applies the submitted details.
   const { error: profileError } = await supabaseAdmin
     .from("profiles")
-    .insert({
+    .upsert({
       id: data.user.id,
       username: username.toLowerCase(),
       email,
       avatar_url: null,
       is_public: true,
-    });
+    }, { onConflict: "id" });
 
   if (profileError) {
     console.log("[signupAction] PROFILE ERROR:", profileError);

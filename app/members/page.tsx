@@ -1,0 +1,77 @@
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+import { supabaseServer } from "../../lib/supabase/supabaseServerFinal";
+import MenuOverlay from "./MenuOverlay";
+import BackButton from "./BackButton";
+import ProfilesList from "./ProfilesList"; // ← NY
+import PageHeading from "@/app/components/PageHeading";
+
+export default async function ProfilesPage() {
+  const { supabase } = await supabaseServer();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return (
+      <main className="min-h-screen flex items-center justify-center text-white">
+        <h1 className="text-2xl font-bold">You must be logged in</h1>
+      </main>
+    );
+  }
+
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id, username, is_public, avatar_url, membership_status")
+    .order("username", { ascending: true });
+
+  if (profilesError) {
+    return (
+      <main className="min-h-screen flex items-center justify-center text-red-400">
+        <h1 className="text-2xl font-bold">
+          Error fetching profiles: {profilesError.message}
+        </h1>
+      </main>
+    );
+  }
+
+  const otherProfiles = (profiles ?? [])
+    .filter((p) => p.is_public === true);
+
+  // ← NY: hent favoritter
+  const { data: favorites } = await supabase
+    .from("profile_favorites")
+    .select("favorite_profile_id")
+    .eq("user_id", user.id);
+
+  return (
+    <main className="min-h-screen flex flex-col items-center px-6 py-12 text-white">
+      <div className="relative w-full max-w-3xl rounded-xl border border-white/10 bg-black/60 p-6 pt-16 backdrop-blur-md sm:p-8 sm:pt-16">
+
+        {/* MENU BUTTON */}
+        <div className="absolute right-4 top-4 z-40">
+          <MenuOverlay />
+        </div>
+
+        {/* BACK BUTTON */}
+        <div className="absolute left-4 top-4 z-40">
+          <BackButton />
+        </div>
+
+        <PageHeading
+          title="Community members"
+          subtitle="Explore the community and follow other brewers’ journeys."
+        />
+
+        <ProfilesList profiles={otherProfiles} favorites={favorites} />
+
+        <p className="text-sm opacity-40 mt-12 text-center">
+          © {new Date().getFullYear()} Batchlog
+        </p>
+      </div>
+    </main>
+  );
+}

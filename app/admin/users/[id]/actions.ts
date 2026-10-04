@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "../../../../lib/supabase/supabaseServerFinal";
-import { isAdminUser } from "../../../../lib/auth/isAdminUser";
+import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
 import { deleteUserData } from "../../../../lib/supabase/deleteUserData";
 
 export async function deleteAdminUser(userId: string) {
@@ -12,7 +12,8 @@ export async function deleteAdminUser(userId: string) {
     error: authError,
   } = await supabase.auth.getUser();
 
-  if (authError || !isAdminUser(adminUser)) {
+  const role = authError ? "member" : await getMembershipRole(supabase, adminUser);
+  if (!hasPermission(role, "manage_users")) {
     throw new Error("Forbidden");
   }
 

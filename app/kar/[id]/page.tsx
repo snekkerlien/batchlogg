@@ -14,6 +14,7 @@ import QRCode from "qrcode";
 
 
 import { translateOldRecipe } from "@/lib/translateOldRecipe";
+import { Qty, UnitInput, UnitSymbol, useUnits } from "@/app/components/Units";
 
 type Fruit = { name: string; amount: string; unit: string };
 type Malt = { name: string; amount: string; unit: string };
@@ -63,6 +64,7 @@ function dayLabel(days: number) {
 
 
 export default function KarPage({ params }: { params: { id: string } }) {
+  const { label } = useUnits();
   const [openSecondary, setOpenSecondary] = useState(false);
   const [openSecondaryActive, setOpenSecondaryActive] = useState(false);
   const [openFinish, setOpenFinish] = useState(false);
@@ -486,10 +488,15 @@ async function toggleVisibility() {
             <input name="name" defaultValue={activeBatch.name}
               className="p-3 rounded bg-black/40 border border-white/20" />
 
-            <label className="font-semibold">Volume (L)</label>
-            <input name="volume_l" type="number" step="0.1"
-              defaultValue={activeBatch.volume_l}
-              className="p-3 rounded bg-black/40 border border-white/20" />
+            <label className="font-semibold">
+              Volume (<UnitSymbol kind="volume" />)
+            </label>
+            <UnitInput
+              kind="volume"
+              name="volume_l"
+              defaultValue={String(activeBatch.volume_l ?? "")}
+              className="p-3 rounded bg-black/40 border border-white/20"
+            />
 
             <label className="font-semibold">Start date</label>
             <input name="startdato" type="date"
@@ -522,7 +529,7 @@ async function toggleVisibility() {
         </span>
       </p>
 
-      <p className="opacity-80">Batch volume: {activeBatch.volume_l} L</p>
+      <p className="opacity-80">Batch volume: <Qty kind="volume" value={activeBatch.volume_l} /></p>
       <p className="opacity-80">Original Gravity (OG): {activeBatch.og}</p>
 
       {(activeBatch.type === "Beer" || activeBatch.type === "Braggot") && (
@@ -570,7 +577,7 @@ async function toggleVisibility() {
 {/* MEAD */}
 {activeBatch.type === "Mead" && (
   <>
-    <p><strong>Honey:</strong> {activeBatch.honey_type} – {activeBatch.honey_amount} kg</p>
+    <p><strong>Honey:</strong> {activeBatch.honey_type} – <Qty kind="kg" value={activeBatch.honey_amount} /></p>
 
     {activeBatch.fruits?.length > 0 && (
       <div>
@@ -594,7 +601,7 @@ async function toggleVisibility() {
       <div>
         <strong>Malt additions:</strong>
         {activeBatch.malts.map((m: Malt, i: number) => (
-          <p key={i}>{m.name}: {m.amount} kg</p>
+          <p key={i}>{m.name}: <Qty kind="kg" value={m.amount} /></p>
         ))}
       </div>
     )}
@@ -603,7 +610,7 @@ async function toggleVisibility() {
       <div>
         <strong>Hop schedule:</strong>
         {activeBatch.hops.map((h: Hop, i: number) => (
-          <p key={i}>{h.name}: {h.amount}{h.unit} @ {h.time} min</p>
+          <p key={i}>{h.name}: <Qty kind="g" value={h.amount} maxDecimals={0} /> @ {h.time} min</p>
         ))}
       </div>
     )}
@@ -622,13 +629,13 @@ async function toggleVisibility() {
       <div>
         <strong>Malt additions:</strong>
         {activeBatch.malts.map((m: Malt, i: number) => (
-          <p key={i}>{m.name}: {m.amount}{m.unit}</p>
+          <p key={i}>{m.name}: <Qty kind="kg" value={m.amount} /></p>
         ))}
       </div>
     )}
 
     <p><strong>Boil time:</strong> {activeBatch.boil_time} min</p>
-    <p><strong>Honey:</strong> {activeBatch.honey_amount} kg</p>
+    <p><strong>Honey:</strong> <Qty kind="kg" value={activeBatch.honey_amount} /></p>
     <p><strong>Additives:</strong><br />{activeBatch.additives}</p>
     <p><strong>Full process:</strong><br />{activeBatch.full_process}</p>
     <p><strong>Notes:</strong><br />{activeBatch.notes}</p>
@@ -639,7 +646,7 @@ async function toggleVisibility() {
 {(activeBatch.type === "Cider" || activeBatch.type === "Wine" || activeBatch.type === "Seltzer") && (
   <>
     <p><strong>Juice type:</strong> {activeBatch.juice_type}</p>
-    <p><strong>Sugar added:</strong> {activeBatch.sugar_amount} kg</p>
+    <p><strong>Sugar added:</strong> <Qty kind="kg" value={activeBatch.sugar_amount} /></p>
     <p><strong>Additives:</strong><br />{activeBatch.additives}</p>
     <p><strong>Full process:</strong><br />{activeBatch.full_process}</p>
     <p><strong>Notes:</strong><br />{activeBatch.notes}</p>
@@ -725,12 +732,13 @@ async function toggleVisibility() {
               className="p-3 rounded bg-black/40 border border-white/20"
             />
       
-            <label className="font-semibold">Volume (L)</label>
-            <input
+            <label className="font-semibold">
+              Volume (<UnitSymbol kind="volume" />)
+            </label>
+            <UnitInput
+              kind="volume"
               name="volume_l"
-              type="number"
-              step="0.1"
-              defaultValue={activeBatch.volume_l}
+              defaultValue={String(activeBatch.volume_l ?? "")}
               className="p-3 rounded bg-black/40 border border-white/20"
             />
       
@@ -761,12 +769,13 @@ async function toggleVisibility() {
                   className="p-3 rounded bg-black/40 border border-white/20"
                 />
       
-                <label className="font-semibold">Honey amount (kg)</label>
-                <input
+                <label className="font-semibold">
+                  Honey amount (<UnitSymbol kind="kg" />)
+                </label>
+                <UnitInput
+                  kind="kg"
                   name="honey_amount"
-                  type="number"
-                  step="0.01"
-                  defaultValue={activeBatch.honey_amount}
+                  defaultValue={String(activeBatch.honey_amount ?? "")}
                   className="p-3 rounded bg-black/40 border border-white/20"
                 />
       
@@ -802,12 +811,13 @@ async function toggleVisibility() {
                   className="p-3 rounded bg-black/40 border border-white/20"
                 />
       
-                <label className="font-semibold">Sugar added (kg)</label>
-                <input
+                <label className="font-semibold">
+                  Sugar added (<UnitSymbol kind="kg" />)
+                </label>
+                <UnitInput
+                  kind="kg"
                   name="sugar_amount"
-                  type="number"
-                  step="0.01"
-                  defaultValue={activeBatch.sugar_amount}
+                  defaultValue={String(activeBatch.sugar_amount ?? "")}
                   className="p-3 rounded bg-black/40 border border-white/20"
                 />
       
@@ -843,8 +853,17 @@ async function toggleVisibility() {
             {activeBatch.malts?.map((m: Malt, i: number) => (
               <div key={i} className="flex gap-2 items-center">
                 <input name={`malts[${i}][name]`} defaultValue={m.name} className="p-2 rounded bg-black/40 border border-white/20 w-1/2" />
-                <input name={`malts[${i}][amount]`} defaultValue={m.amount} className="p-2 rounded bg-black/40 border border-white/20 w-1/4" />
-                <input name={`malts[${i}][unit]`} defaultValue={m.unit} className="p-2 rounded bg-black/40 border border-white/20 w-1/4" />
+                <UnitInput
+                  kind="kg"
+                  name={`malts[${i}][amount]`}
+                  defaultValue={String(m.amount ?? "")}
+                  placeholder={`Amount (${label("kg")})`}
+                  className="p-2 rounded bg-black/40 border border-white/20 w-1/4"
+                />
+                <div className="p-2 rounded bg-black/20 border border-white/10 w-1/4 flex items-center justify-center text-sm opacity-80">
+                  <UnitSymbol kind="kg" />
+                </div>
+                <input type="hidden" name={`malts[${i}][unit]`} value="kg" />
       
                 <button
                   type="button"
@@ -862,7 +881,7 @@ async function toggleVisibility() {
             <button
               type="button"
               onClick={() => {
-                const updated = [...activeBatch.malts, { name: "", amount: "", unit: "" }];
+                const updated = [...activeBatch.malts, { name: "", amount: "", unit: "kg" }];
                 setActiveBatch({ ...activeBatch, malts: updated });
               }}
               className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm"
@@ -878,8 +897,17 @@ async function toggleVisibility() {
             {activeBatch.hops?.map((h: Hop, i: number) => (
               <div key={i} className="flex gap-2 items-center">
                 <input name={`hops[${i}][name]`} defaultValue={h.name} className="p-2 rounded bg-black/40 border border-white/20 w-1/3" />
-                <input name={`hops[${i}][amount]`} defaultValue={h.amount} className="p-2 rounded bg-black/40 border border-white/20 w-1/4" />
-                <input name={`hops[${i}][unit]`} defaultValue={h.unit} className="p-2 rounded bg-black/40 border border-white/20 w-1/4" />
+                <UnitInput
+                  kind="g"
+                  name={`hops[${i}][amount]`}
+                  defaultValue={String(h.amount ?? "")}
+                  placeholder={`Amount (${label("g")})`}
+                  className="p-2 rounded bg-black/40 border border-white/20 w-1/4"
+                />
+                <div className="p-2 rounded bg-black/20 border border-white/10 w-1/4 flex items-center justify-center text-sm opacity-80">
+                  <UnitSymbol kind="g" />
+                </div>
+                <input type="hidden" name={`hops[${i}][unit]`} value="g" />
                 <input name={`hops[${i}][boil]`} defaultValue={h.time} className="p-2 rounded bg-black/40 border border-white/20 w-1/4" />
       
                 <button
@@ -898,7 +926,7 @@ async function toggleVisibility() {
             <button
               type="button"
               onClick={() => {
-                const updated = [...activeBatch.hops, { name: "", amount: "", unit: "", boil: "" }];
+                const updated = [...activeBatch.hops, { name: "", amount: "", unit: "g", boil: "" }];
                 setActiveBatch({ ...activeBatch, hops: updated });
               }}
               className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm"
@@ -959,7 +987,7 @@ async function toggleVisibility() {
                       </span>
                     </p>
                     <p className="opacity-80">Original Gravity (OG): {activeBatch.og}</p>
-                    <p className="opacity-80">Batch volume: {activeBatch.volume_l} L</p>
+                    <p className="opacity-80">Batch volume: <Qty kind="volume" value={activeBatch.volume_l} /></p>
                     <p className="opacity-80">Status: Primary fermentation</p>
       
                     {(activeBatch.type === "Beer" || activeBatch.type === "Braggot") && (
@@ -993,7 +1021,7 @@ async function toggleVisibility() {
 {/* MEAD */}
 {activeBatch.type === "Mead" && (
   <>
-    <p><strong>Honey:</strong> {activeBatch.honey_type} – {activeBatch.honey_amount} kg</p>
+    <p><strong>Honey:</strong> {activeBatch.honey_type} – <Qty kind="kg" value={activeBatch.honey_amount} /></p>
 
     {activeBatch.fruits?.length > 0 && (
       <div>
@@ -1017,7 +1045,7 @@ async function toggleVisibility() {
       <div>
         <strong>Malt additions:</strong>
         {activeBatch.malts.map((m: Malt, i: number) => (
-          <p key={i}>{m.name}: {m.amount} kg</p>
+          <p key={i}>{m.name}: <Qty kind="kg" value={m.amount} /></p>
         ))}
       </div>
     )}
@@ -1026,7 +1054,7 @@ async function toggleVisibility() {
       <div>
         <strong>Hop schedule:</strong>
         {activeBatch.hops.map((h: Hop, i: number) => (
-          <p key={i}>{h.name}: {h.amount}{h.unit} @ {h.time} min</p>
+          <p key={i}>{h.name}: <Qty kind="g" value={h.amount} maxDecimals={0} /> @ {h.time} min</p>
         ))}
       </div>
     )}
@@ -1045,13 +1073,13 @@ async function toggleVisibility() {
       <div>
         <strong>Malt additions:</strong>
         {activeBatch.malts.map((m: Malt, i: number) => (
-          <p key={i}>{m.name}: {m.amount}{m.unit}</p>
+          <p key={i}>{m.name}: <Qty kind="kg" value={m.amount} /></p>
         ))}
       </div>
     )}
 
     <p><strong>Boil time:</strong> {activeBatch.boil_time} min</p>
-    <p><strong>Honey:</strong> {activeBatch.honey_amount} kg</p>
+    <p><strong>Honey:</strong> <Qty kind="kg" value={activeBatch.honey_amount} /></p>
     <p><strong>Additives:</strong><br />{activeBatch.additives}</p>
     <p><strong>Full process:</strong><br />{activeBatch.full_process}</p>
     <p><strong>Notes:</strong><br />{activeBatch.notes}</p>
@@ -1062,7 +1090,7 @@ async function toggleVisibility() {
 {(activeBatch.type === "Cider" || activeBatch.type === "Wine" || activeBatch.type === "Seltzer") && (
   <>
     <p><strong>Juice type:</strong> {activeBatch.juice_type}</p>
-    <p><strong>Sugar added:</strong> {activeBatch.sugar_amount} kg</p>
+    <p><strong>Sugar added:</strong> <Qty kind="kg" value={activeBatch.sugar_amount} /></p>
     <p><strong>Additives:</strong><br />{activeBatch.additives}</p>
     <p><strong>Full process:</strong><br />{activeBatch.full_process}</p>
     <p><strong>Notes:</strong><br />{activeBatch.notes}</p>

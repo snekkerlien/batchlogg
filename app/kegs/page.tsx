@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import PageHeading from "@/app/components/PageHeading";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
-import BackButton from "@/app/batchhistorikk/BackButton";
+import BackButton from "@/app/batch-history/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
 
@@ -39,6 +39,8 @@ export default function KegTrackerPage() {
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  const [canManageKegs, setCanManageKegs] = useState(false);
+  const [accessLoaded, setAccessLoaded] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   
 
@@ -70,22 +72,58 @@ export default function KegTrackerPage() {
   useEffect(() => {
     let active = true;
 
+    async function loadAccess(session: Awaited<ReturnType<typeof supabaseBrowser.auth.getSession>>["data"]["session"]) {
+      if (!session) {
+        if (active) {
+          setIsLoggedIn(false);
+          setCanManageKegs(false);
+          setAccessLoaded(true);
+        }
+        return;
+      }
+
+      const response = await fetch("/api/profile", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        throw new Error(`Could not verify keg permissions (${response.status})`);
+      }
+      const profile = await response.json();
+      if (active) {
+        setIsLoggedIn(true);
+        setCanManageKegs(
+          profile.can_manage_kegs === true ||
+          profile.membership_status === "admin"
+        );
+        setAccessLoaded(true);
+      }
+    }
+
     supabaseBrowser.auth
       .getSession()
       .then(({ data, error }) => {
         if (error) throw error;
-        if (active) setIsLoggedIn(Boolean(data.session));
+        return loadAccess(data.session);
       })
       .catch((error) => {
         console.error("Could not determine login status", error);
         if (active) {
           setLoadError("Could not verify your login status. Please reload the page.");
+          setAccessLoaded(true);
         }
       });
 
     const { data: listener } = supabaseBrowser.auth.onAuthStateChange(
       (_event, session) => {
-        if (active) setIsLoggedIn(Boolean(session));
+        void loadAccess(session).catch((error) => {
+          console.error("Could not refresh keg permissions", error);
+          if (active) {
+            setCanManageKegs(false);
+            setAccessLoaded(true);
+            setLoadError("Could not verify keg permissions. Please reload the page.");
+          }
+        });
       }
     );
 
@@ -96,8 +134,13 @@ export default function KegTrackerPage() {
   }, []);
 
   useEffect(() => {
-    loadKegs();
-  }, []);
+    if (!accessLoaded) return;
+    if (canManageKegs) {
+      void loadKegs();
+    } else {
+      setLoading(false);
+    }
+  }, [accessLoaded, canManageKegs]);
 
   async function addKeg() {
     setSaving(true);
@@ -156,7 +199,7 @@ export default function KegTrackerPage() {
     }
   }
 
-  if (loading) {
+  if (loading || !accessLoaded) {
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
         <div className="bg-black/60 backdrop-blur-md px-6 py-4 rounded-xl border border-white/10">
@@ -169,7 +212,7 @@ export default function KegTrackerPage() {
   return (
     <main className="min-h-screen px-6 py-12 text-white">
       <div className="bg-black/60 backdrop-blur-md p-6 pt-16 sm:p-8 sm:pt-16 rounded-xl border border-white/10 max-w-3xl mx-auto mt-20 sm:mt-24 relative">
-        {isLoggedIn === true ? (
+        {isLoggedIn === true && canManageKegs ? (
   <>
     <div className="absolute top-2 left-4 z-40 sm:top-4 flex gap-3">
       <BackButton />
@@ -194,19 +237,6 @@ export default function KegTrackerPage() {
   </>
 ) : isLoggedIn === false ? (
   <>
-    {!selectMode && (
-      <button
-        type="button"
-        onClick={() => {
-          setSelectMode(true);
-          setSelectedIds([]);
-        }}
-        className="absolute top-2 left-4 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold sm:top-4"
-      >
-        Select kegs
-      </button>
-    )}
-
     <Link
       href="/"
       className="absolute top-2 right-4 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold sm:top-4"
@@ -214,7 +244,16 @@ export default function KegTrackerPage() {
       Go to main site
     </Link>
   </>
-) : null}
+) : (
+  <>
+    <div className="absolute left-4 top-2 z-40 sm:top-4">
+      <BackButton />
+    </div>
+    <div className="absolute right-4 top-2 z-40 sm:top-4">
+      <MenuOverlay current="kegs" />
+    </div>
+  </>
+)}
 
         <PageHeading
           title="Keg Overview"
@@ -230,7 +269,11 @@ export default function KegTrackerPage() {
           </div>
         )}
 
-        <section className="flex flex-wrap justify-center gap-6">
+        {!canManageKegs ? (
+          <p className="py-8 text-center text-white/70">
+            Access denied. Keg management permission is required.
+          </p>
+        ) : <section className="flex flex-wrap justify-center gap-6">
           {kegs.map((keg) => {
             const isSelected = selectedIds.includes(keg.id);
             const tileClass = `relative border border-white/10 rounded-xl p-4 bg-white/5 w-32 h-32 flex flex-col items-center justify-center transition overflow-hidden hover:bg-white/10 ${
@@ -329,7 +372,7 @@ export default function KegTrackerPage() {
               {saving ? "…" : "+"}
             </button>
           )}
-        </section>
+        </section>}
 
         {selectMode && (
   <div className="flex justify-center mt-10 mb-6">

@@ -1,7 +1,7 @@
 import { supabaseServer } from "../../lib/supabase/supabaseServerFinal";
-import { isAdminUser } from "../../lib/auth/isAdminUser";
+import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
 import Link from "next/link";
-import BackButton from "../batchhistorikk/BackButton";
+import BackButton from "../batch-history/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 
 export default async function AdminPage() {
@@ -9,7 +9,8 @@ export default async function AdminPage() {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!isAdminUser(user)) {
+  const role = await getMembershipRole(supabase, user);
+  if (role === "member") {
     return (
       <main className="min-h-screen flex items-center justify-center px-6 text-white">
         <div className="rounded-xl border border-red-500/30 bg-black/60 p-8 text-center backdrop-blur-md">
@@ -47,7 +48,7 @@ export default async function AdminPage() {
         </header>
 
         <section aria-label="Admin tools" className="grid gap-5 md:grid-cols-2">
-          <Link
+          {hasPermission(role, "manage_users") && <Link
             href="/admin/users"
             className="group rounded-xl border border-white/10 bg-white/5 p-6 transition hover:border-green-400/40 hover:bg-white/10"
           >
@@ -65,9 +66,9 @@ export default async function AdminPage() {
             <p className="mt-4 leading-relaxed text-white/70">
               Review accounts and update user details. Open a user to grant or remove keg management access.
             </p>
-          </Link>
+          </Link>}
 
-          <Link
+          {hasPermission(role, "review_reports") && <Link
             href="/admin/community-reports"
             className="group rounded-xl border border-white/10 bg-white/5 p-6 transition hover:border-green-400/40 hover:bg-white/10"
           >
@@ -83,9 +84,29 @@ export default async function AdminPage() {
               </span>
             </div>
             <p className="mt-4 leading-relaxed text-white/70">
-              Review member reports, inspect reported content, and mark reports as reviewed.
+              Review member reports, inspect reported content, and track moderation history.
             </p>
-          </Link>
+          </Link>}
+          {hasPermission(role, "manage_changelog") && <Link
+            href="/admin/content"
+            className="group rounded-xl border border-white/10 bg-white/5 p-6 transition hover:border-green-400/40 hover:bg-white/10"
+          >
+            <p className="text-sm font-semibold uppercase tracking-wider text-green-300">Site content</p>
+            <h2 className="mt-2 text-2xl font-bold">Updates & announcements</h2>
+            <p className="mt-4 leading-relaxed text-white/70">
+              Publish release notes and time-bounded announcements for members.
+            </p>
+          </Link>}
+          {hasPermission(role, "view_analytics") && <Link
+            href="/admin/analytics"
+            className="group rounded-xl border border-white/10 bg-white/5 p-6 transition hover:border-green-400/40 hover:bg-white/10"
+          >
+            <p className="text-sm font-semibold uppercase tracking-wider text-green-300">Operations</p>
+            <h2 className="mt-2 text-2xl font-bold">Community analytics</h2>
+            <p className="mt-4 leading-relaxed text-white/70">
+              View privacy-preserving account, brewing, and moderation totals.
+            </p>
+          </Link>}
         </section>
 
         <div className="mt-8 rounded-lg border border-white/10 bg-black/30 px-5 py-4 text-sm text-white/60">

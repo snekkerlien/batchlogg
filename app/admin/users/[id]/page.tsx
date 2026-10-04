@@ -1,7 +1,8 @@
+import { MEMBERSHIP_STATUSES, isMembershipStatus, membershipLabel } from "@/lib/auth/membership";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { supabaseServer } from "../../../../lib/supabase/supabaseServerFinal";
-import { isAdminUser } from "../../../../lib/auth/isAdminUser";
+import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 import DeleteUserButton from "./DeleteUserButton";
@@ -19,7 +20,8 @@ export default async function UserAdminPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!isAdminUser(user)) {
+  const role = await getMembershipRole(supabase, user);
+  if (!hasPermission(role, "manage_users")) {
     return (
       <main className="min-h-screen flex items-center justify-center px-6 text-white">
         <div className="rounded-xl border border-red-500/30 bg-black/60 p-8 text-center backdrop-blur-md">
@@ -62,16 +64,22 @@ export default async function UserAdminPage({
       data: { user: actionUser },
     } = await actionSupabase.auth.getUser();
 
-    if (!isAdminUser(actionUser)) {
+    const actionRole = await getMembershipRole(actionSupabase, actionUser);
+    if (!hasPermission(actionRole, "manage_users")) {
       throw new Error("Forbidden");
     }
 
     const email = formData.get("email")?.toString();
     const username = formData.get("username")?.toString();
     const canManageKegs = formData.get("can_manage_kegs") === "on";
+    const membershipStatus = formData.get("membership_status")?.toString();
 
-    if (!email || !username) {
-      throw new Error("Email and username are required");
+    if (
+      !email ||
+      !username ||
+      !isMembershipStatus(membershipStatus)
+    ) {
+      throw new Error("Email, username, and a valid role are required");
     }
 
     const { error: authUpdateError } =
@@ -86,7 +94,12 @@ export default async function UserAdminPage({
 
     const { error: profileUpdateError } = await actionServiceRole
       .from("profiles")
-      .update({ email, username, can_manage_kegs: canManageKegs })
+      .update({
+        email,
+        username,
+        can_manage_kegs: canManageKegs,
+        membership_status: membershipStatus,
+      })
       .eq("id", userId);
 
     if (profileUpdateError) {
@@ -153,6 +166,21 @@ export default async function UserAdminPage({
                 defaultValue={profile?.username ?? ""}
                 className="mt-2 w-full rounded-lg border border-white/20 bg-black/40 p-3 text-white outline-none transition focus:border-green-400/50"
               />
+            </label>
+
+            <label className="block">
+              <span className="text-sm font-medium text-white/80">Membership role</span>
+              <select
+                name="membership_status"
+                defaultValue={profile?.membership_status ?? "member"}
+                className="mt-2 w-full rounded-lg border border-white/20 bg-black/40 p-3 text-white outline-none transition focus:border-green-400/50"
+              >
+                {MEMBERSHIP_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {membershipLabel(status)}
+                  </option>
+                ))}
+              </select>
             </label>
 
             <label className="flex items-center gap-3 rounded-lg border border-white/10 bg-black/20 p-4">

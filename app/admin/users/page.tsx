@@ -1,7 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import Link from "next/link";
 import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
-import { isAdminUser } from "../../../lib/auth/isAdminUser";
+import { membershipLabel } from "@/lib/auth/membership";
+import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 
@@ -13,7 +14,8 @@ export default async function UsersPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!isAdminUser(user)) {
+  const role = await getMembershipRole(supabase, user);
+  if (!hasPermission(role, "manage_users")) {
     return (
       <main className="min-h-screen flex items-center justify-center px-6 text-white">
         <div className="rounded-xl border border-red-500/30 bg-black/60 p-8 text-center backdrop-blur-md">
@@ -63,6 +65,7 @@ export default async function UsersPage() {
       username: profile?.username ?? "(no username)",
       avatar_url: profile?.avatar_url ?? null,
       is_public: profile?.is_public ?? false,
+      membership_status: profile?.membership_status ?? "member",
     };
   });
 
@@ -136,6 +139,9 @@ export default async function UsersPage() {
                     </p>
                     <p className="mt-1 text-sm text-zinc-400">
                       {u.is_public ? "Public profile" : "Private profile"}
+                    </p>
+                    <p className="mt-1 text-sm capitalize text-green-200/75">
+                      Role: {membershipLabel(u.membership_status)}
                     </p>
                   </div>
                   <span

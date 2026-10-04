@@ -225,7 +225,7 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
       router.push(
         notification.kar_id
           ? `/kar/${notification.kar_id}`
-          : "/batchhistorikk"
+          : "/batch-history"
       );
     } else {
       router.push(

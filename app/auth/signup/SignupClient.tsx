@@ -94,14 +94,21 @@ export default function SignupClient() {
 
     setCreatingAccount(true);
     try {
-      const { data, error: signupError } = await supabaseBrowser.auth.signUp({
-        email: normalizedEmail,
-        password,
+      const signupResponse = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          email: normalizedEmail,
+          password,
+          username,
+        }),
       });
+      const signupResult = await signupResponse.json();
 
-      if (signupError || !data.user) {
-        console.error("[Signup error]", signupError);
-        setError(signupError?.message || "Could not create account.");
+      if (!signupResponse.ok || !signupResult.userId) {
+        console.error("[Signup error]", signupResult.error);
+        setError(signupResult.error || "Could not create account.");
         return;
       }
 
@@ -125,8 +132,9 @@ export default function SignupClient() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${loginData.session.access_token}`,
         },
+        credentials: "include",
         body: JSON.stringify({
-          id: data.user.id,
+          id: signupResult.userId,
           username,
           email: normalizedEmail,
         }),

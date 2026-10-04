@@ -5,12 +5,13 @@ import { useRouter } from "next/navigation";
 import MenuOverlay from "../../components/MenuOverlay";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import PageHeading from "../../components/PageHeading";
+import { UnitToggle } from "../../components/Units";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import {
   deleteAccount,
   downloadUserData,
   saveThemeAccentColor,
-} from "../account/actions";
+} from "../my-account/actions";
 import {
   DEFAULT_ACCENT_COLOR,
   isAccentColor,
@@ -285,7 +286,7 @@ export default function SettingsPage() {
         </div>
         <div className="absolute top-2 sm:top-4 left-4 z-40">
           <button
-            onClick={() => router.push("/account")}
+            onClick={() => router.push("/my-account")}
             className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg"
             aria-label="Back to my account"
           >
@@ -302,6 +303,16 @@ export default function SettingsPage() {
             {loadError}
           </p>
         )}
+
+        <section className="mb-8 border-t border-white/10 py-5">
+          <h2 className="text-lg font-semibold text-center mb-1 text-green-300">
+            Units
+          </h2>
+          <p className="text-sm text-zinc-400 text-center mb-4">
+            Choose how volumes and weights are shown across the site.
+          </p>
+          <UnitToggle />
+        </section>
 
         <section className="mb-8 border-y border-white/10 py-5">
           <h2 className="text-lg font-semibold text-center mb-1 text-green-300">

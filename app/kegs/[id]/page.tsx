@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import PageHeading from "@/app/components/PageHeading";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
-import BackButton from "@/app/batchhistorikk/BackButton";
+import BackButton from "@/app/batch-history/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 
 type Keg = {

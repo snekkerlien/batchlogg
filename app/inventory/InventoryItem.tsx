@@ -76,7 +76,9 @@ export default function InventoryItem({
           )}
         </div>
         <div className="mt-1 text-xs text-white/60">
-          {item.category.charAt(0).toUpperCase() + item.category.slice(1)}
+          {item.subcategory
+            ? `${item.category.charAt(0).toUpperCase() + item.category.slice(1)} · ${item.subcategory}`
+            : item.category.charAt(0).toUpperCase() + item.category.slice(1)}
         </div>
       </div>
 

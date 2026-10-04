@@ -1,0 +1,326 @@
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+import { supabaseServer } from "../../../../lib/supabase/supabaseServerFinal";
+import MenuOverlay from "./MenuOverlay";
+import BackButton from "./BackButton";
+import { translateOldRecipe } from "@/lib/translateOldRecipe";
+import PageHeading from "@/app/components/PageHeading";
+import ReportContentButton from "@/app/components/ReportContentButton";
+import { Qty } from "@/app/components/Units";
+
+type KarDetailParams = {
+  username: string;
+  karId: string;
+};
+
+function daysSince(dateString: string) {
+  const start = new Date(dateString);
+  const now = new Date();
+
+  const diffMs = now.getTime() - start.getTime();
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  return days;
+}
+
+function dayLabel(days: number) {
+  return days === 1 ? "day" : "days";
+}
+
+export default async function KarDetailPage({
+  params,
+}: {
+  params: KarDetailParams;
+}) {
+  const { supabase } = supabaseServer();
+  let username = params.username;
+  try {
+    username = decodeURIComponent(username);
+  } catch {
+    // Keep the original route value if it is not a valid encoded component.
+  }
+
+  // Check login
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return (
+      <main className="min-h-screen flex items-center justify-center text-white">
+        <h1 className="text-2xl font-bold">You must be logged in</h1>
+      </main>
+    );
+  }
+
+  // Find user by username
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("username", username)
+    .single();
+
+  if (!profile) {
+    return (
+      <main className="min-h-screen flex items-center justify-center text-white">
+        <h1 className="text-2xl font-bold">Profile not found</h1>
+      </main>
+    );
+  }
+
+  const userId = profile.id;
+
+  // Fetch vessel
+  const { data: kar } = await supabase
+  .from("kar")
+  .select("*")
+  .eq("id", params.karId)
+  .single();
+
+  if (!kar) {
+    return (
+      <main className="min-h-screen flex items-center justify-center text-white">
+        <h1 className="text-2xl font-bold">Vessel not found</h1>
+      </main>
+    );
+  }
+
+  // Fetch batches linked to this vessel
+  const { data: batches } = await supabase
+  .from("batches")
+  .select("*")
+  .eq("aktivt_kar", kar.id);
+
+  const activeBatch = batches?.find((b) => b.status === "Aktiv");
+const secondaryBatch = batches?.find((b) =>
+  ["Sekundær", "secondary"].includes(b.status)
+);
+
+// Choose batch (active → secondary)
+let batch = activeBatch || secondaryBatch;
+
+// ⭐ Oversett gamle batches til moderne format
+batch = translateOldRecipe(batch);
+
+
+  return (
+    <main className="min-h-screen px-6 py-12 text-white flex justify-center">
+      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10 relative">
+
+        {/* TOP BAR */}
+        <div className="flex items-center justify-between mb-6">
+          <BackButton />
+          <MenuOverlay />
+        </div>
+
+        {/* HEADER */}
+        <PageHeading
+          title="Vessel"
+          subtitle={
+            !batch
+              ? "This vessel is currently empty."
+              : ["Sekundær", "secondary"].includes(batch.status)
+                ? "Secondary fermentation"
+                : "Active fermentation"
+          }
+        />
+
+        {/* EMPTY VESSEL */}
+        {!batch && (
+          <>
+            <p className="text-center opacity-70 mb-10">
+              This vessel is currently empty.
+            </p>
+          </>
+        )}
+
+        {/* BATCH INFO */}
+        {batch && (
+          <div className="p-4 bg-white/10 border border-white/20 rounded-xl mb-10">
+            {user.id !== profile.id && (
+              <div className="mb-3 flex justify-end">
+                <ReportContentButton
+                  contentType="batch"
+                  contentId={batch.id}
+                  contextUrl={`/members/${encodeURIComponent(profile.username)}/${kar.id}`}
+                />
+              </div>
+            )}
+
+            <h3 className="text-xl font-bold text-green-300 mb-2">
+              {batch.name}
+            </h3>
+
+            <p className="opacity-80">Batch number: {batch.batchnummer}</p>
+            <p className="opacity-80">
+                Start date: {new Date(batch.startdato).toLocaleDateString("en-US")}
+                <span className="ml-2 opacity-70">
+                  ({daysSince(batch.startdato)} {dayLabel(daysSince(batch.startdato))})
+                </span>
+              </p>
+            <p className="opacity-80">Volume: <Qty kind="volume" value={batch.volume_l} /></p>
+            <p className="opacity-80">OG: {batch.og}</p>
+
+            {["Sekundær", "secondary"].includes(batch.status) && (
+              <p className="opacity-80 mt-2">
+                Secondary since:{" "}
+                {new Date(batch.secondary_startdate).toLocaleDateString("en-US")}
+              </p>
+            )}
+
+            {batch.secondary_additions && (
+              <p className="opacity-80 mt-2 whitespace-pre-wrap">
+                Additions:<br />{batch.secondary_additions}
+              </p>
+            )}
+
+            {batch.secondary_notes && (
+              <p className="opacity-80 mt-2 whitespace-pre-wrap">
+                Notes:<br />{batch.secondary_notes}
+              </p>
+            )}
+
+            {/* ⭐ UNIVERSAL RECIPE RENDERER */}
+<div className="mt-6 p-4 bg-white/5 border border-white/10 rounded-lg">
+  <h3 className="text-xl font-bold mb-3 text-green-300">Recipe</h3>
+
+  <div className="space-y-4 text-sm whitespace-pre-wrap">
+
+    {/* ⭐ Fallback for gamle batches */}
+    {!batch.type && batch.oppskrift && (
+      <p className="opacity-80">{batch.oppskrift}</p>
+    )}
+
+    {/* ⭐ MEAD */}
+    {batch.type === "Mead" && (
+      <>
+        <p><strong>Honey:</strong> {batch.honey_type || "Unknown"} – <Qty kind="kg" value={batch.honey_amount} fallback="?" /></p>
+
+        {batch.fruits?.length > 0 && (
+          <div>
+            <strong>Fruits:</strong>
+            {batch.fruits.map((f: any, i: number) => (
+              <p key={i}>{f.name}: {f.amount}{f.unit}</p>
+            ))}
+          </div>
+        )}
+
+        <p><strong>Additives:</strong><br />{batch.additives || "None"}</p>
+        <p><strong>Full process:</strong><br />{batch.full_process || "No process described"}</p>
+        <p><strong>Notes:</strong><br />{batch.notes || "No notes"}</p>
+      </>
+    )}
+
+    {/* ⭐ BEER */}
+    {batch.type === "Beer" && (
+      <>
+        {batch.malts?.length > 0 && (
+          <div>
+            <strong>Malt additions:</strong>
+            {batch.malts.map((m: any, i: number) => (
+              <p key={i}>{m.name}: <Qty kind="kg" value={m.amount} /></p>
+            ))}
+          </div>
+        )}
+
+        {batch.hops?.length > 0 && (
+          <div>
+            <strong>Hop schedule:</strong>
+            {batch.hops.map((h: any, i: number) => (
+              <p key={i}>{h.name}: <Qty kind="g" value={h.amount} maxDecimals={0} /> @ {h.boil} min</p>
+            ))}
+          </div>
+        )}
+
+        {batch.dry_hops?.length > 0 && (
+          <div>
+            <strong>Dry hops:</strong>
+            {batch.dry_hops.map((h: any, i: number) => (
+              <p key={i}>{h.name}: <Qty kind="g" value={h.amount} maxDecimals={0} /> — {h.contact} days</p>
+            ))}
+          </div>
+        )}
+
+        <p><strong>Total boil time:</strong> {batch.boil_time || "Unknown"} min</p>
+        <p><strong>Additives:</strong><br />{batch.additives || "None"}</p>
+        <p><strong>Full process:</strong><br />{batch.full_process || "No process described"}</p>
+        <p><strong>Notes:</strong><br />{batch.notes || "No notes"}</p>
+      </>
+    )}
+
+    {/* ⭐ BRAGGOT */}
+    {batch.type === "Braggot" && (
+      <>
+        {batch.malts?.length > 0 && (
+          <div>
+            <strong>Malt additions:</strong>
+            {batch.malts.map((m: any, i: number) => (
+              <p key={i}>{m.name}: <Qty kind="kg" value={m.amount} /></p>
+            ))}
+          </div>
+        )}
+
+        <p><strong>Boil time:</strong> {batch.boil_time || "Unknown"} min</p>
+        <p><strong>Honey:</strong> <Qty kind="kg" value={batch.honey_amount} fallback="?" /></p>
+        <p><strong>Additives:</strong><br />{batch.additives || "None"}</p>
+        <p><strong>Full process:</strong><br />{batch.full_process || "No process described"}</p>
+        <p><strong>Notes:</strong><br />{batch.notes || "No notes"}</p>
+      </>
+    )}
+
+    {/* ⭐ CIDER / WINE / SELTZER */}
+    {(batch.type === "Cider" ||
+      batch.type === "Wine" ||
+      batch.type === "Seltzer") && (
+      <>
+        <p><strong>Juice type:</strong> {batch.juice_type || "Unknown"}</p>
+        <p><strong>Sugar added:</strong> <Qty kind="kg" value={batch.sugar_amount} fallback="?" /></p>
+        <p><strong>Additives:</strong><br />{batch.additives || "None"}</p>
+        <p><strong>Full process:</strong><br />{batch.full_process || "No process described"}</p>
+        <p><strong>Notes:</strong><br />{batch.notes || "No notes"}</p>
+      </>
+    )}
+
+    {/* ⭐ OTHER */}
+    {batch.type === "Other" && (
+      <>
+        {batch.ingredients?.length > 0 && (
+          <div>
+            <strong>Ingredients:</strong>
+            {batch.ingredients.map((ing: any, idx: number) => (
+              <p key={idx}>{ing.name}: {ing.amount}{ing.unit}</p>
+            ))}
+          </div>
+        )}
+
+        {batch.steps?.length > 0 && (
+          <div>
+            <strong>Process steps:</strong>
+            {batch.steps.map((s: string, idx: number) => (
+              <p key={idx}>{idx + 1}. {s}</p>
+            ))}
+          </div>
+        )}
+
+        <p><strong>Additives:</strong><br />{batch.additives || "None"}</p>
+        <p><strong>Notes:</strong><br />{batch.notes || "No notes"}</p>
+      </>
+    )}
+
+  </div>
+</div>
+
+
+
+          </div>
+        )}
+
+        <p className="text-sm opacity-40 mt-12 text-center">
+          © {new Date().getFullYear()} Batchlog
+        </p>
+      </div>
+    </main>
+  );
+}

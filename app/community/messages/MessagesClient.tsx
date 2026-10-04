@@ -6,6 +6,7 @@ import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
+import ReportContentButton from "@/app/components/ReportContentButton";
 
 interface Conversation {
   id: string;
@@ -319,6 +320,15 @@ export default function MessagesPage() {
                     <time className="mt-2 block text-right text-xs text-white/55">
                       {new Date(message.created_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}
                     </time>
+                    {!ownMessage && (
+                      <div className="mt-2 text-right">
+                        <ReportContentButton
+                          contentType="message"
+                          contentId={message.id}
+                          contextUrl={`/community/messages?peer_id=${encodeURIComponent(peerId ?? "")}`}
+                        />
+                      </div>
+                    )}
                   </li>
                 );
               }) : <li className="m-auto text-sm text-white/55">Start the conversation.</li>}

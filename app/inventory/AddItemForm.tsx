@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { INVENTORY_CATEGORIES, SNUS_CATEGORIES } from "@/lib/inventory/categories";
 
 type AddItemFormProps = {
   onSubmitComplete?: () => void;
@@ -15,30 +16,20 @@ export default function AddItemForm({
 }: AddItemFormProps) {
   const [form, setForm] = useState({
     name: "",
-    category: "honey",
+    category: "fermentables",
+    subcategory: "",
     amount: "",
     unit: "kg",
     minimum_amount: "",
   });
 
-  const baseCategories = [
-    "honey",
-    "fermentables",
-    "fruit",
-    "yeast",
-    "nutrients",
-    "additives",
-    "bottling",
-    "equipment",
-    "cleaning",
-  ];
-
-  const snusCategories = ["snus", "snusessens"];
-
   const visibleCategories =
     profile?.snus_is_true
-      ? [...baseCategories, ...snusCategories]
-      : baseCategories;
+      ? [...INVENTORY_CATEGORIES, ...SNUS_CATEGORIES.map((id) => ({ id, label: id, subcategories: [] as string[] }))]
+      : INVENTORY_CATEGORIES;
+  const selectedCategory = INVENTORY_CATEGORIES.find(
+    (category) => category.id === form.category
+  );
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -56,6 +47,7 @@ export default function AddItemForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <input
+        required
         className="p-3 bg-black/40 border border-white/20 rounded"
         placeholder="Name"
         value={form.name}
@@ -65,19 +57,40 @@ export default function AddItemForm({
       <select
         className="p-3 bg-black/40 border border-white/20 rounded"
         value={form.category}
-        onChange={(e) => setForm({ ...form, category: e.target.value })}
+        onChange={(e) =>
+          setForm({ ...form, category: e.target.value, subcategory: "" })
+        }
       >
         {visibleCategories.map((cat) => (
-          <option key={cat} value={cat}>
-            {cat.charAt(0).toUpperCase() + cat.slice(1)}
+          <option key={cat.id} value={cat.id}>
+            {cat.label}
           </option>
         ))}
       </select>
+
+      {selectedCategory && selectedCategory.subcategories.length > 0 && (
+        <select
+          className="rounded border border-white/20 bg-black/40 p-3"
+          value={form.subcategory}
+          onChange={(event) =>
+            setForm({ ...form, subcategory: event.target.value })
+          }
+        >
+          <option value="">Choose a subcategory</option>
+          {selectedCategory.subcategories.map((subcategory) => (
+            <option key={subcategory} value={subcategory}>
+              {subcategory}
+            </option>
+          ))}
+        </select>
+      )}
 
       <input
         className="p-3 bg-black/40 border border-white/20 rounded"
         placeholder="Amount"
         type="number"
+        min="0"
+        step="any"
         value={form.amount}
         onChange={(e) => setForm({ ...form, amount: e.target.value })}
       />
@@ -93,6 +106,8 @@ export default function AddItemForm({
         className="p-3 bg-black/40 border border-white/20 rounded"
         placeholder="Minimum amount"
         type="number"
+        min="0"
+        step="any"
         value={form.minimum_amount}
         onChange={(e) =>
           setForm({ ...form, minimum_amount: e.target.value })

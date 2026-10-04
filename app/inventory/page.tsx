@@ -9,20 +9,7 @@ import { useInventory } from "./useInventory";
 import Link from "next/link";
 import { useRef } from "react";
 import PageHeading from "@/app/components/PageHeading";
-
-const baseCategories = [
-  "honey",
-  "fermentables",
-  "fruit",
-  "yeast",
-  "nutrients",
-  "additives",
-  "bottling",
-  "equipment",
-  "cleaning",
-];
-
-const snusCategories = ["snus", "snusessens"];
+import { INVENTORY_CATEGORIES, SNUS_CATEGORIES } from "@/lib/inventory/categories";
 
 export default function InventoryPage() {
   const {
@@ -38,13 +25,13 @@ export default function InventoryPage() {
   const cardRef = useRef<HTMLDivElement>(null);
 
 
-  const visibleCategories =
+  const visibleSnusCategories =
     profile?.snus_is_true
-      ? [...baseCategories, ...snusCategories]
-      : baseCategories;
+      ? SNUS_CATEGORIES
+      : [];
 
   const lowItems = items.filter((i) => {
-    if (!profile?.snus_is_true && snusCategories.includes(i.category)) {
+    if (!profile?.snus_is_true && SNUS_CATEGORIES.includes(i.category)) {
       return false;
     }
 
@@ -90,8 +77,8 @@ useEffect(() => {
 
 {/* Vanlige kategorier */}
 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-12">
-  {baseCategories.map((cat) => {
-    const catItems = items.filter((i) => i.category === cat);
+  {INVENTORY_CATEGORIES.map((cat) => {
+    const catItems = items.filter((i) => i.category === cat.id);
     const catCount = catItems.length;
 
     const catLow = catItems.filter((i) => {
@@ -101,13 +88,13 @@ useEffect(() => {
     });
 
     return (
-      <Link key={cat} href={`/inventory/category/${cat}`}>
+      <Link key={cat.id} href={`/inventory/category/${cat.id}`}>
   <div
-    ref={cat === baseCategories[0] ? cardRef : null}
+    ref={cat.id === INVENTORY_CATEGORIES[0].id ? cardRef : null}
     className="p-6 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition flex flex-col"
   >
-    <span className="text-xl font-semibold capitalize mb-3">
-      {cat.replace("_", " ")}
+    <span className="text-xl font-semibold mb-3">
+      {cat.label}
     </span>
 
     <div className="text-white/80 text-sm mb-1">
@@ -134,7 +121,7 @@ useEffect(() => {
     <h2 className="text-2xl font-bold mb-4 text-center">Snus</h2>
 
     <div className="flex flex-wrap justify-center gap-6 mb-12">
-  {snusCategories.map((cat) => {
+  {visibleSnusCategories.map((cat) => {
     const catItems = items.filter((i) => i.category === cat);
     const catCount = catItems.length;
 

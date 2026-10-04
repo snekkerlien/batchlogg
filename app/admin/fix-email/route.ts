@@ -3,7 +3,7 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
-import { isAdminUser } from "../../../lib/auth/isAdminUser";
+import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
 
 export async function POST(req: Request) {
   const { supabase } = supabaseServer();
@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!isAdminUser(user)) {
+  if (!hasPermission(await getMembershipRole(supabase, user), "manage_users")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

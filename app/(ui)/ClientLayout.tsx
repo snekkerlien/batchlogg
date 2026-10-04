@@ -6,6 +6,9 @@ import { Toaster } from "react-hot-toast";
 import { AuthProvider, useAuthContext } from "../providers/AuthProvider";
 import { useSupabaseSessionSync } from "../../lib/supabase/syncSession";
 import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
+import ChangelogNotice from "../components/ChangelogNotice";
+import { UnitsProvider } from "../components/Units";
+import SiteStatusBanner from "../components/SiteStatusBanner";
 import {
   DEFAULT_ACCENT_COLOR,
   isAccentColor,
@@ -59,6 +62,9 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
   return (
     <AuthProvider>
       <UserAccentTheme>
+        <UnitsProvider>
+        <SiteStatusBanner />
+        <ChangelogNotice />
         <Toaster
           position="top-center"
           toastOptions={{
@@ -82,6 +88,7 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
             {children}
           </motion.div>
         </AnimatePresence>
+        </UnitsProvider>
       </UserAccentTheme>
     </AuthProvider>
   );

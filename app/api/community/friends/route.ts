@@ -280,7 +280,6 @@ export async function POST(request: NextRequest) {
           .from("profiles")
           .select("id, username, allow_friend_requests")
           .eq("id", otherId)
-          .eq("is_public", true)
           .maybeSingle(),
         serviceRole
           .from("community_blocks")
@@ -415,11 +414,10 @@ export async function POST(request: NextRequest) {
     if (messageId) {
       const { data: reportedMessage, error: messageError } = await serviceRole
         .from("community_messages")
-        .select("id")
+        .select("id, body, sender_id")
         .eq("id", messageId)
-        .or(
-          `and(sender_id.eq.${user.id},recipient_id.eq.${otherId}),and(sender_id.eq.${otherId},recipient_id.eq.${user.id})`
-        )
+        .eq("sender_id", otherId)
+        .eq("recipient_id", user.id)
         .maybeSingle();
       if (messageError) {
         console.error("Could not verify reported message", messageError);
@@ -433,6 +431,13 @@ export async function POST(request: NextRequest) {
       reporter_id: user.id,
       reported_user_id: otherId,
       message_id: messageId,
+      content_type: "message",
+      content_id: messageId,
+      category: "other",
+      context_url: `/community/messages?peer_id=${encodeURIComponent(user.id)}`,
+      content_snapshot: messageId
+        ? { body: "The reported private message is retained for moderator review." }
+        : null,
       reason,
     });
     if (error) {

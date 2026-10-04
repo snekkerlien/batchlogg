@@ -5,6 +5,7 @@ import * as Actions from "../../actions";
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import { useRecipePrefill } from "../../../../../lib/recipes/useRecipePrefill";
+import { UnitInput, UnitSymbol, useUnits } from "../../../../components/Units";
 
 export default function NewBraggotPage({
   params,
@@ -14,6 +15,7 @@ export default function NewBraggotPage({
   searchParams?: { recipe?: string };
 }) {
   const [loading, setLoading] = useState(false);
+  const { label } = useUnits();
   const { recipe, loading: recipeLoading, error: recipeError } =
     useRecipePrefill(searchParams?.recipe, "Braggot");
 
@@ -23,7 +25,7 @@ export default function NewBraggotPage({
   >([]);
 
   function addMalt() {
-    setMalts([...malts, { name: "", amount: "", unit: "" }]);
+    setMalts([...malts, { name: "", amount: "", unit: "kg" }]);
   }
 
   function removeMalt(index: number) {
@@ -38,7 +40,7 @@ const [hops, setHops] = useState<
 >([]);
 
 function addHop() {
-  setHops([...hops, { name: "", amount: "", unit: "", boil: "" }]);
+  setHops([...hops, { name: "", amount: "", unit: "g", boil: "" }]);
 }
 
 function removeHop(index: number) {
@@ -52,9 +54,9 @@ useEffect(() => {
   setMalts(
     Array.isArray(recipe.malts)
       ? recipe.malts.map((malt: any) => ({
-          ...malt,
+          name: malt.name ?? "",
           amount: String(malt.amount ?? ""),
-          unit: malt.unit ?? "kg",
+          unit: "kg",
         }))
       : []
   );
@@ -63,7 +65,7 @@ useEffect(() => {
       ? recipe.hops.map((hop: any) => ({
           name: hop.name ?? "",
           amount: String(hop.amount ?? ""),
-          unit: hop.unit ?? "g",
+          unit: "g",
           boil: String(hop.time ?? hop.boil ?? ""),
         }))
       : []
@@ -115,12 +117,11 @@ useEffect(() => {
 
           {/* Volume */}
           <div>
-            <label className="block mb-1 font-semibold">Volume (L)</label>
-            <input
+            <label className="block mb-1 font-semibold">Volume (<UnitSymbol kind="volume" />)</label>
+            <UnitInput
               name="volume_l"
-              defaultValue={recipe?.volume ?? ""}
-              type="number"
-              step="0.1"
+              kind="volume"
+              defaultValue={recipe?.volume == null ? "" : String(recipe.volume)}
               placeholder="Example: 10"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
@@ -173,24 +174,15 @@ useEffect(() => {
         }}
       />
 
-      <input
-        placeholder="Amount"
+      <UnitInput
+        kind="kg"
+        placeholder={`Amount (${label("kg")})`}
         className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-24"
         value={m.amount}
-        onChange={(e) => {
+        onValueChange={(value) => {
           const updated = [...malts];
-          updated[i].amount = e.target.value;
-          setMalts(updated);
-        }}
-      />
-
-      <input
-        placeholder="Unit"
-        className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-20"
-        value={m.unit}
-        onChange={(e) => {
-          const updated = [...malts];
-          updated[i].unit = e.target.value;
+          updated[i].amount = value;
+          updated[i].unit = "kg";
           setMalts(updated);
         }}
       />
@@ -234,24 +226,15 @@ useEffect(() => {
         }}
       />
 
-      <input
-        placeholder="Amount"
+      <UnitInput
+        kind="g"
+        placeholder={`Amount (${label("g")})`}
         className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-20"
         value={h.amount}
-        onChange={(e) => {
+        onValueChange={(value) => {
           const updated = [...hops];
-          updated[i].amount = e.target.value;
-          setHops(updated);
-        }}
-      />
-
-      <input
-        placeholder="Unit"
-        className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-16"
-        value={h.unit}
-        onChange={(e) => {
-          const updated = [...hops];
-          updated[i].unit = e.target.value;
+          updated[i].amount = value;
+          updated[i].unit = "g";
           setHops(updated);
         }}
       />
@@ -309,12 +292,11 @@ useEffect(() => {
 
           {/* Honey amount */}
           <div>
-            <label className="block mb-1 font-semibold">Honey amount (kg)</label>
-            <input
+            <label className="block mb-1 font-semibold">Honey amount (<UnitSymbol kind="kg" />)</label>
+            <UnitInput
               name="honey_amount"
-              defaultValue={recipe?.honey_amount ?? ""}
-              type="number"
-              step="0.1"
+              kind="kg"
+              defaultValue={recipe?.honey_amount == null ? "" : String(recipe.honey_amount)}
               placeholder="Example: 1.5"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />

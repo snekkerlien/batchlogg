@@ -3,7 +3,7 @@
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { MALTS_DB, MALT_ALIASES } from "@/app/recipes/actions/data";
+import { MALTS_DB, MALT_ALIASES } from "@/app/my-recipes/actions/data";
 
 
 

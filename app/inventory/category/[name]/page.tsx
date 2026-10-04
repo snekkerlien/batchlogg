@@ -5,6 +5,11 @@ import InventoryList from "../../InventoryList";
 import BackButton from "../../BackButton";
 import MenuOverlay from "../../../components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
+import {
+  INVENTORY_CATEGORIES,
+  LEGACY_CATEGORY_ALIASES,
+  SNUS_CATEGORIES,
+} from "@/lib/inventory/categories";
 
 export default function CategoryPage({ params }: { params: { name: string } }) {
   const {
@@ -15,14 +20,14 @@ export default function CategoryPage({ params }: { params: { name: string } }) {
     updateItem,
     deleteItem,
   } = useInventory();
-  const category = params.name;
-  const categoryTitle = category.replace(/_/g, " ");
+  const requestedCategory = params.name.toLowerCase();
+  const category = LEGACY_CATEGORY_ALIASES[requestedCategory] ?? requestedCategory;
   const formattedCategoryTitle =
-    categoryTitle.charAt(0).toUpperCase() + categoryTitle.slice(1);
-  const snusCategories = ["snus", "snusessens"];
+    INVENTORY_CATEGORIES.find((item) => item.id === category)?.label ??
+    (SNUS_CATEGORIES.some((item) => item === category) ? category : "Inventory");
   const isRestrictedCategory =
     profileLoaded &&
-    snusCategories.includes(category) &&
+    SNUS_CATEGORIES.some((item) => item === category) &&
     !profile?.snus_is_true;
   const filtered = items
     .filter((item) => item.category === category)

@@ -5,10 +5,13 @@ import Link from "next/link";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
 import PageHeading from "@/app/components/PageHeading";
-import BackButton from "@/app/profiles/BackButton";
+import BackButton from "@/app/members/BackButton";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
+import ReportContentButton from "@/app/components/ReportContentButton";
 import {
   encodeForumContent,
+  type ForumAttachment,
+  type ForumAttachmentRef,
   FORUM_IMAGE_TYPES,
   ForumImage,
   MAX_FORUM_IMAGE_SIZE,
@@ -18,6 +21,34 @@ import {
 interface ForumAuthor {
   id: string;
   username: string;
+  profileUsername: string | null;
+  avatar_url: string | null;
+}
+
+function AuthorLink({ author }: { author: ForumAuthor }) {
+  const content = (
+    <>
+      <img
+        src={author.avatar_url || "/default-avatar.png"}
+        alt=""
+        className="h-6 w-6 rounded-full border border-white/20 object-cover"
+      />
+      <span>{author.username}</span>
+    </>
+  );
+
+  if (!author.profileUsername) {
+    return <span className="inline-flex items-center gap-2 align-middle">{content}</span>;
+  }
+
+  return (
+    <Link
+      href={`/members/${encodeURIComponent(author.profileUsername)}`}
+      className="inline-flex items-center gap-2 align-middle hover:text-white hover:underline"
+    >
+      {content}
+    </Link>
+  );
 }
 
 interface ForumReply {
@@ -28,6 +59,7 @@ interface ForumReply {
   updated_at: string;
   author: ForumAuthor;
   images: ForumImage[];
+  attachments: ForumAttachment[];
 }
 
 interface ForumTopic {
@@ -40,7 +72,13 @@ interface ForumTopic {
   updated_at: string;
   author: ForumAuthor;
   images: ForumImage[];
+  attachments: ForumAttachment[];
   replies: ForumReply[];
+}
+
+interface ForumAttachmentChoice extends ForumAttachmentRef {
+  key: string;
+  label: string;
 }
 
 const FORUM_CATEGORIES = [
@@ -90,6 +128,76 @@ function ForumImages({ images }: { images: ForumImage[] }) {
         </a>
       ))}
     </div>
+  );
+}
+
+function ForumAttachmentCards({ attachments }: { attachments: ForumAttachment[] }) {
+  if (!attachments.length) return null;
+  return (
+    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+      {attachments.map((attachment) => {
+        const card = (
+          <span className="block min-w-0 rounded-lg border border-white/10 bg-black/25 p-3">
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-green-300">
+              {attachment.type}
+            </span>
+            <span className="mt-1 block truncate text-sm font-medium">
+              {attachment.name}
+            </span>
+            {attachment.url && (
+              <span className="mt-1 block text-xs text-white/50">Open attachment →</span>
+            )}
+          </span>
+        );
+        return attachment.url ? (
+          <a
+            key={`${attachment.type}:${attachment.id}`}
+            href={attachment.url}
+            className="rounded-lg transition hover:border-green-400/30 hover:bg-white/5"
+          >
+            {card}
+          </a>
+        ) : (
+          <div key={`${attachment.type}:${attachment.id}`}>{card}</div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ForumAttachmentPicker({
+  choices,
+  value,
+  onChange,
+  disabled,
+}: {
+  choices: ForumAttachmentChoice[];
+  value: string[];
+  onChange: (value: string[]) => void;
+  disabled: boolean;
+}) {
+  return (
+    <label className="block text-sm font-medium">
+      Attach recipes or active batches
+      <select
+        multiple
+        value={value}
+        disabled={disabled}
+        onChange={(event) =>
+          onChange(Array.from(event.currentTarget.selectedOptions, (option) => option.value))
+        }
+        className="mt-2 min-h-28 w-full rounded-lg border border-white/20 bg-black/40 p-2 text-sm"
+      >
+        {choices.map((choice) => (
+          <option key={choice.key} value={choice.key}>
+            {choice.label}
+          </option>
+        ))}
+      </select>
+      <span className="mt-1 block text-xs font-normal text-white/50">
+        Select one or more items. Use Ctrl or Cmd to select multiple.
+      </span>
+    </label>
   );
 }
 
@@ -202,8 +310,11 @@ export default function CommunityForumPage() {
   const [body, setBody] = useState("");
   const [category, setCategory] = useState<ForumCategory>("Brewing");
   const [topicImages, setTopicImages] = useState<File[]>([]);
+  const [topicAttachments, setTopicAttachments] = useState<string[]>([]);
   const [replyBody, setReplyBody] = useState("");
   const [replyImages, setReplyImages] = useState<File[]>([]);
+  const [replyAttachments, setReplyAttachments] = useState<string[]>([]);
+  const [attachmentChoices, setAttachmentChoices] = useState<ForumAttachmentChoice[]>([]);
   const visibleTopics =
     selectedCategory === "All categories"
       ? topics
@@ -230,6 +341,63 @@ export default function CommunityForumPage() {
         } = await supabaseBrowser.auth.getSession();
         if (sessionError) throw sessionError;
         if (active) setUserId(session?.user.id ?? null);
+
+        if (session) {
+          try {
+            const [
+              { data: recipes, error: recipesError },
+              { data: vessels, error: vesselsError },
+            ] = await Promise.all([
+              supabaseBrowser
+                .from("recipes")
+                .select("id, name")
+                .eq("user_id", session.user.id)
+                .eq("is_public", true)
+                .order("name"),
+              supabaseBrowser
+                .from("kar")
+                .select("id")
+                .eq("user_id", session.user.id)
+                .eq("is_public", true),
+            ]);
+            if (recipesError || vesselsError) {
+              throw recipesError || vesselsError;
+            }
+            const vesselIds = (vessels ?? []).map((vessel) => vessel.id);
+            const { data: batches, error: batchesError } = vesselIds.length
+              ? await supabaseBrowser
+                  .from("batches")
+                  .select("id, name, status")
+                  .eq("user_id", session.user.id)
+                  .in("aktivt_kar", vesselIds)
+                  .in("status", ["Aktiv", "Sekundær", "secondary"])
+              : { data: [], error: null };
+            if (batchesError) throw batchesError;
+            if (active) {
+              setAttachmentChoices([
+                ...(recipes ?? []).map((recipe) => ({
+                  type: "recipe" as const,
+                  id: recipe.id,
+                  key: `recipe:${recipe.id}`,
+                  label: `Recipe · ${recipe.name}`,
+                })),
+                ...(batches ?? []).map((batch) => ({
+                  type: "batch" as const,
+                  id: batch.id,
+                  key: `batch:${batch.id}`,
+                  label: `Batch · ${batch.name}`,
+                })),
+              ]);
+            }
+          } catch (attachmentError) {
+            console.error("Could not load attachable recipes or batches", attachmentError);
+            if (active) {
+              setError(
+                "The forum is available, but attachable recipes and batches could not be loaded."
+              );
+            }
+          }
+        }
 
         await loadTopics();
       } catch (loadError) {
@@ -269,8 +437,8 @@ export default function CommunityForumPage() {
   async function createTopic(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!userId || submitting) return;
-    if (!body.trim() && topicImages.length === 0) {
-      setError("Write a message or attach at least one image.");
+    if (!body.trim() && topicImages.length === 0 && topicAttachments.length === 0) {
+      setError("Write a message or attach an image, recipe, or batch.");
       return;
     }
 
@@ -285,7 +453,14 @@ export default function CommunityForumPage() {
         .insert({
           author_id: userId,
           title: title.trim(),
-          body: encodeForumContent(body, uploadedImages.map((image) => image.path)),
+          body: encodeForumContent(
+            body,
+            uploadedImages.map((image) => image.path),
+            topicAttachments
+              .map((key) => attachmentChoices.find((choice) => choice.key === key))
+              .filter((choice): choice is ForumAttachmentChoice => !!choice)
+              .map(({ type, id }) => ({ type, id }))
+          ),
           category,
         });
 
@@ -305,6 +480,7 @@ export default function CommunityForumPage() {
       setBody("");
       setCategory("Brewing");
       setTopicImages([]);
+      setTopicAttachments([]);
       setTopicModalOpen(false);
       await loadTopics();
     } catch (loadError) {
@@ -331,8 +507,8 @@ export default function CommunityForumPage() {
   async function createReply(event: FormEvent<HTMLFormElement>, topicId: string) {
     event.preventDefault();
     if (!userId || submitting) return;
-    if (!replyBody.trim() && replyImages.length === 0) {
-      setError("Write a reply or attach at least one image.");
+    if (!replyBody.trim() && replyImages.length === 0 && replyAttachments.length === 0) {
+      setError("Write a reply or attach an image, recipe, or batch.");
       return;
     }
 
@@ -349,7 +525,11 @@ export default function CommunityForumPage() {
           author_id: userId,
           body: encodeForumContent(
             replyBody,
-            uploadedImages.map((image) => image.path)
+            uploadedImages.map((image) => image.path),
+            replyAttachments
+              .map((key) => attachmentChoices.find((choice) => choice.key === key))
+              .filter((choice): choice is ForumAttachmentChoice => !!choice)
+              .map(({ type, id }) => ({ type, id }))
           ),
         });
 
@@ -367,6 +547,7 @@ export default function CommunityForumPage() {
       replyCreated = true;
       setReplyBody("");
       setReplyImages([]);
+      setReplyAttachments([]);
       setReplyingTo(null);
       await loadTopics();
     } catch (loadError) {
@@ -408,12 +589,14 @@ export default function CommunityForumPage() {
 
     setSubmitting(true);
     setError("");
+    const topic = topics.find((item) => item.id === topicId);
     const { data, error: updateError } = await supabaseBrowser
       .from("forum_topics")
       .update({
         body: encodeForumContent(
           editBody,
-          topics.find((topic) => topic.id === topicId)?.images.map((image) => image.path) ?? []
+          topic?.images.map((image) => image.path) ?? [],
+          topic?.attachments.map(({ type, id }) => ({ type, id })) ?? []
         ),
       })
       .eq("id", topicId)
@@ -449,7 +632,8 @@ export default function CommunityForumPage() {
       .update({
         body: encodeForumContent(
           editBody,
-          reply.images.map((image) => image.path)
+          reply.images.map((image) => image.path),
+          reply.attachments.map(({ type, id }) => ({ type, id }))
         ),
       })
       .eq("id", reply.id)
@@ -701,10 +885,11 @@ export default function CommunityForumPage() {
                   <div className="mt-3">
                     {topic.body && <p className="whitespace-pre-wrap">{topic.body}</p>}
                     <ForumImages images={topic.images} />
+                    <ForumAttachmentCards attachments={topic.attachments} />
                   </div>
                 )}
                 <p className="mt-3 text-sm text-white/50">
-                  {topic.author.username} · {formatDate(topic.created_at)}
+                  <AuthorLink author={topic.author} /> · {formatDate(topic.created_at)}
                   {new Date(topic.updated_at).getTime() >
                     new Date(topic.created_at).getTime() && (
                     <span className="ml-2 rounded-full border border-white/15 bg-white/10 px-2 py-0.5 text-xs text-white/70">
@@ -712,6 +897,13 @@ export default function CommunityForumPage() {
                     </span>
                   )}
                 </p>
+                {userId && userId !== topic.author_id && (
+                  <ReportContentButton
+                    contentType="post"
+                    contentId={topic.id}
+                    contextUrl={`/community/forum#forum-topic-${topic.id}`}
+                  />
+                )}
 
                 {topic.replies.length > 0 && (
                   <div className="mt-5 space-y-3 border-l border-white/15 pl-4">
@@ -753,6 +945,7 @@ export default function CommunityForumPage() {
                             <div className="min-w-0 flex-1">
                               {reply.body && <p className="whitespace-pre-wrap">{reply.body}</p>}
                               <ForumImages images={reply.images} />
+                              <ForumAttachmentCards attachments={reply.attachments} />
                             </div>
                             {userId === reply.author_id && (
                               <div className="flex shrink-0 gap-3">
@@ -777,7 +970,7 @@ export default function CommunityForumPage() {
                           </div>
                         )}
                         <p className="mt-2 text-xs text-white/50">
-                          {reply.author.username} · {formatDate(reply.created_at)}
+                          <AuthorLink author={reply.author} /> · {formatDate(reply.created_at)}
                           {new Date(reply.updated_at).getTime() >
                             new Date(reply.created_at).getTime() && (
                             <span className="ml-2 rounded-full border border-white/15 bg-white/10 px-2 py-0.5 text-xs text-white/70">
@@ -785,6 +978,13 @@ export default function CommunityForumPage() {
                             </span>
                           )}
                         </p>
+                        {userId && userId !== reply.author_id && (
+                          <ReportContentButton
+                            contentType="reply"
+                            contentId={reply.id}
+                            contextUrl={`/community/forum#forum-topic-${topic.id}`}
+                          />
+                        )}
                       </div>
                     ))}
                   </div>
@@ -812,6 +1012,12 @@ export default function CommunityForumPage() {
                           setError={setError}
                           disabled={submitting}
                         />
+                        <ForumAttachmentPicker
+                          choices={attachmentChoices}
+                          value={replyAttachments}
+                          onChange={setReplyAttachments}
+                          disabled={submitting}
+                        />
                         <div className="flex gap-3">
                           <button
                             type="submit"
@@ -826,6 +1032,7 @@ export default function CommunityForumPage() {
                               setReplyingTo(null);
                               setReplyBody("");
                               setReplyImages([]);
+                              setReplyAttachments([]);
                             }}
                             className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm hover:bg-white/20"
                           >
@@ -933,6 +1140,12 @@ export default function CommunityForumPage() {
                 files={topicImages}
                 onChange={setTopicImages}
                 setError={setError}
+                disabled={submitting}
+              />
+              <ForumAttachmentPicker
+                choices={attachmentChoices}
+                value={topicAttachments}
+                onChange={setTopicAttachments}
                 disabled={submitting}
               />
               <div className="flex justify-end gap-3 pt-2">

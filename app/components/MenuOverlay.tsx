@@ -10,6 +10,7 @@ export default function MenuOverlay({ current }: { current: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [canManageKegs, setCanManageKegs] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isModerator, setIsModerator] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -26,14 +27,22 @@ export default function MenuOverlay({ current }: { current: string }) {
           if (active) {
             setCanManageKegs(false);
             setIsAdmin(false);
+            setIsModerator(false);
           }
           return;
         }
 
+        const sessionResponse = await fetch("/api/session", {
+          cache: "no-store",
+          credentials: "include",
+        });
+        if (!sessionResponse.ok) {
+          throw new Error(`Could not load membership role (${sessionResponse.status})`);
+        }
+        const sessionData: { role: string } = await sessionResponse.json();
         if (active) {
-          setIsAdmin(
-            session.user.email?.toLowerCase() === "mads@snekkerlien.no"
-          );
+          setIsAdmin(sessionData.role === "admin");
+          setIsModerator(sessionData.role === "moderator");
         }
 
         const response = await fetch("/api/profile", {
@@ -45,7 +54,11 @@ export default function MenuOverlay({ current }: { current: string }) {
         }
 
         const profile = await response.json();
-        if (active) setCanManageKegs(profile.can_manage_kegs === true);
+        if (active) {
+          setCanManageKegs(
+            profile.can_manage_kegs === true || sessionData.role === "admin"
+          );
+        }
       } catch (error) {
         console.error("Could not load keg management permission", error);
       }
@@ -77,10 +90,10 @@ export default function MenuOverlay({ current }: { current: string }) {
   
   const brewingItems: { href: string; label: string; key: string }[] = [
     { href: "/dashboard", label: "Dashboard", key: "dashboard" },
-    { href: "/batchhistorikk", label: "Batch history", key: "batchhistorikk" },
-    { href: "/recipes", label: "My recipes", key: "recipes" },
+    { href: "/batch-history", label: "Batch history", key: "batchhistorikk" },
+    { href: "/my-recipes", label: "My recipes", key: "recipes" },
     { href: "/inventory", label: "Inventory", key: "inventory" },
-    { href: "/abvtools", label: "ABV Tools", key: "abvtools" },
+    { href: "/abv-tools", label: "ABV Tools", key: "abvtools" },
   ];
 
   if (canManageKegs) {
@@ -98,24 +111,30 @@ export default function MenuOverlay({ current }: { current: string }) {
     {
       label: "Community",
       items: [
-        { href: "/profiles", label: "Members", key: "profiles" },
+        { href: "/members", label: "Members", key: "profiles" },
         { href: "/community/friends", label: "Friends", key: "friends" },
         { href: "/community/messages", label: "Messages", key: "messages" },
         { href: "/community/forum", label: "Forum", key: "forum" },
       ],
     },
-    ...(isAdmin
+    ...(isAdmin || isModerator
       ? [
           {
-            label: "Admin",
-            items: [{ href: "/admin", label: "Admin panel", key: "admin" }],
+            label: isAdmin ? "Admin" : "Moderation",
+            items: [
+              {
+                href: isModerator && !isAdmin ? "/admin/community-reports" : "/admin",
+                label: isAdmin ? "Admin panel" : "Community reports",
+                key: "admin",
+              },
+            ],
           },
         ]
       : []),
     {
       label: "Account",
       items: [
-        { href: "/account", label: "My account", key: "account" },
+        { href: "/my-account", label: "My account", key: "account" },
         { href: "/settings", label: "Settings", key: "settings" },
       ],
     },

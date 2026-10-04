@@ -5,6 +5,7 @@ import * as Actions from "../../actions";
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import { useRecipePrefill } from "../../../../../lib/recipes/useRecipePrefill";
+import { UnitInput, UnitSymbol, useUnits } from "../../../../components/Units";
 
 
 export default function NewBeerPage({
@@ -15,6 +16,7 @@ export default function NewBeerPage({
   searchParams?: { recipe?: string };
 }) {
   const [loading, setLoading] = useState(false);
+  const { label } = useUnits();
   const { recipe, loading: recipeLoading, error: recipeError } =
     useRecipePrefill(searchParams?.recipe, "Beer");
 
@@ -61,14 +63,21 @@ function removeDryHop(index: number) {
   setDryHops(updated);
 }
 
-const [boilVolume, setBoilVolume] = useState<number | "">("");
+const [boilVolume, setBoilVolume] = useState("");
 const [volume, setVolume] = useState("");
 
 useEffect(() => {
   if (!recipe) return;
   setVolume(recipe.volume == null ? "" : String(recipe.volume));
-  setBoilVolume(recipe.boil_volume == null ? "" : Number(recipe.boil_volume));
-  setMalts(Array.isArray(recipe.malts) ? recipe.malts : []);
+  setBoilVolume(recipe.boil_volume == null ? "" : String(recipe.boil_volume));
+  setMalts(
+    Array.isArray(recipe.malts)
+      ? recipe.malts.map((malt: any) => ({
+          ...malt,
+          amount: String(malt.amount ?? ""),
+        }))
+      : []
+  );
   setHops(
     Array.isArray(recipe.hops)
       ? recipe.hops.map((hop: any) => ({
@@ -140,27 +149,27 @@ useEffect(() => {
 
           {/* Volume */}
           <div>
-            <label className="block mb-1 font-semibold">Volume (L)</label>
-            <input
-  name="volume_l"
-  type="text"
-  placeholder="Batchvolume"
-  value={volume}
-  onChange={(e) => setVolume(e.target.value)}
-  required
-  className="w-full p-3 rounded bg-black/40 border border-white/20"
-/>
+            <label className="block mb-1 font-semibold">Volume (<UnitSymbol kind="volume" />)</label>
+            <UnitInput
+              name="volume_l"
+              kind="volume"
+              placeholder="Batchvolume"
+              value={volume}
+              onValueChange={setVolume}
+              required
+              className="w-full p-3 rounded bg-black/40 border border-white/20"
+            />
 
           </div>
 
           <div>
-  <label className="block mb-1 font-semibold">Boil Volume (L)</label>
-  <input
+  <label className="block mb-1 font-semibold">Boil Volume (<UnitSymbol kind="volume" />)</label>
+  <UnitInput
   name="boil_volume_l"
-  type="text"
+  kind="volume"
   placeholder="Volume before boil"
   value={boilVolume}
-  onChange={(e) => setBoilVolume(e.target.value === "" ? "" : Number(e.target.value))}
+  onValueChange={setBoilVolume}
   required
   className="w-full p-3 rounded bg-black/40 border border-white/20"
   />
@@ -215,14 +224,14 @@ useEffect(() => {
     />
 
     {/* Amount */}
-    <input
-      placeholder="Amount (kg)"
-      type="text"
+    <UnitInput
+      kind="kg"
+      placeholder={`Amount (${label("kg")})`}
       className="p-3 rounded bg-black/40 border border-white/20 w-32"
       value={m.amount}
-      onChange={(e) => {
+      onValueChange={(value) => {
         const updated = [...malts];
-        updated[i].amount = e.target.value;
+        updated[i].amount = value;
         setMalts(updated);
       }}
     />
@@ -301,14 +310,14 @@ useEffect(() => {
 
 
     {/* Amount */}
-    <input
-      placeholder="Amount (g)"
-      type="text"
+    <UnitInput
+      kind="g"
+      placeholder={`Amount (${label("g")})`}
       className="p-3 rounded bg-black/40 border border-white/20 w-26"
       value={h.amount}
-      onChange={(e) => {
+      onValueChange={(value) => {
         const updated = [...hops];
-        updated[i].amount = e.target.value;
+        updated[i].amount = value;
         setHops(updated);
       }}
     />
@@ -395,14 +404,14 @@ useEffect(() => {
       />
 
       {/* Amount */}
-      <input
-        placeholder="Amount (g)"
-        type="text"
+      <UnitInput
+        kind="g"
+        placeholder={`Amount (${label("g")})`}
         className="p-3 rounded bg-black/40 border border-white/20 w-26"
         value={h.amount}
-        onChange={(e) => {
+        onValueChange={(value) => {
           const updated = [...dryHops];
-          updated[i].amount = e.target.value;
+          updated[i].amount = value;
           setDryHops(updated);
         }}
       />

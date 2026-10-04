@@ -1,7 +1,7 @@
     import { NextResponse } from "next/server";
     import { cookies } from "next/headers";
     import { createServerClient } from "@supabase/ssr";
-    import { calcIBU, calcDryHopIBU, calcEBC, calcDryHopEBC } from "@/app/recipes/actions/createRecipe";
+    import { calcIBU, calcDryHopIBU, calcEBC, calcDryHopEBC } from "@/app/my-recipes/actions/createRecipe";
 
 
     export const runtime = "nodejs";

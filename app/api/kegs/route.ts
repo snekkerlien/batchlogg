@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -50,6 +51,27 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ keg: data ?? null });
   }
 
+  const { supabase } = supabaseServer();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
+  const { data: profile, error: profileError } = await serviceRole
+    .from("profiles")
+    .select("can_manage_kegs, membership_status")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (profileError) {
+    console.error("Could not verify keg access", profileError);
+    return NextResponse.json({ error: "Could not verify keg access" }, { status: 500 });
+  }
+  if (!profile || (profile.can_manage_kegs !== true && profile.membership_status !== "admin")) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const { data, error } = await serviceRole
     .from("kegs")
     .select("*")
@@ -63,6 +85,27 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const { supabase } = supabaseServer();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
+  const { data: profile, error: profileError } = await serviceRole
+    .from("profiles")
+    .select("can_manage_kegs, membership_status")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (profileError) {
+    console.error("Could not verify keg access", profileError);
+    return NextResponse.json({ error: "Could not verify keg access" }, { status: 500 });
+  }
+  if (!profile || (profile.can_manage_kegs !== true && profile.membership_status !== "admin")) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   let body: Record<string, unknown>;
   try {
     body = await request.json();

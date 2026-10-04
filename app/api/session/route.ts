@@ -2,6 +2,7 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
+import { getMembershipRole } from "@/lib/auth/permissions";
 
 export async function GET() {
 
@@ -19,11 +20,11 @@ export async function GET() {
   
 
   if (!user) {
-    
+    return NextResponse.json({ user: null, role: "member" });
     return NextResponse.json({ user: null });
   }
-
-  
-
-  return NextResponse.json({ user });
+  return NextResponse.json({
+    user,
+    role: await getMembershipRole(supabase, user),
+  });
 }
