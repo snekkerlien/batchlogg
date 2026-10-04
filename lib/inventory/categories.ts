@@ -2,7 +2,7 @@ export const INVENTORY_CATEGORIES = [
   {
     id: "fermentables",
     label: "Fermentables",
-    subcategories: ["Base Malt", "Specialty Malt", "Sugar", "Honey", "Extract"],
+    subcategories: ["Base Malt", "Specialty Malt", "Sugar", "Honey", "Juice", "Extract"],
   },
   { id: "hops", label: "Hops", subcategories: [] },
   { id: "yeast", label: "Yeast", subcategories: [] },

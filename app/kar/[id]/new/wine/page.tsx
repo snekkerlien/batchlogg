@@ -6,7 +6,7 @@ import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import { useRecipePrefill } from "../../../../../lib/recipes/useRecipePrefill";
 import { UnitInput, UnitSymbol } from "../../../../components/Units";
-import InventoryUsageFields, {
+import {
   BatchInventoryProvider,
   InventoryAdditiveFields,
   InventoryIngredientSelect,
@@ -112,6 +112,10 @@ export default function NewWinePage({
             <InventoryIngredientSelect
               name="juice_type"
               selectionKey="juice"
+              category="fermentables"
+              subcategory="Juice"
+              trackAmount
+              amountFieldName="inventory_juice_amount"
               defaultValue={recipe?.juice_type ?? ""}
               placeholder="Grape / Juice type"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
@@ -179,8 +183,6 @@ export default function NewWinePage({
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
             />
           </div>
-
-          <InventoryUsageFields />
 
           {/* Submit */}
           <button

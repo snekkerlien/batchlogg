@@ -526,8 +526,29 @@ if (type === "Beer" || type === "Braggot") {
       );
     }
     addIngredientUse("sugar", sugar_amount, "kg", "sugar", "fermentables", "Sugar");
-    if ((type === "Cider" || type === "Wine") && juice_type) {
-      addIngredientUse(juice_type, volume_l, "l", "juice");
+    const inventoryJuiceAmount = formData.get("inventory_juice_amount");
+    if ((type === "Cider" || type === "Wine") && (juice_type || inventoryJuiceAmount)) {
+      const juiceItem = (inventoryItems ?? []).find(
+        (item) =>
+          item.id === inventorySelections.juice &&
+          item.category === "fermentables" &&
+          item.subcategory?.toLocaleLowerCase() === "juice"
+      );
+      const juiceAmount = Number(inventoryJuiceAmount);
+      if (
+        !juiceItem ||
+        typeof inventoryJuiceAmount !== "string" ||
+        inventoryJuiceAmount.trim() === "" ||
+        !Number.isFinite(juiceAmount) ||
+        juiceAmount <= 0
+      ) {
+        redirect(
+          `/kar/${karId}?inventory_error=${encodeURIComponent(
+            "Select a juice inventory item and enter the amount in the unit shown beside it."
+          )}`
+        );
+      }
+      addIngredientUse(juice_type || juiceItem.name, juiceAmount, juiceItem.unit, "juice", "fermentables", "Juice");
     }
     for (const [index, malt] of malts.entries()) {
       addIngredientUse(malt.name, malt.amount, malt.unit || "kg", `malt:${index}`, "fermentables");

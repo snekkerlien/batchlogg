@@ -6,7 +6,7 @@ import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import { useRecipePrefill } from "../../../../../lib/recipes/useRecipePrefill";
 import { UnitInput, UnitSymbol } from "../../../../components/Units";
-import InventoryUsageFields, {
+import {
   BatchInventoryProvider,
   InventoryAdditiveFields,
   InventoryIngredientSelect,
@@ -112,8 +112,32 @@ export default function NewCiderPage({
             <InventoryIngredientSelect
               name="juice_type"
               selectionKey="juice"
+              category="fermentables"
+              subcategory="Juice"
+              trackAmount
+              amountFieldName="inventory_juice_amount"
               defaultValue={recipe?.juice_type ?? ""}
               placeholder="Juice type"
+              className="w-full p-3 rounded bg-black/40 border border-white/20"
+            />
+          </div>
+
+          {/* Sugar (optional) */}
+          <div>
+            <label className="block mb-1 font-semibold">Sugar added (optional) (<UnitSymbol kind="kg" />)</label>
+            <InventoryIngredientSelect
+              selectionKey="sugar"
+              placeholder="Sugar inventory item"
+              category="fermentables"
+              subcategory="Sugar"
+              enabledOnly
+              className="w-full p-3 rounded bg-black/40 border border-white/20 mb-2"
+            />
+            <UnitInput
+              name="sugar_amount"
+              kind="kg"
+              defaultValue={recipe?.sugar_amount == null ? "" : String(recipe.sugar_amount)}
+              placeholder="Example: 1.5 kg"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
@@ -159,8 +183,6 @@ export default function NewCiderPage({
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
             />
           </div>
-
-          <InventoryUsageFields />
 
           {/* Submit */}
           <button

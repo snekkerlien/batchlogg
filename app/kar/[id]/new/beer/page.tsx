@@ -6,7 +6,7 @@ import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import { useRecipePrefill } from "../../../../../lib/recipes/useRecipePrefill";
 import { UnitInput, UnitSymbol, useUnits } from "../../../../components/Units";
-import InventoryUsageFields, {
+import {
   BatchInventoryProvider,
   InventoryAdditiveFields,
   InventoryIngredientSelect,
@@ -559,8 +559,6 @@ useEffect(() => {
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
             />
           </div>
-
-          <InventoryUsageFields />
 
           {/* Submit */}
           <button

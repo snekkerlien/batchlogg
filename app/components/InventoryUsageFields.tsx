@@ -145,6 +145,11 @@ export function BatchInventoryProvider({ children }: { children: ReactNode }) {
         name="inventory_load_error"
         value={error ? "true" : "false"}
       />
+      {error && (
+        <p role="alert" className="rounded-lg border border-amber-400/40 bg-amber-950/40 p-3 text-sm text-amber-200">
+          {error}
+        </p>
+      )}
       {children}
       {enabled && (
         <div className="mt-2 border-t border-white/10 pt-4">
@@ -777,140 +782,5 @@ export function InventoryAdditiveFields({
         + Add additive
       </button>
     </div>
-  );
-}
-
-export default function InventoryUsageFields() {
-  const context = useContext(BatchInventoryContext);
-  if (!context) {
-    throw new Error("Inventory usage fields must be inside BatchInventoryProvider");
-  }
-  const { enabled, loaded, items, error } = context;
-  const [usage, setUsage] = useState<InventoryUsage[]>([]);
-
-  function updateUsage(index: number, changes: Partial<InventoryUsage>) {
-    setUsage((current) =>
-      current.map((entry, entryIndex) =>
-        entryIndex === index ? { ...entry, ...changes } : entry
-      )
-    );
-  }
-
-  const selectedItemIds = new Set(
-    usage.map((entry) => entry.inventory_item_id).filter(Boolean)
-  );
-
-  return (
-    <>
-      <input type="hidden" name="inventory_usage_json" value={JSON.stringify(usage)} />
-      {!loaded && (
-        <p role="status" className="text-sm text-white/60">
-          Checking inventory preference…
-        </p>
-      )}
-      {error && (
-        <p role="alert" className="rounded-lg border border-amber-400/40 bg-amber-950/40 p-3 text-sm text-amber-200">
-          {error}
-        </p>
-      )}
-      {enabled && (
-        <section className="rounded-xl border border-green-500/30 bg-green-950/20 p-4">
-          <h2 className="font-semibold text-green-200">Inventory used in this batch</h2>
-          <p className="mt-1 text-sm text-white/65">
-            Ingredients with recipe amounts are deducted automatically. Add ingredients without
-            a structured amount here, using the unit shown for the inventory item.
-          </p>
-
-          {items.length === 0 ? (
-            <p className="mt-4 text-sm text-amber-200">
-              Your inventory is empty. Add inventory items before creating an inventory-tracked batch.
-            </p>
-          ) : (
-            <div className="mt-4 space-y-3">
-              {usage.map((entry, index) => {
-                const selectedItem = items.find(
-                  (item) => item.id === entry.inventory_item_id
-                );
-                return (
-                  <div
-                    key={index}
-                    className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(8rem,0.6fr)_auto]"
-                  >
-                    <select
-                      aria-label={`Inventory item ${index + 1}`}
-                      required
-                      value={entry.inventory_item_id}
-                      onChange={(event) =>
-                        updateUsage(index, {
-                          inventory_item_id: event.target.value,
-                          amount: "",
-                        })
-                      }
-                      className="min-w-0 rounded-lg border border-white/20 bg-zinc-900 p-3"
-                    >
-                      <option value="">Choose an inventory item</option>
-                      {items
-                        .filter(
-                          (item) =>
-                            (item.id === entry.inventory_item_id ||
-                              !selectedItemIds.has(item.id)) &&
-                            !/\bwater\b/i.test(item.name)
-                        )
-                        .map((item) => (
-                          <option key={item.id} value={item.id}>
-                            {item.name} · {item.amount} {item.unit}
-                          </option>
-                        ))}
-                    </select>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        required
-                        min="0.000001"
-                        max={selectedItem?.amount}
-                        step="any"
-                        value={entry.amount}
-                        onChange={(event) =>
-                          updateUsage(index, { amount: event.target.value })
-                        }
-                        aria-label={`Amount used for item ${index + 1}`}
-                        className="w-full rounded-lg border border-white/20 bg-black/40 p-3"
-                      />
-                      <span className="min-w-8 text-sm text-white/70">
-                        {selectedItem?.unit ?? ""}
-                      </span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setUsage((current) =>
-                          current.filter((_, entryIndex) => entryIndex !== index)
-                        )
-                      }
-                      className="rounded-lg border border-white/20 px-3 py-2 text-sm hover:bg-white/10"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                );
-              })}
-              <button
-                type="button"
-                disabled={usage.length >= items.length}
-                onClick={() =>
-                  setUsage((current) => [
-                    ...current,
-                    { inventory_item_id: "", amount: "" },
-                  ])
-                }
-                className="rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm font-semibold hover:bg-white/10 disabled:opacity-50"
-              >
-                + Add inventory item
-              </button>
-            </div>
-          )}
-        </section>
-      )}
-    </>
   );
 }
