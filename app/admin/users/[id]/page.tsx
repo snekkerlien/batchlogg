@@ -72,6 +72,7 @@ export default async function UserAdminPage({
     const email = formData.get("email")?.toString();
     const username = formData.get("username")?.toString();
     const canManageKegs = formData.get("can_manage_kegs") === "on";
+    const snusIsTrue = formData.get("snus_is_true") === "on";
     const membershipStatus = formData.get("membership_status")?.toString();
 
     if (
@@ -98,6 +99,7 @@ export default async function UserAdminPage({
         email,
         username,
         can_manage_kegs: canManageKegs,
+        snus_is_true: snusIsTrue,
         membership_status: membershipStatus,
       })
       .eq("id", userId);
@@ -191,6 +193,16 @@ export default async function UserAdminPage({
                 className="h-4 w-4 accent-green-600"
               />
               <span className="text-sm text-white/80">Can manage kegs</span>
+            </label>
+
+            <label className="flex items-center gap-3 rounded-lg border border-white/10 bg-black/20 p-4">
+              <input
+                type="checkbox"
+                name="snus_is_true"
+                defaultChecked={profile?.snus_is_true === true}
+                className="h-4 w-4 accent-green-600"
+              />
+              <span className="text-sm text-white/80">Snus access</span>
             </label>
 
             <button

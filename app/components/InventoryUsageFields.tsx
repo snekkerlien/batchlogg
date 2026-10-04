@@ -398,9 +398,7 @@ function InventoryItemCreator({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const isHop = itemCategory === "hops";
-  const isMalt =
-    itemCategory === "fermentables" &&
-    (itemSubcategory === "Base Malt" || itemSubcategory === "Specialty Malt");
+  const isMalt = itemCategory === "malts";
   const selectedCategory = INVENTORY_CATEGORIES.find(
     (item) => item.id === itemCategory
   );

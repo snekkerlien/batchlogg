@@ -26,9 +26,7 @@ export default function AddItemForm({
     hop_year: "",
   });
   const isHop = form.category === "hops";
-  const isMalt =
-    form.category === "fermentables" &&
-    (form.subcategory === "Base Malt" || form.subcategory === "Specialty Malt");
+  const isMalt = form.category === "malts";
 
   const visibleCategories =
     profile?.snus_is_true

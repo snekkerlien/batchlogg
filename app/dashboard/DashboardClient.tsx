@@ -256,7 +256,7 @@ useEffect(() => {
               ...current,
               {
                 id: createdKar.id,
-                nummer: createdKar.nummer,
+                nummer: current.length + 1,
                 created_at: createdKar.created_at,
                 status: "Ledig",
                 batchName: null,
@@ -380,7 +380,7 @@ useEffect(() => {
             <div
               className="text-lg font-bold text-green-300 text-center leading-tight line-clamp-2"
             >
-              {k.batchName ?? `Vessel`}
+              {k.batchName ?? `Vessel ${k.nummer}`}
             </div>
 
 

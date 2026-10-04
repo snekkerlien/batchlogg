@@ -2,7 +2,12 @@ export const INVENTORY_CATEGORIES = [
   {
     id: "fermentables",
     label: "Fermentables",
-    subcategories: ["Base Malt", "Specialty Malt", "Sugar", "Honey", "Juice", "Extract"],
+    subcategories: ["Sugar", "Honey", "Juice", "Extract"],
+  },
+  {
+    id: "malts",
+    label: "Malts",
+    subcategories: ["Base Malt", "Specialty Malt"],
   },
   { id: "hops", label: "Hops", subcategories: [] },
   { id: "yeast", label: "Yeast", subcategories: [] },
@@ -17,8 +22,13 @@ export const INVENTORY_CATEGORIES = [
     subcategories: ["Fruit", "Spices", "Herbs", "Wood"],
   },
   {
+    id: "water-chemicals",
+    label: "Water & Chemicals",
+    subcategories: ["Water", "Campden", "Minerals", "Acids", "Sanitizers"],
+  },
+  {
     id: "packaging",
-    label: "Packaging",
+    label: "Bottling",
     subcategories: ["Bottles", "Caps", "Corks", "Kegs"],
   },
   {

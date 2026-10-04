@@ -22,7 +22,7 @@ export async function GET(
   const { data: recipe, error } = await supabase
     .from("recipes")
     .select(
-      "id, type, name, volume, og, honey_type, honey_amount, fruits, juice_type, sugar_amount, malts, hops, dry_hops, boil_time, boil_volume, yeast, additives, full_process, notes, ingredients, steps"
+      "id, type, name, volume, og, honey_type, honey_amount, base_liquid, base_liquid_amount, fruits, juice_type, sugar_amount, malts, hops, dry_hops, boil_time, boil_volume, yeast, additives, full_process, notes, ingredients, steps"
     )
     .eq("id", params.id)
     .eq("user_id", user.id)

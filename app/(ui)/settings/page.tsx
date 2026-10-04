@@ -6,6 +6,7 @@ import MenuOverlay from "../../components/MenuOverlay";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import PageHeading from "../../components/PageHeading";
 import { UnitToggle } from "../../components/Units";
+import FeedbackForm from "./FeedbackForm";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import {
   deleteAccount,
@@ -580,6 +581,13 @@ export default function SettingsPage() {
               </div>
             </div>
           )}
+        </section>
+
+        <section className="mb-8 border-b border-white/10 pb-6">
+          <h2 className="text-lg font-semibold text-center mb-4 text-green-300">
+            Feedback
+          </h2>
+          <FeedbackForm />
         </section>
 
         <section className="border-b border-white/10 pb-6">

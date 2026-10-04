@@ -272,15 +272,14 @@ export async function createBatch(formData: FormData) {
     throw new Error("Dette karet har allerede en aktiv batch.");
   }
 
-  // Finn neste batchnummer
-  const { data: last } = await supabase
+  // Neste batchnummer, telt fra 1 per bruker
+  const { data: userBatches } = await supabase
     .from("batches")
     .select("batchnummer")
-    .order("batchnummer", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .eq("user_id", userId);
 
-  const nextNumber = last ? Number(last.batchnummer) + 1 : 1;
+  const nextNumber =
+    Math.max(0, ...(userBatches ?? []).map((b) => Number(b.batchnummer) || 0)) + 1;
   const formattedBatchnummer = String(nextNumber).padStart(4, "0");
 
   // Base fields
@@ -299,6 +298,16 @@ export async function createBatch(formData: FormData) {
   let honey_amount = (formData.get("honey_amount") as string) || "";
   const yeast = (formData.get("yeast") as string) || "";
 
+  // Base liquid is mead-only and defaults to plain water when left empty
+  const base_liquid =
+    type === "Mead"
+      ? ((formData.get("base_liquid") as string) || "").trim() || "Water"
+      : null;
+  const baseLiquidAmountRaw = (formData.get("base_liquid_amount") as string) || "";
+  const base_liquid_amount =
+    type === "Mead" && baseLiquidAmountRaw.trim() !== "" && Number(baseLiquidAmountRaw) > 0
+      ? Number(baseLiquidAmountRaw)
+      : null;
   const fruits_json = formData.get("fruits_json") as string;
   const fruits: Fruit[] = fruits_json ? JSON.parse(fruits_json) : [];
 
@@ -551,7 +560,7 @@ if (type === "Beer" || type === "Braggot") {
       addIngredientUse(juice_type || juiceItem.name, juiceAmount, juiceItem.unit, "juice", "fermentables", "Juice");
     }
     for (const [index, malt] of malts.entries()) {
-      addIngredientUse(malt.name, malt.amount, malt.unit || "kg", `malt:${index}`, "fermentables");
+      addIngredientUse(malt.name, malt.amount, malt.unit || "kg", `malt:${index}`, "malts");
     }
     for (const [index, hop] of hops.entries()) {
       addIngredientUse(hop.name, hop.amount, hop.unit || "g", `hop:${index}`, "hops");
@@ -925,7 +934,8 @@ ${notes}
       honey_amount,
       fruits,
 
-      // Shared
+      base_liquid,
+      base_liquid_amount,
       yeast,
       additives,
       full_process,
@@ -1107,6 +1117,70 @@ export async function moveToSecondary(formData: FormData) {
 }
 
 // ---------------------------------------------------------
+// FLYTT BATCH TIL ANNET KAR
+// ---------------------------------------------------------
+export async function moveBatchToVessel(formData: FormData) {
+  const { supabase } = supabaseServer();
+
+  const batchId = formData.get("batch_id") as string;
+  const karId = formData.get("kar_id") as string;
+  const targetKarId = formData.get("target_kar_id") as string;
+
+  if (!batchId || !karId || !targetKarId || karId === targetKarId) {
+    throw new Error("Batch, current vessel and a different target vessel are required");
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Authentication required");
+
+  const { data: batch } = await supabase
+    .from("batches")
+    .select("id, status")
+    .eq("id", batchId)
+    .eq("aktivt_kar", karId)
+    .eq("user_id", user.id)
+    .in("status", ["Aktiv", "Sekundær", "secondary"])
+    .maybeSingle();
+  if (!batch) throw new Error("Batch not found or access denied");
+
+  const { data: target } = await supabase
+    .from("kar")
+    .select("id")
+    .eq("id", targetKarId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (!target) throw new Error("Target vessel not found");
+
+  const { data: occupied } = await supabase
+    .from("batches")
+    .select("id")
+    .eq("aktivt_kar", targetKarId)
+    .in("status", ["Aktiv", "Sekundær", "secondary"])
+    .limit(1);
+  if (occupied && occupied.length > 0) {
+    throw new Error("Target vessel is not empty");
+  }
+
+  const { error } = await supabase
+    .from("batches")
+    .update({ aktivt_kar: targetKarId })
+    .eq("id", batchId)
+    .eq("user_id", user.id);
+  if (error) throw new Error(`Could not move batch: ${error.message}`);
+
+  const karStatus = batch.status === "Aktiv" ? "Aktiv" : "Sekundær";
+  await supabase.from("kar").update({ status: karStatus }).eq("id", targetKarId);
+  await supabase.from("kar").update({ status: "Ledig" }).eq("id", karId);
+
+  revalidatePath("/dashboard");
+  revalidatePath(`/kar/${karId}`);
+  revalidatePath(`/kar/${targetKarId}`);
+  redirect(`/kar/${targetKarId}`);
+}
+
+// ---------------------------------------------------------
 // 3. AVSLUTT BATCH
 // ---------------------------------------------------------
 export async function finishBatch(formData: FormData) {
@@ -1175,6 +1249,8 @@ export async function finishBatch(formData: FormData) {
       // Mead
       honey_type: batch.honey_type,
       honey_amount: batch.honey_amount,
+      base_liquid: batch.base_liquid,
+      base_liquid_amount: batch.base_liquid_amount,
       fruits: batch.fruits,
 
       // Wine / Cider / Seltzer

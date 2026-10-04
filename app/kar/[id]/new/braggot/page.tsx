@@ -174,8 +174,7 @@ useEffect(() => {
       <InventoryIngredientSelect
         selectionKey={`malt:${i}`}
         placeholder="Malt type (e.g. Pale Ale, Munich)"
-        category="fermentables"
-        subcategories={["Base Malt", "Specialty Malt"]}
+        category="malts"
         className="p-3 rounded bg-black/40 border border-white/20 w-full"
         value={m.name}
         onChange={(value) => {

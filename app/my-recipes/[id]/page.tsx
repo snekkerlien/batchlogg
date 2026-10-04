@@ -77,6 +77,12 @@ export default function RecipeNotesPage({ params }: { params: { id: string } }) 
           <p><strong>FG:</strong> {Number(recipe.fg).toFixed(3)}</p>
           <p><strong>ABV:</strong> {recipe.abv.toFixed(1)}%</p>
           <p><strong>Volume:</strong> <Qty kind="volume" value={recipe.volume} /></p>
+          {(recipe.base_liquid || recipe.base_liquid_amount) && (
+            <p>
+              <strong>Base liquid:</strong> {recipe.base_liquid || "Water"}
+              {recipe.base_liquid_amount ? <> – <Qty kind="volume" value={recipe.base_liquid_amount} /></> : null}
+            </p>
+          )}
         </div>
 
         {/* FULL RECIPE DETAILS */}

@@ -47,7 +47,7 @@ export default async function AdminPage() {
           </p>
         </header>
 
-        <section aria-label="Admin tools" className="grid gap-5 md:grid-cols-2">
+        <section aria-label="Admin tools" className="grid gap-5 md:grid-cols-2 md:[&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:w-[calc(50%-0.625rem)] md:[&>*:last-child:nth-child(odd)]:justify-self-center">
           {hasPermission(role, "manage_users") && <Link
             href="/admin/users"
             className="group rounded-xl border border-white/10 bg-white/5 p-6 transition hover:border-green-400/40 hover:bg-white/10"
@@ -59,9 +59,7 @@ export default async function AdminPage() {
                 </p>
                 <h2 className="mt-2 text-2xl font-bold">Manage users</h2>
               </div>
-              <span aria-hidden="true" className="text-2xl text-green-300 transition group-hover:translate-x-1">
-                →
-              </span>
+              <span aria-hidden="true" className="text-2xl text-green-300 transition group-hover:translate-x-1">→</span>
             </div>
             <p className="mt-4 leading-relaxed text-white/70">
               Review accounts and update user details. Open a user to grant or remove keg management access.
@@ -79,9 +77,7 @@ export default async function AdminPage() {
                 </p>
                 <h2 className="mt-2 text-2xl font-bold">Community reports</h2>
               </div>
-              <span aria-hidden="true" className="text-2xl text-green-300 transition group-hover:translate-x-1">
-                →
-              </span>
+              <span aria-hidden="true" className="text-2xl text-green-300 transition group-hover:translate-x-1">→</span>
             </div>
             <p className="mt-4 leading-relaxed text-white/70">
               Review member reports, inspect reported content, and track moderation history.
@@ -91,8 +87,7 @@ export default async function AdminPage() {
             href="/admin/content"
             className="group rounded-xl border border-white/10 bg-white/5 p-6 transition hover:border-green-400/40 hover:bg-white/10"
           >
-            <p className="text-sm font-semibold uppercase tracking-wider text-green-300">Site content</p>
-            <h2 className="mt-2 text-2xl font-bold">Updates & announcements</h2>
+            <div className="flex items-start justify-between gap-4"><div><p className="text-sm font-semibold uppercase tracking-wider text-green-300">Site content</p><h2 className="mt-2 text-2xl font-bold">Updates & announcements</h2></div><span aria-hidden="true" className="text-2xl text-green-300 transition group-hover:translate-x-1">→</span></div>
             <p className="mt-4 leading-relaxed text-white/70">
               Publish release notes and time-bounded announcements for members.
             </p>
@@ -101,10 +96,18 @@ export default async function AdminPage() {
             href="/admin/analytics"
             className="group rounded-xl border border-white/10 bg-white/5 p-6 transition hover:border-green-400/40 hover:bg-white/10"
           >
-            <p className="text-sm font-semibold uppercase tracking-wider text-green-300">Operations</p>
-            <h2 className="mt-2 text-2xl font-bold">Community analytics</h2>
+            <div className="flex items-start justify-between gap-4"><div><p className="text-sm font-semibold uppercase tracking-wider text-green-300">Operations</p><h2 className="mt-2 text-2xl font-bold">Community analytics</h2></div><span aria-hidden="true" className="text-2xl text-green-300 transition group-hover:translate-x-1">→</span></div>
             <p className="mt-4 leading-relaxed text-white/70">
               View privacy-preserving account, brewing, and moderation totals.
+            </p>
+          </Link>}
+          {hasPermission(role, "manage_users") && <Link
+            href="/admin/feedback"
+            className="group rounded-xl border border-white/10 bg-white/5 p-6 transition hover:border-green-400/40 hover:bg-white/10"
+          >
+            <div className="flex items-start justify-between gap-4"><div><p className="text-sm font-semibold uppercase tracking-wider text-green-300">Members</p><h2 className="mt-2 text-2xl font-bold">Feedback &amp; suggestions</h2></div><span aria-hidden="true" className="text-2xl text-green-300 transition group-hover:translate-x-1">→</span></div>
+            <p className="mt-4 leading-relaxed text-white/70">
+              Read feedback, suggestions and bug reports sent in from settings.
             </p>
           </Link>}
         </section>

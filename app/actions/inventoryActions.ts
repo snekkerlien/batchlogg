@@ -19,7 +19,7 @@ export async function addInventoryItem(formData: FormData, shouldRevalidate = tr
   const alphaRaw = formData.get("alpha_acid")?.toString().trim().replace(",", ".") ?? "";
   const ebcRaw = formData.get("ebc")?.toString().trim().replace(",", ".") ?? "";
   const isHop = category === "hops";
-  const isMalt = category === "fermentables" && (subcategory === "Base Malt" || subcategory === "Specialty Malt");
+  const isMalt = category === "malts";
   const yearRaw = formData.get("hop_year")?.toString().trim() ?? "";
   const hopYear = isHop && yearRaw ? Number(yearRaw) : null;
   const alphaAcid = isHop ? Number(alphaRaw) : null;

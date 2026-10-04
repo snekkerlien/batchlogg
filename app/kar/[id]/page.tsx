@@ -71,6 +71,7 @@ export default function KarPage({ params }: { params: { id: string } }) {
   const [openSecondary, setOpenSecondary] = useState(false);
   const [openSecondaryActive, setOpenSecondaryActive] = useState(false);
   const [openFinish, setOpenFinish] = useState(false);
+  const [openMove, setOpenMove] = useState(false);
   const [confirmCancelBatch, setConfirmCancelBatch] = useState(false);
   const cancelBatchFormRef = useRef<HTMLFormElement>(null);
   const cancelBatchConfirmedRef = useRef(false);
@@ -90,6 +91,8 @@ export default function KarPage({ params }: { params: { id: string } }) {
   const [karLoading, setKarLoading] = useState(true);
 
   const [openStyleSelect, setOpenStyleSelect] = useState(false);
+  const [freeVessels, setFreeVessels] = useState<any[]>([]);
+  const [vesselNumber, setVesselNumber] = useState<number | null>(null);
   const latestSG = sgReadings.length > 0
     ? Number(sgReadings[sgReadings.length - 1].sg)
     : null;
@@ -138,6 +141,35 @@ export default function KarPage({ params }: { params: { id: string } }) {
   }, [kar]);
 
 
+
+  useEffect(() => {
+    if (!kar) return;
+    (async () => {
+      const [{ data: vessels }, { data: busy }] = await Promise.all([
+        supabase
+          .from("kar")
+          .select("id")
+          .eq("user_id", kar.user_id)
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("batches")
+          .select("aktivt_kar")
+          .eq("user_id", kar.user_id)
+          .in("status", ["Aktiv", "Sekundær", "secondary"]),
+      ]);
+      const numbered = (vessels ?? []).map((v: any, i: number) => ({
+        id: v.id,
+        nummer: i + 1,
+      }));
+      const busyIds = new Set((busy ?? []).map((b: any) => b.aktivt_kar));
+      setVesselNumber(numbered.find((v) => v.id === kar.id)?.nummer ?? null);
+      setFreeVessels(
+        activeBatch
+          ? numbered.filter((v) => v.id !== kar.id && !busyIds.has(v.id))
+          : []
+      );
+    })();
+  }, [kar, activeBatch]);
 
   useEffect(() => {
     if (!kar || activeBatch) return;
@@ -383,7 +415,7 @@ async function toggleVisibility() {
 )}
 
 <PageHeading
-  title="Vessel"
+  title={vesselNumber ? `Vessel ${vesselNumber}` : "Vessel"}
   subtitle={
     activeBatch
       ? ["Sekundær", "secondary"].includes(activeBatch.status)
@@ -582,6 +614,13 @@ async function toggleVisibility() {
       <div className="mt-6 p-4 bg-white/5 border border-white/10 rounded-lg">
         <h3 className="text-xl font-bold mb-3 text-green-300">Recipe</h3>
         <div className="space-y-4 text-sm whitespace-pre-wrap">
+
+{(activeBatch.base_liquid || activeBatch.base_liquid_amount) && (
+  <p>
+    <strong>Base liquid:</strong> {activeBatch.base_liquid || "Water"}
+    {activeBatch.base_liquid_amount ? <> – <Qty kind="volume" value={activeBatch.base_liquid_amount} /></> : null}
+  </p>
+)}
 
 {/* MEAD */}
 {activeBatch.type === "Mead" && (
@@ -1027,6 +1066,13 @@ async function toggleVisibility() {
         <div className="space-y-4 text-sm whitespace-pre-wrap">
           
 
+{(activeBatch.base_liquid || activeBatch.base_liquid_amount) && (
+  <p>
+    <strong>Base liquid:</strong> {activeBatch.base_liquid || "Water"}
+    {activeBatch.base_liquid_amount ? <> – <Qty kind="volume" value={activeBatch.base_liquid_amount} /></> : null}
+  </p>
+)}
+
 {/* MEAD */}
 {activeBatch.type === "Mead" && (
   <>
@@ -1380,6 +1426,58 @@ async function toggleVisibility() {
 
     <div className="w-full h-px bg-white/10 my-6"></div>
   </>
+)}
+
+    {/* Move batch to another vessel */}
+{hasActive && isOwner && freeVessels.length > 0 && (
+  <div className="mt-6 bg-white/5 border border-white/10 rounded-lg p-4">
+    <button
+      type="button"
+      onClick={() => setOpenMove(!openMove)}
+      className="w-full flex items-center justify-between font-semibold text-green-300 cursor-pointer"
+    >
+      Move to another vessel
+      <span
+        className={`text-white text-xl transition-transform duration-300 ${
+          openMove ? "rotate-90" : "rotate-180"
+        }`}
+      >
+        ▶
+      </span>
+    </button>
+
+    <div
+      className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+        openMove ? "[grid-template-rows:1fr]" : "[grid-template-rows:0fr]"
+      }`}
+    >
+      <div className="overflow-hidden">
+        <form
+          action={Actions.moveBatchToVessel}
+          className="mt-4 flex flex-col gap-3"
+        >
+          <input type="hidden" name="batch_id" value={activeBatch.id} />
+          <input type="hidden" name="kar_id" value={kar.id} />
+          <select
+            name="target_kar_id"
+            required
+            defaultValue=""
+            className="p-3 rounded bg-black/40 border border-white/20"
+          >
+            <option value="" disabled>Select empty vessel</option>
+            {freeVessels.map((v) => (
+              <option key={v.id} value={v.id}>
+                Vessel {v.nummer}
+              </option>
+            ))}
+          </select>
+          <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
+            Move batch
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
 )}
 
 {hasActive && isOwner && (

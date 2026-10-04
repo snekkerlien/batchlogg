@@ -190,8 +190,12 @@ export default function RecipesPage() {
       );
     }
 
+    const numberedVessels = (vessels ?? []).map((vessel, index) => ({
+      ...vessel,
+      nummer: index + 1,
+    }));
     setEmptyVessels(
-      (vessels ?? []).filter((vessel) => !occupiedVesselIds.has(vessel.id))
+      numberedVessels.filter((vessel) => !occupiedVesselIds.has(vessel.id))
     );
     setVesselsLoaded(true);
     setRecipes(recipesWithNotes);

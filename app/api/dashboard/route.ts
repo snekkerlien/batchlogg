@@ -107,11 +107,11 @@ export async function GET(request: NextRequest) {
     {
       username: profileResult.data?.username ?? "Unknown",
       maxVessels: profileResult.data?.max_vessels ?? 12,
-      kar: vessels.map((vessel) => {
+      kar: vessels.map((vessel, index) => {
         const batch = batchByVessel.get(vessel.id);
         return {
           id: vessel.id,
-          nummer: vessel.nummer,
+          nummer: index + 1,
           created_at: vessel.created_at,
           status:
             batch?.status === "Sekundær" || batch?.status === "secondary"

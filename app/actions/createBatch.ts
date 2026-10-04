@@ -71,19 +71,17 @@ export async function createBatch(formData: FormData) {
     throw new Error("This fermentation vessel already contains an active batch.");
   }
 
-  // Find next batch number
-  const { data: last } = await supabase
+  // Find next batch number, counted from 1 per user
+  const { data: userBatches } = await supabase
     .from("batches")
-    .select("batchnummer_int")
-    .order("batchnummer_int", { ascending: false })
-    .limit(1)
-  .maybeSingle();
+    .select("batchnummer")
+    .eq("user_id", userId);
 
-const lastInt = Number(last?.batchnummer_int);
-const nextInt = Number.isFinite(lastInt) ? lastInt + 1 : 1;
-const formattedBatchnummer = String(nextInt).padStart(4, "0");
+  const nextInt =
+    Math.max(0, ...(userBatches ?? []).map((b) => Number(b.batchnummer) || 0)) + 1;
+  const formattedBatchnummer = String(nextInt).padStart(4, "0");
 
-  console.log("🟩 nextInt:", nextInt, "lastInt:", lastInt);
+  console.log("🟩 nextInt:", nextInt);
 
   // Fetch fields
   const name = formData.get("name") as string;

@@ -6,6 +6,7 @@ import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import { useRecipePrefill } from "../../../../../lib/recipes/useRecipePrefill";
 import { UnitInput, UnitSymbol } from "../../../../components/Units";
+import BaseLiquidField from "../../../../components/BaseLiquidField";
 import {
   BatchInventoryProvider,
   InventoryAdditiveFields,
@@ -133,6 +134,8 @@ export default function NewMeadPage({
               required
             />
           </div>
+
+          <BaseLiquidField defaultName={recipe?.base_liquid ?? ""} defaultAmount={recipe?.base_liquid_amount == null ? "" : String(recipe.base_liquid_amount)} />
 
           {/* Honey */}
           <div>
