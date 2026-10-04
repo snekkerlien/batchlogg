@@ -42,7 +42,7 @@ export default function ChangelogNotice() {
         fetch("/api/changelog", { cache: "no-store" }),
         supabaseBrowser
           .from("profiles")
-          .select("last_viewed_changelog_version, last_viewed_announcement_id")
+          .select("last_viewed_changelog_version")
           .eq("id", user.id)
           .maybeSingle(),
       ]);
@@ -59,10 +59,7 @@ export default function ChangelogNotice() {
         updates.changelog?.version !== profile?.last_viewed_changelog_version
           ? updates.changelog
           : null;
-      const nextAnnouncement =
-        updates.announcement?.id !== profile?.last_viewed_announcement_id
-          ? updates.announcement
-          : null;
+      const nextAnnouncement = updates.announcement;
       setChangelog(nextChangelog);
       setAnnouncement(nextAnnouncement);
       setVisible(!!nextChangelog || !!nextAnnouncement);
@@ -97,16 +94,17 @@ export default function ChangelogNotice() {
     setError("");
     const updates: Record<string, string> = {};
     if (changelog) updates.last_viewed_changelog_version = changelog.version;
-    if (announcement) updates.last_viewed_announcement_id = announcement.id;
-    const { error: saveError } = await supabaseBrowser
-      .from("profiles")
-      .update(updates)
-      .eq("id", user.id);
-    if (saveError) {
-      console.error("Could not save viewed site updates", saveError);
-      setError("Could not save that you have read these updates. Please try again.");
-      setSaving(false);
-      return;
+    if (Object.keys(updates).length > 0) {
+      const { error: saveError } = await supabaseBrowser
+        .from("profiles")
+        .update(updates)
+        .eq("id", user.id);
+      if (saveError) {
+        console.error("Could not save viewed site updates", saveError);
+        setError("Could not save that you have read these updates. Please try again.");
+        setSaving(false);
+        return;
+      }
     }
     setVisible(false);
     setSaving(false);
