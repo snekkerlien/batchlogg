@@ -141,6 +141,8 @@ export async function createBatch(formData: FormData) {
 
   // Revalidate correct path
   revalidatePath(`/kar/${karId}`);
+  revalidatePath("/dashboard");
+
 
   console.log("🟩 createBatch_complete:", batch.id);
 }
