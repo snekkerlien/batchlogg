@@ -33,7 +33,6 @@ export default function KegPublicPage() {
   const params = useParams();
   const rawId = Array.isArray(params?.id) ? params.id[0] : params?.id;
   const [keg, setKeg] = useState<Keg | null>(null);
-  const [kegName, setKegName] = useState("");
   const [brewName, setBrewName] = useState("");
   const [abv, setAbv] = useState("");
   const [brewDate, setBrewDate] = useState("");
@@ -78,7 +77,6 @@ export default function KegPublicPage() {
       try {
         const item = await fetchKeg(rawId);
         setKeg(item ?? null);
-        setKegName(item?.name ?? "");
         setBrewName(item?.brew_name ?? "");
         setAbv(item?.abv === null || item?.abv === undefined ? "" : String(item.abv));
         setBrewDate(item?.brew_date ?? "");
@@ -105,7 +103,7 @@ export default function KegPublicPage() {
         body: JSON.stringify({
           action: "update",
           id: rawId,
-          name: kegName.trim() || keg.name,
+          name: keg.name,
           brew_name: brewName.trim(),
           abv: abv.trim() === "" ? null : Number(abv),
           brew_date: brewDate || null,
@@ -119,7 +117,7 @@ export default function KegPublicPage() {
 
       setKeg({
         ...keg,
-        name: kegName.trim() || keg.name,
+        name: keg.name,
         brew_name: brewName.trim(),
         abv: abv.trim() === "" ? null : Number(abv),
         brew_date: brewDate || null,
@@ -154,6 +152,32 @@ export default function KegPublicPage() {
       setQrError("Could not generate the QR code. Please try again.");
     }
   }
+
+  function formatAge(dateString: string | null) {
+  if (!dateString) return "";
+
+  const start = new Date(dateString);
+  const now = new Date();
+
+  const diffMs = now.getTime() - start.getTime();
+  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+
+  if (diffDays < 30) {
+    const d = Math.floor(diffDays);
+    return `(${d} day${d === 1 ? "" : "s"})`;
+  }
+
+  const diffMonths = diffDays / 30.437; // average month length
+  if (diffMonths < 12) {
+    const m = Math.floor(diffMonths);
+    return `(${m} month${m === 1 ? "" : "s"})`;
+  }
+
+  const diffYears = diffMonths / 12;
+  const y = Math.floor(diffYears);
+  return `(${y} year${y === 1 ? "" : "s"})`;
+}
+
 
   if (loading) {
     return (
@@ -196,15 +220,13 @@ export default function KegPublicPage() {
           />
         </label>
 
-        <label className="block">
-            <span className="mb-2 block text-sm font-medium text-zinc-300">Keg number</span>
-            <input
-              value={kegName}
-              onChange={(event) => setKegName(event.target.value)}
-              className="w-full rounded-lg border border-white/20 bg-black/30 px-3 py-3 outline-none focus:border-green-400"
-              placeholder="Example: Keg 1"
-            />
-          </label>
+        <div>
+  <span className="mb-2 block text-sm font-medium text-zinc-300">Keg number</span>
+  <div className="w-full rounded-lg border border-white/20 bg-black/20 px-3 py-3 text-zinc-300">
+    {keg.name}
+  </div>
+</div>
+
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
@@ -222,14 +244,18 @@ export default function KegPublicPage() {
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-zinc-300">Date</span>
-              <input
-                type="date"
-                value={brewDate}
-                onChange={(event) => setBrewDate(event.target.value)}
-                className="w-full rounded-lg border border-white/20 bg-black/30 px-3 py-3 text-white outline-none focus:border-green-400"
-              />
-            </label>
+  <span className="mb-2 block text-sm font-medium text-zinc-300">
+    Date {brewDate && <span className="opacity-70 ml-2">{formatAge(brewDate)}</span>}
+  </span>
+
+  <input
+    type="date"
+    value={brewDate}
+    onChange={(event) => setBrewDate(event.target.value)}
+    className="w-full rounded-lg border border-white/20 bg-black/30 px-3 py-3 text-white outline-none focus:border-green-400"
+  />
+</label>
+
           </div>
 
           <label className="block">

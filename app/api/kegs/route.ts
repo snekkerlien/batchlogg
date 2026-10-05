@@ -77,26 +77,49 @@ export async function POST(request: NextRequest) {
   const action = body?.action ?? "update";
 
   if (action === "create") {
-    const { data, error } = await serviceRole
-      .from("kegs")
-      .insert([
-        {
-          name: body?.name ?? "Keg",
-          brew_name: body?.brew_name ?? "",
-          abv: null,
-          brew_date: null,
-          notes: body?.notes ?? "",
-        },
-      ])
-      .select()
-      .single();
+  // Fetch existing keg names to determine next number
+  const { data: existingKegs, error: fetchError } = await serviceRole
+    .from("kegs")
+    .select("name");
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ keg: data });
+  if (fetchError) {
+    return NextResponse.json({ error: fetchError.message }, { status: 500 });
   }
+
+  // Extract numbers from names like "Keg 1", "Keg 2", etc.
+  let nextNumber = 1;
+
+  if (existingKegs && existingKegs.length > 0) {
+    const numbers = existingKegs
+      .map(k => parseInt(String(k.name).replace(/[^0-9]/g, ""), 10))
+      .filter(n => !isNaN(n));
+
+    if (numbers.length > 0) {
+      nextNumber = Math.max(...numbers) + 1;
+    }
+  }
+
+  const { data, error } = await serviceRole
+    .from("kegs")
+    .insert([
+      {
+        name: `Keg ${nextNumber}`,
+        brew_name: "",
+        abv: null,
+        brew_date: null,
+        notes: "",
+      },
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ keg: data });
+}
+
 
   if (action === "update") {
     if (typeof body.id !== "string" || !body.id) {
