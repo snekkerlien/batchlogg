@@ -174,6 +174,19 @@ export default function KegTrackerPage() {
     );
   }
 
+  function formatDisplayDate(dateString: string | null) {
+  if (!dateString) return "";
+
+  const d = new Date(dateString);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+
+  return `${day}/${month}/${year}`;
+}
+
+
+
   async function deleteSelectedKegs() {
     if (selectedIds.length === 0) return;
 
@@ -320,18 +333,24 @@ export default function KegTrackerPage() {
                       </div>
                     )}
                     <span className="relative z-10 text-lg font-bold text-green-300 text-center leading-tight line-clamp-2">
-                      {keg.brew_name || keg.name}
+                      {keg.brew_name || "Empty keg"}
+
                     </span>
                     <span className="relative z-10 text-zinc-400 font-semibold mt-2">
-                      {keg.brew_name ? keg.name : "Empty"}
+                      {keg.brew_name ? "" : ""}
+
                     </span>
                     {keg.brew_name && (
-                      <span className="relative z-10 mt-1 text-xs text-zinc-300">
-                        {keg.abv !== null ? `${keg.abv}% ABV` : ""}
-                        {keg.abv !== null && keg.brew_date ? " · " : ""}
-                        {keg.brew_date ?? ""}
-                      </span>
+                      <div className="relative z-10 mt-1 text-xs text-zinc-300 flex flex-col items-center">
+                    {keg.abv !== null && (
+                      <span>{keg.abv}% ABV</span>
                     )}
+                    {keg.brew_date && (
+                      <span>{formatDisplayDate(keg.brew_date)}</span>
+                    )}
+                  </div>
+                  )}
+
                   </button>
                 ) : (
                   <Link href={`/kegs/${keg.id}`} className={tileClass}>
@@ -353,16 +372,25 @@ export default function KegTrackerPage() {
                       </div>
                     )}
                     <span className="relative z-10 text-lg font-bold text-green-300 text-center leading-tight line-clamp-2">
-                      {keg.brew_name || keg.name}
+                      {keg.brew_name || "Empty keg"}
                     </span>
-                    <span className="relative z-10 text-zinc-400 font-semibold mt-2">
-                      {keg.brew_name ? keg.name : "Empty"}
+                    <span className="relative z-10 text-zinc-400 text-center font-semibold mt-2">
+                      {keg.brew_name ? "" : ""}
+
                     </span>
                     {keg.brew_name && (
                       <span className="relative z-10 mt-1 text-xs text-zinc-300">
-                        {keg.abv !== null ? `${keg.abv}% ABV` : ""}
-                        {keg.abv !== null && keg.brew_date ? " · " : ""}
-                        {keg.brew_date ?? ""}
+                        {keg.brew_name && (
+  <div className="relative z-10 mt-1 text-xs text-zinc-300 flex flex-col items-center">
+    {keg.abv !== null && (
+      <span>{keg.abv}% ABV</span>
+    )}
+    {keg.brew_date && (
+      <span>{formatDisplayDate(keg.brew_date)}</span>
+    )}
+  </div>
+)}
+
                       </span>
                     )}
                   </Link>

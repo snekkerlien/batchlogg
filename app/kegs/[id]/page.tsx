@@ -153,6 +153,55 @@ export default function KegPublicPage() {
     }
   }
 
+  async function emptyKeg() {
+  if (!keg || !rawId) return;
+
+  setSaving(true);
+  setSaveError("");
+
+  try {
+    const response = await fetch("/api/kegs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "update",
+        id: rawId,
+        name: keg.name, // keep internal name
+        brew_name: "",
+        abv: null,
+        brew_date: null,
+        notes: "",
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Could not empty keg");
+    }
+
+    setKeg({
+      ...keg,
+      brew_name: "",
+      abv: null,
+      brew_date: null,
+      notes: "",
+    });
+
+    setBrewName("");
+    setAbv("");
+    setBrewDate("");
+    setNotes("");
+
+    setSaved(true);
+    window.setTimeout(() => setSaved(false), 1800);
+  } catch (error) {
+    console.error("Could not empty keg", error);
+    setSaveError("Could not empty keg. Please try again.");
+  } finally {
+    setSaving(false);
+  }
+}
+
+
   function formatAge(dateString: string | null) {
   if (!dateString) return "";
 
@@ -279,6 +328,15 @@ export default function KegPublicPage() {
           >
             {saving ? "Saving…" : "Save keg details"}
           </button>
+
+          <button
+            type="button"
+            onClick={emptyKeg}
+            className="px-6 py-3 bg-red-700 hover:bg-red-800 rounded-lg font-semibold"
+          >
+            Empty keg
+          </button>
+
 
           <button
             type="button"
