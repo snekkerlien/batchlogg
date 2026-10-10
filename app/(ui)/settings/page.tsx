@@ -106,7 +106,6 @@ export default function SettingsPage() {
       active = false;
     };
   }, [router]);
-
   async function saveAccentColor() {
     setSavingThemeAccentColor(true);
     setThemeAccentMessage("");
@@ -238,7 +237,6 @@ export default function SettingsPage() {
     await supabaseBrowser.auth.signOut();
     router.replace("/auth/login");
   }
-
   async function handleDownload() {
     setShowDownloadSpinner(true);
     setDownloadError("");
@@ -382,7 +380,6 @@ export default function SettingsPage() {
             </p>
           )}
         </section>
-
         <section className="mb-8 border-b border-white/10 pb-6">
           <h2 className="text-lg font-semibold text-center mb-1 text-green-300">
             Brewing preferences
@@ -582,7 +579,6 @@ export default function SettingsPage() {
             </div>
           )}
         </section>
-
         <section className="mb-8 border-b border-white/10 pb-6">
           <h2 className="text-lg font-semibold text-center mb-4 text-green-300">
             Feedback
@@ -590,7 +586,7 @@ export default function SettingsPage() {
           <FeedbackForm />
         </section>
 
-        <section className="border-b border-white/10 pb-6">
+        <section className="mb-8 border-b border-white/10 pb-6">
           <h2 className="text-lg font-semibold text-center mb-4 text-green-300">
             Data &amp; account
           </h2>
@@ -629,20 +625,49 @@ export default function SettingsPage() {
                 {restoreMessage}
               </p>
             )}
-            <div className="mt-3 border-t border-white/10 pt-5 text-center">
-              <button
-                type="button"
-                onClick={() => setShowDeleteConfirmation(true)}
-                className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm"
-              >
-                Delete my account
-              </button>
-              <p className="mt-3 text-sm text-zinc-400">
-                Permanently remove your account and all associated data.
-              </p>
-            </div>
+            <button
+            type="button"
+            onClick={() => setShowDeleteConfirmation(true)}
+            className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm"
+          >
+            Delete my account
+          </button>
           </div>
         </section>
+
+        <section className="mb-8 border-b border-white/10 pb-6">
+          <h2 className="text-lg font-semibold text-center mb-4 text-green-300">
+            About Batchlogg
+          </h2>
+          <div className="flex flex-col items-center gap-4">
+            <button
+              type="button"
+              onClick={() => router.push("/changelog")}
+              className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm"
+            >
+              Changelog
+            </button>
+
+            <button
+              type="button"
+              onClick={() => router.push("/terms")}
+              className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm"
+            >
+              Terms of Service
+            </button>
+
+            <button
+              type="button"
+              onClick={() => router.push("/privacy")}
+              className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm"
+            >
+              Privacy Policy
+            </button>
+          </div>
+        </section>
+        <div className="mt-3 pt-5 text-center">
+          
+        </div>
 
         <p className="text-sm opacity-40 mt-10 text-center">
           © {new Date().getFullYear()} Batchlog
