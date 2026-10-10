@@ -164,7 +164,7 @@ export default function Home() {
         <section className="bg-black/30 backdrop-blur-md p-8 rounded-xl border border-white/10 text-center">
           <h2 className="text-3xl font-bold mb-4">For brewers, by brewers</h2>
           <p className="text-lg opacity-90 text-center max-w-3xl mx-auto">
-            Batchlogg is built for brewers who want more than a basic logbook. Whether you brew at home, in a garage, or in a small setup, the platform helps you stay organized, learn from each batch, and share your work with the wider brewing community through the forum, member profiles, messages, and friends.
+            Batchlogg is built for brewers who want more than a basic logbook. Whether you’re brewing small experimental batches or running a larger, more structured setup, the platform helps you stay organized, learn from each batch, and share your work with the wider brewing community through the forum, member profiles, messages, and friends.
           </p>
         </section>
 

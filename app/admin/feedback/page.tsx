@@ -4,9 +4,6 @@ import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
 const CATEGORY_LABELS: Record<string, string> = {
   suggestion: "Suggestion",
   feedback: "Feedback",
@@ -20,6 +17,9 @@ export default async function AdminFeedbackPage() {
     error: authError,
   } = await supabase.auth.getUser();
   const role = authError ? "member" : await getMembershipRole(supabase, user);
+
+console.log("SSR SUPABASE URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
+
 
   if (!hasPermission(role, "manage_users")) {
     return (
@@ -42,22 +42,9 @@ export default async function AdminFeedbackPage() {
 
   const { data: items, error } = await serviceRole
     .from("feedback")
-    .select("id, user_id, username, email, category, message, created_at, status")
+    .select("id, user_id, username, email, category, message, created_at")
     .order("created_at", { ascending: false })
     .limit(200);
-
-  const sortedItems = items
-    ? [...items].sort((a, b) => {
-        const order = { open: 0, resolved: 1, dropped: 2 };
-
-        const aOrder = order[(a.status ?? "open") as keyof typeof order];
-        const bOrder = order[(b.status ?? "open") as keyof typeof order];
-
-        if (aOrder !== bOrder) return aOrder - bOrder;
-
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      })
-    : [];
 
   return (
     <main className="min-h-screen px-6 py-12 text-white">
@@ -84,16 +71,16 @@ export default async function AdminFeedbackPage() {
           <p className="text-center text-red-300">
             Could not load feedback: {error.message}
           </p>
-        ) : !sortedItems || sortedItems.length === 0 ? (
-          <p className="text-center text-white/60">No feedback yet.</p>
+        ) : !items || items.length === 0 ? (
+          <p className="text-center text-white/60">No new feedback.</p>
         ) : (
           <ul className="space-y-4">
-            {sortedItems.map((item) => (
+            {items.map((item) => (
               <li
                 key={item.id}
                 className="relative rounded-xl border border-white/10 bg-white/5 p-5"
               >
-                {/* HEADER ROW */}
+                {/* HEADER */}
                 <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                   <span className="rounded-full border border-green-400/30 bg-green-500/10 px-3 py-1 font-semibold text-green-300">
                     {CATEGORY_LABELS[item.category] ?? item.category}
@@ -102,47 +89,6 @@ export default async function AdminFeedbackPage() {
                   <time className="text-white/50">
                     {new Date(item.created_at).toLocaleString("en-GB")}
                   </time>
-                </div>
-
-                {/* BUTTONS - CENTERED VERTICALLY IN CARD */}
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-3">
-                  <form
-                    action="/api/admin/feedback/update"
-                    method="POST"
-                    className="flex items-center gap-3"
-                  >
-                    <input type="hidden" name="id" value={item.id} />
-
-                    {/* CHECKMARK */}
-                    <button
-                      name="status"
-                      value="resolved"
-                      className="flex items-center justify-center w-11 h-11 rounded-xl bg-green-700 hover:bg-green-800 border border-green-400/40 text-green-200 text-2xl font-bold"
-                      title="Mark as resolved"
-                    >
-                      ✓
-                    </button>
-
-                    {/* CROSS */}
-                    <button
-                      name="status"
-                      value="dropped"
-                      className="flex items-center justify-center w-11 h-11 rounded-xl bg-red-700 hover:bg-red-800 border border-red-400/40 text-red-200 text-2xl font-bold"
-                      title="Mark as dropped"
-                    >
-                      ✕
-                    </button>
-
-                    {/* RESET */}
-                    <button
-                      name="status"
-                      value="open"
-                      className="flex items-center justify-center w-11 h-11 rounded-xl bg-yellow-700 hover:bg-yellow-800 border border-yellow-400/40 text-yellow-200 text-2xl font-bold"
-                      title="Reset to open"
-                    >
-                      ↺
-                    </button>
-                  </form>
                 </div>
 
                 {/* MESSAGE */}
@@ -164,19 +110,31 @@ export default async function AdminFeedbackPage() {
                   {item.email && item.username ? ` (${item.email})` : ""}
                 </p>
 
-                {/* STATUS BADGE */}
-                <div className="mt-4 flex items-center gap-3 text-sm">
-                  <span
-                    className={`px-3 py-1 rounded-full border ${
-                      item.status === "resolved"
-                        ? "border-green-400/40 bg-green-500/10 text-green-300"
-                        : item.status === "dropped"
-                        ? "border-red-400/40 bg-red-500/10 text-red-300"
-                        : "border-yellow-400/40 bg-yellow-500/10 text-yellow-300"
-                    }`}
-                  >
-                    {item.status ?? "open"}
-                  </span>
+                {/* ADMIN ACTIONS */}
+                <div className="mt-5 flex items-center gap-3 text-sm">
+
+                  {/* Add to roadmap */}
+                  <form action="/api/admin/feedback/add-to-roadmap" method="POST">
+                    <input type="hidden" name="feedbackId" value={item.id} />
+                    <button
+                      className="px-3 py-2 rounded-lg border border-green-400/40 bg-green-500/10 text-green-300 font-semibold hover:bg-green-500/20"
+                      title="Add this feedback to the roadmap"
+                    >
+                      Add to roadmap
+                    </button>
+                  </form>
+
+                  {/* Delete */}
+                  <form action="/api/admin/feedback/delete" method="POST">
+                    <input type="hidden" name="feedbackId" value={item.id} />
+                    <button
+                      className="px-3 py-2 rounded-lg border border-red-400/40 bg-red-500/10 text-red-300 font-semibold hover:bg-red-500/20"
+                      title="Delete this feedback"
+                    >
+                      Delete
+                    </button>
+                  </form>
+
                 </div>
               </li>
             ))}

@@ -459,13 +459,14 @@ const secondary = batchesRaw
   if (!featuredRecipe) return null;
   return (
     <Link
-      href={`/my-recipes/${featuredRecipe.id}`}
-      className="mb-8 block rounded-xl border border-amber-300/20 bg-amber-300/5 p-5 transition hover:bg-amber-300/10"
-    >
-      <p className="text-xs font-semibold uppercase tracking-wider text-amber-200">Featured recipe</p>
-      <h2 className="mt-2 text-xl font-semibold">{featuredRecipe.name}</h2>
-      <p className="mt-1 text-sm text-white/55">{featuredRecipe.type}</p>
-    </Link>
+  href={`/members/${encodeURIComponent(profile.username)}/recipes/${featuredRecipe.id}`}
+  className="mb-8 block rounded-xl border border-green-300/20 bg-green-300/5 p-5 transition hover:bg-green-300/10"
+>
+  <p className="text-xs font-semibold uppercase tracking-wider text-green-200">Featured recipe</p>
+  <h2 className="mt-2 text-xl font-semibold">{featuredRecipe.name}</h2>
+  <p className="mt-1 text-sm text-white/55">{featuredRecipe.type}</p>
+</Link>
+
   );
 })()}
 {/* VESSELS */}

@@ -14,11 +14,14 @@ export default function FeedbackForm() {
     e.preventDefault();
     setSending(true);
     setStatus(null);
+
     try {
       const formData = new FormData();
       formData.set("category", category);
       formData.set("message", message);
+
       await submitFeedback(formData);
+
       setMessage("");
       setOpen(false);
       setStatus({ ok: true, text: "Thanks! Your message was sent." });
@@ -56,6 +59,7 @@ export default function FeedbackForm() {
             <option value="feedback">General feedback</option>
             <option value="bug">Bug report</option>
           </select>
+
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -66,6 +70,7 @@ export default function FeedbackForm() {
             placeholder="What's on your mind?"
             className="p-3 rounded bg-black/40 border border-white/20"
           />
+
           <div className="flex gap-2">
             <button
               type="submit"
@@ -74,6 +79,7 @@ export default function FeedbackForm() {
             >
               {sending ? "Sending…" : "Send"}
             </button>
+
             <button
               type="button"
               onClick={() => setOpen(false)}
