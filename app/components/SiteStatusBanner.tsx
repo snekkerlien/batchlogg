@@ -28,8 +28,12 @@ export default function SiteStatusBanner() {
   }, []);
 
   if (!message) return null;
+
   return (
-    <aside role="status" className="rounded-xl border border-amber-300/20 bg-black/60 px-4 py-2 text-center text-sm text-amber-100 backdrop-blur-md">
+    <aside
+      role="status"
+      className="rounded-xl border border-green-300/20 bg-black/60 px-4 py-2 text-center text-sm text-green-100 backdrop-blur-md"
+    >
       <span className="font-semibold">Service notice:</span> {message}
     </aside>
   );

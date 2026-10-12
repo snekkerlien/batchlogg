@@ -38,13 +38,13 @@ export default function TermsPage() {
             1. Introduction
           </h2>
           <p className="text-sm text-zinc-300 leading-relaxed mb-3">
-            These Terms of Service (“Terms”) govern your access to and use of
+            These terms of service govern your access to and use of
             Batchlogg, including all features, tools, and services provided
             through the platform. By creating an account or using Batchlogg, you
-            agree to be bound by these Terms.
+            agree to be bound by these terms.
           </p>
           <p className="text-sm text-zinc-300 leading-relaxed">
-            If you do not agree to these Terms, you must discontinue use of the
+            If you do not agree to these terms, you must discontinue use of the
             service immediately.
           </p>
         </section>
@@ -151,7 +151,7 @@ export default function TermsPage() {
           </h2>
           <p className="text-sm text-zinc-300 leading-relaxed mb-3">
             We reserve the right to suspend or terminate accounts that violate
-            these Terms, engage in harmful behavior, or pose security risks.
+            these terms, engage in harmful behavior, or pose security risks.
           </p>
           <p className="text-sm text-zinc-300 leading-relaxed">
             You may delete your account at any time using the tools provided in
@@ -163,7 +163,7 @@ export default function TermsPage() {
         {/* LIABILITY */}
         <section className="mb-8 border-b border-white/10 pb-6 text-center">
           <h2 className="text-lg font-semibold text-green-300 mb-3">
-            8. Disclaimer of Warranty & Limitation of Liability
+            8. Disclaimer of warranty & limitation of liability
           </h2>
           <p className="text-sm text-zinc-300 leading-relaxed mb-3">
             Batchlogg is provided “as is” without warranties of any kind. We do
@@ -180,11 +180,11 @@ export default function TermsPage() {
         {/* CHANGES TO TERMS */}
         <section className="mb-8 border-b border-white/10 pb-6 text-center">
           <h2 className="text-lg font-semibold text-green-300 mb-3">
-            9. Updates to These Terms
+            9. Updates to these terms
           </h2>
           <p className="text-sm text-zinc-300 leading-relaxed">
-            We may update these Terms periodically. Continued use of Batchlogg
-            after changes are published means you accept the updated Terms.
+            We may update these terms periodically. Continued use of Batchlogg
+            after changes are published means you accept the updated terms.
           </p>
         </section>
 
@@ -194,7 +194,7 @@ export default function TermsPage() {
             10. Contact Information
           </h2>
           <p className="text-sm text-zinc-300 leading-relaxed">
-            If you have questions about these Terms or Batchlogg in general,
+            If you have questions about these terms or Batchlogg in general,
             please reach out through the Feedback section in your account
             settings.
           </p>
