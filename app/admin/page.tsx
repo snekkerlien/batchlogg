@@ -76,8 +76,7 @@ export default async function AdminPage() {
                 </span>
               </div>
               <p className="mt-4 leading-relaxed text-white/70">
-                Review accounts and update user details. Open a user to grant or
-                remove keg management access.
+                Review accounts and update user details.
               </p>
             </Link>
           )}
@@ -144,7 +143,7 @@ export default async function AdminPage() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-sm font-semibold uppercase tracking-wider text-green-300">
-                    Operations
+                    Statistics
                   </p>
                   <h2 className="mt-2 text-2xl font-bold">
                     Community analytics
@@ -172,7 +171,7 @@ export default async function AdminPage() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-sm font-semibold uppercase tracking-wider text-green-300">
-                    Members
+                    Development
                   </p>
                   <h2 className="mt-2 text-2xl font-bold">
                     Feedback & suggestions
@@ -187,7 +186,7 @@ export default async function AdminPage() {
               </div>
               <p className="mt-4 leading-relaxed text-white/70">
                 Read feedback, suggestions and bug reports sent in from
-                settings.
+                users.
               </p>
             </Link>
           )}
