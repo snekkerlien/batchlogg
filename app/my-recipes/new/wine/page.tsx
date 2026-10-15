@@ -5,6 +5,7 @@ import * as Actions from "../../actions/createRecipe";
 import MenuOverlay from "../../MenuOverlay";
 import BackButton from "../../BackButton";
 import { UnitInput, UnitSymbol } from "../../../components/Units";
+import RecipeAdditiveFields from "../RecipeAdditiveFields";
 
 export default function NewWineRecipePage() {
   const [loading, setLoading] = useState(false);
@@ -148,11 +149,7 @@ export default function NewWineRecipePage() {
           {/* Additives */}
           <div>
             <label className="block mb-1 font-semibold">Additives</label>
-            <textarea
-              name="additives"
-              placeholder="Tannin, acid blend, pectic enzyme, nutrient, oak chips..."
-              className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
-            />
+            <RecipeAdditiveFields />
           </div>
 
           {/* Full process */}

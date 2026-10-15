@@ -23,7 +23,7 @@ export default function PrivacyPage() {
             className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg"
             aria-label="Back to my account"
           >
-            ←
+            s
           </button>
         </div>
 

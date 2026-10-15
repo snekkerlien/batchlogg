@@ -4,25 +4,20 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import { addInventoryItem } from "@/app/actions/inventoryActions";
 import { INVENTORY_CATEGORIES } from "@/lib/inventory/categories";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
-
-export type InventoryItem = {
-  id: string;
-  name: string;
-  amount: number;
-  unit: string;
-  minimum_amount: number;
-  category: string;
-  subcategory: string | null;
-  alpha_acid?: number | null;
-  ebc?: number | null;
-  hop_year?: number | null;
-};
+import { convertIngredientAmount } from "@/lib/inventory/convertIngredientAmount";
+import {
+  getInventoryRequirementIssues,
+  getSavedRecipeInventoryIssues,
+  recipeInventoryRequirements,
+  type InventoryItem,
+} from "@/lib/inventory/recipeInventory";
 
 type InventoryUsage = {
   inventory_item_id: string;
@@ -41,15 +36,35 @@ type BatchInventoryContextValue = {
 
 const BatchInventoryContext = createContext<BatchInventoryContextValue | null>(null);
 
-export function BatchInventoryProvider({ children }: { children: ReactNode }) {
+export function BatchInventoryProvider({
+  children,
+  recipeId,
+  recipe,
+  className = "",
+}: {
+  children: ReactNode;
+  recipeId?: string;
+  recipe?: Record<string, unknown> | null;
+  className?: string;
+}) {
   const [enabled, setEnabled] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [bypassInventory, setBypassInventory] = useState(false);
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [showInventoryCreator, setShowInventoryCreator] = useState(false);
+  const [inventoryIssues, setInventoryIssues] = useState<string[] | null>(null);
+  const [recipeInventoryWarnings, setRecipeInventoryWarnings] = useState<string[]>([]);
+  const inventoryFormContent = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("skip_inventory") === "true") {
+      setBypassInventory(true);
+      setLoaded(true);
+      return;
+    }
+
     let active = true;
 
     async function loadInventory() {
@@ -131,43 +146,161 @@ export function BatchInventoryProvider({ children }: { children: ReactNode }) {
     return inventoryItem;
   }
 
+  useEffect(() => {
+    if (!recipeId || !recipe || !loaded || !enabled || error) {
+      setRecipeInventoryWarnings([]);
+      return;
+    }
+    setRecipeInventoryWarnings(getSavedRecipeInventoryIssues(recipe, items));
+  }, [enabled, error, items, loaded, recipe, recipeId]);
+
+  function checkRecipeInventory(event: SubmitEvent) {
+    if (!recipeId) return;
+    if (!loaded) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      setInventoryIssues([
+        "Inventory is still loading. Wait for it to finish, then try again.",
+      ]);
+      return;
+    }
+    if (!enabled && !error) return;
+    if (error) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      setInventoryIssues([error]);
+      return;
+    }
+
+    if (!(event.target instanceof HTMLFormElement)) return;
+    const requirements = recipeInventoryRequirements(new FormData(event.target));
+    if (!requirements) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      setInventoryIssues([
+        "The recipe ingredient list could not be checked. Reload the recipe and try again.",
+      ]);
+      return;
+    }
+
+    const issues = getInventoryRequirementIssues(requirements, items, selections, true);
+    if (issues.length > 0) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      setInventoryIssues(issues);
+    }
+  }
+
+  useEffect(() => {
+    const form = inventoryFormContent.current?.closest("form");
+    if (!form) return;
+    form.addEventListener("submit", checkRecipeInventory, true);
+    return () => form.removeEventListener("submit", checkRecipeInventory, true);
+  }, [enabled, error, items, loaded, recipeId, selections]);
+
   return (
     <BatchInventoryContext.Provider
       value={{ enabled, loaded, items, selections, setSelection, addItem, error }}
     >
-      <input
-        type="hidden"
-        name="inventory_item_selections_json"
-        value={JSON.stringify(selections)}
-      />
-      <input
-        type="hidden"
-        name="inventory_load_error"
-        value={error ? "true" : "false"}
-      />
-      {error && (
-        <p role="alert" className="rounded-lg border border-amber-400/40 bg-amber-950/40 p-3 text-sm text-amber-200">
-          {error}
-        </p>
-      )}
-      {children}
-      {enabled && (
-        <div className="mt-2 border-t border-white/10 pt-4">
-          <button
-            type="button"
-            onClick={() => setShowInventoryCreator((current) => !current)}
-            className="w-full rounded-lg border border-white/20 bg-white/10 px-4 py-3 font-semibold hover:bg-white/20"
+      <div ref={inventoryFormContent} className={className}>
+        <input type="hidden" name="recipe_id" value={recipeId ?? ""} />
+        <input
+          type="hidden"
+          name="inventory_bypass"
+          value={bypassInventory && recipeId ? "true" : "false"}
+        />
+        <input
+          type="hidden"
+          name="inventory_item_selections_json"
+          value={JSON.stringify(selections)}
+        />
+        <input
+          type="hidden"
+          name="inventory_load_error"
+          value={error ? "true" : "false"}
+        />
+        {error && (
+          <p role="alert" className="rounded-lg border border-amber-400/40 bg-amber-950/40 p-3 text-sm text-amber-200">
+            {error}
+          </p>
+        )}
+        {recipeInventoryWarnings.length > 0 && (
+          <div
+            role="alert"
+            className="mb-4 rounded-lg border border-amber-400/50 bg-amber-950/50 p-4 text-amber-100"
           >
-            {showInventoryCreator ? "Cancel adding inventory items" : "Add missing inventory items"}
-          </button>
-          {showInventoryCreator && (
-            <InventoryItemCreator
-              onAdded={() => setShowInventoryCreator(false)}
-              onCancel={() => setShowInventoryCreator(false)}
-            />
-          )}
-        </div>
-      )}
+            <p className="font-semibold">This recipe needs ingredients you don’t have enough of.</p>
+            <p className="mt-1 text-sm">
+              Add or select the missing inventory items before creating the batch.
+            </p>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
+              {recipeInventoryWarnings.map((warning, index) => (
+                <li key={`${index}:${warning}`}>{warning}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {children}
+        {enabled && (
+          <div className="mt-2 border-t border-white/10 pt-4">
+            <button
+              type="button"
+              onClick={() => setShowInventoryCreator((current) => !current)}
+              className="w-full rounded-lg border border-white/20 bg-white/10 px-4 py-3 font-semibold hover:bg-white/20"
+            >
+              {showInventoryCreator ? "Cancel adding inventory items" : "Add missing inventory items"}
+            </button>
+            {showInventoryCreator && (
+              <InventoryItemCreator
+                onAdded={() => setShowInventoryCreator(false)}
+                onCancel={() => setShowInventoryCreator(false)}
+              />
+            )}
+          </div>
+        )}
+        {inventoryIssues && (
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-4"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setInventoryIssues(null);
+            }}
+          >
+            <section
+              role="alertdialog"
+              aria-modal="true"
+              aria-labelledby="recipe-inventory-title"
+              className="w-full max-w-lg rounded-xl border border-amber-400/30 bg-zinc-900 p-6 shadow-2xl"
+            >
+              <h2 id="recipe-inventory-title" className="mb-3 text-xl font-bold">
+                Recipe ingredients need attention
+              </h2>
+              <p className="mb-3 text-sm text-zinc-300">
+                This batch has not been created. Match the recipe ingredients to inventory items
+                and make sure there is enough stock, then try again.
+              </p>
+              <ul className="mb-6 list-disc space-y-1 pl-5 text-sm text-amber-200">
+                {inventoryIssues.map((issue, index) => (
+                  <li key={`${index}:${issue}`}>{issue}</li>
+                ))}
+              </ul>
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  autoFocus
+                  onClick={() => setInventoryIssues(null)}
+                  className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold hover:bg-white/20"
+                >
+                  Review ingredients
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
+      </div>
     </BatchInventoryContext.Provider>
   );
 }
@@ -187,6 +320,8 @@ export function InventoryIngredientSelect({
   enabledOnly = false,
   trackAmount = false,
   amountFieldName,
+  defaultAmount,
+  defaultAmountUnit,
 }: {
   selectionKey: string;
   value?: string;
@@ -202,6 +337,8 @@ export function InventoryIngredientSelect({
   enabledOnly?: boolean;
   trackAmount?: boolean;
   amountFieldName?: string;
+  defaultAmount?: string;
+  defaultAmountUnit?: string;
 }) {
   const context = useContext(BatchInventoryContext);
   if (!context) {
@@ -209,6 +346,7 @@ export function InventoryIngredientSelect({
   }
   const [localValue, setLocalValue] = useState(defaultValue ?? "");
   const [amount, setAmount] = useState("");
+  const amountEdited = useRef(false);
   const currentValue = value ?? localValue;
   const normalizedValue = currentValue.trim().toLocaleLowerCase();
 
@@ -236,6 +374,26 @@ export function InventoryIngredientSelect({
     normalizedValue,
   ]);
 
+  const options = context.items.filter(
+    (item) =>
+      (!category || item.category === category) &&
+      (!subcategories ||
+        subcategories.some((s) => item.subcategory?.toLowerCase() === s.toLowerCase())) &&
+      (!subcategory || item.subcategory?.toLowerCase() === subcategory.toLowerCase())
+  );
+  const selected = context.items.find(
+    (item) => item.id === context.selections[selectionKey]
+  );
+  useEffect(() => {
+    if (amountEdited.current || defaultAmount == null || !defaultAmount.trim()) return;
+    const defaultValue = Number(defaultAmount.replace(",", "."));
+    if (!Number.isFinite(defaultValue)) return;
+    const converted = selected && defaultAmountUnit
+      ? convertIngredientAmount(defaultValue, defaultAmountUnit, selected.unit)
+      : defaultValue;
+    if (converted !== null) setAmount(String(converted));
+  }, [defaultAmount, defaultAmountUnit, selected?.id, selected?.unit]);
+
   if (!context.enabled && enabledOnly) return null;
 
   if (!context.enabled) {
@@ -253,16 +411,7 @@ export function InventoryIngredientSelect({
       />
     );
   }
-  const options = context.items.filter(
-    (item) =>
-      (!category || item.category === category) &&
-      (!subcategories ||
-        subcategories.some((s) => item.subcategory?.toLowerCase() === s.toLowerCase())) &&
-      (!subcategory || item.subcategory?.toLowerCase() === subcategory.toLowerCase())
-  );
-  const selected = context.items.find(
-    (item) => item.id === context.selections[selectionKey]
-  );
+
   const inputClassName = className
     .replace(/\bbg-black\/40\b/g, "bg-zinc-900")
     .replace(/\bmin-w-\[\d+px\]/g, "")
@@ -316,7 +465,10 @@ export function InventoryIngredientSelect({
                 value={amount}
                 required={!!selected}
                 disabled={!selected}
-                onChange={(event) => setAmount(event.target.value)}
+                onChange={(event) => {
+                  amountEdited.current = true;
+                  setAmount(event.target.value);
+                }}
                 className="min-w-0 w-full bg-transparent py-3 outline-none disabled:opacity-50"
               />
               <span className="whitespace-nowrap text-sm text-white/60">

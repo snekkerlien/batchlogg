@@ -5,19 +5,24 @@ import * as Actions from "../../actions/createRecipe";
 import MenuOverlay from "../../MenuOverlay";
 import BackButton from "../../BackButton";
 import { UnitInput, UnitSymbol, useUnits } from "../../../components/Units";
+import RecipeAdditiveFields from "../RecipeAdditiveFields";
 
 export default function NewBeerRecipePage() {
   const [loading, setLoading] = useState(false);
   const { label } = useUnits();
+  const [beerSubtype, setBeerSubtype] = useState("");
 
   // ⭐ warnings fra server action
   const [warnings, setWarnings] = useState<string[]>([]);
+  const [error, setError] = useState("");
 
   // MALTS (name + amount in kg)
-  const [malts, setMalts] = useState<{ name: string; amount: string }[]>([]);
+  const [malts, setMalts] = useState<
+    { name: string; amount: string; ebc: string }[]
+  >([]);
 
   function addMalt() {
-    setMalts([...malts, { name: "", amount: "" }]);
+    setMalts([...malts, { name: "", amount: "", ebc: "" }]);
   }
 
   function removeMalt(index: number) {
@@ -57,7 +62,8 @@ function removeDryHop(index: number) {
   async function handleSubmit(e: React.FormEvent) {
   e.preventDefault();
   setLoading(true);
-  setWarnings([]); // reset warnings
+  setWarnings([]);
+  setError("");
 
   const formData = new FormData(e.currentTarget as HTMLFormElement);
   const result = await Actions.createRecipe(formData);
@@ -65,6 +71,7 @@ function removeDryHop(index: number) {
   // ❌ Feil maltnavn → stopp lagring
   if (result?.success === false) {
     setWarnings(result.maltWarnings ?? []);
+    setError(result.error ?? "");
     setLoading(false);
     return;
   }
@@ -100,13 +107,13 @@ function removeDryHop(index: number) {
         {/* ⭐ WARNINGS */}
         {warnings.length > 0 && (
           <div className="bg-red-600 text-white p-4 rounded-md mb-6">
-            <strong>⚠️ Unknown malts detected:</strong>
+            <strong>⚠️ Malt EBC is missing:</strong>
             <ul className="mt-2 list-disc list-inside">
               {warnings.map((w) => (
                 <li key={w}>{w}</li>
               ))}
             </ul>
-            <p className="mt-2">Correct them or before you can save.</p>
+            <p className="mt-2">Enter the EBC value for each malt before saving.</p>
           </div>
         )}
 
@@ -116,16 +123,57 @@ function removeDryHop(index: number) {
         >
           <input type="hidden" name="type" value="Beer" />
 
+          <div>
+            <label htmlFor="beer-subtype" className="mb-1 block font-semibold">
+              Beer recipe style
+            </label>
+            <select
+              id="beer-subtype"
+              name="beer_subtype"
+              value={beerSubtype}
+              onChange={(event) => setBeerSubtype(event.target.value)}
+              required
+              className="w-full rounded border border-white/20 bg-zinc-900 p-3"
+            >
+              <option value="">Choose a beer recipe style</option>
+              <option value="all_grain">All-grain</option>
+              <option value="fresh_wort_kit">Fresh wort kit</option>
+              <option value="malt_extract_kit">Malt extract kit</option>
+            </select>
+          </div>
+
+          {error && (
+            <p role="alert" className="rounded border border-red-400/40 bg-red-950/50 p-3 text-red-200">
+              {error}
+            </p>
+          )}
+
+          {beerSubtype && (
+            <>
           {/* Recipe name */}
           <div>
-            <label className="block mb-1 font-semibold">Recipe name</label>
+            <label className="block mb-1 font-semibold">
+              {beerSubtype === "all_grain" ? "Recipe name" : "Kit name"}
+            </label>
             <input
               name="name"
-              placeholder="Example: Pale Ale, IPA, Stout"
+              placeholder={beerSubtype === "all_grain" ? "Example: Pale Ale, IPA, Stout" : "Name of the kit"}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
             />
           </div>
+
+          {beerSubtype !== "all_grain" && (
+            <div>
+              <label className="mb-1 block font-semibold">Kit link (optional)</label>
+              <input
+                name="kit_url"
+                type="url"
+                placeholder="https://example.com/kit"
+                className="w-full rounded border border-white/20 bg-black/40 p-3"
+              />
+            </div>
+          )}
 
           {/* Volume */}
           <div>
@@ -133,11 +181,18 @@ function removeDryHop(index: number) {
             <UnitInput
               name="volume"
               kind="volume"
-              placeholder="Final batch size after the boil (e.g., 20 L)"
+              placeholder={
+                beerSubtype === "all_grain"
+                  ? "Final batch size after the boil (e.g., 20 L)"
+                  : "Final kit volume (e.g., 20 L)"
+              }
+              required={beerSubtype !== "all_grain"}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
 
+          {beerSubtype === "all_grain" && (
+          <>
           {/* Boil Volume */}
           <div>
             <label className="block mb-1 font-semibold">Boil Volume (<UnitSymbol kind="volume" />)</label>
@@ -148,6 +203,8 @@ function removeDryHop(index: number) {
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
+          </>
+          )}
 
           {/* OG */}
           <div>
@@ -156,10 +213,13 @@ function removeDryHop(index: number) {
               name="og"
               type="text"
               placeholder="Example: 1.050"
+              required={beerSubtype !== "all_grain"}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
 
+          {beerSubtype === "all_grain" && (
+          <>
           {/* FG */}
           <div>
             <label className="block mb-1 font-semibold">Final Gravity (FG)</label>
@@ -170,6 +230,8 @@ function removeDryHop(index: number) {
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
+          </>
+          )}
 
           {/* Yeast */}
           <div>
@@ -178,10 +240,13 @@ function removeDryHop(index: number) {
               name="yeast"
               type="text"
               placeholder="Example: US-05"
+              required={beerSubtype !== "all_grain"}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
 
+          {beerSubtype === "all_grain" && (
+          <>
           {/* MALTS */}
           <div>
             <label className="block mb-2 font-semibold">Malt additions</label>
@@ -195,6 +260,22 @@ function removeDryHop(index: number) {
                   onChange={(e) => {
                     const updated = [...malts];
                     updated[i].name = e.target.value;
+                    setMalts(updated);
+                  }}
+                />
+
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  placeholder="EBC"
+                  aria-label={`Malt ${i + 1} EBC`}
+                  required
+                  className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-24"
+                  value={m.ebc}
+                  onChange={(e) => {
+                    const updated = [...malts];
+                    updated[i].ebc = e.target.value;
                     setMalts(updated);
                   }}
                 />
@@ -231,16 +312,20 @@ function removeDryHop(index: number) {
           </div>
 
           <input type="hidden" name="malts_json" value={JSON.stringify(malts)} />
+          </>
+          )}
 
+          {beerSubtype === "all_grain" && (
+          <>
           {/* HOPS */}
           <div>
             <label className="block mb-2 font-semibold">Hop additions</label>
 
             {hops.map((h, i) => (
-              <div key={i} className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full">
+              <div key={i} className="mb-4 w-full space-y-2">
                 <input
                   placeholder="Hop type"
-                  className="p-3 rounded bg-black/40 border border-white/20 w-full md:flex-1"
+                  className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
                   value={h.name}
                   onChange={(e) => {
                     const updated = [...hops];
@@ -249,10 +334,13 @@ function removeDryHop(index: number) {
                   }}
                 />
 
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(6.5rem,0.8fr)_minmax(5rem,0.6fr)_minmax(7rem,1fr)_minmax(9rem,1.4fr)_auto]">
                 <input
   placeholder="Alpha (%)"
-  type="text"
-  className="p-3 rounded bg-black/40 border border-white/20 w-24"
+                  type="number"
+                  min="0"
+                  step="any"
+                  className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
   value={h.alpha}
   onChange={(e) => {
     const updated = [...hops];
@@ -264,8 +352,10 @@ function removeDryHop(index: number) {
 
 <input
   placeholder="Year"
-  type="text"
-  className="p-3 rounded bg-black/40 border border-white/20 w-24"
+  type="number"
+  min="1900"
+  step="1"
+  className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
   value={h.year}
   onChange={(e) => {
     const updated = [...hops];
@@ -277,7 +367,7 @@ function removeDryHop(index: number) {
                 <UnitInput
                   kind="g"
                   placeholder={`Amount (${label("g")})`}
-                  className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-28"
+                  className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
                   value={h.amount}
                   onValueChange={(value) => {
                     const updated = [...hops];
@@ -288,8 +378,10 @@ function removeDryHop(index: number) {
 
                 <input
                   placeholder="Boil time (min)"
-                  type="text"
-                  className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-32"
+                  type="number"
+                  min="0"
+                  step="1"
+                  className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
                   value={h.time}
                   onChange={(e) => {
                     const updated = [...hops];
@@ -301,10 +393,11 @@ function removeDryHop(index: number) {
                 <button
                   type="button"
                   onClick={() => removeHop(i)}
-                  className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
+                  className="col-span-2 justify-self-end rounded-lg border border-white/20 bg-white/10 px-4 py-3 text-sm hover:bg-white/20 sm:col-span-1 sm:justify-self-auto"
                 >
                   Remove
                 </button>
+                </div>
               </div>
             ))}
 
@@ -317,18 +410,28 @@ function removeDryHop(index: number) {
             </button>
           </div>
 
-          <input type="hidden" name="hops_json" value={JSON.stringify(hops)} />
+          <input
+            type="hidden"
+            name="hops_json"
+            value={JSON.stringify(beerSubtype === "all_grain" ? hops : [])}
+          />
+          </>
+          )}
 
         {/* DRY HOPS */}
+{beerSubtype && (
+<>
 <div>
-  <label className="block mb-2 font-semibold">Dry hop additions</label>
+  <label className="mb-2 block font-semibold">
+    Dry hop additions
+  </label>
 
   {dryHops.map((h, i) => (
-    <div key={i} className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full">
+    <div key={i} className="mb-4 w-full space-y-2">
 
       <input
         placeholder="Hop type"
-        className="p-3 rounded bg-black/40 border border-white/20 w-full md:flex-1"
+        className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
         value={h.name}
         onChange={(e) => {
           const updated = [...dryHops];
@@ -337,10 +440,39 @@ function removeDryHop(index: number) {
         }}
       />
 
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(6.5rem,0.8fr)_minmax(5rem,0.6fr)_minmax(7rem,1fr)_minmax(9rem,1.4fr)_auto]">
+      <input
+        placeholder="Alpha (%)"
+        type="number"
+        min="0"
+        step="any"
+        className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
+        value={h.alpha}
+        onChange={(e) => {
+          const updated = [...dryHops];
+          updated[i].alpha = e.target.value;
+          setDryHops(updated);
+        }}
+      />
+
+      <input
+        placeholder="Year"
+        type="number"
+        min="1900"
+        step="1"
+        className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
+        value={h.year}
+        onChange={(e) => {
+          const updated = [...dryHops];
+          updated[i].year = e.target.value;
+          setDryHops(updated);
+        }}
+      />
+
       <UnitInput
         kind="g"
         placeholder={`Amount (${label("g")})`}
-        className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-28"
+        className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
         value={h.amount}
         onValueChange={(value) => {
           const updated = [...dryHops];
@@ -352,7 +484,7 @@ function removeDryHop(index: number) {
       <input
         placeholder="Contact time (days)"
         type="text"
-        className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-32"
+        className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
         value={h.contact}
         onChange={(e) => {
           const updated = [...dryHops];
@@ -364,10 +496,11 @@ function removeDryHop(index: number) {
       <button
         type="button"
         onClick={() => removeDryHop(i)}
-        className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
+        className="col-span-2 justify-self-end rounded-lg border border-white/20 bg-white/10 px-4 py-3 text-sm hover:bg-white/20 sm:col-span-1 sm:justify-self-auto"
       >
         Remove
       </button>
+      </div>
     </div>
   ))}
 
@@ -381,28 +514,33 @@ function removeDryHop(index: number) {
 </div>
 
 <input type="hidden" name="dry_hops_json" value={JSON.stringify(dryHops)} />
+          </>
+)}
 
 
 
 
+          {beerSubtype === "all_grain" && (
+          <>
           {/* Boil time */}
           <div>
             <label className="block mb-1 font-semibold">Total boil time (minutes)</label>
-            <textarea
+            <input
               name="boil_time"
+              type="number"
+              min="0"
+              step="1"
               placeholder="Length of the boil"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
+          </>
+          )}
 
           {/* Additives */}
           <div>
             <label className="block mb-1 font-semibold">Additives</label>
-            <textarea
-              name="additives"
-              placeholder="Irish Moss, gypsum, CaCl₂..."
-              className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
-            />
+            <RecipeAdditiveFields />
           </div>
 
           {/* Full process */}
@@ -432,6 +570,8 @@ function removeDryHop(index: number) {
           >
             {loading ? "Saving..." : "Save recipe"}
           </button>
+            </>
+          )}
         </form>
       </div>
     </main>

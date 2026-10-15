@@ -15,13 +15,28 @@ interface KarType {
   created_at: string;
   status: "Aktiv" | "Ledig" | "Sekundær";
   batchName?: string | null;
+  isShared: boolean;
 }
 
 interface DashboardResponse {
   username: string;
   maxVessels: number;
   kar: KarType[];
+  sharedKar: (KarType & { ownerUsername: string })[];
 }
+
+const sharedVesselCardStyle = {
+  borderColor: "var(--user-accent)",
+  boxShadow:
+    "0 0 0 1px color-mix(in srgb, var(--user-accent) 20%, transparent), 0 0 18px color-mix(in srgb, var(--user-accent) 24%, transparent)",
+};
+
+const sharedVesselIconStyle = {
+  borderColor: "var(--user-accent)",
+  backgroundColor: "color-mix(in srgb, var(--user-accent) 18%, #09090b)",
+  color: "var(--user-accent)",
+  boxShadow: "0 0 10px color-mix(in srgb, var(--user-accent) 35%, transparent)",
+};
 
 function isCreatedKar(
   value: unknown
@@ -46,6 +61,9 @@ export default function DashboardClient() {
   const [loadError, setLoadError] = useState("");
   const [username, setUsername] = useState("");
   const [kar, setKar] = useState<KarType[]>([]);
+  const [sharedKar, setSharedKar] = useState<
+    (KarType & { ownerUsername: string })[]
+  >([]);
   const [motd, setMotd] = useState("");
   const [selectMode, setSelectMode] = useState(false);
   const [selectedKars, setSelectedKars] = useState<string[]>([]);
@@ -141,13 +159,14 @@ useEffect(() => {
       }
 
       const data: DashboardResponse = await response.json();
-      if (!Array.isArray(data.kar)) {
+      if (!Array.isArray(data.kar) || !Array.isArray(data.sharedKar)) {
         throw new Error("Dashboard response did not include vessel data");
       }
 
       setUsername(data.username ?? "Unknown");
       setMaxVessels(data.maxVessels ?? 12);
       setKar(data.kar);
+      setSharedKar(data.sharedKar);
     } catch (error) {
       console.error("Failed to load dashboard data", error);
       setLoadError("Could not load your dashboard. Please try again.");
@@ -260,6 +279,7 @@ useEffect(() => {
                 created_at: createdKar.created_at,
                 status: "Ledig",
                 batchName: null,
+                isShared: false,
               },
             ]
       );
@@ -342,7 +362,9 @@ useEffect(() => {
                 }
               }
             }}
-            className={`relative border border-white/10 rounded-xl p-4 bg-white/5 w-32 h-32 flex flex-col items-center justify-center transition overflow-hidden
+            style={k.isShared ? sharedVesselCardStyle : undefined}
+            className={`relative border rounded-xl p-4 bg-white/5 w-32 h-32 flex flex-col items-center justify-center transition overflow-hidden
+              ${k.isShared ? "" : "border-white/10"}
               ${selectMode ? "animate-fadeIn" : ""}
               ${
                 selectMode && selectedKars.includes(k.id)
@@ -357,6 +379,30 @@ useEffect(() => {
               hover:bg-white/10
             `}
           >
+            {k.isShared && (
+              <span
+                title="Shared vessel"
+                aria-label="Shared vessel"
+                style={sharedVesselIconStyle}
+                className="absolute right-2 top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full border bg-black/80"
+              >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  className="h-3.5 w-3.5"
+                >
+                  <circle cx="6" cy="6" r="2.25" stroke="currentColor" strokeWidth="1.5" />
+                  <circle cx="14" cy="6" r="2.25" stroke="currentColor" strokeWidth="1.5" />
+                  <path
+                    d="M2.5 15c.35-2.2 1.55-3.4 3.5-3.4s3.15 1.2 3.5 3.4M10.5 15c.35-2.2 1.55-3.4 3.5-3.4s3.15 1.2 3.5 3.4"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </span>
+            )}
             {/* ⭐ Only show bubbles when the vessel has an active batch */}
 {(k.status === "Aktiv" || k.status === "Sekundær") && (
   <div className="bubble-container">
@@ -407,6 +453,77 @@ useEffect(() => {
           </button>
         )}
       </div>
+
+      {sharedKar.length > 0 && (
+        <section className="mt-10 border-t border-white/10 pt-8">
+          <h2 className="mb-4 text-center text-2xl font-semibold text-green-300">
+            Shared with me
+          </h2>
+          <div className="flex flex-wrap justify-center gap-6">
+            {sharedKar.map((vessel) => (
+              <a
+                key={vessel.id}
+                href={`/kar/${vessel.id}`}
+                style={sharedVesselCardStyle}
+                className="relative flex h-36 w-36 flex-col items-center justify-center overflow-hidden rounded-xl border bg-white/5 p-3 text-center transition hover:bg-white/10"
+              >
+                <span
+                  title="Shared vessel"
+                  aria-label="Shared vessel"
+                  style={sharedVesselIconStyle}
+                  className="absolute right-2 top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full border bg-black/80"
+                >
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    className="h-3.5 w-3.5"
+                  >
+                    <circle cx="6" cy="6" r="2.25" stroke="currentColor" strokeWidth="1.5" />
+                    <circle cx="14" cy="6" r="2.25" stroke="currentColor" strokeWidth="1.5" />
+                    <path
+                      d="M2.5 15c.35-2.2 1.55-3.4 3.5-3.4s3.15 1.2 3.5 3.4M10.5 15c.35-2.2 1.55-3.4 3.5-3.4s3.15 1.2 3.5 3.4"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </span>
+                {(vessel.status === "Aktiv" || vessel.status === "Sekundær") && (
+                  <div className="bubble-container">
+                    {[...Array(6)].map((_, index) => (
+                      <span
+                        key={index}
+                        className="bubble"
+                        style={{
+                          left: `${(index * 37 + 11) % 100}%`,
+                          animationDuration: `${2 + (index % 3)}s`,
+                          animationDelay: `${((index * 7) % 20) / 10}s`,
+                          width: `${4 + (index % 3) * 2}px`,
+                          height: `${4 + (index % 3) * 2}px`,
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+                <span className="relative z-10 line-clamp-2 text-base font-bold leading-tight text-green-300">
+                  {vessel.batchName ?? `Vessel ${vessel.nummer}`}
+                </span>
+                <span className="relative z-10 mt-2 text-xs text-zinc-300">
+                  {vessel.status === "Aktiv"
+                    ? "Primary"
+                    : vessel.status === "Sekundær"
+                      ? "Secondary"
+                      : "Empty"}
+                </span>
+                <span className="relative z-10 mt-1 line-clamp-1 text-xs text-zinc-400">
+                  Shared by {vessel.ownerUsername}
+                </span>
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
 
       <p className="text-center mt-5 opacity-60">
   Max vessels: {maxVessels}

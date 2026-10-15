@@ -5,6 +5,7 @@ import * as Actions from "../../actions/createRecipe";
 import MenuOverlay from "../../MenuOverlay";
 import BackButton from "../../BackButton";
 import { UnitInput, UnitSymbol, useUnits } from "../../../components/Units";
+import RecipeAdditiveFields from "../RecipeAdditiveFields";
 
 export default function NewBraggotRecipePage() {
   const [loading, setLoading] = useState(false);
@@ -12,11 +13,11 @@ export default function NewBraggotRecipePage() {
 
   // Dynamic malt list
   const [malts, setMalts] = useState<
-    { name: string; amount: string; unit: string }[]
+    { name: string; amount: string; unit: string; ebc: string }[]
   >([]);
 
   function addMalt() {
-    setMalts([...malts, { name: "", amount: "", unit: "kg" }]);
+    setMalts([...malts, { name: "", amount: "", unit: "kg", ebc: "" }]);
   }
 
   function removeMalt(index: number) {
@@ -27,12 +28,12 @@ export default function NewBraggotRecipePage() {
 
   // Dynamic hop list
   const [hops, setHops] = useState<
-  { name: string; amount: string; time: string }[]
+  { name: string; amount: string; time: string; alpha: string; year: string }[]
   >([]);
 
   
     function addHop() {
-  setHops([...hops, { name: "", amount: "", time: "" }]);
+  setHops([...hops, { name: "", amount: "", time: "", alpha: "", year: "" }]);
 }
 
 
@@ -87,13 +88,13 @@ export default function NewBraggotRecipePage() {
 
         {warnings.length > 0 && (
   <div className="bg-red-600 text-white p-4 rounded-md mb-6">
-    <strong>⚠️ Ukjente malter funnet:</strong>
+    <strong>⚠️ Malt EBC is missing:</strong>
     <ul className="mt-2 list-disc list-inside">
       {warnings.map((w) => (
         <li key={w}>{w}</li>
       ))}
     </ul>
-    <p className="mt-2">Rett opp navnene før du kan lagre oppskriften.</p>
+    <p className="mt-2">Enter the EBC value for each malt before saving.</p>
   </div>
 )}
 
@@ -132,7 +133,8 @@ export default function NewBraggotRecipePage() {
             <label className="block mb-1 font-semibold">Original Gravity (OG)</label>
             <input
               name="og"
-              type="text"
+              type="number"
+              step="0.001"
               placeholder="Example: 1.070"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
@@ -143,7 +145,8 @@ export default function NewBraggotRecipePage() {
             <label className="block mb-1 font-semibold">Final Gravity (FG)</label>
             <input
               name="fg"
-              type="text"
+              type="number"
+              step="0.001"
               placeholder="Example: 1.010"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
@@ -165,6 +168,22 @@ export default function NewBraggotRecipePage() {
                   onChange={(e) => {
                     const updated = [...malts];
                     updated[i].name = e.target.value;
+                    setMalts(updated);
+                  }}
+                />
+
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  placeholder="EBC"
+                  aria-label={`Malt ${i + 1} EBC`}
+                  required
+                  className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-24"
+                  value={m.ebc}
+                  onChange={(e) => {
+                    const updated = [...malts];
+                    updated[i].ebc = e.target.value;
                     setMalts(updated);
                   }}
                 />
@@ -223,6 +242,34 @@ export default function NewBraggotRecipePage() {
                   }}
                 />
 
+                <input
+                  placeholder="Alpha (%)"
+                  type="number"
+                  min="0"
+                  step="any"
+                  className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-24"
+                  value={h.alpha}
+                  onChange={(e) => {
+                    const updated = [...hops];
+                    updated[i].alpha = e.target.value;
+                    setHops(updated);
+                  }}
+                />
+
+                <input
+                  placeholder="Year"
+                  type="number"
+                  min="1900"
+                  step="1"
+                  className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-24"
+                  value={h.year}
+                  onChange={(e) => {
+                    const updated = [...hops];
+                    updated[i].year = e.target.value;
+                    setHops(updated);
+                  }}
+                />
+
                 <UnitInput
   kind="g"
   placeholder={`Amount (${label("g")})`}
@@ -237,6 +284,9 @@ export default function NewBraggotRecipePage() {
 
 <input
   placeholder="Boil time (min)"
+  type="number"
+  min="0"
+  step="1"
   className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-20"
   value={h.time}
   onChange={(e) => {
@@ -272,7 +322,9 @@ export default function NewBraggotRecipePage() {
             <label className="block mb-1 font-semibold">Boil time (minutes)</label>
             <input
               name="boil_time"
-              type="text"
+              type="number"
+              min="0"
+              step="1"
               placeholder="Example: 60"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
@@ -313,11 +365,7 @@ export default function NewBraggotRecipePage() {
           {/* Additives */}
           <div>
             <label className="block mb-1 font-semibold">Additives</label>
-            <textarea
-              name="additives"
-              placeholder="DAP, Fermaid O, K2CO3, Irish Moss..."
-              className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
-            />
+            <RecipeAdditiveFields />
           </div>
 
           {/* Full process */}

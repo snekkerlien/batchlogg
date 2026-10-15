@@ -5,6 +5,7 @@ import * as Actions from "../../actions/createRecipe";
 import MenuOverlay from "../../MenuOverlay";
 import BackButton from "../../BackButton";
 import { UnitInput, UnitSymbol } from "../../../components/Units";
+import RecipeAdditiveFields from "../RecipeAdditiveFields";
 
 export default function NewOtherRecipePage() {
   const [loading, setLoading] = useState(false);
@@ -161,6 +162,9 @@ export default function NewOtherRecipePage() {
 
                 <input
                   placeholder="Amount"
+                  type="number"
+                  min="0"
+                  step="any"
                   className="w-24 p-3 rounded bg-black/40 border border-white/20"
                   value={ing.amount}
                   onChange={(e) => {
@@ -243,11 +247,7 @@ export default function NewOtherRecipePage() {
           {/* Additives */}
           <div>
             <label className="block mb-1 font-semibold">Additives</label>
-            <textarea
-              name="additives"
-              placeholder="Optional additives, chemicals, nutrients..."
-              className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
-            />
+            <RecipeAdditiveFields />
           </div>
 
           {/* Notes */}

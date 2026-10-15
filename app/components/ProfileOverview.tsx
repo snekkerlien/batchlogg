@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 
 type ProfileStats = {
   totalBatches: number;
@@ -221,7 +222,7 @@ export function ProfileAchievements({ stats }: { stats: ProfileStats }) {
           </ul>
         </>
       )}
-      {active && (
+      {active && typeof document !== "undefined" && createPortal(
         <div
           role="dialog"
           aria-modal="true"
@@ -261,7 +262,8 @@ export function ProfileAchievements({ stats }: { stats: ProfileStats }) {
               Close
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </section>
   );

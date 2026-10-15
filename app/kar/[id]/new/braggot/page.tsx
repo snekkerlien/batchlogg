@@ -10,6 +10,7 @@ import {
   BatchInventoryProvider,
   InventoryAdditiveFields,
   InventoryIngredientSelect,
+  InventoryPreferenceFallback,
 } from "@/app/components/InventoryUsageFields";
 
 export default function NewBraggotPage({
@@ -26,11 +27,11 @@ export default function NewBraggotPage({
 
   // Dynamic malt list
   const [malts, setMalts] = useState<
-    { name: string; amount: string; unit: string }[]
+    { name: string; amount: string; unit: string; ebc: string }[]
   >([]);
 
   function addMalt() {
-    setMalts([...malts, { name: "", amount: "", unit: "kg" }]);
+    setMalts([...malts, { name: "", amount: "", unit: "kg", ebc: "" }]);
   }
 
   function removeMalt(index: number) {
@@ -62,6 +63,7 @@ useEffect(() => {
           name: malt.name ?? "",
           amount: String(malt.amount ?? ""),
           unit: "kg",
+          ebc: String(malt.ebc ?? ""),
         }))
       : []
   );
@@ -106,7 +108,7 @@ useEffect(() => {
           className="flex flex-col gap-6"
           onSubmit={() => setLoading(true)}
         >
-          <BatchInventoryProvider>
+          <BatchInventoryProvider recipeId={recipe?.id} recipe={recipe}>
           {/* Hidden fields */}
           <input type="hidden" name="kar" value={params.id} />
           <input type="hidden" name="type" value="Braggot" />
@@ -182,6 +184,16 @@ useEffect(() => {
           updated[i].name = value;
           setMalts(updated);
         }}
+        onItemSelect={(item) => {
+          if (!item) return;
+          setMalts((current) =>
+            current.map((malt, index) =>
+              index === i
+                ? { ...malt, ebc: item.ebc != null ? String(item.ebc) : malt.ebc }
+                : malt
+            )
+          );
+        }}
       />
 
       <UnitInput
@@ -193,6 +205,22 @@ useEffect(() => {
           const updated = [...malts];
           updated[i].amount = value;
           updated[i].unit = "kg";
+          setMalts(updated);
+        }}
+      />
+
+      <input
+        type="number"
+        min="0"
+        step="any"
+        placeholder="EBC"
+        aria-label={`Malt ${i + 1} EBC`}
+        required
+        className="w-full rounded-lg border border-white/20 bg-black/40 p-3 md:w-24"
+        value={m.ebc}
+        onChange={(event) => {
+          const updated = [...malts];
+          updated[i].ebc = event.target.value;
           setMalts(updated);
         }}
       />
@@ -256,6 +284,11 @@ useEffect(() => {
 
       <input
         placeholder="Alpha (%)"
+        type="number"
+        min="0.1"
+        max="100"
+        step="any"
+        required
         className="p-3 rounded bg-black/40 border border-white/20 w-full"
         value={h.alpha}
         onChange={(e) => {
@@ -347,20 +380,26 @@ useEffect(() => {
             <InventoryIngredientSelect
               name="honey_type"
               selectionKey="honey"
+              trackAmount
+              amountFieldName="inventory_honey_amount"
+              defaultAmount={recipe?.honey_amount == null ? "" : String(recipe.honey_amount)}
+              defaultAmountUnit="kg"
               defaultValue={recipe?.honey_type ?? ""}
               placeholder="Honey type"
               category="fermentables"
               subcategory="Honey"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
-            <label className="block mb-1 font-semibold">Honey amount (<UnitSymbol kind="kg" />)</label>
-            <UnitInput
-              name="honey_amount"
-              kind="kg"
-              defaultValue={recipe?.honey_amount == null ? "" : String(recipe.honey_amount)}
-              placeholder="Example: 1.5"
-              className="w-full p-3 rounded bg-black/40 border border-white/20"
-            />
+            <InventoryPreferenceFallback>
+              <label className="block mb-1 font-semibold">Honey amount (<UnitSymbol kind="kg" />)</label>
+              <UnitInput
+                name="honey_amount"
+                kind="kg"
+                defaultValue={recipe?.honey_amount == null ? "" : String(recipe.honey_amount)}
+                placeholder="Example: 1.5"
+                className="w-full p-3 rounded bg-black/40 border border-white/20"
+              />
+            </InventoryPreferenceFallback>
           </div>
 
           {/* Yeast */}

@@ -1,7 +1,7 @@
     import { NextResponse } from "next/server";
     import { cookies } from "next/headers";
     import { createServerClient } from "@supabase/ssr";
-    import { calcIBU, calcDryHopIBU, calcEBC, calcDryHopEBC } from "@/app/my-recipes/actions/createRecipe";
+    import { calcIBU, calcDryHopIBU, calcEBC } from "@/lib/brewing/beerCalculators";
 
 
     export const runtime = "nodejs";
@@ -41,6 +41,10 @@
 
         const body = await req.json();
         const { id, ...fields } = body;
+        const beerSubtype = fields.beer_subtype;
+        const kitUrl = fields.kit_url;
+        delete fields.beer_subtype;
+        delete fields.kit_url;
 
         // ⭐ Parse JSON fields if needed
         const jsonFields = ["malts", "hops", "dry_hops", "fruits", "ingredients", "steps"];
@@ -52,6 +56,56 @@
             } catch {
             // ignore parse errors, leave as string
             }
+        }
+        }
+
+        if (fields.type === "Beer" && beerSubtype !== undefined) {
+        if (!["all_grain", "fresh_wort_kit", "malt_extract_kit"].includes(beerSubtype)) {
+            return NextResponse.json({ error: "Invalid beer recipe style" }, { status: 400 });
+        }
+        if (
+            beerSubtype !== "all_grain" &&
+            (typeof fields.name !== "string" ||
+                !fields.name.trim() ||
+                typeof fields.yeast !== "string" ||
+                !fields.yeast.trim() ||
+                fields.og === undefined ||
+                fields.og === null ||
+                fields.og === "" ||
+                !Number.isFinite(Number(fields.og)) ||
+                fields.volume === undefined ||
+                fields.volume === null ||
+                fields.volume === "" ||
+                !Number.isFinite(Number(fields.volume)) ||
+                Number(fields.volume) <= 0)
+        ) {
+            return NextResponse.json({
+                error: "Kit name, volume, OG, and yeast are required for kit recipes.",
+            }, { status: 400 });
+        }
+        let normalizedKitUrl: string | null = null;
+        if (beerSubtype !== "all_grain" && typeof kitUrl === "string" && kitUrl.trim()) {
+            try {
+                const parsedKitUrl = new URL(kitUrl.trim());
+                if (parsedKitUrl.protocol !== "http:" && parsedKitUrl.protocol !== "https:") {
+                    return NextResponse.json({ error: "Kit link must use http or https" }, { status: 400 });
+                }
+                normalizedKitUrl = parsedKitUrl.toString();
+            } catch {
+                return NextResponse.json({ error: "Invalid kit link" }, { status: 400 });
+            }
+        }
+        fields.ingredients = {
+            beer_subtype: beerSubtype,
+            kit_url: normalizedKitUrl,
+        };
+        if (beerSubtype !== "all_grain") {
+            fields.malts = [];
+            fields.boil_time = null;
+            fields.boil_volume = null;
+            fields.fg = null;
+            fields.abv = null;
+            fields.hops = [];
         }
         }
 
@@ -92,13 +146,12 @@
     fields.hops = normalizedHops;
 
 
-    const ibuBoil = calcIBU(normalizedHops, og, boil_volume);
-    const ibuDry = calcDryHopIBU(dry_hops);
+    const ibuBoil = calcIBU(normalizedHops, og, volume, boil_volume);
+    const ibuDry = calcDryHopIBU(dry_hops, volume);
     fields.ibu = ibuBoil + ibuDry;
 
-    const ebcResult = calcEBC(malts, boil_volume);
-    const ebcDry = calcDryHopEBC(dry_hops);
-    fields.ebc = ebcResult.ebc + ebcDry;
+    const ebcResult = calcEBC(malts, volume);
+    fields.ebc = ebcResult.ebc;
 
     fields.malt_warnings = ebcResult.warnings;
 

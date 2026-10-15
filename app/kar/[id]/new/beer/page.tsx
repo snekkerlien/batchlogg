@@ -27,11 +27,11 @@ export default function NewBeerPage({
 
   // Dynamic malt list
   const [malts, setMalts] = useState<
-    { name: string; amount: string }[]
+    { name: string; amount: string; ebc: string }[]
   >([]);
 
   function addMalt() {
-    setMalts([...malts, { name: "", amount: "" }]);
+    setMalts([...malts, { name: "", amount: "", ebc: "" }]);
   }
 
   function removeMalt(index: number) {
@@ -70,16 +70,32 @@ function removeDryHop(index: number) {
 
 const [boilVolume, setBoilVolume] = useState("");
 const [volume, setVolume] = useState("");
+const [beerSubtype, setBeerSubtype] = useState("");
 
 useEffect(() => {
-  if (!recipe) return;
-  setVolume(recipe.volume == null ? "" : String(recipe.volume));
+if (!recipe) return;
+const recipeIngredients =
+  recipe.ingredients && !Array.isArray(recipe.ingredients)
+    ? (recipe.ingredients as Record<string, unknown>)
+    : null;
+const storedSubtype = recipeIngredients?.beer_subtype;
+const isKitSubtype =
+  storedSubtype === "fresh_wort_kit" || storedSubtype === "malt_extract_kit";
+setBeerSubtype(
+  storedSubtype === "fresh_wort_kit"
+    ? "fresh_wort_kit"
+    : storedSubtype === "malt_extract_kit"
+      ? "malt_extract_kit"
+      : "all_grain"
+);
+setVolume(recipe.volume == null ? "" : String(recipe.volume));
   setBoilVolume(recipe.boil_volume == null ? "" : String(recipe.boil_volume));
   setMalts(
     Array.isArray(recipe.malts)
       ? recipe.malts.map((malt: any) => ({
           ...malt,
           amount: String(malt.amount ?? ""),
+      ebc: String(malt.ebc ?? ""),
         }))
       : []
   );
@@ -95,7 +111,7 @@ useEffect(() => {
       : []
   );
   setDryHops(
-    Array.isArray(recipe.dry_hops)
+    Array.isArray(recipe.dry_hops) && recipe.dry_hops.length > 0
       ? recipe.dry_hops.map((hop: any) => ({
           ...hop,
           amount: String(hop.amount ?? ""),
@@ -103,6 +119,14 @@ useEffect(() => {
           alpha: String(hop.alpha ?? ""),
           year: String(hop.year ?? ""),
         }))
+      : isKitSubtype && Array.isArray(recipe.hops)
+        ? recipe.hops.map((hop: any) => ({
+            name: hop.name ?? "",
+            amount: String(hop.amount ?? ""),
+            contact: "",
+            alpha: String(hop.alpha ?? ""),
+            year: String(hop.year ?? ""),
+          }))
       : []
   );
 }, [recipe]);
@@ -133,17 +157,44 @@ useEffect(() => {
         <form
           key={recipe?.id ?? "new-batch"}
           action={Actions.createBatch}
-          className="flex flex-col gap-6"
+          className="w-full"
           onSubmit={() => setLoading(true)}
         >
-          <BatchInventoryProvider>
+          <BatchInventoryProvider
+            recipeId={recipe?.id}
+            recipe={recipe}
+            className="flex flex-col gap-6"
+          >
           {/* Hidden fields */}
           <input type="hidden" name="kar" value={params.id} />
           <input type="hidden" name="type" value="Beer" />
 
+          <div>
+            <label htmlFor="beer-subtype" className="mb-2 block font-semibold">
+              Beer recipe style
+            </label>
+            <select
+              id="beer-subtype"
+              name="beer_subtype"
+              value={beerSubtype}
+              onChange={(event) => setBeerSubtype(event.target.value)}
+              required
+              className="w-full rounded-lg border border-white/20 bg-zinc-900 p-3"
+            >
+              <option value="">Choose a beer recipe style</option>
+              <option value="all_grain">All-grain</option>
+              <option value="fresh_wort_kit">Fresh wort kit</option>
+              <option value="malt_extract_kit">Malt extract kit</option>
+            </select>
+          </div>
+
+          {beerSubtype && (
+            <>
           {/* Batch name */}
           <div>
-            <label className="block mb-1 font-semibold">Batch name</label>
+            <label className="mb-2 block font-semibold">
+              {beerSubtype === "all_grain" ? "Batch name" : "Batch / kit name"}
+            </label>
             <input
               name="name"
               defaultValue={recipe?.name ?? ""}
@@ -153,13 +204,30 @@ useEffect(() => {
             />
           </div>
 
+          {beerSubtype !== "all_grain" && (
+            <div>
+              <label className="mb-2 block font-semibold">Kit link (optional)</label>
+              <input
+                name="kit_url"
+                type="url"
+                defaultValue={
+                  recipe?.ingredients && !Array.isArray(recipe.ingredients)
+                    ? String((recipe.ingredients as Record<string, unknown>).kit_url ?? "")
+                    : ""
+                }
+                placeholder="https://example.com/kit"
+                className="w-full rounded-lg border border-white/20 bg-black/40 p-3"
+              />
+            </div>
+          )}
+
           {/* Volume */}
           <div>
-            <label className="block mb-1 font-semibold">Volume (<UnitSymbol kind="volume" />)</label>
+            <label className="mb-2 block font-semibold">Volume (<UnitSymbol kind="volume" />)</label>
             <UnitInput
               name="volume_l"
               kind="volume"
-              placeholder="Batchvolume"
+              placeholder="Final batch volume"
               value={volume}
               onValueChange={setVolume}
               required
@@ -168,24 +236,25 @@ useEffect(() => {
 
           </div>
 
+          {beerSubtype === "all_grain" && (
           <div>
-  <label className="block mb-1 font-semibold">Boil Volume (<UnitSymbol kind="volume" />)</label>
-  <UnitInput
-  name="boil_volume_l"
-  kind="volume"
-  placeholder="Volume before boil"
-  value={boilVolume}
-  onValueChange={setBoilVolume}
-  required
-  className="w-full p-3 rounded bg-black/40 border border-white/20"
-  />
-
-</div>
+            <label className="mb-2 block font-semibold">Boil Volume (<UnitSymbol kind="volume" />)</label>
+            <UnitInput
+              name="boil_volume_l"
+              kind="volume"
+              placeholder="Volume before boil"
+              value={boilVolume}
+              onValueChange={setBoilVolume}
+              required
+              className="w-full p-3 rounded bg-black/40 border border-white/20"
+            />
+          </div>
+          )}
 
 
           {/* Start date */}
           <div>
-            <label className="block mb-1 font-semibold">Start date</label>
+            <label className="mb-2 block font-semibold">Start date</label>
             <input
               name="startdato"
               type="date"
@@ -197,7 +266,7 @@ useEffect(() => {
 
           {/* OG */}
           <div>
-            <label className="block mb-1 font-semibold">Original Gravity (OG)</label>
+            <label className="mb-2 block font-semibold">Original Gravity (OG)</label>
             <input
               name="og"
               defaultValue={recipe?.og ?? ""}
@@ -209,6 +278,7 @@ useEffect(() => {
             />
           </div>
 
+          {beerSubtype === "all_grain" && (
           <div>
   <label className="block mb-2 font-semibold">Malt additions</label>
 
@@ -229,6 +299,16 @@ useEffect(() => {
         updated[i].name = value;
         setMalts(updated);
       }}
+      onItemSelect={(item) => {
+        if (!item) return;
+        setMalts((current) =>
+          current.map((malt, index) =>
+            index === i
+              ? { ...malt, ebc: item.ebc != null ? String(item.ebc) : malt.ebc }
+              : malt
+          )
+        );
+      }}
     />
 
     {/* Amount */}
@@ -244,11 +324,27 @@ useEffect(() => {
       }}
     />
 
+    <input
+      type="number"
+      min="0"
+      step="any"
+      placeholder="EBC"
+      aria-label={`Malt ${i + 1} EBC`}
+      required
+      className="w-24 rounded-lg border border-white/20 bg-black/40 p-3"
+      value={m.ebc}
+      onChange={(event) => {
+        const updated = [...malts];
+        updated[i].ebc = event.target.value;
+        setMalts(updated);
+      }}
+    />
+
     {/* Remove */}
     <button
       type="button"
       onClick={() => removeMalt(i)}
-      className="px py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
+      className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
     >
       Remove
     </button>
@@ -265,12 +361,17 @@ useEffect(() => {
     + Add malt
   </button>
 </div>
+)}
 
-
-          {/* Hidden JSON field */}
-          <input type="hidden" name="malts_json" value={JSON.stringify(malts)} />
+{/* Hidden JSON field */}
+<input
+  type="hidden"
+  name="malts_json"
+  value={JSON.stringify(beerSubtype === "all_grain" ? malts : [])}
+/>
 
           {/* Dynamic hop additions */}
+          {beerSubtype === "all_grain" && (
           <div>
   <label className="block mb-2 font-semibold">Hop additions</label>
 
@@ -284,7 +385,7 @@ useEffect(() => {
       selectionKey={`hop:${i}`}
       placeholder="Hop type"
       category="hops"
-      className="p-3 rounded bg-black/40 border border-white/20 flex-1 min-w-[200px]"
+      className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
       value={h.name}
       onChange={(value) => {
         const updated = [...hops];
@@ -307,12 +408,16 @@ useEffect(() => {
       }}
     />
 
-<div className="grid grid-cols-2 gap-2 sm:grid-cols-[5rem_5rem_minmax(0,1fr)_minmax(0,1.4fr)_auto]">
+<div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-[minmax(6.5rem,0.8fr)_minmax(5rem,0.6fr)_minmax(7rem,1fr)_minmax(9rem,1.4fr)_auto]">
 
     <input
   placeholder="Alpha (%)"
-  type="text"
-  className="p-3 rounded bg-black/40 border border-white/20 w-full"
+      type="number"
+      min="0.1"
+      max="100"
+      step="any"
+      required
+  className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
   value={h.alpha}
   onChange={(e) => {
     const updated = [...hops];
@@ -325,7 +430,7 @@ useEffect(() => {
 <input
   placeholder="Year"
   type="text"
-  className="p-3 rounded bg-black/40 border border-white/20 w-full"
+  className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
   value={h.year}
   onChange={(e) => {
     const updated = [...hops];
@@ -339,7 +444,7 @@ useEffect(() => {
     <UnitInput
       kind="g"
       placeholder={`Amount (${label("g")})`}
-      className="p-3 rounded bg-black/40 border border-white/20 w-full"
+      className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
       value={h.amount}
       onValueChange={(value) => {
         const updated = [...hops];
@@ -352,7 +457,7 @@ useEffect(() => {
     <input
       placeholder="Boil time (min)"
       type="text"
-      className="p-3 rounded bg-black/40 border border-white/20 w-full"
+      className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
       value={h.time}
       onChange={(e) => {
         const updated = [...hops];
@@ -365,7 +470,7 @@ useEffect(() => {
     <button
       type="button"
       onClick={() => removeHop(i)}
-      className="col-span-2 sm:col-span-1 px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
+      className="col-span-2 justify-self-end rounded-lg border border-white/20 bg-white/10 px-4 py-3 text-sm hover:bg-white/20 sm:col-span-1 sm:justify-self-auto"
     >
       Remove
     </button>
@@ -382,10 +487,14 @@ useEffect(() => {
     + Add hop
   </button>
 </div>
+)}
 
 {/* Dry hop additions */}
+{beerSubtype && (
 <div>
-  <label className="block mb-2 font-semibold">Dry hop additions</label>
+  <label className="mb-2 block font-semibold">
+    Dry hop additions
+  </label>
 
   {dryHops.map((h, i) => (
     <div
@@ -397,7 +506,7 @@ useEffect(() => {
         selectionKey={`dryhop:${i}`}
         placeholder="Hop type"
         category="hops"
-        className="p-3 rounded bg-black/40 border border-white/20 flex-1 min-w-[200px]"
+        className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
         value={h.name}
         onChange={(value) => {
           const updated = [...dryHops];
@@ -420,13 +529,17 @@ useEffect(() => {
         }}
       />
 
-<div className="grid grid-cols-2 gap-2 sm:grid-cols-[5rem_5rem_minmax(0,1fr)_minmax(0,1.4fr)_auto]">
+<div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-[minmax(6.5rem,0.8fr)_minmax(5rem,0.6fr)_minmax(7rem,1fr)_minmax(9rem,1.4fr)_auto]">
 
       {/* Alpha (%) */}
       <input
         placeholder="Alpha (%)"
-        type="text"
-        className="p-3 rounded bg-black/40 border border-white/20 w-full"
+        type="number"
+        min="0.1"
+        max="100"
+        step="any"
+        required
+        className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
         value={h.alpha}
         onChange={(e) => {
           const updated = [...dryHops];
@@ -439,7 +552,7 @@ useEffect(() => {
       <input
         placeholder="Year"
         type="text"
-        className="p-3 rounded bg-black/40 border border-white/20 w-full"
+        className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
         value={h.year}
         onChange={(e) => {
           const updated = [...dryHops];
@@ -452,7 +565,7 @@ useEffect(() => {
       <UnitInput
         kind="g"
         placeholder={`Amount (${label("g")})`}
-        className="p-3 rounded bg-black/40 border border-white/20 w-full"
+        className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
         value={h.amount}
         onValueChange={(value) => {
           const updated = [...dryHops];
@@ -465,7 +578,7 @@ useEffect(() => {
       <input
         placeholder="Contact time (days)"
         type="text"
-        className="p-3 rounded bg-black/40 border border-white/20 w-full"
+        className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
         value={h.contact}
         onChange={(e) => {
           const updated = [...dryHops];
@@ -478,7 +591,7 @@ useEffect(() => {
       <button
         type="button"
         onClick={() => removeDryHop(i)}
-        className="col-span-2 sm:col-span-1 px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
+        className="col-span-2 justify-self-end rounded-lg border border-white/20 bg-white/10 px-4 py-3 text-sm hover:bg-white/20 sm:col-span-1 sm:justify-self-auto"
       >
         Remove
       </button>
@@ -494,19 +607,31 @@ useEffect(() => {
     + Add dry hop
   </button>
 </div>
+)}
 
-<input type="hidden" name="dry_hops_json" value={JSON.stringify(dryHops)} />
+<input
+  type="hidden"
+  name="dry_hops_json"
+  value={JSON.stringify(beerSubtype ? dryHops : [])}
+/>
 
 
 
 
 
           {/* Hidden JSON field */}
-          <input type="hidden" name="hops_json" value={JSON.stringify(hops)} />
+          <input
+            type="hidden"
+            name="hops_json"
+            value={JSON.stringify(
+              beerSubtype === "all_grain" ? hops : []
+            )}
+          />
 
           {/* Boil time */}
+          {beerSubtype === "all_grain" && (
           <div>
-            <label className="block mb-1 font-semibold">Total boil time (minutes)</label>
+            <label className="mb-2 block font-semibold">Total boil time (minutes)</label>
             <input
               name="boil_time"
               defaultValue={recipe?.boil_time ?? ""}
@@ -516,10 +641,11 @@ useEffect(() => {
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
+          )}
 
           {/* Yeast */}
           <div>
-            <label className="block mb-1 font-semibold">Yeast strain</label>
+            <label className="mb-2 block font-semibold">Yeast strain</label>
             <InventoryIngredientSelect
               name="yeast"
               selectionKey="yeast"
@@ -533,13 +659,13 @@ useEffect(() => {
 
           {/* Additives */}
           <div>
-            <label className="block mb-1 font-semibold">Additives</label>
+            <label className="mb-2 block font-semibold">Additives</label>
             <InventoryAdditiveFields defaultValue={recipe?.additives ?? ""} />
           </div>
 
           {/* Full process */}
           <div>
-            <label className="block mb-1 font-semibold">Full process</label>
+            <label className="mb-2 block font-semibold">Full process</label>
             <textarea
               name="full_process"
               defaultValue={recipe?.full_process ?? ""}
@@ -550,7 +676,7 @@ useEffect(() => {
 
           {/* Notes */}
           <div>
-            <label className="block mb-1 font-semibold">Notes</label>
+            <label className="mb-2 block font-semibold">Notes</label>
             <textarea
               name="notes"
               defaultValue={recipe?.notes ?? ""}
@@ -566,6 +692,8 @@ useEffect(() => {
           >
             {loading ? "Creating..." : "Create batch"}
           </button>
+            </>
+          )}
           </BatchInventoryProvider>
           
         </form>

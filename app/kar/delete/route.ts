@@ -29,12 +29,22 @@ export async function POST(req: Request) {
   const { data, error } = await supabase
     .from("kar")
     .delete()
-    .eq("id", karId);
+    .eq("id", karId)
+    .eq("user_id", user.id)
+    .select("id")
+    .maybeSingle();
 
   console.log("Delete result:", data);
   console.log("Delete error:", error);
 
   console.log("=== DELETE SINGLE KAR END ===");
+
+  if (error || !data) {
+    return NextResponse.json(
+      { error: error?.message ?? "Vessel not found or access denied" },
+      { status: error ? 500 : 403 }
+    );
+  }
 
   return NextResponse.redirect(new URL("/dashboard", req.url));
 }

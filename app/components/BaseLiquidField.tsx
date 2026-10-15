@@ -12,19 +12,20 @@ export default function BaseLiquidField({
       <label className="block mb-1 font-semibold">
         Base liquid (<UnitSymbol kind="volume" />)
       </label>
-      <div className="flex gap-2">
+      <div className="flex items-center gap-2">
         <input
           name="base_liquid"
           defaultValue={defaultName}
           placeholder="Water (leave empty for plain water)"
-          className="flex-1 p-3 rounded bg-black/40 border border-white/20"
+          className="min-w-0 flex-1 rounded border border-white/20 bg-black/40 p-3"
         />
+        <span className="shrink-0 text-sm text-white/80">up to</span>
         <UnitInput
           name="base_liquid_amount"
           kind="volume"
           defaultValue={defaultAmount}
           placeholder="Amount"
-          className="w-28 p-3 rounded bg-black/40 border border-white/20"
+          className="w-28 shrink-0 rounded border border-white/20 bg-black/40 p-3"
         />
       </div>
     </div>

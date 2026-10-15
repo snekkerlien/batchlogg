@@ -33,9 +33,8 @@ export async function POST(req: Request) {
 
   const { data: batch, error: batchError } = await supabase
     .from("batches")
-    .select("id")
+    .select("id, aktivt_kar")
     .eq("id", body.batchId)
-    .eq("user_id", user.id)
     .maybeSingle();
 
   if (batchError) {

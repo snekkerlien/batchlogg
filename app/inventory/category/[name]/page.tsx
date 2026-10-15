@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useInventory } from "../../useInventory";
 import InventoryList from "../../InventoryList";
+import AddItemModal from "../../AddItemModal";
 import BackButton from "../../BackButton";
 import MenuOverlay from "../../../components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
@@ -17,9 +19,11 @@ export default function CategoryPage({ params }: { params: { name: string } }) {
     loading,
     profile,
     profileLoaded,
+    addItem,
     updateItem,
     deleteItem,
   } = useInventory();
+  const [modalOpen, setModalOpen] = useState(false);
   const requestedCategory = params.name.toLowerCase();
   const category = LEGACY_CATEGORY_ALIASES[requestedCategory] ?? requestedCategory;
   const formattedCategoryTitle =
@@ -29,6 +33,9 @@ export default function CategoryPage({ params }: { params: { name: string } }) {
     profileLoaded &&
     SNUS_CATEGORIES.some((item) => item === category) &&
     !profile?.snus_is_true;
+  const isKnownCategory =
+    INVENTORY_CATEGORIES.some((item) => item.id === category) ||
+    SNUS_CATEGORIES.some((item) => item === category);
   const filtered = items
     .filter((item) => item.category === category)
     .sort((a, b) =>
@@ -67,6 +74,16 @@ export default function CategoryPage({ params }: { params: { name: string } }) {
               title={formattedCategoryTitle}
               subtitle="All items in this category."
             />
+            {isKnownCategory && (
+              <div className="mb-8 mt-6 text-center">
+                <button
+                  onClick={() => setModalOpen(true)}
+                  className="rounded-lg border border-green-500 bg-green-700 px-6 py-3 font-semibold hover:bg-green-600"
+                >
+                  Add new item
+                </button>
+              </div>
+            )}
             {loading ? (
               <p className="opacity-60 text-center mt-10">Loading…</p>
             ) : filtered.length === 0 ? (
@@ -87,6 +104,15 @@ export default function CategoryPage({ params }: { params: { name: string } }) {
           </>
         )}
       </div>
+      {isKnownCategory && !isRestrictedCategory && (
+        <AddItemModal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          profile={profile}
+          onAddItem={addItem}
+          fixedCategory={category}
+        />
+      )}
     </main>
   );
 }

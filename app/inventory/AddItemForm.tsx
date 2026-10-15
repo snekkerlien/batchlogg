@@ -7,16 +7,18 @@ type AddItemFormProps = {
   onSubmitComplete?: () => void;
   onAddItem: (formData: FormData) => Promise<void>;
   profile: any; // du kan stramme inn senere
+  fixedCategory?: string;
 };
 
 export default function AddItemForm({
   onSubmitComplete,
   onAddItem,
   profile,
+  fixedCategory,
 }: AddItemFormProps) {
   const [form, setForm] = useState({
     name: "",
-    category: "fermentables",
+    category: fixedCategory ?? "fermentables",
     subcategory: "",
     amount: "",
     unit: "kg",
@@ -27,6 +29,14 @@ export default function AddItemForm({
   });
   const isHop = form.category === "hops";
   const isMalt = form.category === "malts";
+  const itemType =
+    form.category === "malts"
+      ? "malt"
+      : form.category === "hops"
+        ? "hop"
+        : form.category === "yeast"
+          ? "yeast"
+          : "item";
 
   const visibleCategories =
     profile?.snus_is_true
@@ -54,24 +64,28 @@ export default function AddItemForm({
       <input
         required
         className="p-3 bg-black/40 border border-white/20 rounded"
-        placeholder="Name"
+        placeholder={isMalt ? "Malt type" : isHop ? "Hop type" : "Name"}
         value={form.name}
         onChange={(e) => setForm({ ...form, name: e.target.value })}
       />
 
-      <select
-        className="p-3 bg-black/40 border border-white/20 rounded"
-        value={form.category}
-        onChange={(e) =>
-          setForm({ ...form, category: e.target.value, subcategory: "" })
-        }
-      >
-        {visibleCategories.map((cat) => (
-          <option key={cat.id} value={cat.id}>
-            {cat.label}
-          </option>
-        ))}
-      </select>
+      {fixedCategory ? (
+        <input type="hidden" name="category" value={form.category} />
+      ) : (
+        <select
+          className="p-3 bg-black/40 border border-white/20 rounded"
+          value={form.category}
+          onChange={(e) =>
+            setForm({ ...form, category: e.target.value, subcategory: "" })
+          }
+        >
+          {visibleCategories.map((cat) => (
+            <option key={cat.id} value={cat.id}>
+              {cat.label}
+            </option>
+          ))}
+        </select>
+      )}
 
       {selectedCategory && selectedCategory.subcategories.length > 0 && (
         <select
@@ -160,7 +174,7 @@ export default function AddItemForm({
       )}
 
       <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
-        Add item
+        Add {itemType}
       </button>
     </form>
   );

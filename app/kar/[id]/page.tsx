@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import * as Actions from "./actions";
 import { KarNotesClient } from "./KarNotesClient";
+import VesselContributors from "./VesselContributors";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import VisibilitySwitch from "@/app/components/VisibilitySwitch";
 import BatchSGChart from "@/app/components/BatchSGChart";
@@ -16,6 +17,11 @@ import QRCode from "qrcode";
 
 import { translateOldRecipe } from "@/lib/translateOldRecipe";
 import { Qty, UnitInput, UnitSymbol, useUnits } from "@/app/components/Units";
+import BaseLiquidField from "@/app/components/BaseLiquidField";
+import {
+  BatchEditAdditiveFields,
+  BatchEditFruitFields,
+} from "./BatchEditAdditionFields";
 
 type Fruit = { name: string; amount: string; unit: string };
 type Malt = { name: string; amount: string; unit: string };
@@ -72,12 +78,14 @@ export default function KarPage({ params }: { params: { id: string } }) {
   const [openSecondaryActive, setOpenSecondaryActive] = useState(false);
   const [openFinish, setOpenFinish] = useState(false);
   const [openMove, setOpenMove] = useState(false);
+  const [openSharing, setOpenSharing] = useState(false);
   const [confirmCancelBatch, setConfirmCancelBatch] = useState(false);
   const cancelBatchFormRef = useRef<HTMLFormElement>(null);
   const cancelBatchConfirmedRef = useRef(false);
 
   const [user, setUser] = useState<any>(null);
   const [kar, setKar] = useState<any>(null);
+  const [isContributor, setIsContributor] = useState(false);
   const [activeBatch, setActiveBatch] = useState<any>(null);
   const [historyBatch, setHistoryBatch] = useState<any>(null);
   const [notes, setNotes] = useState<any[]>([]);
@@ -120,13 +128,34 @@ export default function KarPage({ params }: { params: { id: string } }) {
     .from("kar")
     .select("*")
     .eq("id", params.id)
-    .eq("user_id", user.id)
     .single()
     .then(({ data }) => {
       setKar(data);
       setKarLoading(false);
     });
 }, [user, params.id]);
+
+  useEffect(() => {
+    if (!kar || !user || kar.user_id === user.id) {
+      setIsContributor(false);
+      return;
+    }
+
+    supabase
+      .from("kar_contributors")
+      .select("kar_id")
+      .eq("kar_id", kar.id)
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("Could not verify shared vessel access", error);
+          setIsContributor(false);
+          return;
+        }
+        setIsContributor(!!data);
+      });
+  }, [kar, user]);
 
   useEffect(() => {
     if (!kar) return;
@@ -144,6 +173,11 @@ export default function KarPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     if (!kar) return;
+    if (kar.user_id !== user?.id) {
+      setVesselNumber(null);
+      setFreeVessels([]);
+      return;
+    }
     (async () => {
       const [{ data: vessels }, { data: busy }] = await Promise.all([
         supabase
@@ -169,14 +203,14 @@ export default function KarPage({ params }: { params: { id: string } }) {
           : []
       );
     })();
-  }, [kar, activeBatch]);
+  }, [kar, activeBatch, user]);
 
   useEffect(() => {
     if (!kar || activeBatch) return;
     supabase
       .from("batches")
       .select("*")
-      .eq("user_id", kar.user_id)
+      .eq("aktivt_kar", kar.id)
       .order("finished_date", { ascending: false })
       .limit(1)
       .maybeSingle()
@@ -252,6 +286,7 @@ export default function KarPage({ params }: { params: { id: string } }) {
 }
 
   const isOwner = kar.user_id === user.id;
+  const canContribute = isOwner || isContributor;
   const hasActive = !!activeBatch;
 
   const hasHistory = !!historyBatch;
@@ -292,6 +327,31 @@ async function toggleVisibility() {
 
   setKar((prev: any) => ({ ...prev, is_public: newValue }));
 }
+
+const sharingSection = isOwner ? (
+  <div className="mb-6 rounded-lg border border-white/10 bg-white/5 p-4">
+    <button
+      type="button"
+      onClick={() => setOpenSharing((open) => !open)}
+      aria-expanded={openSharing}
+      className="w-full flex items-center justify-between font-semibold text-green-300"
+    >
+      Share vessel with friends
+      <span
+        className={`text-white text-xl transition-transform duration-300 ${
+          openSharing ? "rotate-90" : "rotate-180"
+        }`}
+      >
+        ▶
+      </span>
+    </button>
+    {openSharing && (
+      <div className="mt-4">
+        <VesselContributors karId={kar.id} />
+      </div>
+    )}
+  </div>
+) : null;
 
 
   return (
@@ -348,6 +408,8 @@ async function toggleVisibility() {
     Generate QR code
   </button>
 )}
+
+{sharingSection}
 
 {showQR && (
   <div
@@ -415,7 +477,7 @@ async function toggleVisibility() {
 )}
 
 <PageHeading
-  title={vesselNumber ? `Vessel ${vesselNumber}` : "Vessel"}
+  title={vesselNumber ? `Vessel ${vesselNumber}` : isOwner ? "Vessel" : "Shared vessel"}
   subtitle={
     activeBatch
       ? ["Sekundær", "secondary"].includes(activeBatch.status)
@@ -442,7 +504,7 @@ async function toggleVisibility() {
       This vessel is currently empty.
     </p>
 
-    {user.id === kar.user_id && (
+    {canContribute && (
       <div className="text-center mb-10">
         <button
   onClick={() => setOpenStyleSelect(true)}
@@ -506,7 +568,7 @@ async function toggleVisibility() {
           {activeBatch.name}
         </h3>
 
-        {isOwner && (
+        {canContribute && (
           <button
             type="button"
             onClick={() => setOpenEdit(!openEdit)}
@@ -645,6 +707,27 @@ async function toggleVisibility() {
 {/* BEER */}
 {activeBatch.type === "Beer" && (
   <>
+    <p>
+      <strong>Recipe style:</strong>{" "}
+      {activeBatch.beer_subtype === "fresh_wort_kit"
+        ? "Fresh wort kit"
+        : activeBatch.beer_subtype === "malt_extract_kit"
+          ? "Malt extract kit"
+          : "All-grain"}
+    </p>
+    {activeBatch.kit_url && (
+      <p>
+        <strong>Kit link:</strong>{" "}
+        <a
+          href={activeBatch.kit_url}
+          target="_blank"
+          rel="noreferrer"
+          className="text-green-300 underline"
+        >
+          Open kit
+        </a>
+      </p>
+    )}
     {activeBatch.malts?.length > 0 && (
       <div>
         <strong>Malt additions:</strong>
@@ -663,7 +746,22 @@ async function toggleVisibility() {
       </div>
     )}
 
-    <p><strong>Total boil time:</strong> {activeBatch.boil_time} min</p>
+    {activeBatch.dry_hops?.length > 0 && (
+      <div>
+        <strong>Dry hop additions:</strong>
+        {activeBatch.dry_hops.map((hop: any, index: number) => (
+          <p key={index}>
+            {hop.name}: <Qty kind="g" value={hop.amount} maxDecimals={0} />
+            {hop.contact ? ` for ${hop.contact} days` : ""}
+          </p>
+        ))}
+      </div>
+    )}
+
+    {activeBatch.beer_subtype !== "fresh_wort_kit" &&
+      activeBatch.beer_subtype !== "malt_extract_kit" && (
+        <p><strong>Total boil time:</strong> {activeBatch.boil_time} min</p>
+      )}
     <p><strong>Additives:</strong><br />{activeBatch.additives}</p>
     <p><strong>Full process:</strong><br />{activeBatch.full_process}</p>
     <p><strong>Notes:</strong><br />{activeBatch.notes}</p>
@@ -753,7 +851,7 @@ async function toggleVisibility() {
           {activeBatch.name}
         </h3>
 
-        {isOwner && (
+        {canContribute && (
           <button
             type="button"
             onClick={() => setOpenEdit(!openEdit)}
@@ -810,6 +908,15 @@ async function toggleVisibility() {
             {/* TYPE-SPECIFIC FIELDS */}
             {activeBatch.type === "Mead" && (
               <>
+                <BaseLiquidField
+                  defaultName={activeBatch.base_liquid ?? ""}
+                  defaultAmount={
+                    activeBatch.base_liquid_amount == null
+                      ? ""
+                      : String(activeBatch.base_liquid_amount)
+                  }
+                />
+
                 <label className="font-semibold">Honey type</label>
                 <input
                   name="honey_type"
@@ -827,12 +934,11 @@ async function toggleVisibility() {
                   className="p-3 rounded bg-black/40 border border-white/20"
                 />
       
-                <label className="font-semibold">Additives</label>
-                <textarea
-                  name="additives"
-                  defaultValue={activeBatch.additives}
-                  className="p-3 rounded bg-black/40 border border-white/20"
+                <BatchEditFruitFields
+                  defaultValue={Array.isArray(activeBatch.fruits) ? activeBatch.fruits : []}
                 />
+
+                <BatchEditAdditiveFields defaultValue={activeBatch.additives ?? ""} />
       
                 <label className="font-semibold">Full process</label>
                 <textarea
@@ -866,13 +972,6 @@ async function toggleVisibility() {
                   kind="kg"
                   name="sugar_amount"
                   defaultValue={String(activeBatch.sugar_amount ?? "")}
-                  className="p-3 rounded bg-black/40 border border-white/20"
-                />
-      
-                <label className="font-semibold">Additives</label>
-                <textarea
-                  name="additives"
-                  defaultValue={activeBatch.additives}
                   className="p-3 rounded bg-black/40 border border-white/20"
                 />
       
@@ -987,10 +1086,6 @@ async function toggleVisibility() {
           <label className="font-semibold mt-4">Total boil time (min)</label>
           <input name="boil_time" type="number" defaultValue={activeBatch.boil_time} className="p-3 rounded bg-black/40 border border-white/20" />
       
-          {/* ⭐ Additives */}
-          <label className="font-semibold">Additives</label>
-          <textarea name="additives" defaultValue={activeBatch.additives} className="p-3 rounded bg-black/40 border border-white/20" />
-      
           {/* ⭐ Full process */}
           <label className="font-semibold">Full process</label>
           <textarea name="full_process" defaultValue={activeBatch.full_process} className="p-3 rounded bg-black/40 border border-white/20" />
@@ -1003,13 +1098,6 @@ async function toggleVisibility() {
       
       {activeBatch.type === "Other" && (
               <>
-                <label className="font-semibold">Additives</label>
-                <textarea
-                  name="additives"
-                  defaultValue={activeBatch.additives}
-                  className="p-3 rounded bg-black/40 border border-white/20"
-                />
-      
                 <label className="font-semibold">Notes</label>
                 <textarea
                   name="notes"
@@ -1017,6 +1105,10 @@ async function toggleVisibility() {
                   className="p-3 rounded bg-black/40 border border-white/20"
                 />
               </>
+            )}
+
+            {activeBatch.type !== "Mead" && (
+              <BatchEditAdditiveFields defaultValue={activeBatch.additives ?? ""} />
             )}
       
             <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
@@ -1191,7 +1283,7 @@ async function toggleVisibility() {
 
 
     {/* ⭐ Rack to secondary */}
-{hasActive && isOwner && activeBatch.status === "Aktiv" && (
+{hasActive && canContribute && activeBatch.status === "Aktiv" && (
   <div className="mt-6 bg-white/5 border border-white/10 rounded-lg p-4">
     <button
       type="button"
@@ -1245,7 +1337,7 @@ async function toggleVisibility() {
 
         
 
-           {hasActive && isOwner && (
+           {hasActive && canContribute && (
   <div className="bg-white/5 border border-white/10 rounded-lg p-4 mt-6 mb-6">
     <button
       type="button"
@@ -1325,7 +1417,7 @@ async function toggleVisibility() {
 )}
 
 {/* Finish batch under Rack to secondary */}
-{isOwner && hasActive && (
+{canContribute && hasActive && (
   <div className="bg-white/5 border border-white/10 rounded-lg p-4 mt-6">
     <button
       type="button"
@@ -1386,7 +1478,7 @@ async function toggleVisibility() {
 
 
 {/* Cancel batch */}
-{isOwner && hasActive && (
+{canContribute && hasActive && (
   <>
     <form
       ref={cancelBatchFormRef}

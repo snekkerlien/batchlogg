@@ -34,7 +34,9 @@ export async function POST(req: Request) {
   const { data, error } = await supabase
     .from("kar")
     .delete()
-    .in("id", ids);
+    .in("id", ids)
+    .eq("user_id", user.id)
+    .select("id");
 
   console.log("Delete result:", data);
   console.log("Delete error:", error);

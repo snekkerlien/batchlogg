@@ -85,7 +85,7 @@ export default function NewOtherPage({
           className="flex flex-col gap-6"
           onSubmit={() => setLoading(true)}
         >
-          <BatchInventoryProvider>
+          <BatchInventoryProvider recipeId={recipe?.id} recipe={recipe}>
           {/* Hidden fields */}
           <input type="hidden" name="kar" value={params.id} />
           <input type="hidden" name="type" value="Other" />

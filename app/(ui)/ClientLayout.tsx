@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider, useAuthContext } from "../providers/AuthProvider";
@@ -71,6 +72,7 @@ function UserAccentTheme({ children }: { children: ReactNode }) {
 
 export default function ClientLayout({ children }: { children: ReactNode }) {
   useSupabaseSessionSync();
+  const pathname = usePathname();
 
   return (
     <AuthProvider>
@@ -79,7 +81,7 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
         <FirstLoginSetup />
         <div className="relative z-[80] mx-auto -mb-8 max-w-3xl space-y-2 px-3 pt-12 empty:hidden">
           <SiteAnnouncementBanner />
-          <SiteStatusBanner />
+          {pathname !== "/" && <SiteStatusBanner />}
         </div>
         <ChangelogNotice />
         <Toaster

@@ -2,164 +2,11 @@
 
 import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
 import { redirect } from "next/navigation";
-
-// ⭐ Import malt + humle databasen fra egen fil
-import { MALTS_DB, MALT_ALIASES } from "./data";
-
-export { calcIBU, calcDryHopIBU, calcEBC, calcDryHopEBC };
-
-
-// -----------------------------
-// Levenshtein fuzzy match
-// -----------------------------
-function levenshtein(a: string, b: string): number {
-  const m = a.length;
-  const n = b.length;
-  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
-
-  for (let i = 0; i <= m; i++) dp[i][0] = i;
-  for (let j = 0; j <= n; j++) dp[0][j] = j;
-
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      dp[i][j] = Math.min(
-        dp[i - 1][j] + 1,
-        dp[i][j - 1] + 1,
-        dp[i - 1][j - 1] + cost
-      );
-    }
-  }
-
-  return dp[m][n];
-}
-
-function normalizeMaltName(name: string): string {
-  const key = name.toLowerCase().trim();
-  return MALT_ALIASES[key] || name;
-}
-
-function fuzzyMatchMalt(name: string) {
-  const normalized = normalizeMaltName(name).toLowerCase().trim();
-
-  let best: any = null;
-  let bestScore = Infinity;
-
-  for (const malt of MALTS_DB) {
-    const dbName = malt.name.toLowerCase();
-    const dist = levenshtein(normalized, dbName);
-
-    if (dist < bestScore) {
-      bestScore = dist;
-      best = malt;
-    }
-  }
-
-  if (!best || bestScore > 3) {
-    return {
-      name,
-      lovibond: 0,
-      warning: true,
-    };
-  }
-
-  return {
-    ...best,
-    warning: false,
-  };
-}
-
-// -----------------------------
-// IBU (Tinseth)
-// -----------------------------
-function calcIBU(hops: any[], og: number, volumeL: number) {
-  if (!hops || hops.length === 0) return 0;
-
-  const bigness = 1.65 * Math.pow(0.000125, og - 1.0);
-  let ibu = 0;
-
-  for (const hop of hops) {
-    const aa = (Number(hop.alpha) || 0) / 100;
-
-    const boil = hop.time ? Number(hop.time) : 60;
-    const boilFactor = (1 - Math.exp(-0.04 * boil)) / 4.15;
-    const utilization = bigness * boilFactor;
-
-    ibu += (Number(hop.amount) * 1000 * aa * utilization) / volumeL;
-  }
-
-  return ibu;
-}
-
-
-// -----------------------------
-// ⭐ Brewfather-style Dry Hop IBU
-// -----------------------------
-function calcDryHopIBU(dryHops: any[]) {
-  if (!dryHops || dryHops.length === 0) return 0;
-
-  let ibu = 0;
-
-  for (const hop of dryHops) {
-    const grams = Number(hop.amount) || 0;
-    const days = Number(hop.contact) || 0;
-
-    // Brewfather polyphenol bitterness model
-    ibu += grams * 0.0008 * days;
-  }
-
-  return ibu;
-}
-
-// -----------------------------
-// EBC (MCU → SRM → EBC)
-// -----------------------------
-function calcEBC(malts: any[], volumeL: number) {
-  if (!malts || malts.length === 0) return { ebc: 0, warnings: [] };
-
-  const L_PER_GAL = 3.78541;
-  const KG_PER_LB = 0.453592;
-
-  let mcu = 0;
-  const warnings: string[] = [];
-
-  for (const malt of malts) {
-    const match = fuzzyMatchMalt(malt.name);
-
-    if (match.warning) {
-      warnings.push(malt.name);
-    }
-
-    const lovibond = match.lovibond;
-    const weight_lb = Number(malt.amount) / KG_PER_LB;
-    const volume_gal = volumeL / L_PER_GAL;
-
-    mcu += (weight_lb * lovibond) / volume_gal;
-  }
-
-  const srm = 1.4922 * Math.pow(mcu, 0.6859);
-  const ebc = srm * 1.97;
-
-  return { ebc, warnings };
-}
-
-// -----------------------------
-// ⭐ Brewfather-style Dry Hop EBC
-// -----------------------------
-function calcDryHopEBC(dryHops: any[]) {
-  if (!dryHops || dryHops.length === 0) return 0;
-
-  let ebc = 0;
-
-  for (const hop of dryHops) {
-    const grams = Number(hop.amount) || 0;
-
-    // Brewfather hop color contribution
-    ebc += grams * 0.002;
-  }
-
-  return ebc;
-}
+import {
+  calcDryHopIBU,
+  calcEBC,
+  calcIBU,
+} from "@/lib/brewing/beerCalculators";
 
 // -----------------------------
 // MAIN FUNCTION
@@ -181,6 +28,25 @@ export async function createRecipe(formData: FormData) {
   // Core
   const type = formData.get("type") as string;
   const name = formData.get("name") as string;
+  const beerSubtype = formData.get("beer_subtype") as string | null;
+  const kitUrl = formData.get("kit_url") as string | null;
+
+  if (
+    type === "Beer" &&
+    !["all_grain", "fresh_wort_kit", "malt_extract_kit"].includes(beerSubtype ?? "")
+  ) {
+    return { success: false, error: "Choose a beer recipe style." };
+  }
+  if (type === "Beer" && beerSubtype !== "all_grain" && kitUrl?.trim()) {
+    try {
+      const parsedKitUrl = new URL(kitUrl.trim());
+      if (parsedKitUrl.protocol !== "http:" && parsedKitUrl.protocol !== "https:") {
+        return { success: false, error: "Kit link must use http or https." };
+      }
+    } catch {
+      return { success: false, error: "Enter a valid kit link." };
+    }
+  }
 
   const ogRaw = formData.get("og") as string | null;
   const fgRaw = formData.get("fg") as string | null;
@@ -198,10 +64,28 @@ export async function createRecipe(formData: FormData) {
   const full_process = formData.get("full_process") as string;
   const notes = formData.get("notes") as string;
   const yeast = formData.get("yeast") as string;
+  if (
+    type === "Beer" &&
+    beerSubtype !== "all_grain" &&
+    (!name?.trim() ||
+      !yeast?.trim() ||
+      !ogRaw ||
+      !Number.isFinite(og) ||
+      !volumeRaw ||
+      !Number.isFinite(volume) ||
+      Number(volume) <= 0)
+  ) {
+    return {
+      success: false,
+      error: "Kit name, volume, OG, and yeast are required for kit recipes.",
+    };
+  }
 
   // Mead
   const honey_type = formData.get("honey_type") as string;
   const honey_amount = formData.get("honey_amount") as string;
+  const base_liquid = formData.get("base_liquid") as string;
+  const base_liquid_amount = formData.get("base_liquid_amount") as string;
 
   const fruits_json = formData.get("fruits_json") as string;
   const fruits = fruits_json ? JSON.parse(fruits_json) : null;
@@ -241,27 +125,22 @@ export async function createRecipe(formData: FormData) {
   // ⭐ Automatic IBU/EBC for beer/braggot
   const ibuBoil =
   (type === "Beer" || type === "Braggot") && og && volume
-    ? calcIBU(hops || [], og, boil_volume ?? volume)
+    ? calcIBU(hops || [], og, volume, boil_volume ?? volume)
     : 0
 
   const ibuDry =
     (type === "Beer" || type === "Braggot")
-      ? calcDryHopIBU(dry_hops || [])
+      ? calcDryHopIBU(dry_hops || [], volume ?? 0)
       : 0;
 
   const ibu = ibuBoil + ibuDry;
 
   const ebcResult =
     (type === "Beer" || type === "Braggot") && volume
-      ? calcEBC(malts || [], boil_volume ?? volume)
+      ? calcEBC(malts || [], volume)
       : { ebc: 0, warnings: [] };
 
-  const ebcDry =
-    (type === "Beer" || type === "Braggot")
-      ? calcDryHopEBC(dry_hops || [])
-      : 0;
-
-  const ebc = ebcResult.ebc + ebcDry;
+  const ebc = ebcResult.ebc;
 
   const maltWarnings = ebcResult.warnings;
 
@@ -275,7 +154,17 @@ export async function createRecipe(formData: FormData) {
 
   // Other
   const ingredients_json = formData.get("ingredients_json") as string;
-  const ingredients = ingredients_json ? JSON.parse(ingredients_json) : null;
+  const otherIngredients = ingredients_json ? JSON.parse(ingredients_json) : null;
+  const ingredients =
+    type === "Beer"
+      ? {
+          beer_subtype: beerSubtype,
+          kit_url:
+            beerSubtype === "all_grain" || !kitUrl?.trim()
+              ? null
+              : new URL(kitUrl.trim()).toString(),
+        }
+      : otherIngredients;
 
   const steps_json = formData.get("steps_json") as string;
   const steps = steps_json ? JSON.parse(steps_json) : null;
@@ -298,6 +187,8 @@ export async function createRecipe(formData: FormData) {
 
     honey_type,
     honey_amount,
+    base_liquid,
+    base_liquid_amount: base_liquid_amount ? parseFloat(base_liquid_amount) : null,
     fruits,
 
     juice_type,

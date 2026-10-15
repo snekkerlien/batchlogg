@@ -7,6 +7,12 @@ export type SavedRecipe = Record<string, any> & {
   type: string;
 };
 
+function normalizeRecipeType(type: unknown) {
+  if (typeof type !== "string") return "";
+  const normalized = type.trim().toLowerCase().replace(/[-_]+/g, " ").replace(/\s+/g, " ");
+  return normalized === "hard seltzer" ? "seltzer" : normalized;
+}
+
 export function useRecipePrefill(recipeId?: string, expectedType?: string) {
   const [recipe, setRecipe] = useState<SavedRecipe | null>(null);
   const [loading, setLoading] = useState(Boolean(recipeId));
@@ -37,7 +43,7 @@ export function useRecipePrefill(recipeId?: string, expectedType?: string) {
       })
       .then((loadedRecipe) => {
         const typeMatches =
-          loadedRecipe.type?.toLowerCase() === expectedType?.toLowerCase();
+          normalizeRecipeType(loadedRecipe.type) === normalizeRecipeType(expectedType);
         if (!typeMatches) {
           throw new Error("This recipe does not match the batch type.");
         }

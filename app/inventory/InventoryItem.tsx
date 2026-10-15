@@ -80,6 +80,27 @@ export default function InventoryItem({
             ? `${item.category.charAt(0).toUpperCase() + item.category.slice(1)} · ${item.subcategory}`
             : item.category.charAt(0).toUpperCase() + item.category.slice(1)}
         </div>
+        {item.category === "hops" && (
+          <div className="mt-2 flex flex-wrap gap-2 text-xs">
+            {item.alpha_acid != null && item.alpha_acid !== "" && (
+              <span className="rounded-md border border-amber-300/20 bg-amber-300/10 px-2 py-1 text-amber-100">
+                {Number(item.alpha_acid)}%
+              </span>
+            )}
+            {item.hop_year != null && item.hop_year !== "" && (
+              <span className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-white/70">
+                {item.hop_year}
+              </span>
+            )}
+          </div>
+        )}
+        {item.category === "malts" && item.ebc != null && item.ebc !== "" && (
+          <div className="mt-2">
+            <span className="rounded-md border border-orange-300/20 bg-orange-300/10 px-2 py-1 text-xs text-orange-100">
+              EBC {Number(item.ebc)}
+            </span>
+          </div>
+        )}
       </div>
 
       {!editMode && (

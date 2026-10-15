@@ -5,6 +5,8 @@ import * as Actions from "../../actions/createRecipe";
 import MenuOverlay from "../../MenuOverlay";
 import BackButton from "../../BackButton";
 import { UnitInput, UnitSymbol } from "../../../components/Units";
+import BaseLiquidField from "../../../components/BaseLiquidField";
+import RecipeAdditiveFields from "../RecipeAdditiveFields";
 
 export default function NewMeadRecipePage() {
   const [loading, setLoading] = useState(false);
@@ -134,6 +136,8 @@ export default function NewMeadRecipePage() {
             />
           </div>
 
+          <BaseLiquidField />
+
           {/* Honey */}
           <div>
             <label className="block mb-1 font-semibold">Honey type</label>
@@ -155,65 +159,73 @@ export default function NewMeadRecipePage() {
           </div>
 
           {/* Fruit additions */}
-          <div>
-            <label className="block mb-2 font-semibold">Fruit additions</label>
+<div>
+  <label className="block mb-2 font-semibold">Fruit additions</label>
 
-            {fruits.map((f, i) => (
-              <div
-                key={i}
-                className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full"
-              >
-                <input
-                  placeholder="Fruit (e.g. Mango, Raspberry)"
-                  className="p-3 rounded bg-black/40 border border-white/20 w-full md:flex-1"
-                  value={f.name}
-                  onChange={(e) => {
-                    const updated = [...fruits];
-                    updated[i].name = e.target.value;
-                    setFruits(updated);
-                  }}
-                />
+  <div className="space-y-2">
+    {fruits.map((f, i) => (
+      <div
+        key={i}
+        className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(6rem,0.35fr)_minmax(5rem,0.25fr)_auto]"
+      >
+        <input
+          aria-label={`Fruit ${i + 1}`}
+          placeholder="Fruit (e.g. Mango, Raspberry)"
+          className="col-span-2 min-w-0 rounded border border-white/20 bg-black/40 p-3 sm:col-span-1"
+          value={f.name}
+          onChange={(e) => {
+            const updated = [...fruits];
+            updated[i].name = e.target.value;
+            setFruits(updated);
+          }}
+        />
 
-                <input
-                  placeholder="Amount"
-                  className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-24"
-                  value={f.amount}
-                  onChange={(e) => {
-                    const updated = [...fruits];
-                    updated[i].amount = e.target.value;
-                    setFruits(updated);
-                  }}
-                />
+        <input
+          aria-label={`Fruit ${i + 1} amount`}
+          placeholder="Amount"
+          type="number"
+          min="0"
+          step="any"
+          className="min-w-0 rounded border border-white/20 bg-black/40 p-3"
+          value={f.amount}
+          onChange={(e) => {
+            const updated = [...fruits];
+            updated[i].amount = e.target.value;
+            setFruits(updated);
+          }}
+        />
 
-                <input
-                  placeholder="Unit"
-                  className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-20"
-                  value={f.unit}
-                  onChange={(e) => {
-                    const updated = [...fruits];
-                    updated[i].unit = e.target.value;
-                    setFruits(updated);
-                  }}
-                />
+        <input
+          aria-label={`Fruit ${i + 1} unit`}
+          placeholder="Unit"
+          className="min-w-0 rounded border border-white/20 bg-black/40 p-3"
+          value={f.unit}
+          onChange={(e) => {
+            const updated = [...fruits];
+            updated[i].unit = e.target.value;
+            setFruits(updated);
+          }}
+        />
 
-                <button
-                  type="button"
-                  onClick={() => removeFruit(i)}
-                  className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm self-start md:self-auto"
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
+        <button
+          type="button"
+          onClick={() => removeFruit(i)}
+          className="col-span-2 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm hover:bg-white/20 sm:col-span-1"
+        >
+          Remove
+        </button>
+      </div>
+    ))}
 
-            <button
-              type="button"
-              onClick={addFruit}
-              className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
-            >
-              + Add fruit
-            </button>
-          </div>
+    <button
+      type="button"
+      onClick={addFruit}
+      className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm hover:bg-white/20"
+    >
+      + Add fruit
+    </button>
+  </div>
+</div>
 
           <input type="hidden" name="fruits_json" value={JSON.stringify(fruits)} />
 
@@ -230,11 +242,7 @@ export default function NewMeadRecipePage() {
           {/* Additives */}
           <div>
             <label className="block mb-1 font-semibold">Additives</label>
-            <textarea
-              name="additives"
-              placeholder="Fermaid O, DAP, K2CO3..."
-              className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
-            />
+            <RecipeAdditiveFields />
           </div>
 
           {/* Full process */}

@@ -10,6 +10,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import VisibilitySwitch from "../components/VisibilitySwitch";
 import RecipeFilters, { type RecipeSort } from "./RecipeFilters";
+import {
+  getSavedRecipeInventoryIssues,
+  type InventoryItem,
+} from "@/lib/inventory/recipeInventory";
 
 function ebcToHex(ebc: number | string) {
   const value = Number(ebc);
@@ -79,6 +83,13 @@ export default function RecipesPage() {
   const [vesselsLoaded, setVesselsLoaded] = useState(false);
   const [startRecipeId, setStartRecipeId] = useState<string | null>(null);
   const [selectedVesselId, setSelectedVesselId] = useState("");
+  const [startingRecipeId, setStartingRecipeId] = useState<string | null>(null);
+  const [batchInventoryDialog, setBatchInventoryDialog] = useState<{
+    recipe: Record<string, unknown>;
+    vesselId: string;
+    issues?: string[];
+    error?: string;
+  } | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [openStyleSelect, setOpenStyleSelect] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -87,6 +98,9 @@ export default function RecipesPage() {
   const [recipeSort, setRecipeSort] = useState<RecipeSort>("newest");
   const [openEdit, setOpenEdit] = useState<string | null>(null);
   const [editRecipe, setEditRecipe] = useState<any>(null);
+  const [editBeerSubtype, setEditBeerSubtype] = useState("all_grain");
+  const [editError, setEditError] = useState<string | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
   const [editFruits, setEditFruits] = useState<Fruit[]>([]);
   const [hadSecondary, setHadSecondary] = useState(false);
   const [secondaryAdditions, setSecondaryAdditions] = useState("");
@@ -204,6 +218,81 @@ export default function RecipesPage() {
 
   load();
 }, []);
+
+  function openRecipeBatch(
+    recipe: Record<string, unknown>,
+    vesselId: string,
+    skipInventory = false
+  ) {
+    const routeType = batchFormRoutes[String(recipe.type ?? "").toLowerCase()];
+    if (!routeType) return;
+
+    const searchParams = new URLSearchParams({
+      recipe: String(recipe.id),
+    });
+    if (skipInventory) searchParams.set("skip_inventory", "true");
+    router.push(
+      `/kar/${vesselId}/new/${routeType}?${searchParams.toString()}`
+    );
+  }
+
+  async function continueWithRecipe(recipe: Record<string, unknown>) {
+    const vesselId = selectedVesselId;
+    if (!vesselId || startingRecipeId) return;
+    setStartingRecipeId(String(recipe.id));
+
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabaseBrowser.auth.getUser();
+      if (userError) throw userError;
+      if (!user) throw new Error("Your session has expired. Sign in and try again.");
+
+      const { data: profile, error: profileError } = await supabaseBrowser
+        .from("profiles")
+        .select("use_inventory_for_batches")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (profileError) throw profileError;
+
+      if (profile?.use_inventory_for_batches !== true) {
+        openRecipeBatch(recipe, vesselId);
+        return;
+      }
+
+      const { data, error: inventoryError } = await supabaseBrowser
+        .from("inventory_items")
+        .select("id, name, amount, unit, minimum_amount, category, subcategory, alpha_acid, ebc, hop_year")
+        .eq("user_id", user.id)
+        .order("name");
+      if (inventoryError) throw inventoryError;
+
+      const items: InventoryItem[] = (data ?? [])
+        .filter((item) => !/\bwater\b/i.test(item.name))
+        .map((item) => ({
+          ...item,
+          amount: Number(item.amount),
+          minimum_amount: Number(item.minimum_amount ?? 0),
+        }));
+      const issues = getSavedRecipeInventoryIssues(recipe, items, false, true);
+      if (issues.length > 0) {
+        setBatchInventoryDialog({ recipe, vesselId, issues });
+        return;
+      }
+
+      openRecipeBatch(recipe, vesselId);
+    } catch (error) {
+      console.error("Could not check recipe ingredients against inventory", error);
+      setBatchInventoryDialog({
+        recipe,
+        vesselId,
+        error: "Inventory could not be checked. Please try again before starting this batch.",
+      });
+    } finally {
+      setStartingRecipeId(null);
+    }
+  }
 
 
 
@@ -455,6 +544,8 @@ function removeDryHop(index: number) {
     onClick={(e) => {
       e.stopPropagation();
       setEditRecipe(r);
+      setEditError(null);
+      setEditBeerSubtype(r.type === "Beer" ? r.ingredients?.beer_subtype ?? "all_grain" : "all_grain");
       setEditFruits(r.fruits || []);
       setOpenEdit(r.id); 
       setHadSecondary(r.had_secondary || false);
@@ -462,7 +553,19 @@ function removeDryHop(index: number) {
       setSecondaryNotes(r.secondary_notes || "");
       setEditMalts(r.malts || []);
       setEditHops(r.hops || []);
-      setEditDryHops(r.dry_hops || []);
+      setEditDryHops(
+        r.dry_hops?.length
+          ? r.dry_hops
+          : r.type === "Beer" &&
+              (r.ingredients?.beer_subtype === "fresh_wort_kit" ||
+                r.ingredients?.beer_subtype === "malt_extract_kit")
+            ? (r.hops || []).map((hop: Hop) => ({
+                name: hop.name,
+                amount: hop.amount,
+                contact: "",
+              }))
+            : []
+      );
 
 
         // åpner edit-modal for denne oppskriften
@@ -589,7 +692,30 @@ function removeDryHop(index: number) {
 
                       {(r.type === "Beer" || r.type === "Braggot") && (
   <>
-    <p className="text-xs opacity-60 mt-2">
+                          {r.type === "Beer" && r.ingredients?.beer_subtype && (
+                            <div className="text-sm">
+                              <strong>Recipe style:</strong>{" "}
+                              {r.ingredients.beer_subtype === "fresh_wort_kit"
+                                ? "Fresh wort kit"
+                                : r.ingredients.beer_subtype === "malt_extract_kit"
+                                  ? "Malt extract kit"
+                                  : "All-grain"}
+                              {r.ingredients.kit_url && (
+                                <>
+                                  {" · "}
+                                  <a
+                                    href={r.ingredients.kit_url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-green-300 underline"
+                                  >
+                                    Kit link
+                                  </a>
+                                </>
+                              )}
+                            </div>
+                          )}
+                          <p className="text-xs opacity-60 mt-2">
       Note: If the IBU or EBC values differ from the recipe you imported,
       this is because Batchlogg uses more accurate brewing models
       (Tinseth for bitterness and Morey for color). Many recipe kits use
@@ -784,18 +910,13 @@ function removeDryHop(index: number) {
                             disabled={
                               !selectedVesselId ||
                               !vesselsLoaded ||
+                              startingRecipeId !== null ||
                               !batchFormRoutes[r.type?.toLowerCase()]
                             }
-                            onClick={() => {
-                              const routeType = batchFormRoutes[r.type?.toLowerCase()];
-                              if (!routeType) return;
-                              router.push(
-                                `/kar/${selectedVesselId}/new/${routeType}?recipe=${encodeURIComponent(r.id)}`
-                              );
-                            }}
+                            onClick={() => void continueWithRecipe(r)}
                             className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold disabled:opacity-50"
                           >
-                            Continue with recipe
+                            {startingRecipeId === r.id ? "Checking inventory..." : "Continue with recipe"}
                           </button>
                           <button
                             type="button"
@@ -845,33 +966,67 @@ function removeDryHop(index: number) {
         className="flex flex-col gap-4"
         onSubmit={async (e) => {
           e.preventDefault();
+          setEditError(null);
+          setSavingEdit(true);
 
           const formData = new FormData(e.currentTarget);
           const payload = Object.fromEntries(formData.entries());
 
-          await fetch("/api/recipes/update", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: openEdit, ...payload }),
-          });
-
-          
-
-          setOpenEdit(null);
-          window.location.reload();
+          try {
+            const response = await fetch("/api/recipes/update", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ id: openEdit, ...payload }),
+            });
+            const result = await response.json();
+            if (!response.ok) {
+              setEditError(result.error || "Could not save the recipe.");
+              return;
+            }
+            setOpenEdit(null);
+            window.location.reload();
+          } catch (error) {
+            setEditError(
+              error instanceof Error ? error.message : "Could not save the recipe."
+            );
+          } finally {
+            setSavingEdit(false);
+          }
         }}
       >
+
+        {editError && (
+          <p role="alert" className="rounded border border-red-400/40 bg-red-950/50 p-3 text-red-200">
+            {editError}
+          </p>
+        )}
 
         <input type="hidden" name="type" value={editRecipe.type} />
 
 
         {/* COMMON FIELDS */}
-        <label className="font-semibold">Name</label>
+        <label className="font-semibold">
+          {editRecipe.type === "Beer" && editBeerSubtype !== "all_grain" ? "Kit name" : "Name"}
+        </label>
         <input
           name="name"
           defaultValue={editRecipe.name}
+          required={editRecipe.type === "Beer" && editBeerSubtype !== "all_grain"}
           className="p-3 rounded bg-black/40 border border-white/20"
         />
+
+        {editRecipe.type === "Beer" && editBeerSubtype !== "all_grain" && (
+          <label className="block">
+            <span className="font-semibold">Kit link (optional)</span>
+            <input
+              name="kit_url"
+              type="url"
+              defaultValue={editRecipe.ingredients?.kit_url ?? ""}
+              placeholder="https://example.com/kit"
+              className="mt-1 w-full rounded border border-white/20 bg-black/40 p-3"
+            />
+          </label>
+        )}
 
         <label className="font-semibold">
           Volume (<UnitSymbol kind="volume" />)
@@ -880,6 +1035,7 @@ function removeDryHop(index: number) {
           kind="volume"
           name="volume"
           defaultValue={String(editRecipe.volume ?? "")}
+          required={editRecipe.type === "Beer" && editBeerSubtype !== "all_grain"}
           className="p-3 rounded bg-black/40 border border-white/20"
         />
 
@@ -888,21 +1044,27 @@ function removeDryHop(index: number) {
           name="og"
           type="text"
           defaultValue={editRecipe.og}
+          required={editRecipe.type === "Beer" && editBeerSubtype !== "all_grain"}
           className="p-3 rounded bg-black/40 border border-white/20"
         />
 
-        <label className="font-semibold">FG</label>
-        <input
-          name="fg"
-          type="text"
-          defaultValue={editRecipe.fg}
-          className="p-3 rounded bg-black/40 border border-white/20"
-        />
+        {!(editRecipe.type === "Beer" && editBeerSubtype !== "all_grain") && (
+          <>
+            <label className="font-semibold">FG</label>
+            <input
+              name="fg"
+              type="text"
+              defaultValue={editRecipe.fg}
+              className="p-3 rounded bg-black/40 border border-white/20"
+            />
+          </>
+        )}
 
         <label className="font-semibold">Yeast</label>
         <input
           name="yeast"
           defaultValue={editRecipe.yeast}
+          required={editRecipe.type === "Beer" && editBeerSubtype !== "all_grain"}
           className="p-3 rounded bg-black/40 border border-white/20"
         />
 
@@ -1015,7 +1177,25 @@ function removeDryHop(index: number) {
 
         {(editRecipe.type === "Beer" || editRecipe.type === "Braggot") && (
   <>
+    {editRecipe.type === "Beer" && (
+      <label className="block">
+        <span className="font-semibold">Beer recipe style</span>
+        <select
+          name="beer_subtype"
+          value={editBeerSubtype}
+          onChange={(event) => setEditBeerSubtype(event.target.value)}
+          className="mt-1 w-full rounded border border-white/20 bg-zinc-900 p-3"
+        >
+          <option value="all_grain">All-grain</option>
+          <option value="fresh_wort_kit">Fresh wort kit</option>
+          <option value="malt_extract_kit">Malt extract kit</option>
+        </select>
+      </label>
+    )}
+
     {/* Boil Volume */}
+    {(editRecipe.type === "Braggot" || editBeerSubtype === "all_grain") && (
+    <>
           <div>
             <label className="block mb-1 font-semibold">
               Boil Volume (<UnitSymbol kind="volume" />)
@@ -1028,8 +1208,12 @@ function removeDryHop(index: number) {
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
+    </>
+    )}
     
     {/* MALTS */}
+    {(editRecipe.type === "Braggot" || editBeerSubtype === "all_grain") && (
+    <>
     <div>
       <label className="block mb-2 font-semibold">Malt additions</label>
 
@@ -1070,31 +1254,36 @@ function removeDryHop(index: number) {
     </div>
 
     <input type="hidden" name="malts" value={JSON.stringify(editMalts)} />
+    </>
+    )}
 
     {/* HOPS */}
+    {(editRecipe.type === "Braggot" || editBeerSubtype === "all_grain") && (
+    <>
     <div>
       <label className="block mb-2 font-semibold">Hop additions</label>
 
       {editHops.map((h, i) => (
-        <div key={i} className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full">
+        <div key={i} className="mb-4 w-full space-y-2">
 
           <input
             placeholder="Hop type"
-            className="p-3 rounded bg-black/40 border border-white/20 w-full md:flex-1"
+            className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
             value={h.name}
             onChange={(e) => updateHop(i, "name", e.target.value)}
           />
 
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(6.5rem,0.8fr)_minmax(5rem,0.6fr)_minmax(7rem,1fr)_minmax(9rem,1.4fr)_auto]">
           <input
             placeholder="Alpha (%)"
-            className="p-3 rounded bg-black/40 border border-white/20 w-24"
+            className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
             value={h.alpha}
             onChange={(e) => updateHop(i, "alpha", e.target.value)}
           />
 
           <input
             placeholder="Year"
-            className="p-3 rounded bg-black/40 border border-white/20 w-24"
+            className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
             value={h.year}
             onChange={(e) => updateHop(i, "year", e.target.value)}
           />
@@ -1102,14 +1291,14 @@ function removeDryHop(index: number) {
           <UnitInput
             kind="g"
             placeholder={`Amount (${label("g")})`}
-            className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-28"
+            className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
             value={h.amount}
             onValueChange={(value) => updateHop(i, "amount", value)}
           />
 
           <input
             placeholder="Boil time (min)"
-            className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-32"
+            className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
             value={h.time}
             onChange={(e) => updateHop(i, "time", e.target.value)}
           />
@@ -1117,10 +1306,11 @@ function removeDryHop(index: number) {
           <button
             type="button"
             onClick={() => removeHop(i)}
-            className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
+            className="col-span-2 justify-self-end rounded-lg border border-white/20 bg-white/10 px-4 py-3 text-sm hover:bg-white/20 sm:col-span-1 sm:justify-self-auto"
           >
             Remove
           </button>
+          </div>
         </div>
       ))}
 
@@ -1134,32 +1324,39 @@ function removeDryHop(index: number) {
     </div>
 
     <input type="hidden" name="hops" value={JSON.stringify(editHops)} />
+    </>
+    )}
 
     {/* DRY HOPS */}
+    {(editRecipe.type === "Braggot" || editRecipe.type === "Beer") && (
+    <>
     <div>
-      <label className="block mb-2 font-semibold">Dry hop additions</label>
+      <label className="mb-2 block font-semibold">
+        Dry hop additions
+      </label>
 
       {editDryHops.map((h, i) => (
-        <div key={i} className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full">
+        <div key={i} className="mb-4 w-full space-y-2">
 
           <input
             placeholder="Hop type"
-            className="p-3 rounded bg-black/40 border border-white/20 w-full md:flex-1"
+            className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
             value={h.name}
             onChange={(e) => updateDryHop(i, "name", e.target.value)}
           />
 
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(7rem,1fr)_minmax(9rem,1.4fr)_auto]">
           <UnitInput
             kind="g"
             placeholder={`Amount (${label("g")})`}
-            className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-28"
+            className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
             value={h.amount}
             onValueChange={(value) => updateDryHop(i, "amount", value)}
           />
 
           <input
             placeholder="Contact time (days)"
-            className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-32"
+            className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
             value={h.contact}
             onChange={(e) => updateDryHop(i, "contact", e.target.value)}
           />
@@ -1167,10 +1364,11 @@ function removeDryHop(index: number) {
           <button
             type="button"
             onClick={() => removeDryHop(i)}
-            className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
+            className="col-span-2 justify-self-end rounded-lg border border-white/20 bg-white/10 px-4 py-3 text-sm hover:bg-white/20 sm:col-span-1 sm:justify-self-auto"
           >
             Remove
           </button>
+          </div>
         </div>
       ))}
 
@@ -1188,9 +1386,13 @@ function removeDryHop(index: number) {
     </div>
 
     <input type="hidden" name="dry_hops" value={JSON.stringify(editDryHops)} />
+    </>
+    )}
 
 
     {/* Boil time */}
+    {(editRecipe.type === "Braggot" || editBeerSubtype === "all_grain") && (
+    <>
           <div>
             <label className="block mb-1 font-semibold">Total boil time (minutes)</label>
             <input
@@ -1201,6 +1403,8 @@ function removeDryHop(index: number) {
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
+    </>
+    )}
 
   </>
 )}
@@ -1288,8 +1492,11 @@ function removeDryHop(index: number) {
 <input type="hidden" name="had_secondary" value={hadSecondary ? "true" : "false"} />
 
 
-        <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
-          Save changes
+        <button
+          disabled={savingEdit}
+          className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold disabled:opacity-50"
+        >
+          {savingEdit ? "Saving..." : "Save changes"}
         </button>
       </form>
 
@@ -1303,8 +1510,71 @@ function removeDryHop(index: number) {
   </div>
 )}
 
-        {/* DELETE CONFIRMATION */}
-        {confirmDeleteId && (
+{batchInventoryDialog && (
+  <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-4">
+    <section
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="batch-inventory-dialog-title"
+      className="w-full max-w-lg rounded-xl border border-amber-400/30 bg-zinc-900 p-6 text-white shadow-2xl"
+    >
+      <h2 id="batch-inventory-dialog-title" className="mb-3 text-xl font-bold">
+        {batchInventoryDialog.error
+          ? "Could not check inventory"
+          : "Not enough inventory for this recipe"}
+      </h2>
+      {batchInventoryDialog.error ? (
+        <p role="alert" className="mb-6 text-sm text-amber-200">
+          {batchInventoryDialog.error}
+        </p>
+      ) : (
+        <>
+          <p className="mb-3 text-sm text-zinc-300">
+            The new batch has not been opened. Add or match these ingredients before
+            continuing:
+          </p>
+          <ul className="mb-4 list-disc space-y-1 pl-5 text-sm text-amber-200">
+            {batchInventoryDialog.issues?.map((issue, index) => (
+              <li key={`${index}:${issue}`}>{issue}</li>
+            ))}
+          </ul>
+          <p className="mb-6 text-sm text-zinc-300">
+            You can temporarily continue without using inventory for this batch. Your
+            inventory and inventory setting will not be changed.
+          </p>
+        </>
+      )}
+      <div className="flex flex-col-reverse justify-end gap-3 sm:flex-row">
+        <button
+          type="button"
+          onClick={() => setBatchInventoryDialog(null)}
+          className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold hover:bg-white/20"
+        >
+          {batchInventoryDialog.error ? "Close" : "Review recipe"}
+        </button>
+        {!batchInventoryDialog.error && (
+          <button
+            type="button"
+            onClick={() => {
+              openRecipeBatch(
+                batchInventoryDialog.recipe,
+                batchInventoryDialog.vesselId,
+                true
+              );
+              setBatchInventoryDialog(null);
+            }}
+            className="rounded-lg border border-amber-400/40 bg-amber-700/80 px-4 py-2 font-semibold hover:bg-amber-700"
+          >
+            Continue without inventory
+          </button>
+        )}
+      </div>
+    </section>
+  </div>
+)}
+
+{/* DELETE CONFIRMATION */}
+{confirmDeleteId && (
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
             <div className="bg-zinc-900 border border-white/20 p-6 rounded-xl w-full max-w-sm text-white">
               <h2 className="text-xl font-bold mb-4">Delete recipe?</h2>

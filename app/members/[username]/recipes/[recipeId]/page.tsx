@@ -98,15 +98,19 @@ export default async function RecipeNotesPage({
   </h2>
 
   {/* Base values */}
+  {recipe.og != null && (
+    <p className="text-sm opacity-90">
+      <strong>OG:</strong> {Number(recipe.og).toFixed(3)}
+    </p>
+  )}
+
+{recipe.fg != null && (
   <p className="text-sm opacity-90">
-  <strong>OG:</strong> {Number(recipe.og).toFixed(3)}
-</p>
+    <strong>FG:</strong> {Number(recipe.fg).toFixed(3)}
+  </p>
+)}
 
-<p className="text-sm opacity-90">
-  <strong>FG:</strong> {Number(recipe.fg).toFixed(3)}
-</p>
-
-  <p className="text-sm opacity-90"><strong>ABV:</strong> {recipe.abv.toFixed(1)}%</p>
+  {recipe.abv != null && <p className="text-sm opacity-90"><strong>ABV:</strong> {Number(recipe.abv).toFixed(1)}%</p>}
   <p className="text-sm opacity-90"><strong>Volume:</strong> <Qty kind="volume" value={recipe.volume} /></p>
 
   {/* MEAD */}
@@ -142,6 +146,27 @@ export default async function RecipeNotesPage({
   {/* BEER */}
   {recipe.type === "Beer" && (
     <>
+      <p>
+        <strong>Recipe style:</strong>{" "}
+        {recipe.ingredients?.beer_subtype === "fresh_wort_kit"
+          ? "Fresh wort kit"
+          : recipe.ingredients?.beer_subtype === "malt_extract_kit"
+            ? "Malt extract kit"
+            : "All-grain"}
+      </p>
+      {recipe.ingredients?.kit_url && (
+        <p>
+          <strong>Kit link:</strong>{" "}
+          <a
+            href={recipe.ingredients.kit_url}
+            target="_blank"
+            rel="noreferrer"
+            className="text-green-300 underline"
+          >
+            Open kit
+          </a>
+        </p>
+      )}
       {recipe.malts?.length > 0 && (
         <div>
           <strong>Malt additions:</strong>

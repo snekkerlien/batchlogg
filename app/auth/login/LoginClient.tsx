@@ -20,57 +20,33 @@ export default function LoginClient() {
   }, []);
 
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
-  e.preventDefault();
-  setErrorMsg("");
+    e.preventDefault();
+    setErrorMsg("");
 
-  const form = new FormData(e.currentTarget);
-  const identifier = form.get("identifier")?.toString().trim() ?? "";
-  const password = form.get("password")?.toString() ?? "";
+    const form = new FormData(e.currentTarget);
+    const email = form.get("email")?.toString().trim() ?? "";
+    const password = form.get("password")?.toString() ?? "";
 
-  if (!identifier || !password) {
-    setErrorMsg("Please enter both username/email and password.");
-    return;
-  }
-
-  // ⭐ CASE-INSENSITIVE LOGIN
-  const normalized = identifier.toLowerCase();
-  let loginEmail = normalized;
-
-  if (!normalized.includes("@")) {
-    // User typed a username → look up email (case-insensitive)
-    const { data: profile, error: lookupError } = await supabaseBrowser
-      .from("profiles")
-      .select("email")
-      .eq("username", normalized)
-      .single();
-
-    if (lookupError || !profile) {
-      setErrorMsg("Username not found.");
+    if (!email || !password) {
+      setErrorMsg("Please enter your email address and password.");
       return;
     }
 
-    loginEmail = profile.email;
+    const params = new URLSearchParams(window.location.search);
+    const redirect = params.get("redirect");
+
+    const { error } = await supabaseBrowser.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      setErrorMsg("Incorrect email or password.");
+      return;
+    }
+
+    router.replace(redirect || "/dashboard");
   }
-
-  const params = new URLSearchParams(window.location.search);
-  const redirect = params.get("redirect");
-
-  const { error } = await supabaseBrowser.auth.signInWithPassword({
-    email: loginEmail,
-    password,
-  });
-
-  if (error) {
-    setErrorMsg("Incorrect username/email or password.");
-    return;
-  }
-
-  if (redirect) {
-    router.replace(redirect);
-  } else {
-    router.replace("/dashboard");
-  }
-}
 
 
   if (loading) return null;
@@ -98,9 +74,10 @@ export default function LoginClient() {
         )}
 
         <input
-          type="text"
-          name="identifier"
-          placeholder="Username or Email"
+          type="email"
+          name="email"
+          autoComplete="email"
+          placeholder="Email"
           required
           className="w-full px-4 py-3 rounded-lg bg-black/40 border border-white/20"
         />

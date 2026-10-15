@@ -31,7 +31,6 @@ export async function deleteNoteServer(noteId: string, karId: string) {
     .from("batches")
     .select("id, user_id, aktivt_kar")
     .eq("id", note.batch_id)
-    .eq("user_id", user.id)
     .maybeSingle();
 
   if (batchError) {

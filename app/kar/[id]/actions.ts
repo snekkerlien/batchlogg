@@ -3,7 +3,13 @@
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { MALTS_DB, MALT_ALIASES } from "@/app/my-recipes/actions/data";
+import { MALT_ALIASES } from "@/app/my-recipes/actions/data";
+import {
+  calcDryHopIBU,
+  calcEBC,
+  calcIBU,
+} from "@/lib/brewing/beerCalculators";
+import { convertIngredientAmount } from "@/lib/inventory/convertIngredientAmount";
 
 
 
@@ -12,7 +18,7 @@ import { MALTS_DB, MALT_ALIASES } from "@/app/my-recipes/actions/data";
 // ---------------------------------------------------------
 
 type Fruit = { name: string; amount: string; unit: string };
-type Malt = { name: string; amount: string; unit: string };
+type Malt = { name: string; amount: string; unit: string; ebc: string };
 type Hop = { name: string; amount: string; unit: string; time: string; alpha: string; year: string; };
 type DryHop = { name: string; amount: string; contact: string; alpha: string; year: string; };
 
@@ -22,147 +28,6 @@ function normalizeInventoryName(value: string) {
   return value.trim().toLocaleLowerCase().replace(/\s+/g, " ");
 }
 
-function convertIngredientAmount(
-  amount: number,
-  fromUnit: string,
-  toUnit: string
-): number | null {
-  const normalizeUnit = (unit: string) =>
-    unit.trim().toLocaleLowerCase().replace(/[.\s]/g, "");
-  const from = normalizeUnit(fromUnit);
-  const to = normalizeUnit(toUnit);
-  const unitFactors: Record<string, { family: string; factor: number }> = {
-    kg: { family: "mass", factor: 1000 },
-    g: { family: "mass", factor: 1 },
-    mg: { family: "mass", factor: 0.001 },
-    lb: { family: "mass", factor: 453.59237 },
-    lbs: { family: "mass", factor: 453.59237 },
-    oz: { family: "mass", factor: 28.349523125 },
-    l: { family: "volume", factor: 1000 },
-    ml: { family: "volume", factor: 1 },
-    gal: { family: "volume", factor: 3785.411784 },
-    gallon: { family: "volume", factor: 3785.411784 },
-    gallons: { family: "volume", factor: 3785.411784 },
-    pcs: { family: "count", factor: 1 },
-    pc: { family: "count", factor: 1 },
-    piece: { family: "count", factor: 1 },
-    pieces: { family: "count", factor: 1 },
-    each: { family: "count", factor: 1 },
-  };
-
-  if (from === to) return amount;
-  const fromFactor = unitFactors[from];
-  const toFactor = unitFactors[to];
-  if (!fromFactor || !toFactor || fromFactor.family !== toFactor.family) return null;
-  return (amount * fromFactor.factor) / toFactor.factor;
-}
-
-function levenshtein(a: string, b: string): number {
-  const m = a.length;
-  const n = b.length;
-  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
-
-  for (let i = 0; i <= m; i++) dp[i][0] = i;
-  for (let j = 0; j <= n; j++) dp[0][j] = j;
-
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      dp[i][j] = Math.min(
-        dp[i - 1][j] + 1,
-        dp[i][j - 1] + 1,
-        dp[i - 1][j - 1] + cost
-      );
-    }
-  }
-
-  return dp[m][n];
-}
-
-function normalizeMaltName(name: string): string {
-  const key = name.toLowerCase().trim();
-  return MALT_ALIASES[key] || name;
-}
-
-function fuzzyMatchMalt(name: string) {
-  const normalized = normalizeMaltName(name).toLowerCase().trim();
-
-  let best: any = null;
-  let bestScore = Infinity;
-
-  for (const malt of MALTS_DB) {
-    const dbName = malt.name.toLowerCase();
-    const dist = levenshtein(normalized, dbName);
-
-    if (dist < bestScore) {
-      bestScore = dist;
-      best = malt;
-    }
-  }
-
-  if (!best || bestScore > 3) {
-    return {
-      name,
-      lovibond: 0,
-      warning: true,
-    };
-  }
-
-  return {
-    ...best,
-    warning: false,
-  };
-}
-
-
-function calcIBU(hops: any[], og: number, volumeL: number) {
-  if (!hops || hops.length === 0) return 0;
-
-  const bigness = 1.65 * Math.pow(0.000125, og - 1.0);
-  let ibu = 0;
-
-  for (const hop of hops) {
-    const aa = (Number(hop.alpha) || 0) / 100;
-
-    const boil = hop.time ? Number(hop.time) : 60;
-    const boilFactor = (1 - Math.exp(-0.04 * boil)) / 4.15;
-    const utilization = bigness * boilFactor;
-
-    ibu += (Number(hop.amount) * 1000 * aa * utilization) / volumeL;
-  }
-
-  return ibu;
-}
-
-
-function calcEBC(malts: any[], volumeL: number) {
-  if (!malts || malts.length === 0) return { ebc: 0, warnings: [] };
-
-  const L_PER_GAL = 3.78541;
-  const KG_PER_LB = 0.453592;
-
-  let mcu = 0;
-  const warnings: string[] = [];
-
-  for (const malt of malts) {
-    const match = malt.ebc > 0 ? { lovibond: (malt.ebc / 1.97 + 0.76) / 1.3546, warning: false } : fuzzyMatchMalt(malt.name);
-
-    if (match.warning) {
-      warnings.push(malt.name);
-    }
-
-    const lovibond = match.lovibond;
-    const weight_lb = Number(malt.amount) / KG_PER_LB;
-    const volume_gal = volumeL / L_PER_GAL;
-
-    mcu += (weight_lb * lovibond) / volume_gal;
-  }
-
-  const srm = 1.4922 * Math.pow(mcu, 0.6859);
-  const ebc = srm * 1.97;
-
-  return { ebc, warnings };
-}
 
 
 export async function createBatch(formData: FormData) {
@@ -187,7 +52,12 @@ export async function createBatch(formData: FormData) {
   if (profileError || !profile) {
     throw new Error("Could not load the inventory preference for this account.");
   }
-  const useInventory = profile.use_inventory_for_batches === true;
+  const recipeId = formData.get("recipe_id");
+  const inventoryBypassed =
+    formData.get("inventory_bypass") === "true" &&
+    typeof recipeId === "string" &&
+    recipeId.trim() !== "";
+  const useInventory = profile.use_inventory_for_batches === true && !inventoryBypassed;
   let inventoryUsage: unknown[] = [];
   let inventorySelections: Record<string, string> = {};
   if (useInventory) {
@@ -246,17 +116,14 @@ export async function createBatch(formData: FormData) {
 
   const { data: vessel, error: vesselError } = await supabase
     .from("kar")
-    .select("id")
+    .select("id, user_id")
     .eq("id", karId)
-    .eq("user_id", userId)
     .maybeSingle();
 
   if (vesselError) {
     throw new Error(`Kunne ikke kontrollere karet: ${vesselError.message}`);
   }
-  if (!vessel) {
-    throw new Error("Karet finnes ikke eller tilhører ikke denne brukeren.");
-  }
+  if (!vessel) throw new Error("Vessel not found or access denied.");
 
   const { data: activeBatch, error: activeBatchError } = await supabase
     .from("batches")
@@ -288,6 +155,39 @@ export async function createBatch(formData: FormData) {
   const startdato = formData.get("startdato") as string;
   const og = Number(formData.get("og"));
   const type = formData.get("type") as string;
+  const beerSubtypeRaw = formData.get("beer_subtype");
+  const beerSubtype =
+    type === "Beer" && typeof beerSubtypeRaw === "string"
+      ? beerSubtypeRaw
+      : null;
+  const kitUrlRaw = formData.get("kit_url");
+  let kitUrl: string | null = null;
+
+  if (
+    type === "Beer" &&
+    !["all_grain", "fresh_wort_kit", "malt_extract_kit"].includes(
+      beerSubtype ?? ""
+    )
+  ) {
+    throw new Error("Choose a beer recipe style.");
+  }
+  if (
+    type === "Beer" &&
+    beerSubtype !== "all_grain" &&
+    typeof kitUrlRaw === "string" &&
+    kitUrlRaw.trim()
+  ) {
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(kitUrlRaw.trim());
+    } catch {
+      throw new Error("Enter a valid kit link.");
+    }
+    if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+      throw new Error("Kit links must use http or https.");
+    }
+    kitUrl = parsedUrl.toString();
+  }
 
   if (!name || !volume_l || !startdato || !og) {
     throw new Error("Mangler obligatoriske felter.");
@@ -326,31 +226,63 @@ export async function createBatch(formData: FormData) {
 
 
   // Resolve malt names → real malt names
-const resolvedMalts = malts.map(m => {
+const resolvedMalts = malts.map((m) => {
   const alias = MALT_ALIASES[m.name.toLowerCase()];
-  const realName = alias || m.name;
-
-  const dbEntry = MALTS_DB.find(x => x.name.toLowerCase() === realName.toLowerCase());
-
   return {
     ...m,
-    lovibond: dbEntry?.lovibond ?? 0
+    name: alias || m.name,
   };
 });
 
 // Resolve hop names → real hop names
 const resolvedHops = hops.map(h => ({
   ...h,
-  alpha: Number(h.alpha) || 0,   // brukerens alfasyre
+  alpha: Number(String(h.alpha).replace(",", ".")) || 0,
   year: Number(h.year) || null, // brukerens årstall
 }));
 
 const resolvedDryHops = dryHops.map(h => ({
   ...h,
-  alpha: Number(h.alpha) || 0,
+  alpha: Number(String(h.alpha).replace(",", ".")) || 0,
   year: Number(h.year) || null,
 }));
 
+const hasValue = (value: unknown) =>
+  typeof value === "string" ? value.trim() !== "" : value != null;
+const validAlphaAcid = (value: unknown) => {
+  const alpha = Number(String(value ?? "").replace(",", "."));
+  return Number.isFinite(alpha) && alpha > 0 && alpha <= 100;
+};
+if (
+  ((type === "Beer" && beerSubtype === "all_grain") || type === "Braggot") &&
+  malts.some(
+    (malt) =>
+      (hasValue(malt.name) || hasValue(malt.amount)) &&
+      (!hasValue(malt.ebc) ||
+        !Number.isFinite(Number(String(malt.ebc).replace(",", "."))) ||
+        Number(String(malt.ebc).replace(",", ".")) < 0)
+  )
+) {
+  throw new Error("Enter a valid EBC value for every malt addition.");
+}
+if (
+  ((type === "Beer" && beerSubtype === "all_grain") || type === "Braggot") &&
+  hops.some(
+    (hop) =>
+      (hasValue(hop.name) || hasValue(hop.amount)) && !validAlphaAcid(hop.alpha)
+  )
+) {
+  throw new Error("Enter an alpha-acid value between 0 and 100 for every hop addition.");
+}
+if (
+  (type === "Beer" || type === "Braggot") &&
+  dryHops.some(
+    (hop) =>
+      (hasValue(hop.name) || hasValue(hop.amount)) && !validAlphaAcid(hop.alpha)
+  )
+) {
+  throw new Error("Enter an alpha-acid value between 0 and 100 for every hop addition.");
+}
 
 
 
@@ -364,10 +296,10 @@ let ibu = 0;
 let ebc = 0;
 
 if (type === "Beer" || type === "Braggot") {
-  const ibuBoil = calcIBU(resolvedHops, og, boil_volume_l || volume_l);
-  const ebcResult = calcEBC(malts, boil_volume_l || volume_l);
+  const ibuBoil = calcIBU(resolvedHops, og, volume_l, boil_volume_l || volume_l);
+  const ebcResult = calcEBC(resolvedMalts, volume_l);
 
-  ibu = ibuBoil;
+  ibu = ibuBoil + calcDryHopIBU(resolvedDryHops, volume_l);
   ebc = ebcResult.ebc;
 }
 
@@ -652,26 +584,11 @@ if (type === "Beer" || type === "Braggot") {
       matchedBySelectionKey.set(ingredient.selectionKey, item);
     }
 
-    // Inventory alpha acid / EBC values take precedence over typed values
     if (type === "Beer" || type === "Braggot") {
-      resolvedHops.forEach((hop, index) => {
-        const alpha = Number(matchedBySelectionKey.get(`hop:${index}`)?.alpha_acid);
-        if (alpha > 0) hop.alpha = alpha;
-        const year = Number(matchedBySelectionKey.get(`hop:${index}`)?.hop_year);
-        if (year > 0) hop.year = year;
-      });
-      resolvedDryHops.forEach((hop, index) => {
-        const alpha = Number(matchedBySelectionKey.get(`dryhop:${index}`)?.alpha_acid);
-        if (alpha > 0) hop.alpha = alpha;
-        const year = Number(matchedBySelectionKey.get(`dryhop:${index}`)?.hop_year);
-        if (year > 0) hop.year = year;
-      });
-      const maltsWithEbc = malts.map((malt, index) => ({
-        ...malt,
-        ebc: Number(matchedBySelectionKey.get(`malt:${index}`)?.ebc) || 0,
-      }));
-      ibu = calcIBU(resolvedHops, og, boil_volume_l || volume_l);
-      ebc = calcEBC(maltsWithEbc, boil_volume_l || volume_l).ebc;
+      ibu =
+        calcIBU(resolvedHops, og, volume_l, boil_volume_l || volume_l) +
+        calcDryHopIBU(resolvedDryHops, volume_l);
+      ebc = calcEBC(resolvedMalts, volume_l).ebc;
     }
 
     for (const entry of batchAdditives) {
@@ -928,6 +845,8 @@ ${notes}
       startdato,
       og,
       type,
+      beer_subtype: beerSubtype,
+      kit_url: kitUrl,
 
       // Mead
       honey_type,
@@ -984,6 +903,24 @@ ${notes}
     }
     batch = data?.batch;
     if (!batch?.id) throw new Error("Batch creation returned no batch record.");
+    if (type === "Beer") {
+      const { data: savedStyle, error: styleSaveError } = await supabase
+        .from("batches")
+        .update({
+          beer_subtype: beerSubtype,
+          kit_url: kitUrl,
+        })
+        .eq("id", batch.id)
+        .eq("user_id", userId)
+        .select("id")
+        .maybeSingle();
+      if (styleSaveError) {
+        throw new Error(`Could not save the beer recipe style: ${styleSaveError.message}`);
+      }
+      if (!savedStyle) {
+        throw new Error("Could not verify the saved beer recipe style.");
+      }
+    }
   } else {
     const { data, error } = await supabase
       .from("batches")
@@ -1002,8 +939,15 @@ ${notes}
       created_at: startdato,
     });
 
-    // Update kar status
-    await supabase.from("kar").update({ status: "Aktiv" }).eq("id", karId);
+    if (vessel.user_id === userId) {
+      const { error: vesselUpdateError } = await supabase
+        .from("kar")
+        .update({ status: "Aktiv" })
+        .eq("id", karId);
+      if (vesselUpdateError) {
+        throw new Error(`Could not update vessel status: ${vesselUpdateError.message}`);
+      }
+    }
   }
 
   revalidatePath(`/kar/${karId}`);
@@ -1035,12 +979,19 @@ export async function cancelBatch(formData: FormData) {
     throw new Error("Authentication required");
   }
 
+  const { data: vessel, error: vesselError } = await supabase
+    .from("kar")
+    .select("id, user_id")
+    .eq("id", karId)
+    .maybeSingle();
+  if (vesselError) throw new Error(`Could not verify vessel: ${vesselError.message}`);
+  if (!vessel) throw new Error("Vessel not found or access denied");
+
   const { data: batch, error: batchLookupError } = await supabase
     .from("batches")
     .select("id")
     .eq("id", batchId)
     .eq("aktivt_kar", karId)
-    .eq("user_id", user.id)
     .maybeSingle();
 
   if (batchLookupError) {
@@ -1058,28 +1009,27 @@ export async function cancelBatch(formData: FormData) {
     throw new Error(`Could not delete batch notes: ${notesError.message}`);
   }
 
-  const { error: deleteBatchError } = await supabase
+  const { data: deletedBatch, error: deleteBatchError } = await supabase
     .from("batches")
     .delete()
     .eq("id", batch.id)
-    .eq("user_id", user.id);
+    .select("id")
+    .maybeSingle();
   if (deleteBatchError) {
     throw new Error(`Could not cancel batch: ${deleteBatchError.message}`);
   }
-
-  const { data: updatedKar, error: updateKarError } = await supabase
-    .from("kar")
-    .update({ status: "Ledig" })
-    .eq("id", karId)
-    .eq("user_id", user.id)
-    .select("id")
-    .maybeSingle();
-
-  if (updateKarError) {
-    throw new Error(`Could not update vessel status: ${updateKarError.message}`);
+  if (!deletedBatch) {
+    throw new Error("Could not cancel batch because it was not found or access was denied");
   }
-  if (!updatedKar) {
-    throw new Error("Could not find the vessel to update");
+
+  if (vessel.user_id === user.id) {
+    const { error: updateKarError } = await supabase
+      .from("kar")
+      .update({ status: "Ledig" })
+      .eq("id", karId);
+    if (updateKarError) {
+      throw new Error(`Could not update vessel status: ${updateKarError.message}`);
+    }
   }
 
   revalidatePath("/dashboard");
@@ -1101,7 +1051,22 @@ export async function moveToSecondary(formData: FormData) {
 
   if (!batchId || !karId) return;
 
-  await supabase
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Authentication required");
+
+  const { data: batch, error: batchError } = await supabase
+    .from("batches")
+    .select("id")
+    .eq("id", batchId)
+    .eq("aktivt_kar", karId)
+    .eq("status", "Aktiv")
+    .maybeSingle();
+  if (batchError) throw new Error(`Could not verify batch: ${batchError.message}`);
+  if (!batch) throw new Error("Batch not found or access denied");
+
+  const { error: updateError } = await supabase
     .from("batches")
     .update({
       status: "secondary",
@@ -1109,9 +1074,24 @@ export async function moveToSecondary(formData: FormData) {
       secondary_additions: additions,
       secondary_notes: notes,
     })
-    .eq("id", batchId);
+    .eq("id", batchId)
+    .eq("aktivt_kar", karId);
+  if (updateError) throw new Error(`Could not rack batch: ${updateError.message}`);
 
-  await supabase.from("kar").update({ status: "Sekundær" }).eq("id", karId);
+  const { data: vessel } = await supabase
+    .from("kar")
+    .select("user_id")
+    .eq("id", karId)
+    .maybeSingle();
+  if (vessel?.user_id === user.id) {
+    const { error: vesselError } = await supabase
+      .from("kar")
+      .update({ status: "Sekundær" })
+      .eq("id", karId);
+    if (vesselError) {
+      throw new Error(`Could not update vessel status: ${vesselError.message}`);
+    }
+  }
 
   redirect(`/kar/${karId}`);
 }
@@ -1140,16 +1120,14 @@ export async function moveBatchToVessel(formData: FormData) {
     .select("id, status")
     .eq("id", batchId)
     .eq("aktivt_kar", karId)
-    .eq("user_id", user.id)
     .in("status", ["Aktiv", "Sekundær", "secondary"])
     .maybeSingle();
   if (!batch) throw new Error("Batch not found or access denied");
 
   const { data: target } = await supabase
     .from("kar")
-    .select("id")
+    .select("id, user_id")
     .eq("id", targetKarId)
-    .eq("user_id", user.id)
     .maybeSingle();
   if (!target) throw new Error("Target vessel not found");
 
@@ -1167,12 +1145,33 @@ export async function moveBatchToVessel(formData: FormData) {
     .from("batches")
     .update({ aktivt_kar: targetKarId })
     .eq("id", batchId)
-    .eq("user_id", user.id);
+    .eq("aktivt_kar", karId);
   if (error) throw new Error(`Could not move batch: ${error.message}`);
 
-  const karStatus = batch.status === "Aktiv" ? "Aktiv" : "Sekundær";
-  await supabase.from("kar").update({ status: karStatus }).eq("id", targetKarId);
-  await supabase.from("kar").update({ status: "Ledig" }).eq("id", karId);
+  if (target.user_id === user.id) {
+    const karStatus = batch.status === "Aktiv" ? "Aktiv" : "Sekundær";
+    const { error: targetStatusError } = await supabase
+      .from("kar")
+      .update({ status: karStatus })
+      .eq("id", targetKarId);
+    if (targetStatusError) {
+      throw new Error(`Could not update target vessel status: ${targetStatusError.message}`);
+    }
+  }
+  const { data: source } = await supabase
+    .from("kar")
+    .select("user_id")
+    .eq("id", karId)
+    .maybeSingle();
+  if (source?.user_id === user.id) {
+    const { error: sourceStatusError } = await supabase
+      .from("kar")
+      .update({ status: "Ledig" })
+      .eq("id", karId);
+    if (sourceStatusError) {
+      throw new Error(`Could not update source vessel status: ${sourceStatusError.message}`);
+    }
+  }
 
   revalidatePath("/dashboard");
   revalidatePath(`/kar/${karId}`);
@@ -1193,17 +1192,32 @@ export async function finishBatch(formData: FormData) {
   const finished_notes = (formData.get("finished_notes") as string) || "";
   const saveRecipe = formData.get("save_as_recipe") === "on";
 
-  if (!batchId || !karId) return;
+  if (!batchId || !karId) {
+    throw new Error("Batch ID and vessel ID are required");
+  }
 
-  const fg = parseFloat(fgRaw);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Authentication required");
+
+  const fg = Number(fgRaw);
+  if (!Number.isFinite(fg) || fg <= 0) {
+    throw new Error("Enter a valid final gravity before finishing the batch");
+  }
 
   // Fetch batch
-  const { data: batch } = await supabase
+  const { data: batch, error: batchError } = await supabase
     .from("batches")
     .select("*")
     .eq("id", batchId)
-    .single();
+    .eq("aktivt_kar", karId)
+    .in("status", ["Aktiv", "Sekundær", "secondary"])
+    .maybeSingle();
 
+  if (batchError) {
+    throw new Error(`Could not load batch to finish: ${batchError.message}`);
+  }
   if (!batch) throw new Error("Batch not found");
 
   // Calculate ABV
@@ -1217,7 +1231,7 @@ export async function finishBatch(formData: FormData) {
     .order("created_at", { ascending: true });
 
   // Update batch
-  await supabase
+  const { data: updatedBatch, error: updateBatchError } = await supabase
     .from("batches")
     .update({
       status: "finished",
@@ -1227,15 +1241,46 @@ export async function finishBatch(formData: FormData) {
       finished_date: new Date().toISOString(),
       save_as_recipe: saveRecipe,
     })
-    .eq("id", batchId);
+    .eq("id", batchId)
+    .eq("aktivt_kar", karId)
+    .select("id")
+    .maybeSingle();
+  if (updateBatchError) {
+    throw new Error(`Could not finish batch: ${updateBatchError.message}`);
+  }
+  if (!updatedBatch) {
+    throw new Error("Could not finish batch because it was not found or access was denied");
+  }
 
   // Free vessel
-  await supabase.from("kar").update({ status: "Ledig" }).eq("id", karId);
+  const { data: vessel, error: vesselError } = await supabase
+    .from("kar")
+    .select("id, user_id")
+    .eq("id", karId)
+    .maybeSingle();
+  if (vesselError) {
+    throw new Error(`Could not load vessel: ${vesselError.message}`);
+  }
+  if (!vessel) {
+    throw new Error("Could not find the vessel to free");
+  }
+  if (vessel.user_id === user.id) {
+    const { error: updateKarError } = await supabase
+      .from("kar")
+      .update({ status: "Ledig" })
+      .eq("id", karId);
+    if (updateKarError) {
+      throw new Error(`Could not free vessel: ${updateKarError.message}`);
+    }
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath(`/kar/${karId}`);
 
   // SAVE AS RECIPE
   if (saveRecipe) {
-    await supabase.from("recipes").insert({
-      user_id: batch.user_id,
+    const { error: recipeError } = await supabase.from("recipes").insert({
+      user_id: user.id,
       batch_id: batch.id,
 
       // Core
@@ -1284,10 +1329,11 @@ export async function finishBatch(formData: FormData) {
 
       is_public: false,
     });
+    if (recipeError) {
+      throw new Error(`Batch was finished, but its recipe could not be saved: ${recipeError.message}`);
+    }
   }
 
-  revalidatePath("/dashboard");
-  revalidatePath(`/kar/${karId}`);
   redirect(`/kar/${karId}`);
 }
 
@@ -1300,29 +1346,103 @@ export async function updateBatch(formData: FormData) {
 
   const batchId = formData.get("batch_id") as string;
   const karId = formData.get("kar_id") as string;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const name = formData.get("name") as string;
   const volume_l = Number(formData.get("volume_l"));
   const og = Number(formData.get("og"));
   const startdato = formData.get("startdato") as string;
-  const oppskrift = formData.get("oppskrift") as string;
+  const additives = formData.get("additives");
+  const notes = formData.get("notes");
   const secondary_additions = formData.get("secondary_additions");
   const secondary_notes = formData.get("secondary_notes");
+  const baseLiquid = formData.get("base_liquid");
+  const baseLiquidAmountRaw = formData.get("base_liquid_amount");
 
-  if (!batchId || !karId) return;
+  if (!user) throw new Error("Authentication required");
+  if (!batchId || !karId) {
+    throw new Error("Batch ID and vessel ID are required");
+  }
 
-  await supabase
+  const { data: batch, error: batchLookupError } = await supabase
+    .from("batches")
+    .select("id")
+    .eq("id", batchId)
+    .eq("aktivt_kar", karId)
+    .maybeSingle();
+  if (batchLookupError) {
+    throw new Error(`Could not verify batch: ${batchLookupError.message}`);
+  }
+  if (!batch) throw new Error("Batch not found or access denied");
+
+  let fruits: Fruit[] | undefined;
+  if (formData.has("fruits_json")) {
+    const rawFruits = formData.get("fruits_json");
+    if (typeof rawFruits !== "string") {
+      throw new Error("Invalid fruit additions submitted.");
+    }
+    const parsedFruits: unknown = JSON.parse(rawFruits);
+    if (!Array.isArray(parsedFruits)) {
+      throw new Error("Invalid fruit additions submitted.");
+    }
+    fruits = parsedFruits.map((fruit) => {
+      if (typeof fruit !== "object" || fruit === null) {
+        throw new Error("Invalid fruit additions submitted.");
+      }
+      const row = fruit as Record<string, unknown>;
+      return {
+        name: typeof row.name === "string" ? row.name : "",
+        amount: row.amount == null ? "" : String(row.amount),
+        unit: typeof row.unit === "string" ? row.unit : "",
+      };
+    });
+  }
+
+  const { data, error } = await supabase
     .from("batches")
     .update({
       name,
       volume_l,
       og,
       startdato,
-      oppskrift,
-      secondary_additions,
-      secondary_notes,
+      ...(formData.has("additives") ? { additives } : {}),
+      ...(fruits ? { fruits } : {}),
+      ...(formData.has("base_liquid")
+        ? {
+            base_liquid:
+              typeof baseLiquid === "string" && baseLiquid.trim()
+                ? baseLiquid.trim()
+                : "Water",
+          }
+        : {}),
+      ...(formData.has("base_liquid_amount")
+        ? {
+            base_liquid_amount:
+              typeof baseLiquidAmountRaw === "string" &&
+              baseLiquidAmountRaw.trim() &&
+              Number(baseLiquidAmountRaw) > 0
+                ? Number(baseLiquidAmountRaw)
+                : null,
+          }
+        : {}),
+      ...(formData.has("notes") ? { notes } : {}),
+      ...(formData.has("full_process")
+        ? { full_process: formData.get("full_process") as string }
+        : {}),
+      ...(formData.has("secondary_additions") ? { secondary_additions } : {}),
+      ...(formData.has("secondary_notes") ? { secondary_notes } : {}),
     })
-    .eq("id", batchId);
+    .eq("id", batchId)
+    .eq("aktivt_kar", karId)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Could not update batch: ${error.message}`);
+  }
+  if (!data) throw new Error("Could not update batch because access was denied");
 
   revalidatePath(`/kar/${karId}`);
   redirect(`/kar/${karId}`);

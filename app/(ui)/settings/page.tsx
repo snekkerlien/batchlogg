@@ -26,6 +26,9 @@ export default function SettingsPage() {
   const restoreInputRef = useRef<HTMLInputElement | null>(null);
   const [user, setUser] = useState<any>(null);
   const [username, setUsername] = useState("account");
+  const [savingUsername, setSavingUsername] = useState(false);
+  const [usernameError, setUsernameError] = useState("");
+  const [usernameMessage, setUsernameMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [themeAccentColor, setThemeAccentColor] = useState(DEFAULT_ACCENT_COLOR);
@@ -141,6 +144,34 @@ export default function SettingsPage() {
       setPreferencesMessage("Could not save preferences. Please try again.");
     } finally {
       setSavingPreferences(false);
+    }
+  }
+
+  async function changeUsername(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setUsernameError("");
+    setUsernameMessage("");
+    setSavingUsername(true);
+
+    try {
+      const response = await fetch("/api/profile/username", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Could not update username.");
+      }
+      setUsername(result.username);
+      setUsernameMessage("Username updated.");
+    } catch (error) {
+      console.error("Could not update username", error);
+      setUsernameError(
+        error instanceof Error ? error.message : "Could not update username."
+      );
+    } finally {
+      setSavingUsername(false);
     }
   }
 
@@ -446,6 +477,47 @@ export default function SettingsPage() {
               </p>
             )}
           </div>
+        </section>
+
+        <section className="mb-8 border-b border-white/10 pb-6">
+          <h2 className="text-lg font-semibold text-center mb-1 text-green-300">
+            Username
+          </h2>
+          <form
+            onSubmit={changeUsername}
+            className="mx-auto max-w-md space-y-3"
+          >
+            <input
+              id="settings-username"
+              type="text"
+              aria-label="Username"
+              autoComplete="username"
+              maxLength={64}
+              required
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              className="w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-2"
+            />
+            {usernameError && (
+              <p role="alert" className="text-sm text-red-400">
+                {usernameError}
+              </p>
+            )}
+            {usernameMessage && (
+              <p role="status" className="text-sm text-green-300">
+                {usernameMessage}
+              </p>
+            )}
+            <div className="flex justify-center">
+              <button
+                type="submit"
+                disabled={savingUsername}
+                className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20 disabled:cursor-wait disabled:opacity-60"
+              >
+                {savingUsername ? "Saving…" : "Update username"}
+              </button>
+            </div>
+          </form>
         </section>
 
         <section className="mb-8 border-b border-white/10 pb-10">

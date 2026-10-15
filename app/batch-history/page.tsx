@@ -63,7 +63,6 @@ export default function BatchHistoryPage() {
       const { data: batchesRaw } = await supabaseBrowser
         .from("batches")
         .select("*")
-        .eq("user_id", userId)
         .order("created_at", { ascending: false });
 
       const { data: karsRaw } = await supabaseBrowser
@@ -75,13 +74,17 @@ export default function BatchHistoryPage() {
         (a, b) => a.nummer - b.nummer
       );
 
-      const { data: notesRaw } = await supabaseBrowser
-        .from("batch_notes")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false });
-
       const batchIds = (batchesRaw ?? []).map((batch) => batch.id);
+      let notesRaw: any[] = [];
+      if (batchIds.length > 0) {
+        const { data } = await supabaseBrowser
+            .from("batch_notes")
+            .select("*")
+            .in("batch_id", batchIds)
+            .order("created_at", { ascending: false });
+        notesRaw = data ?? [];
+      }
+
       let readingsByBatch = new Map<string, any[]>();
 
       if (batchIds.length > 0) {

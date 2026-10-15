@@ -16,21 +16,31 @@ export async function POST(req: Request) {
   }
 
   // Fetch vessel ID before deleting
-  const { data: batchToDelete } = await supabase
+  const { data: batchToDelete, error: lookupError } = await supabase
     .from("batches")
-    .select("aktivt_kar")
+    .select("id, aktivt_kar")
     .eq("id", id)
     .maybeSingle();
+  if (lookupError) {
+    return NextResponse.json({ error: lookupError.message }, { status: 500 });
+  }
+  if (!batchToDelete) {
+    return NextResponse.json({ error: "Batch not found or access denied" }, { status: 404 });
+  }
 
   // Delete batch
-  const { error } = await supabase
+  const { data: deleted, error } = await supabase
     .from("batches")
     .delete()
     .eq("id", id)
-    .eq("user_id", session.user.id);
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+  if (!deleted) {
+    return NextResponse.json({ error: "Batch could not be deleted" }, { status: 403 });
   }
 
   // Revalidate dashboard + vessel card

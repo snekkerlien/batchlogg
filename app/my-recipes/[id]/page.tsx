@@ -55,6 +55,17 @@ export default function RecipeNotesPage({ params }: { params: { id: string } }) 
   }
 
   const notes = recipe.notes_log || [];
+  const beerSubtype =
+    recipe.type === "Beer" && recipe.ingredients &&
+    !Array.isArray(recipe.ingredients)
+      ? recipe.ingredients.beer_subtype
+      : null;
+  const beerSubtypeLabel =
+    beerSubtype === "fresh_wort_kit"
+      ? "Fresh wort kit"
+      : beerSubtype === "malt_extract_kit"
+        ? "Malt extract kit"
+        : "All-grain";
 
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
@@ -73,9 +84,9 @@ export default function RecipeNotesPage({ params }: { params: { id: string } }) 
 
         {/* BASE VALUES OUTSIDE CARD */}
         <div className="space-y-2 mb-10 text-lg">
-          <p><strong>OG:</strong> {Number(recipe.og).toFixed(3)}</p>
-          <p><strong>FG:</strong> {Number(recipe.fg).toFixed(3)}</p>
-          <p><strong>ABV:</strong> {recipe.abv.toFixed(1)}%</p>
+          {recipe.og != null && <p><strong>OG:</strong> {Number(recipe.og).toFixed(3)}</p>}
+          {recipe.fg != null && <p><strong>FG:</strong> {Number(recipe.fg).toFixed(3)}</p>}
+          {recipe.abv != null && <p><strong>ABV:</strong> {Number(recipe.abv).toFixed(1)}%</p>}
           <p><strong>Volume:</strong> <Qty kind="volume" value={recipe.volume} /></p>
           {(recipe.base_liquid || recipe.base_liquid_amount) && (
             <p>
@@ -115,11 +126,31 @@ export default function RecipeNotesPage({ params }: { params: { id: string } }) 
           {/* Beer / Braggot */}
           {(recipe.type === "Beer" || recipe.type === "Braggot") && (
             <>
+              {recipe.type === "Beer" && (
+                <>
+                  <p><strong>Recipe style:</strong> {beerSubtypeLabel}</p>
+                  {recipe.ingredients?.kit_url && (
+                    <p>
+                      <strong>Kit link:</strong>{" "}
+                      <a
+                        href={recipe.ingredients.kit_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-green-300 underline"
+                      >
+                        Open kit
+                      </a>
+                    </p>
+                  )}
+                </>
+              )}
+              {beerSubtype === "all_grain" && (
               <p className="text-xs opacity-60 mt-2">
                 Note: If the IBU or EBC values differ from the recipe you imported,
                 this is because Batchlogg uses more accurate brewing models
                 (Tinseth for bitterness and Morey for color).
               </p>
+              )}
 
               {recipe.malts?.length > 0 && (
                 <div>

@@ -79,7 +79,7 @@ export default function NewMeadPage({
           className="flex flex-col gap-6"
           onSubmit={() => setLoading(true)}
         >
-          <BatchInventoryProvider>
+          <BatchInventoryProvider recipeId={recipe?.id} recipe={recipe}>
           {/* Hidden fields */}
           <input type="hidden" name="kar" value={params.id} />
           <input type="hidden" name="type" value="Mead" />
@@ -145,6 +145,8 @@ export default function NewMeadPage({
               selectionKey="honey"
               trackAmount
               amountFieldName="inventory_honey_amount"
+              defaultAmount={recipe?.honey_amount == null ? "" : String(recipe.honey_amount)}
+              defaultAmountUnit="kg"
               value={honeyType}
               onChange={setHoneyType}
               placeholder="Honey type"

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,7 +47,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Invalid token" }, { status: 401 });
   }
 
-  const [profileResult, karResult] = await Promise.all([
+  const [profileResult, karResult, sharesResult] = await Promise.all([
     supabase
       .from("profiles")
       .select("username, max_vessels")
@@ -57,6 +58,10 @@ export async function GET(request: NextRequest) {
       .select("id, nummer, created_at")
       .eq("user_id", user.id)
       .order("created_at", { ascending: true }),
+    supabase
+      .from("kar_contributors")
+      .select("kar_id")
+      .eq("user_id", user.id),
   ]);
 
   if (profileResult.error) {
@@ -72,9 +77,52 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+  const ownedVesselIds = (karResult.data ?? []).map((vessel) => vessel.id);
+  const { data: ownedContributors, error: ownedContributorsError } =
+    ownedVesselIds.length > 0
+      ? await supabase
+          .from("kar_contributors")
+          .select("kar_id")
+          .in("kar_id", ownedVesselIds)
+      : { data: [], error: null };
+  if (ownedContributorsError) {
+    return NextResponse.json(
+      { error: ownedContributorsError.message },
+      { status: 500 }
+    );
+  }
+  if (sharesResult.error) {
+    return NextResponse.json(
+      { error: sharesResult.error.message },
+      { status: 500 }
+    );
+  }
 
   const vessels = karResult.data ?? [];
-  const vesselIds = vessels.map((vessel) => vessel.id);
+  const ownedSharedIds = new Set(
+    (ownedContributors ?? []).map((contributor) => contributor.kar_id)
+  );
+  const sharedIds = [
+    ...new Set((sharesResult.data ?? []).map((share) => share.kar_id)),
+  ];
+  const { data: sharedVessels, error: sharedVesselsError } =
+    sharedIds.length > 0
+      ? await supabase
+          .from("kar")
+          .select("id, nummer, created_at, user_id")
+          .in("id", sharedIds)
+          .order("created_at", { ascending: true })
+      : { data: [], error: null };
+
+  if (sharedVesselsError) {
+    return NextResponse.json(
+      { error: sharedVesselsError.message },
+      { status: 500 }
+    );
+  }
+
+  const allVessels = [...vessels, ...(sharedVessels ?? [])];
+  const vesselIds = allVessels.map((vessel) => vessel.id);
   let batchByVessel = new Map<string, { status: string; name: string | null }>();
 
   if (vesselIds.length > 0) {
@@ -103,6 +151,26 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  const { serviceRole } = supabaseServer();
+  const ownerIds = [
+    ...new Set((sharedVessels ?? []).map((vessel) => vessel.user_id)),
+  ];
+  const { data: owners, error: ownersError } =
+    ownerIds.length > 0
+      ? await serviceRole
+          .from("profiles")
+          .select("id, username")
+          .in("id", ownerIds)
+      : { data: [], error: null };
+
+  if (ownersError) {
+    return NextResponse.json(
+      { error: ownersError.message },
+      { status: 500 }
+    );
+  }
+  const ownerNames = new Map((owners ?? []).map((owner) => [owner.id, owner.username]));
+
   return NextResponse.json(
     {
       username: profileResult.data?.username ?? "Unknown",
@@ -120,6 +188,24 @@ export async function GET(request: NextRequest) {
                 ? "Aktiv"
                 : "Ledig",
           batchName: batch?.name ?? null,
+          isShared: ownedSharedIds.has(vessel.id),
+        };
+      }),
+      sharedKar: (sharedVessels ?? []).map((vessel) => {
+        const batch = batchByVessel.get(vessel.id);
+        return {
+          id: vessel.id,
+          nummer: vessel.nummer,
+          created_at: vessel.created_at,
+          status:
+            batch?.status === "Sekundær" || batch?.status === "secondary"
+              ? "Sekundær"
+              : batch
+                ? "Aktiv"
+                : "Ledig",
+          batchName: batch?.name ?? null,
+          ownerUsername: ownerNames.get(vessel.user_id) ?? "Another user",
+          isShared: true,
         };
       }),
     },

@@ -7,6 +7,7 @@ type AddItemModalProps = {
   onClose: () => void;
   profile: any;
   onAddItem: (formData: FormData) => Promise<void>;
+  fixedCategory?: string;
 };
 
 export default function AddItemModal({
@@ -14,6 +15,7 @@ export default function AddItemModal({
   onClose,
   profile,
   onAddItem,
+  fixedCategory,
 }: AddItemModalProps) {
   if (!open) return null;
 
@@ -26,11 +28,18 @@ export default function AddItemModal({
         >
           ✕
         </button>
-        <h2 className="mb-4 text-center text-2xl font-bold">Add new item</h2>
+        <h2 className="mb-4 text-center text-2xl font-bold">
+          {fixedCategory === "malts"
+            ? "Add malt"
+            : fixedCategory === "hops"
+              ? "Add hop"
+              : "Add new item"}
+        </h2>
         <AddItemForm
           onSubmitComplete={onClose}
           onAddItem={onAddItem}
           profile={profile}
+          fixedCategory={fixedCategory}
         />
       </div>
     </div>
