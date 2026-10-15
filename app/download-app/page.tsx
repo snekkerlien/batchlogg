@@ -2,7 +2,7 @@ import Image from "next/image";
 import DownloadAppTopBar from "./DownloadAppTopBar";
 
 const latestReleaseUrl =
-  "https://github.com/snekkerlien/batchlogg-downloads/releases/latest";
+  "https://github.com/snekkerlien/batchlogg/releases/latest";
 
 export default function DownloadAppPage() {
   return (
