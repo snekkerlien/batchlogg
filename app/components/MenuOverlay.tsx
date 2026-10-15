@@ -134,6 +134,7 @@ export default function MenuOverlay({ current }: { current: string }) {
     {
       label: "Account",
       items: [
+        { href: "/download-app", label: "Download desktop app", key: "download-app" },
         { href: "/my-account", label: "My account", key: "account" },
         { href: "/settings", label: "Settings", key: "settings" },
       ],

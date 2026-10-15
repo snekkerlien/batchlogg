@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import { useRouter } from "next/navigation";
 
@@ -99,6 +100,12 @@ export default function Home() {
             >
               Sign up
             </a>
+            <Link
+              href="/download-app"
+              className="block border border-white/20 bg-white/10 p-3 rounded-lg font-semibold hover:bg-white/20"
+            >
+              Download desktop app
+            </Link>
           </div>
         )}
 
@@ -121,6 +128,12 @@ export default function Home() {
             >
               Go to dashboard
             </a>
+            <Link
+              href="/download-app"
+              className="block border border-white/20 bg-white/10 p-3 rounded-lg font-semibold hover:bg-white/20"
+            >
+              Download desktop app
+            </Link>
           </div>
         )}
       </div>
