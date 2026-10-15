@@ -1,5 +1,5 @@
 import Image from "next/image";
-import Link from "next/link";
+import DownloadAppTopBar from "./DownloadAppTopBar";
 
 const latestReleaseUrl =
   "https://github.com/snekkerlien/batchlogg/releases/latest";
@@ -7,7 +7,9 @@ const latestReleaseUrl =
 export default function DownloadAppPage() {
   return (
     <main className="min-h-screen px-5 py-12 text-white">
-      <div className="mx-auto flex min-h-[75vh] w-full max-w-4xl flex-col items-center justify-center gap-8 rounded-2xl border border-white/10 bg-black/60 p-6 text-center backdrop-blur-md sm:p-10">
+      <div className="relative mx-auto flex min-h-[75vh] w-full max-w-4xl flex-col items-center justify-center gap-8 rounded-2xl border border-white/10 bg-black/60 p-6 pt-20 text-center backdrop-blur-md sm:p-10 sm:pt-20">
+        <DownloadAppTopBar />
+
         <Image
           src="/batchlogg-logo.png"
           alt=""
@@ -52,12 +54,6 @@ export default function DownloadAppPage() {
           </p>
         </div>
 
-        <Link
-          href="/"
-          className="text-sm font-medium text-white/60 underline decoration-white/30 underline-offset-4 hover:text-white"
-        >
-          Back to Batchlogg
-        </Link>
       </div>
     </main>
   );
