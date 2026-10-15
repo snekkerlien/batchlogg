@@ -33,12 +33,19 @@ code signing and notarization, especially on macOS.
 
 ## Publishing downloads
 
-Push a version tag such as `desktop-v0.2.0` to start the GitHub Actions workflow.
+The source repository can remain private while installers are downloadable from
+the public `snekkerlien/batchlogg-downloads` repository. Create that public GitHub
+repository with a README (do not add application source to it), then add a
+fine-grained personal access token as the `RELEASES_REPO_TOKEN` Actions secret
+in the source repository. Grant the token access to the downloads repository
+with **Contents: Read and write** permissions.
+
+Push a version tag such as `desktop-v0.2.1` to start the GitHub Actions workflow.
 It builds Windows MSI/EXE installers and a universal macOS DMG, then attaches
-them to a GitHub release. The website's `/download-app` page links to the latest
-release.
+the collected installer files to a release in the public downloads repository.
+The website's `/download-app` page links to that repository's latest release.
 
 The Tauri package, Cargo crate, and Tauri config versions should be updated
-together before creating a tag. The release workflow is not triggered until the
-tag is pushed and the build completes successfully. Unsigned installers can
-show operating-system security warnings.
+together before creating a tag. The workflow is not triggered until the tag is
+pushed and the builds complete successfully. Unsigned installers can show
+operating-system security warnings.

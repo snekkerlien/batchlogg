@@ -68,10 +68,24 @@ jobs:
           path: release-assets
           merge-multiple: true
 
+      - name: Collect installer files
+        shell: bash
+        run: |
+          mkdir release-files
+          find release-assets -type f \( -name '*.msi' -o -name '*.exe' -o -name '*.dmg' \) \
+            -exec cp {} release-files/ \;
+          installer_count="$(find release-files -maxdepth 1 -type f | wc -l)"
+          if [ "$installer_count" -ne 3 ]; then
+            echo "Expected 2 Windows installers and 1 macOS DMG, found $installer_count."
+            exit 1
+          fi
+
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
+          repository: snekkerlien/batchlogg-downloads
+          token: ${{ secrets.RELEASES_REPO_TOKEN }}
           name: Batchlogg Desktop ${{ github.ref_name }}
           generate_release_notes: true
           make_latest: true
-          files: release-assets/*
+          files: release-files/*
