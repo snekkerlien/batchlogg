@@ -33,17 +33,16 @@ code signing and notarization, especially on macOS.
 
 ## Publishing downloads
 
-The source repository can remain private while installers are downloadable from
-the public `snekkerlien/batchlogg-downloads` repository. Create that public GitHub
-repository with a README (do not add application source to it), then add a
-fine-grained personal access token as the `RELEASES_REPO_TOKEN` Actions secret
-in the source repository. Grant the token access to the downloads repository
-with **Contents: Read and write** permissions.
-
-Push a version tag such as `desktop-v0.2.1` to start the GitHub Actions workflow.
+Push a version tag such as `desktop-v0.2.3` to start the GitHub Actions workflow.
 It builds Windows MSI/EXE installers and a universal macOS DMG, then attaches
-the collected installer files to a release in the public downloads repository.
-The website's `/download-app` page links to that repository's latest release.
+the installer files to a release in this repository. The website's
+`/download-app` page links to this repository's latest release. The workflow
+uses GitHub Actions' built-in token and needs no personal access token secret.
+
+Because the downloads use this repository's public GitHub Releases, the
+repository must remain public. GitHub also exposes source archives for public
+repositories; use a separate public downloads repository if the application
+source needs to be private.
 
 The Tauri package, Cargo crate, and Tauri config versions should be updated
 together before creating a tag. The workflow is not triggered until the tag is

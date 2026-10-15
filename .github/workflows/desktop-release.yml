@@ -83,8 +83,6 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          repository: snekkerlien/batchlogg-downloads
-          token: ${{ secrets.RELEASES_REPO_TOKEN }}
           name: Batchlogg Desktop ${{ github.ref_name }}
           generate_release_notes: true
           make_latest: true
