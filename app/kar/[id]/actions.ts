@@ -320,12 +320,35 @@ if (
   const boil_time = (formData.get("boil_time") as string) || "";
 
   const boil_volume_l = Number(formData.get("boil_volume_l") ?? formData.get("volume_l"));
+  const manualIBURaw = formData.get("ibu");
+  const manualEBCRaw = formData.get("ebc");
+  const manualIBU = typeof manualIBURaw === "string" && manualIBURaw.trim()
+    ? Number(manualIBURaw)
+    : null;
+  const manualEBC = typeof manualEBCRaw === "string" && manualEBCRaw.trim()
+    ? Number(manualEBCRaw)
+    : null;
+  if (
+    type === "Beer" &&
+    beerSubtype === "fresh_wort_kit" &&
+    (manualIBU === null ||
+      !Number.isFinite(manualIBU) ||
+      manualIBU < 0 ||
+      manualEBC === null ||
+      !Number.isFinite(manualEBC) ||
+      manualEBC < 0)
+  ) {
+    throw new Error("Enter the IBU and EBC values shown on the fresh wort kit.");
+  }
 
   // ⭐ Brewfather IBU/EBC for Beer + Braggot
 let ibu = 0;
 let ebc = 0;
 
-if (type === "Beer" || type === "Braggot") {
+if (type === "Beer" && beerSubtype === "fresh_wort_kit") {
+  ibu = manualIBU!;
+  ebc = manualEBC!;
+} else if (type === "Beer" || type === "Braggot") {
   const ibuBoil = calcIBU(resolvedHops, og, volume_l, boil_volume_l || volume_l);
   const ebcResult = calcEBC(resolvedMalts, volume_l);
 
@@ -614,7 +637,10 @@ if (type === "Beer" || type === "Braggot") {
       matchedBySelectionKey.set(ingredient.selectionKey, item);
     }
 
-    if (type === "Beer" || type === "Braggot") {
+    if (
+      (type === "Beer" && beerSubtype !== "fresh_wort_kit") ||
+      type === "Braggot"
+    ) {
       ibu =
         calcIBU(resolvedHops, og, volume_l, boil_volume_l || volume_l) +
         calcDryHopIBU(resolvedDryHops, volume_l);
@@ -1624,9 +1650,26 @@ export async function updateBatch(formData: FormData) {
       typeUpdates.yeast = formData.get("yeast") as string;
     }
 
-    const ibu = calcIBU(normalizedHops, og, volume_l, boilVolume) +
-      calcDryHopIBU(normalizedDryHops, volume_l);
-    const ebc = calcEBC(normalizedMalts, volume_l).ebc;
+    let ibu: number;
+    let ebc: number;
+    if (batch.type === "Beer" && formData.get("beer_subtype") === "fresh_wort_kit") {
+      const ibuRaw = formData.get("ibu");
+      const ebcRaw = formData.get("ebc");
+      ibu = typeof ibuRaw === "string" && ibuRaw.trim() ? Number(ibuRaw) : NaN;
+      ebc = typeof ebcRaw === "string" && ebcRaw.trim() ? Number(ebcRaw) : NaN;
+      if (
+        !Number.isFinite(ibu) ||
+        ibu < 0 ||
+        !Number.isFinite(ebc) ||
+        ebc < 0
+      ) {
+        throw new Error("Enter the IBU and EBC values shown on the fresh wort kit.");
+      }
+    } else {
+      ibu = calcIBU(normalizedHops, og, volume_l, boilVolume) +
+        calcDryHopIBU(normalizedDryHops, volume_l);
+      ebc = calcEBC(normalizedMalts, volume_l).ebc;
+    }
     typeUpdates.ibu = ibu;
     typeUpdates.ebc = ebc;
 

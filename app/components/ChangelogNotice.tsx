@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import { useAuthContext } from "@/app/providers/AuthProvider";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
@@ -13,6 +14,7 @@ interface ChangelogEntry {
 }
 
 export default function ChangelogNotice() {
+  const router = useRouter();
   const { user } = useAuthContext();
   const [changelog, setChangelog] = useState<ChangelogEntry | null>(null);
   const [loading, setLoading] = useState(false);
@@ -77,8 +79,8 @@ export default function ChangelogNotice() {
     return () => document.removeEventListener("keydown", handleEscape);
   }, [visible, changelog, user?.id]);
 
-  async function closeNotice() {
-    if (!user || !changelog || saving) return;
+  async function closeNotice(): Promise<boolean> {
+    if (!user || !changelog || saving) return false;
     setSaving(true);
     setError("");
     const updates: Record<string, string> = {};
@@ -92,11 +94,16 @@ export default function ChangelogNotice() {
         console.error("Could not save viewed site updates", saveError);
         setError("Could not save that you have read these updates. Please try again.");
         setSaving(false);
-        return;
+        return false;
       }
     }
     setVisible(false);
     setSaving(false);
+    return true;
+  }
+
+  async function openFullChangelog() {
+    if (await closeNotice()) router.push("/changelog");
   }
 
   if (loading && !error) return null;
@@ -143,6 +150,16 @@ export default function ChangelogNotice() {
         {error && <p role="alert" className="mt-4 text-sm text-amber-300">{error}</p>}
         <div className="mt-5 space-y-5 text-sm leading-6 text-white/80 [&_a]:text-green-300 [&_a]:underline [&_h1]:mt-5 [&_h1]:text-xl [&_h1]:font-bold [&_h2]:mt-5 [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:font-semibold [&_li]:ml-5 [&_li]:list-disc [&_ol_li]:list-decimal [&_p]:mt-3 [&_strong]:font-semibold [&_ul]:space-y-1">
           {changelog && <ReactMarkdown>{changelog.body}</ReactMarkdown>}
+        </div>
+        <div className="mt-6 flex justify-center">
+          <button
+            type="button"
+            onClick={() => void openFullChangelog()}
+            disabled={saving}
+            className="rounded-lg border border-green-400/40 bg-green-500/10 px-4 py-2 text-sm font-semibold text-green-300 transition hover:bg-green-500/20 disabled:opacity-50"
+          >
+            View full changelog
+          </button>
         </div>
       </section>
     </div>

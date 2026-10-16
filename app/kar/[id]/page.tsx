@@ -652,7 +652,10 @@ const sharingSection = isOwner ? (
 
           {activeBatch.ebc !== null && (
             <div className="flex items-center gap-2 opacity-80">
-              <p>EBC (calculated): {Number(activeBatch.ebc).toFixed(0)}</p>
+              <p>
+                EBC {activeBatch.beer_subtype === "fresh_wort_kit" ? "(from kit)" : "(calculated)"}:{" "}
+                {Number(activeBatch.ebc).toFixed(0)}
+              </p>
               <span
                 className="inline-block w-6 h-6 rounded border border-white/30"
                 style={{ backgroundColor: ebcToHex(Number(activeBatch.ebc)) }}
@@ -788,7 +791,10 @@ const sharingSection = isOwner ? (
       
           {activeBatch.ebc !== null && (
         <div className="flex items-center gap-2 opacity-80">
-          <p>EBC (calculated): {Number(activeBatch.ebc).toFixed(0)}</p>
+          <p>
+            EBC {activeBatch.beer_subtype === "fresh_wort_kit" ? "(from kit)" : "(calculated)"}:{" "}
+            {Number(activeBatch.ebc).toFixed(0)}
+          </p>
           <span
             className="inline-block w-6 h-6 rounded border border-white/30"
             style={{ backgroundColor: ebcToHex(Number(activeBatch.ebc)) }}

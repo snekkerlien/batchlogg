@@ -144,23 +144,43 @@ export async function createRecipe(formData: FormData) {
   const boilVolumeRaw = formData.get("boil_volume_l") as string;
   const boil_volume = boilVolumeRaw ? parseFloat(boilVolumeRaw) : null;
 
-  // ⭐ Automatic IBU/EBC for beer/braggot
-  const ibuBoil =
-  (type === "Beer" || type === "Braggot") && og && volume
-    ? calcIBU(hops || [], og, volume, boil_volume ?? volume)
-    : 0
+  const manualIBURaw = formData.get("ibu");
+  const manualEBCRaw = formData.get("ebc");
+  const manualIBU = manualIBURaw ? Number(manualIBURaw) : null;
+  const manualEBC = manualEBCRaw ? Number(manualEBCRaw) : null;
+  if (
+    type === "Beer" &&
+    beerSubtype === "fresh_wort_kit" &&
+    (!Number.isFinite(manualIBU) ||
+      manualIBU === null ||
+      manualIBU < 0 ||
+      !Number.isFinite(manualEBC) ||
+      manualEBC === null ||
+      manualEBC < 0)
+  ) {
+    return {
+      success: false,
+      error: "Enter the IBU and EBC values shown on the fresh wort kit.",
+    };
+  }
 
-  const ibuDry =
-    (type === "Beer" || type === "Braggot")
-      ? calcDryHopIBU(dry_hops || [], volume ?? 0)
-      : 0;
-
-  const ibu = ibuBoil + ibuDry;
+  const isManualFreshWortKit =
+    type === "Beer" && beerSubtype === "fresh_wort_kit";
+  const ibu = isManualFreshWortKit
+    ? manualIBU!
+    : ((type === "Beer" || type === "Braggot") && og && volume
+        ? calcIBU(hops || [], og, volume, boil_volume ?? volume)
+        : 0) +
+      ((type === "Beer" || type === "Braggot")
+        ? calcDryHopIBU(dry_hops || [], volume ?? 0)
+        : 0);
 
   const ebcResult =
-    (type === "Beer" || type === "Braggot") && volume
-      ? calcEBC(malts || [], volume)
-      : { ebc: 0, warnings: [] };
+    isManualFreshWortKit
+      ? { ebc: manualEBC!, warnings: [] }
+      : (type === "Beer" || type === "Braggot") && volume
+        ? calcEBC(malts || [], volume)
+        : { ebc: 0, warnings: [] };
 
   const ebc = ebcResult.ebc;
 

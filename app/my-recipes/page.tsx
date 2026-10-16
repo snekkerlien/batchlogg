@@ -738,12 +738,14 @@ function removeDryHop(index: number) {
                               )}
                             </div>
                           )}
+                          {(r.type === "Braggot" || r.ingredients?.beer_subtype === "all_grain") && (
                           <p className="text-xs opacity-60 mt-2">
       Note: If the IBU or EBC values differ from the recipe you imported,
       this is because Batchlogg uses more accurate brewing models
       (Tinseth for bitterness and Morey for color). Many recipe kits use
       simplified or inconsistent calculations, so their numbers may not match.
     </p>
+                          )}
 
     {r.malts?.length > 0 && (
       <div>
@@ -1073,6 +1075,43 @@ function removeDryHop(index: number) {
           required={editRecipe.type === "Beer" && editBeerSubtype !== "all_grain"}
           className="p-3 rounded bg-black/40 border border-white/20"
         />
+
+        {editRecipe.type === "Beer" && editBeerSubtype === "fresh_wort_kit" && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block font-semibold">
+              IBU (from kit)
+              <input
+                name="ibu"
+                type="number"
+                min="0"
+                step="any"
+                defaultValue={
+                  editRecipe.ingredients?.beer_subtype === "fresh_wort_kit"
+                    ? String(editRecipe.ibu ?? "")
+                    : ""
+                }
+                required
+                className="mt-1 w-full rounded border border-white/20 bg-black/40 p-3 font-normal"
+              />
+            </label>
+            <label className="block font-semibold">
+              EBC (from kit)
+              <input
+                name="ebc"
+                type="number"
+                min="0"
+                step="any"
+                defaultValue={
+                  editRecipe.ingredients?.beer_subtype === "fresh_wort_kit"
+                    ? String(editRecipe.ebc ?? "")
+                    : ""
+                }
+                required
+                className="mt-1 w-full rounded border border-white/20 bg-black/40 p-3 font-normal"
+              />
+            </label>
+          </div>
+        )}
 
         {!(editRecipe.type === "Beer" && editBeerSubtype !== "all_grain") && (
           <>

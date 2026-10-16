@@ -68,6 +68,10 @@ export default function DashboardClient() {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedKars, setSelectedKars] = useState<string[]>([]);
   const [confirmDeleteVessels, setConfirmDeleteVessels] = useState(false);
+  const [sharedVesselToLeave, setSharedVesselToLeave] = useState<
+    (KarType & { ownerUsername: string }) | null
+  >(null);
+  const [leavingSharedVessel, setLeavingSharedVessel] = useState(false);
   const [fadeMessage, setFadeMessage] = useState("");
   const [maxVessels, setMaxVessels] = useState(12);
   const [creatingKar, setCreatingKar] = useState(false);
@@ -292,6 +296,41 @@ useEffect(() => {
     }
   }
 
+  async function leaveSharedVessel() {
+    if (!sharedVesselToLeave || leavingSharedVessel) return false;
+    setLeavingSharedVessel(true);
+    try {
+      const response = await fetch(
+        `/api/kar/${sharedVesselToLeave.id}/contributors`,
+        {
+          method: "DELETE",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ leave: true }),
+        }
+      );
+      const result: { error?: string } = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Could not leave the shared vessel.");
+      }
+      setSharedKar((current) =>
+        current.filter((vessel) => vessel.id !== sharedVesselToLeave.id)
+      );
+      return true;
+    } catch (error) {
+      console.error("Could not leave shared vessel", error);
+      setFadeMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not leave the shared vessel. Please try again."
+      );
+      setTimeout(() => setFadeMessage(""), 3000);
+      return false;
+    } finally {
+      setLeavingSharedVessel(false);
+    }
+  }
+
   if (loading) {
   return (
     <main className="min-h-screen flex items-center justify-center text-white">
@@ -461,12 +500,12 @@ useEffect(() => {
           </h2>
           <div className="flex flex-wrap justify-center gap-6">
             {sharedKar.map((vessel) => (
-              <a
-                key={vessel.id}
-                href={`/kar/${vessel.id}`}
-                style={sharedVesselCardStyle}
-                className="relative flex h-36 w-36 flex-col items-center justify-center overflow-hidden rounded-xl border bg-white/5 p-3 text-center transition hover:bg-white/10"
-              >
+              <div key={vessel.id} className="flex w-36 flex-col items-center gap-2">
+                <a
+                  href={`/kar/${vessel.id}`}
+                  style={sharedVesselCardStyle}
+                  className="relative flex h-36 w-36 flex-col items-center justify-center overflow-hidden rounded-xl border bg-white/5 p-3 text-center transition hover:bg-white/10"
+                >
                 <span
                   title="Shared vessel"
                   aria-label="Shared vessel"
@@ -519,7 +558,15 @@ useEffect(() => {
                 <span className="relative z-10 mt-1 line-clamp-1 text-xs text-zinc-400">
                   Shared by {vessel.ownerUsername}
                 </span>
-              </a>
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setSharedVesselToLeave(vessel)}
+                  className="text-xs text-zinc-400 underline underline-offset-2 transition hover:text-red-300"
+                >
+                  Leave vessel
+                </button>
+              </div>
             ))}
           </div>
         </section>
@@ -587,6 +634,18 @@ useEffect(() => {
         confirmLabel="Delete vessels"
         onConfirm={deleteSelectedKars}
         onCancel={() => setConfirmDeleteVessels(false)}
+      />
+      <ConfirmDialog
+        open={sharedVesselToLeave !== null}
+        title="Leave shared vessel?"
+        message={
+          sharedVesselToLeave
+            ? `You will lose access to ${sharedVesselToLeave.batchName ?? `Vessel ${sharedVesselToLeave.nummer}`} shared by ${sharedVesselToLeave.ownerUsername}. The owner can share it with you again later.`
+            : ""
+        }
+        confirmLabel={leavingSharedVessel ? "Leaving…" : "Leave vessel"}
+        onConfirm={leaveSharedVessel}
+        onCancel={() => setSharedVesselToLeave(null)}
       />
 
       <style jsx>{`

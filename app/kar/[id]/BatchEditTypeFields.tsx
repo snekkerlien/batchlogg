@@ -44,6 +44,8 @@ type BatchEditRecord = {
   type: string;
   beer_subtype?: string | null;
   kit_url?: string | null;
+  ibu?: number | string | null;
+  ebc?: number | string | null;
   volume_l?: number | string | null;
   boil_volume_l?: number | string | null;
   boil_time?: number | string | null;
@@ -206,6 +208,42 @@ export default function BatchEditTypeFields({
             name="hops_json"
             value={JSON.stringify(isBeer && !isAllGrain ? [] : hops)}
           />
+          {isBeer && beerSubtype === "fresh_wort_kit" && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block font-semibold">
+                IBU (from kit)
+                <input
+                  name="ibu"
+                  type="number"
+                  min="0"
+                  step="any"
+                  defaultValue={
+                    batch.beer_subtype === "fresh_wort_kit"
+                      ? valueOrEmpty(batch.ibu)
+                      : ""
+                  }
+                  required
+                  className={`${inputClass} mt-1 font-normal`}
+                />
+              </label>
+              <label className="block font-semibold">
+                EBC (from kit)
+                <input
+                  name="ebc"
+                  type="number"
+                  min="0"
+                  step="any"
+                  defaultValue={
+                    batch.beer_subtype === "fresh_wort_kit"
+                      ? valueOrEmpty(batch.ebc)
+                      : ""
+                  }
+                  required
+                  className={`${inputClass} mt-1 font-normal`}
+                />
+              </label>
+            </div>
+          )}
           {isBeer && (
             <input
               type="hidden"

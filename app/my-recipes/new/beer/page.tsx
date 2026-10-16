@@ -239,6 +239,33 @@ function removeDryHop(index: number) {
             />
           </div>
 
+          {beerSubtype === "fresh_wort_kit" && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block font-semibold">
+                IBU (from kit)
+                <input
+                  name="ibu"
+                  type="number"
+                  min="0"
+                  step="any"
+                  required
+                  className="mt-1 w-full rounded border border-white/20 bg-black/40 p-3 font-normal"
+                />
+              </label>
+              <label className="block font-semibold">
+                EBC (from kit)
+                <input
+                  name="ebc"
+                  type="number"
+                  min="0"
+                  step="any"
+                  required
+                  className="mt-1 w-full rounded border border-white/20 bg-black/40 p-3 font-normal"
+                />
+              </label>
+            </div>
+          )}
+
           {beerSubtype === "all_grain" && (
           <>
           {/* FG */}

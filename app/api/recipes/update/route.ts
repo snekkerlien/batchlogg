@@ -165,14 +165,32 @@
     fields.hops = normalizedHops;
 
 
-    const ibuBoil = calcIBU(normalizedHops, og, volume, boil_volume);
-    const ibuDry = calcDryHopIBU(dry_hops, volume);
-    fields.ibu = ibuBoil + ibuDry;
+    if (fields.type === "Beer" && beerSubtype === "fresh_wort_kit") {
+        if (
+            !Number.isFinite(Number(fields.ibu)) ||
+            fields.ibu === undefined ||
+            fields.ibu === null ||
+            fields.ibu === "" ||
+            Number(fields.ibu) < 0 ||
+            !Number.isFinite(Number(fields.ebc)) ||
+            fields.ebc === undefined ||
+            fields.ebc === null ||
+            fields.ebc === "" ||
+            Number(fields.ebc) < 0
+        ) {
+            return NextResponse.json({
+                error: "Enter the IBU and EBC values shown on the fresh wort kit.",
+            }, { status: 400 });
+        }
+    } else {
+        const ibuBoil = calcIBU(normalizedHops, og, volume, boil_volume);
+        const ibuDry = calcDryHopIBU(dry_hops, volume);
+        fields.ibu = ibuBoil + ibuDry;
 
-    const ebcResult = calcEBC(malts, volume);
-    fields.ebc = ebcResult.ebc;
-
-    fields.malt_warnings = ebcResult.warnings;
+        const ebcResult = calcEBC(malts, volume);
+        fields.ebc = ebcResult.ebc;
+        fields.malt_warnings = ebcResult.warnings;
+    }
 
     
 

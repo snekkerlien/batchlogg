@@ -178,17 +178,47 @@ export async function DELETE(request: Request, { params }: RouteContext) {
     return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   }
 
-  let body: { userId?: unknown };
+  let body: { userId?: unknown; leave?: unknown };
   try {
-    body = await request.json();
+    const parsed: unknown = await request.json();
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+      return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+    }
+    body = parsed as { userId?: unknown; leave?: unknown };
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
-  if (typeof body.userId !== "string") {
-    return NextResponse.json({ error: "Contributor is required." }, { status: 400 });
-  }
 
   try {
+    if (body.leave === true) {
+      if (await getOwner(params.id, user.id, serviceRole)) {
+        return NextResponse.json(
+          { error: "Vessel owners cannot leave their own vessel." },
+          { status: 409 }
+        );
+      }
+
+      const { data, error } = await serviceRole
+        .from("kar_contributors")
+        .delete()
+        .eq("kar_id", params.id)
+        .eq("user_id", user.id)
+        .select("kar_id")
+        .maybeSingle();
+      if (error) throw new Error(`Could not leave shared vessel: ${error.message}`);
+      if (!data) {
+        return NextResponse.json(
+          { error: "You are not a contributor to this vessel." },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({ success: true });
+    }
+
+    if (typeof body.userId !== "string") {
+      return NextResponse.json({ error: "Contributor is required." }, { status: 400 });
+    }
     if (!(await getOwner(params.id, user.id, serviceRole))) {
       return NextResponse.json({ error: "Vessel not found." }, { status: 404 });
     }

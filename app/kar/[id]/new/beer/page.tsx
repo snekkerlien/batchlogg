@@ -280,6 +280,47 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
             />
           </div>
 
+          {beerSubtype === "fresh_wort_kit" && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block font-semibold">
+                IBU (from kit)
+                <input
+                  name="ibu"
+                  type="number"
+                  min="0"
+                  step="any"
+                  defaultValue={
+                    recipe?.ingredients &&
+                    !Array.isArray(recipe.ingredients) &&
+                    (recipe.ingredients as Record<string, unknown>).beer_subtype === "fresh_wort_kit"
+                      ? String(recipe.ibu ?? "")
+                      : ""
+                  }
+                  required
+                  className="mt-1 w-full rounded border border-white/20 bg-black/40 p-3 font-normal"
+                />
+              </label>
+              <label className="block font-semibold">
+                EBC (from kit)
+                <input
+                  name="ebc"
+                  type="number"
+                  min="0"
+                  step="any"
+                  defaultValue={
+                    recipe?.ingredients &&
+                    !Array.isArray(recipe.ingredients) &&
+                    (recipe.ingredients as Record<string, unknown>).beer_subtype === "fresh_wort_kit"
+                      ? String(recipe.ebc ?? "")
+                      : ""
+                  }
+                  required
+                  className="mt-1 w-full rounded border border-white/20 bg-black/40 p-3 font-normal"
+                />
+              </label>
+            </div>
+          )}
+
           {beerSubtype === "all_grain" && (
           <div>
   <label className="block mb-2 font-semibold">Malt additions</label>
