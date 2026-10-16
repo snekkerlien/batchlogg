@@ -24,7 +24,7 @@ jobs:
               src-tauri/target/release/bundle/nsis/*
           - platform: macos
             os: macos-latest
-            bundles: dmg
+            bundles: app,dmg
             artifact_path: |
               src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
               src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app.tar.gz*
@@ -94,12 +94,19 @@ jobs:
           dmg="$(find release-assets -type f -name '*.dmg' -print -quit)"
           mac_update="$(find release-assets -type f -name '*.app.tar.gz' -print -quit)"
 
-          for file in "$msi" "$msi.sig" "$nsis" "$nsis.sig" "$dmg" "$mac_update" "$mac_update.sig"; do
-            if [ -z "$file" ] || [ ! -f "$file" ]; then
-              echo "::error::Missing expected installer or signed updater artifact: $file"
+          require_file() {
+            if [ -z "$1" ] || [ ! -f "$1" ]; then
+              echo "::error::Missing expected artifact: $2"
               exit 1
             fi
-          done
+          }
+          require_file "$msi" "Windows MSI installer"
+          require_file "$msi.sig" "Windows MSI update signature"
+          require_file "$nsis" "Windows NSIS installer"
+          require_file "$nsis.sig" "Windows NSIS update signature"
+          require_file "$dmg" "macOS DMG installer"
+          require_file "$mac_update" "macOS app.tar.gz updater bundle"
+          require_file "$mac_update.sig" "macOS updater signature"
 
           cp "$msi" release-files/windows-x86_64-msi.msi
           cp "$msi.sig" release-files/windows-x86_64-msi.msi.sig

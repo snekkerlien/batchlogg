@@ -35,9 +35,9 @@ code signing and notarization, especially on macOS.
 
 Push a version tag matching the app version, such as `desktop-v0.2.3`, to start
 the GitHub Actions workflow. It builds signed Windows MSI/EXE installers and a
-universal macOS DMG/update bundle, then attaches them and an update manifest to
-a release in this repository. When the desktop app starts, it checks for an
-update and asks before downloading and installing it. The website's
+universal macOS DMG plus `.app.tar.gz` updater bundle, then attaches them and an
+update manifest to a release in this repository. When the desktop app starts,
+it checks for an update and asks before downloading and installing it. The website's
 `/download-app` page links to this repository's latest release. The workflow
 uses GitHub Actions' built-in token and needs no personal access token secret.
 
