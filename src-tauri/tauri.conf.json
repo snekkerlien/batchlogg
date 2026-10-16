@@ -22,9 +22,18 @@
       "csp": "default-src 'self'; script-src 'self'; style-src 'self'; connect-src https://batchlogg.vercel.app"
     }
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDEyNjgwQTcyNEM2MjU4NkEKUldScVdHSk1jZ3BvRW9ZT0hwVmVKeHp4Tlh3UFN2SEw3MERaeWN0aWlNaW50YW1IUmxGZUxnTnkK",
+      "endpoints": [
+        "https://github.com/snekkerlien/batchlogg/releases/latest/download/latest.json"
+      ]
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

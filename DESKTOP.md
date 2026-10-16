@@ -33,11 +33,33 @@ code signing and notarization, especially on macOS.
 
 ## Publishing downloads
 
-Push a version tag such as `desktop-v0.2.3` to start the GitHub Actions workflow.
-It builds Windows MSI/EXE installers and a universal macOS DMG, then attaches
-the installer files to a release in this repository. The website's
+Push a version tag matching the app version, such as `desktop-v0.2.3`, to start
+the GitHub Actions workflow. It builds signed Windows MSI/EXE installers and a
+universal macOS DMG/update bundle, then attaches them and an update manifest to
+a release in this repository. When the desktop app starts, it checks for an
+update and asks before downloading and installing it. The website's
 `/download-app` page links to this repository's latest release. The workflow
 uses GitHub Actions' built-in token and needs no personal access token secret.
+
+### Updater signing key
+
+Updater packages must be signed. The matching public key is embedded in the
+Tauri configuration; the private key must never be committed or shared. A
+signing key has already been generated locally at
+`~/.tauri/batchlogg.key` (on Windows, `%USERPROFILE%\.tauri\batchlogg.key`).
+Back it up securely: losing it prevents future updates for existing installs.
+
+Add its contents as the repository Actions secret `TAURI_SIGNING_PRIVATE_KEY`.
+With the GitHub CLI installed and authenticated, run this in PowerShell:
+
+```powershell
+Get-Content -Raw "$HOME\.tauri\batchlogg.key" |
+  gh secret set TAURI_SIGNING_PRIVATE_KEY --repo snekkerlien/batchlogg
+```
+
+Alternatively, add the file contents in the repository's **Settings → Secrets
+and variables → Actions**. The key was generated without a password, so no
+`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` secret is needed.
 
 Because the downloads use this repository's public GitHub Releases, the
 repository must remain public. GitHub also exposes source archives for public

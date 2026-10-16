@@ -1,4 +1,4 @@
-const appUrl = "https://batchlogg.vercel.app";
+const appUrl = "https://batchlogg.vercel.app/?desktopApp=1";
 const status = document.getElementById("status");
 const retry = document.getElementById("retry");
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import { useRouter } from "next/navigation";
+import { isDesktopApp } from "@/lib/desktopApp";
 
 export default function Home() {
   const router = useRouter();
@@ -16,11 +17,21 @@ export default function Home() {
     async function load() {
       const {
         data: { session },
+        error,
       } = await supabaseBrowser.auth.getSession();
+
+      if (error) {
+        console.error("Could not restore the login session", error);
+      }
 
       setSession(session);
 
       if (session) {
+        if (isDesktopApp()) {
+          router.replace("/dashboard");
+          return;
+        }
+
         const token = session.access_token;
         const res = await fetch("/api/profile", {
           headers: { Authorization: `Bearer ${token}` },
@@ -40,13 +51,16 @@ export default function Home() {
     const { data: listener } = supabaseBrowser.auth.onAuthStateChange(
       (_event, newSession) => {
         setSession(newSession);
+        if (newSession && isDesktopApp()) {
+          router.replace("/dashboard");
+        }
       }
     );
 
     return () => {
       listener.subscription.unsubscribe();
     };
-  }, []);
+  }, [router]);
 
   async function logout() {
     await supabaseBrowser.auth.signOut();

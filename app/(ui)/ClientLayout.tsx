@@ -16,6 +16,7 @@ import {
   DEFAULT_ACCENT_COLOR,
   isAccentColor,
 } from "../../lib/theme/accentColor";
+import { isDesktopApp } from "../../lib/desktopApp";
 
 function UserAccentTheme({ children }: { children: ReactNode }) {
   const { user } = useAuthContext();
@@ -73,6 +74,15 @@ function UserAccentTheme({ children }: { children: ReactNode }) {
 export default function ClientLayout({ children }: { children: ReactNode }) {
   useSupabaseSessionSync();
   const pathname = usePathname();
+
+  useEffect(() => {
+    if (!isDesktopApp()) return;
+
+    document.body.classList.add("desktop-app");
+    return () => {
+      document.body.classList.remove("desktop-app");
+    };
+  }, []);
 
   return (
     <AuthProvider>
