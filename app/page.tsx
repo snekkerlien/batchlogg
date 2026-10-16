@@ -51,7 +51,7 @@ export default function Home() {
             to join in or manage your own brewing.
           </p>
         </div>
-        <ul className="grid gap-4 sm:grid-cols-2">
+        <ul className="public-explore-grid grid gap-4 sm:grid-cols-2">
           <li>
             <Link
               href="/about"
@@ -111,7 +111,7 @@ export default function Home() {
               </span>
             </Link>
           </li>
-          <li>
+          <li className="desktop-download-card">
             <Link
               href="/download-app"
               className="block h-full rounded-lg border border-white/10 bg-white/5 p-5 transition hover:border-green-300/40 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-300"
@@ -125,7 +125,7 @@ export default function Home() {
               </span>
             </Link>
           </li>
-          <li>
+          <li className="desktop-contact-card">
             <Link
               href="/contact"
               className="block h-full rounded-lg border border-white/10 bg-white/5 p-5 transition hover:border-green-300/40 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-300"
