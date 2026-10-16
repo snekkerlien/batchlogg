@@ -78,9 +78,10 @@ export async function GET(request: NextRequest) {
     );
   }
   const ownedVesselIds = (karResult.data ?? []).map((vessel) => vessel.id);
+  const { serviceRole } = supabaseServer();
   const { data: ownedContributors, error: ownedContributorsError } =
     ownedVesselIds.length > 0
-      ? await supabase
+      ? await serviceRole
           .from("kar_contributors")
           .select("kar_id")
           .in("kar_id", ownedVesselIds)
@@ -151,7 +152,6 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const { serviceRole } = supabaseServer();
   const ownerIds = [
     ...new Set((sharedVessels ?? []).map((vessel) => vessel.user_id)),
   ];

@@ -27,15 +27,14 @@ interface DashboardResponse {
 
 const sharedVesselCardStyle = {
   borderColor: "var(--user-accent)",
-  boxShadow:
-    "0 0 0 1px color-mix(in srgb, var(--user-accent) 20%, transparent), 0 0 18px color-mix(in srgb, var(--user-accent) 24%, transparent)",
+  boxShadow: "0 0 0 1px var(--user-accent), 0 0 18px var(--user-accent)",
 };
 
 const sharedVesselIconStyle = {
   borderColor: "var(--user-accent)",
-  backgroundColor: "color-mix(in srgb, var(--user-accent) 18%, #09090b)",
+  backgroundColor: "#09090b",
   color: "var(--user-accent)",
-  boxShadow: "0 0 10px color-mix(in srgb, var(--user-accent) 35%, transparent)",
+  boxShadow: "0 0 10px var(--user-accent)",
 };
 
 function isCreatedKar(
