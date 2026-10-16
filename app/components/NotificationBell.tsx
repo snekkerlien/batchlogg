@@ -16,6 +16,17 @@ interface ForumReplyNotification {
   reply_author: string;
 }
 
+interface ForumLikeNotification {
+  kind: "forum_like";
+  id: string;
+  topic_id: string;
+  target_type: "topic" | "reply";
+  created_at: string;
+  read_at: string | null;
+  topic_title: string;
+  actor_name: string;
+}
+
 interface BatchReminderNotification {
   kind: "batch_reminder";
   id: string;
@@ -43,6 +54,7 @@ interface SocialNotification {
 
 type Notification =
   | ForumReplyNotification
+  | ForumLikeNotification
   | BatchReminderNotification
   | SocialNotification;
 
@@ -94,7 +106,7 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
     }
 
     const [forumData, batchData, socialData]: [
-      { notifications: Omit<ForumReplyNotification, "kind">[]; unreadCount: number },
+      { notifications: (ForumReplyNotification | ForumLikeNotification)[]; unreadCount: number },
       { reminders: Omit<BatchReminderNotification, "kind">[]; unreadCount: number },
       { notifications: Omit<SocialNotification, "kind">[]; unreadCount: number },
     ] = await Promise.all([
@@ -103,10 +115,7 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
       socialResponse.json(),
     ]);
     const combined: Notification[] = [
-      ...forumData.notifications.map((notification) => ({
-        ...notification,
-        kind: "forum_reply" as const,
-      })),
+      ...forumData.notifications,
       ...batchData.reminders.map((reminder) => ({
         ...reminder,
         kind: "batch_reminder" as const,
@@ -190,7 +199,7 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
   async function openNotification(notification: Notification) {
     if (!notification.read_at) {
       const endpoint =
-        notification.kind === "forum_reply"
+        notification.kind === "forum_reply" || notification.kind === "forum_like"
           ? "/api/community/notifications"
           : notification.kind === "batch_reminder"
             ? "/api/batch-reminders"
@@ -199,7 +208,10 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ ids: [notification.id] }),
+        body: JSON.stringify({
+          ids: [notification.id],
+          kind: notification.kind === "forum_like" ? "forum_like" : "forum_reply",
+        }),
       });
 
       if (!response.ok) {
@@ -219,7 +231,7 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
     }
 
     setOpen(false);
-    if (notification.kind === "forum_reply") {
+    if (notification.kind === "forum_reply" || notification.kind === "forum_like") {
       router.push(`/community/forum#forum-topic-${notification.topic_id}`);
     } else if (notification.kind === "batch_reminder") {
       router.push(
@@ -446,6 +458,22 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
                         </span>
                         <span className="mt-1 block text-sm text-white/70">
                           {notification.reply_body}
+                        </span>
+                        <span className="mt-2 block text-xs text-white/45">
+                          {new Date(notification.created_at).toLocaleString(
+                            "en-GB",
+                            { dateStyle: "medium", timeStyle: "short" }
+                          )}
+                        </span>
+                      </>
+                    ) : notification.kind === "forum_like" ? (
+                      <>
+                        <span className="block text-sm font-semibold text-green-300">
+                          {notification.actor_name} liked your{" "}
+                          {notification.target_type === "topic" ? "discussion" : "reply"}
+                        </span>
+                        <span className="mt-1 block truncate text-sm font-medium">
+                          {notification.topic_title}
                         </span>
                         <span className="mt-2 block text-xs text-white/45">
                           {new Date(notification.created_at).toLocaleString(

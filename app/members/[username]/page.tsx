@@ -13,6 +13,7 @@ import RecipeFilters, { type RecipeSort } from "@/app/my-recipes/RecipeFilters";
 import { membershipLabel } from "@/lib/auth/membership";
 import ProfileOverview, { ProfileAchievements } from "@/app/components/ProfileOverview";
 import { Qty } from "@/app/components/Units";
+import MemberAdminActions, { type MemberAdminDetails } from "./MemberAdminActions";
 
 
 export default function ProfileDetailPage({ params }: { params: { username: string } }) {
@@ -34,6 +35,8 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
     membership_status: string | null;
   } | null>(null);
   const [canViewContent, setCanViewContent] = useState(false);
+  const [canManageUsers, setCanManageUsers] = useState(false);
+  const [adminDetails, setAdminDetails] = useState<MemberAdminDetails | null>(null);
   const [isOwner, setIsOwner] = useState(false);
   const [isFriend, setIsFriend] = useState(false);
   const [friendRequest, setFriendRequest] = useState<{
@@ -84,6 +87,8 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
       const profileData = profileResult.profile;
       setProfile(profileData);
       setCanViewContent(profileResult.canViewContent);
+      setCanManageUsers(profileResult.canManageUsers === true);
+      setAdminDetails(profileResult.adminDetails ?? null);
       setProfileStats(profileResult.stats ?? null);
       setIsOwner(session.user.id === profileData.id);
       setIsFriend(profileResult.isFriend);
@@ -363,6 +368,15 @@ const secondary = batchesRaw
 
           <MenuOverlay />
         </div>
+
+{canManageUsers && adminDetails && (
+  <MemberAdminActions
+    userId={profile.id}
+    username={profile.username}
+    details={adminDetails}
+    membershipStatus={profile.membership_status}
+  />
+)}
 
        {/* PROFILE AVATAR */}
 <div className="w-full flex justify-center mb-6">

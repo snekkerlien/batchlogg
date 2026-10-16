@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
+import PublicPageNavigation from "@/app/components/PublicPageNavigation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -59,15 +60,19 @@ export default async function PublicRecipesPage() {
   return (
     <main className="min-h-screen px-6 py-12 text-white">
       <div className="mx-auto w-full max-w-4xl rounded-xl border border-white/10 bg-black/60 p-6 backdrop-blur-md sm:p-8">
-        <nav className="mb-8 flex flex-wrap gap-5 text-sm text-green-300">
-          <Link href="/" className="underline">Batchlogg home</Link>
-          <Link href="/abv-tools" className="underline">ABV tools</Link>
-        </nav>
+        <PublicPageNavigation current="recipes" />
         <header className="mb-8">
           <h1 className="text-3xl font-bold text-green-300">Public brewing recipes</h1>
           <p className="mt-3 text-white/75">
             Recipes shared publicly by Batchlogg members. Private recipes and
             recipes belonging to private profiles are not shown here.
+          </p>
+          <p className="mt-3 text-sm leading-6 text-white/65">
+            Each recipe is shared by its brewer, so available details vary.
+            Open a recipe to review its ingredients, fermentation guidance, and
+            notes before deciding whether it fits your equipment and process.
+            Gravity, alcohol, and batch-volume figures are supplied as recipe
+            data and may be estimates; verify measurements for your own brew.
           </p>
         </header>
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
+import { writeAdminAuditEvent } from "@/lib/admin/auditLog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -60,6 +61,20 @@ export async function PATCH(request: NextRequest) {
   if (error) {
     console.error("Could not update maintenance notice", error);
     return NextResponse.json({ error: "Could not update maintenance notice" }, { status: 500 });
+  }
+  if (
+    !(await writeAdminAuditEvent(serviceRole, {
+      actorId: user.id,
+      action: "maintenance_notice.updated",
+      targetType: "site_status",
+      targetId: "main",
+      details: { enabled: body.enabled },
+    }))
+  ) {
+    return NextResponse.json(
+      { error: "Maintenance notice was updated, but the audit log could not be updated." },
+      { status: 500 }
+    );
   }
   return NextResponse.json({ success: true });
 }

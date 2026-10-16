@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { supabaseServer } from "../../../../lib/supabase/supabaseServerFinal";
 import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
+import { writeAdminAuditEvent } from "@/lib/admin/auditLog";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 import DeleteUserButton from "./DeleteUserButton";
@@ -64,6 +65,9 @@ export default async function UserAdminPage({
       data: { user: actionUser },
     } = await actionSupabase.auth.getUser();
 
+    if (!actionUser) {
+      throw new Error("Forbidden");
+    }
     const actionRole = await getMembershipRole(actionSupabase, actionUser);
     if (!hasPermission(actionRole, "manage_users")) {
       throw new Error("Forbidden");
@@ -106,6 +110,21 @@ export default async function UserAdminPage({
 
     if (profileUpdateError) {
       throw new Error(`Failed to update profile: ${profileUpdateError.message}`);
+    }
+
+    if (
+      !(await writeAdminAuditEvent(actionServiceRole, {
+        actorId: actionUser.id,
+        action: "user.updated",
+        targetType: "user",
+        targetId: userId,
+        details: {
+          membership_status: membershipStatus,
+          updated_fields: "email,username,membership_status,can_manage_kegs,snus_is_true",
+        },
+      }))
+    ) {
+      throw new Error("User account was updated, but the audit log could not be updated.");
     }
 
     revalidatePath(`/admin/users/${userId}`);

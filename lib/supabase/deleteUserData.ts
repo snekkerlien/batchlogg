@@ -243,10 +243,20 @@ async function deleteForumData(
   ]);
 
   await deleteRows(serviceRole, "forum_reply_notifications", "recipient_id", userId);
+  await deleteRows(serviceRole, "forum_like_notifications", "recipient_id", userId);
+  await deleteRows(serviceRole, "forum_like_notifications", "actor_id", userId);
+  await deleteRows(serviceRole, "forum_likes", "user_id", userId);
   await deleteRowsByIds(
     serviceRole,
     "forum_reply_notifications",
     "reply_id",
+    replyIds,
+  );
+  await deleteRowsByIds(serviceRole, "forum_likes", "target_id", replyIds);
+  await deleteRowsByIds(
+    serviceRole,
+    "forum_like_notifications",
+    "target_id",
     replyIds,
   );
 
@@ -257,6 +267,8 @@ async function deleteForumData(
       "topic_id",
       topicId,
     );
+    await deleteRows(serviceRole, "forum_like_notifications", "topic_id", topicId);
+    await deleteRows(serviceRole, "forum_likes", "topic_id", topicId);
     await deleteRows(serviceRole, "forum_replies", "topic_id", topicId);
     await deleteRows(serviceRole, "forum_topics", "id", topicId);
   }

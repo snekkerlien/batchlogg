@@ -4,9 +4,8 @@ export const revalidate = 0;
 
 import { supabaseServer } from "../../../../../lib/supabase/supabaseServerFinal";
 import { notFound } from "next/navigation";
-import MenuOverlay from "./MenuOverlay";
-import BackButton from "./BackButton";
 import PageHeading from "@/app/components/PageHeading";
+import PublicPageNavigation from "@/app/components/PublicPageNavigation";
 import type { Fruit, Malt, Hop, Ingredient } from "@/app/types/batchTypes";
 import { Qty } from "@/app/components/Units";
 
@@ -21,7 +20,9 @@ export default async function RecipeNotesPage({
     data: { user },
     error: userError,
   } = await supabase.auth.getUser();
-  if (userError) throw new Error(`Could not verify the current user: ${userError.message}`);
+  if (userError && userError.name !== "AuthSessionMissingError") {
+    throw new Error(`Could not verify the current user: ${userError.message}`);
+  }
 
   const { data: profile, error: profileError } = await serviceRole
     .from("profiles")
@@ -46,15 +47,15 @@ export default async function RecipeNotesPage({
   if (!recipe) notFound();
 
   const notes = viewingOwnProfile ? recipe.notes_log || [] : [];
+  const hasSecondaryDetails =
+    recipe.had_secondary ||
+    Boolean(recipe.secondary_additions?.trim()) ||
+    Boolean(recipe.secondary_notes?.trim());
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
       <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10 relative">
 
-        {/* TOP BAR */}
-        <div className="flex items-center justify-between mb-6">
-          <BackButton />
-          <MenuOverlay />
-        </div>
+        <PublicPageNavigation current="profiles" />
 
         <PageHeading
           title={recipe.name.charAt(0).toUpperCase() + recipe.name.slice(1)}
@@ -270,6 +271,31 @@ export default async function RecipeNotesPage({
   )}
 
 </div>
+        {hasSecondaryDetails && (
+          <section className="mt-6 rounded-xl border border-white/10 bg-white/5 p-4">
+            <h2 className="mb-3 text-xl font-semibold text-green-300">
+              Secondary fermentation
+            </h2>
+            {recipe.secondary_additions?.trim() ? (
+              <p className="whitespace-pre-line text-sm opacity-90">
+                <strong>Secondary additions:</strong>
+                <br />
+                {recipe.secondary_additions}
+              </p>
+            ) : recipe.had_secondary ? (
+              <p className="text-sm opacity-75">
+                This recipe includes a secondary fermentation.
+              </p>
+            ) : null}
+            {recipe.secondary_notes?.trim() && (
+              <p className="mt-3 whitespace-pre-line text-sm opacity-90">
+                <strong>Secondary notes:</strong>
+                <br />
+                {recipe.secondary_notes}
+              </p>
+            )}
+          </section>
+        )}
         {viewingOwnProfile && (
           <>
         <h2 className="text-2xl font-semibold mt-12 mb-4 text-center">

@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import MenuOverlay from "@/app/components/MenuOverlay";
+import PublicPageNavigation from "@/app/components/PublicPageNavigation";
 import { useAuthContext } from "@/app/providers/AuthProvider";
 
 function BackIcon() {
@@ -29,40 +29,35 @@ export default function DownloadAppTopBar() {
   const { user, loading } = useAuthContext();
   const router = useRouter();
 
+  if (loading || !user) {
+    return (
+      <div className="absolute left-4 right-4 top-4 z-40">
+        <PublicPageNavigation current="download-app" />
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="absolute left-4 top-4 z-40">
-        {loading || !user ? (
-          <Link
-            href="/"
-            aria-label="Back to landing page"
-            title="Back to landing page"
-            className="flex items-center justify-center rounded-lg border border-white/20 bg-white/10 p-2 hover:bg-white/20"
-          >
-            <BackIcon />
-          </Link>
-        ) : (
-          <button
-            type="button"
-            onClick={() => {
-              if (window.history.length > 1) {
-                router.back();
-              } else {
-                router.push("/dashboard");
-              }
-            }}
-            aria-label="Go back"
-            className="flex items-center justify-center rounded-lg border border-white/20 bg-white/10 p-2 hover:bg-white/20"
-          >
-            <BackIcon />
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => {
+            if (window.history.length > 1) {
+              router.back();
+            } else {
+              router.push("/dashboard");
+            }
+          }}
+          aria-label="Go back"
+          className="flex items-center justify-center rounded-lg border border-white/20 bg-white/10 p-2 hover:bg-white/20"
+        >
+          <BackIcon />
+        </button>
       </div>
-      {!loading && user && (
-        <div className="absolute right-4 top-4 z-40">
-          <MenuOverlay current="download-app" />
-        </div>
-      )}
+      <div className="absolute right-4 top-4 z-40">
+        <MenuOverlay current="download-app" />
+      </div>
     </>
   );
 }

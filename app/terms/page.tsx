@@ -176,9 +176,19 @@ export default function TermsPage() {
             10. Contact Information
           </h2>
           <p className="text-sm text-zinc-300 leading-relaxed">
-            If you have questions about these terms or Batchlogg in general,
-            please reach out through the Feedback section in your account
-            settings.
+            For bug reports or non-sensitive questions about Batchlogg, use
+            the public{" "}
+            <a
+              href="https://github.com/snekkerlien/batchlogg/issues"
+              target="_blank"
+              rel="noreferrer"
+              className="text-green-300 underline"
+            >
+              GitHub issue tracker
+            </a>
+            . Do not post passwords, account details, or other private
+            information there. Signed-in members can also send feedback from
+            Settings.
           </p>
         </section>
 

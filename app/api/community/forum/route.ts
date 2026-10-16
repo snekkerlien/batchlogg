@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
+import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
 import {
   decodeForumContent,
   type ForumAttachmentRef,
@@ -9,7 +10,18 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const { serviceRole } = supabaseServer();
+  const { supabase, serviceRole } = supabaseServer();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError && authError.name !== "AuthSessionMissingError") {
+    console.error("Could not identify forum visitor", authError);
+    return NextResponse.json({ error: "Could not load forum topics" }, { status: 500 });
+  }
+  const role = user ? await getMembershipRole(supabase, user) : "member";
+  const canModerate = hasPermission(role, "delete_reported_content");
+
   const { data: topicRows, error: topicsError } = await serviceRole
     .from("forum_topics")
     .select("id, author_id, title, body, category, created_at, updated_at")
@@ -25,7 +37,7 @@ export async function GET() {
 
   const topics = topicRows ?? [];
   if (topics.length === 0) {
-    return NextResponse.json({ topics: [] });
+    return NextResponse.json({ topics: [], canModerate });
   }
 
   const { data: replyRows, error: repliesError } = await serviceRole
@@ -46,6 +58,34 @@ export async function GET() {
   }
 
   const replies = replyRows ?? [];
+  const contentIds = [...topics.map((topic) => topic.id), ...replies.map((reply) => reply.id)];
+  const [
+    { data: likeCounts, error: likeCountsError },
+    { data: userLikes, error: userLikesError },
+  ] = await Promise.all([
+    serviceRole
+      .from("forum_like_counts")
+      .select("target_type, target_id, like_count")
+      .in("target_id", contentIds),
+    user
+      ? serviceRole
+          .from("forum_likes")
+          .select("target_type, target_id")
+          .eq("user_id", user.id)
+          .in("target_id", contentIds)
+      : { data: [], error: null },
+  ]);
+  if (likeCountsError || userLikesError) {
+    console.error("Could not load forum likes", likeCountsError || userLikesError);
+    return NextResponse.json({ error: "Could not load forum likes" }, { status: 500 });
+  }
+
+  const likeCountByContent = new Map(
+    (likeCounts ?? []).map((like) => [`${like.target_type}:${like.target_id}`, like.like_count])
+  );
+  const likedContent = new Set(
+    (userLikes ?? []).map((like) => `${like.target_type}:${like.target_id}`)
+  );
   const decodedTopics = topics.map((topic) => ({
     topic,
     content: decodeForumContent(topic.body),
@@ -186,9 +226,12 @@ export async function GET() {
   };
 
   return NextResponse.json({
+    canModerate,
     topics: decodedTopics.map(({ topic, content }) => {
       return {
         ...topic,
+        like_count: likeCountByContent.get(`topic:${topic.id}`) ?? 0,
+        liked_by_user: likedContent.has(`topic:${topic.id}`),
         body: content.body,
         images: content.imagePaths
           .map((path) => imageFor(path, topic.author_id))
@@ -200,6 +243,8 @@ export async function GET() {
           .map(({ reply, content: replyContent }) => {
             return {
               ...reply,
+              like_count: likeCountByContent.get(`reply:${reply.id}`) ?? 0,
+              liked_by_user: likedContent.has(`reply:${reply.id}`),
               body: replyContent.body,
               images: replyContent.imagePaths
                 .map((path) => imageFor(path, reply.author_id))

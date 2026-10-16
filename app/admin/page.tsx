@@ -81,6 +81,31 @@ export default async function AdminPage() {
             </Link>
           )}
 
+          {hasPermission(role, "manage_users") && (
+            <Link
+              href="/admin/audit-log"
+              className="group rounded-xl border border-white/10 bg-white/5 p-6 transition hover:border-green-400/40 hover:bg-white/10"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-wider text-green-300">
+                    Security
+                  </p>
+                  <h2 className="mt-2 text-2xl font-bold">Audit log</h2>
+                </div>
+                <span
+                  aria-hidden="true"
+                  className="text-2xl text-green-300 transition group-hover:translate-x-1"
+                >
+                  →
+                </span>
+              </div>
+              <p className="mt-4 leading-relaxed text-white/70">
+                Review recent administrative actions.
+              </p>
+            </Link>
+          )}
+
           {hasPermission(role, "review_reports") && (
             <Link
               href="/admin/community-reports"
@@ -103,6 +128,31 @@ export default async function AdminPage() {
               <p className="mt-4 leading-relaxed text-white/70">
                 Review member reports, inspect reported content, and track
                 moderation history.
+              </p>
+            </Link>
+          )}
+
+          {hasPermission(role, "manage_users") && (
+            <Link
+              href="/admin/restrictions"
+              className="group rounded-xl border border-white/10 bg-white/5 p-6 transition hover:border-green-400/40 hover:bg-white/10"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-wider text-green-300">
+                    Moderation
+                  </p>
+                  <h2 className="mt-2 text-2xl font-bold">User restrictions</h2>
+                </div>
+                <span
+                  aria-hidden="true"
+                  className="text-2xl text-green-300 transition group-hover:translate-x-1"
+                >
+                  →
+                </span>
+              </div>
+              <p className="mt-4 leading-relaxed text-white/70">
+                Review active mutes and bans, and restore access.
               </p>
             </Link>
           )}

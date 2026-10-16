@@ -1,17 +1,17 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
 import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
+import { writeAdminAuditEvent } from "@/lib/admin/auditLog";
 
 export async function POST(req: Request) {
-  const { supabase } = supabaseServer();
+  const { supabase, serviceRole } = supabaseServer();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!hasPermission(await getMembershipRole(supabase, user), "manage_users")) {
+  if (!user || !hasPermission(await getMembershipRole(supabase, user), "manage_users")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -26,19 +26,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing userId or newEmail" }, { status: 400 });
   }
 
-  const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    }
-  );
-
-  // Oppdater Auth
-  const { data, error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+  const { data, error } = await serviceRole.auth.admin.updateUserById(userId, {
     email: newEmail,
     email_confirm: true,
   });
@@ -49,7 +37,7 @@ export async function POST(req: Request) {
   }
 
   // Oppdater profiles.email
-  const { error: profileError } = await supabaseAdmin
+  const { error: profileError } = await serviceRole
     .from("profiles")
     .update({ email: newEmail })
     .eq("id", userId);
@@ -57,6 +45,20 @@ export async function POST(req: Request) {
   if (profileError) {
     console.error("Profile update error:", profileError);
     return NextResponse.json({ error: profileError.message }, { status: 500 });
+  }
+
+  if (
+    !(await writeAdminAuditEvent(serviceRole, {
+      actorId: user.id,
+      action: "user.email_updated",
+      targetType: "user",
+      targetId: userId,
+    }))
+  ) {
+    return NextResponse.json(
+      { error: "Email was updated, but the audit log could not be updated." },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ success: true, user: data });

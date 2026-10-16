@@ -16,112 +16,128 @@ export async function GET() {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
 
-  const { data: notifications, error: notificationsError } = await supabase
-    .from("forum_reply_notifications")
-    .select("id, topic_id, reply_id, created_at, read_at")
-    .eq("recipient_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(20);
+  const [
+    { data: replyNotifications, error: replyNotificationsError },
+    { count: replyUnreadCount, error: replyCountError },
+    { data: likeNotifications, error: likeNotificationsError },
+    { count: likeUnreadCount, error: likeCountError },
+  ] = await Promise.all([
+    supabase
+      .from("forum_reply_notifications")
+      .select("id, topic_id, reply_id, created_at, read_at")
+      .eq("recipient_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(20),
+    supabase
+      .from("forum_reply_notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("recipient_id", user.id)
+      .is("read_at", null),
+    serviceRole
+      .from("forum_like_notifications")
+      .select("id, actor_id, target_type, target_id, topic_id, created_at, read_at")
+      .eq("recipient_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(20),
+    serviceRole
+      .from("forum_like_notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("recipient_id", user.id)
+      .is("read_at", null),
+  ]);
 
-  if (notificationsError) {
-    console.error("Could not load forum notifications", notificationsError);
-    return NextResponse.json(
-      { error: "Could not load notifications" },
-      { status: 500 }
+  if (
+    replyNotificationsError ||
+    replyCountError ||
+    likeNotificationsError ||
+    likeCountError
+  ) {
+    console.error(
+      "Could not load forum notifications",
+      replyNotificationsError || replyCountError || likeNotificationsError || likeCountError
     );
+    return NextResponse.json({ error: "Could not load notifications" }, { status: 500 });
   }
 
-  const { count: unreadCount, error: countError } = await supabase
-    .from("forum_reply_notifications")
-    .select("id", { count: "exact", head: true })
-    .eq("recipient_id", user.id)
-    .is("read_at", null);
+  const replyRows = replyNotifications ?? [];
+  const likeRows = likeNotifications ?? [];
+  const topicIds = [...new Set([
+    ...replyRows.map((notification) => notification.topic_id),
+    ...likeRows.map((notification) => notification.topic_id),
+  ])];
+  const replyIds = replyRows.map((notification) => notification.reply_id);
+  const [{ data: topics, error: topicsError }, { data: replies, error: repliesError }] =
+    await Promise.all([
+      topicIds.length
+        ? serviceRole.from("forum_topics").select("id, title").in("id", topicIds)
+        : { data: [], error: null },
+      replyIds.length
+        ? serviceRole
+            .from("forum_replies")
+            .select("id, body, author_id")
+            .in("id", replyIds)
+        : { data: [], error: null },
+    ]);
 
-  if (countError) {
-    console.error("Could not count unread forum notifications", countError);
-    return NextResponse.json(
-      { error: "Could not count unread notifications" },
-      { status: 500 }
-    );
+  if (topicsError || repliesError) {
+    console.error("Could not load forum notification details", topicsError || repliesError);
+    return NextResponse.json({ error: "Could not load notifications" }, { status: 500 });
   }
 
-  const rows = notifications ?? [];
-  if (rows.length === 0) {
-    return NextResponse.json({ notifications: [], unreadCount: unreadCount ?? 0 });
-  }
-
-  const topicIds = [...new Set(rows.map((notification) => notification.topic_id))];
-  const replyIds = rows.map((notification) => notification.reply_id);
-  const { data: topics, error: topicsError } = await serviceRole
-    .from("forum_topics")
-    .select("id, title")
-    .in("id", topicIds);
-
-  if (topicsError) {
-    console.error("Could not load notification topic titles", topicsError);
-    return NextResponse.json(
-      { error: "Could not load notifications" },
-      { status: 500 }
-    );
-  }
-
-  const { data: replies, error: repliesError } = await serviceRole
-    .from("forum_replies")
-    .select("id, body, author_id")
-    .in("id", replyIds);
-
-  if (repliesError) {
-    console.error("Could not load notification replies", repliesError);
-    return NextResponse.json(
-      { error: "Could not load notifications" },
-      { status: 500 }
-    );
-  }
-
-  const replyRows = replies ?? [];
-  const authorIds = [...new Set(replyRows.map((reply) => reply.author_id))];
+  const replyAuthorIds = (replies ?? []).map((reply) => reply.author_id);
+  const authorIds = [...new Set([
+    ...replyAuthorIds,
+    ...likeRows.map((notification) => notification.actor_id),
+  ])];
   const { data: authors, error: authorsError } = authorIds.length
-    ? await serviceRole
-        .from("profiles")
-        .select("id, username")
-        .in("id", authorIds)
+    ? await serviceRole.from("profiles").select("id, username").in("id", authorIds)
     : { data: [], error: null };
 
   if (authorsError) {
     console.error("Could not load notification authors", authorsError);
-    return NextResponse.json(
-      { error: "Could not load notifications" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Could not load notifications" }, { status: 500 });
   }
 
   const topicsById = new Map((topics ?? []).map((topic) => [topic.id, topic]));
   const authorsById = new Map((authors ?? []).map((author) => [author.id, author]));
-  const repliesById = new Map(replyRows.map((reply) => [reply.id, reply]));
+  const repliesById = new Map((replies ?? []).map((reply) => [reply.id, reply]));
+  const forumReplyNotifications = replyRows.flatMap((notification) => {
+    const topic = topicsById.get(notification.topic_id);
+    const reply = repliesById.get(notification.reply_id);
+    if (!topic || !reply) return [];
+    const replyContent = decodeForumContent(reply.body);
+
+    return [{
+      ...notification,
+      kind: "forum_reply" as const,
+      topic_title: topic.title,
+      reply_body:
+        replyContent.body ||
+        (replyContent.imagePaths.length ? "Image attachment" : ""),
+      reply_author: authorsById.get(reply.author_id)?.username || "Community member",
+    }];
+  });
+  const forumLikeNotifications = likeRows.flatMap((notification) => {
+    const topic = topicsById.get(notification.topic_id);
+    if (!topic) return [];
+    return [{
+      ...notification,
+      kind: "forum_like" as const,
+      topic_title: topic.title,
+      actor_name: authorsById.get(notification.actor_id)?.username || "Community member",
+    }];
+  });
 
   return NextResponse.json({
-    unreadCount: unreadCount ?? 0,
-    notifications: rows.flatMap((notification) => {
-      const topic = topicsById.get(notification.topic_id);
-      const reply = repliesById.get(notification.reply_id);
-      if (!topic || !reply) return [];
-      const author = authorsById.get(reply.author_id);
-      const replyContent = decodeForumContent(reply.body);
-
-      return [{
-        ...notification,
-        topic_title: topic.title,
-        reply_body:
-          replyContent.body ||
-          (replyContent.imagePaths.length ? "Image attachment" : ""),
-        reply_author: author?.username || "Community member",
-      }];
-    }),
+    unreadCount: (replyUnreadCount ?? 0) + (likeUnreadCount ?? 0),
+    notifications: [...forumReplyNotifications, ...forumLikeNotifications]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 20),
   });
 }
 
 export async function PATCH(request: NextRequest) {
-  const { supabase } = supabaseServer();
+  const { supabase, serviceRole } = supabaseServer();
   const {
     data: { user },
     error: authError,
@@ -131,7 +147,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
 
-  let body: { ids?: unknown; all?: unknown };
+  let body: { ids?: unknown; all?: unknown; kind?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -139,6 +155,9 @@ export async function PATCH(request: NextRequest) {
   }
 
   const markAll = body.all === true;
+  if (!markAll && body.kind !== undefined && body.kind !== "forum_reply" && body.kind !== "forum_like") {
+    return NextResponse.json({ error: "Invalid notification type" }, { status: 400 });
+  }
   if (!markAll && (
     !Array.isArray(body.ids) ||
     body.ids.length === 0 ||
@@ -157,18 +176,32 @@ export async function PATCH(request: NextRequest) {
     );
   }
 
-  let updateQuery = supabase
-    .from("forum_reply_notifications")
-    .update({ read_at: new Date().toISOString() })
-    .eq("recipient_id", user.id)
-    .is("read_at", null);
+  const updateReadAt = new Date().toISOString();
+  const updateReplyNotifications = () => {
+    let query = supabase
+      .from("forum_reply_notifications")
+      .update({ read_at: updateReadAt })
+      .eq("recipient_id", user.id)
+      .is("read_at", null);
+    if (!markAll) query = query.in("id", body.ids as string[]);
+    return query;
+  };
+  const updateLikeNotifications = () => {
+    let query = serviceRole
+      .from("forum_like_notifications")
+      .update({ read_at: updateReadAt })
+      .eq("recipient_id", user.id)
+      .is("read_at", null);
+    if (!markAll) query = query.in("id", body.ids as string[]);
+    return query;
+  };
 
-  if (!markAll) {
-    updateQuery = updateQuery.in("id", body.ids as string[]);
-  }
-
-  const { error: updateError } = await updateQuery;
-
+  const updates = markAll
+    ? await Promise.all([updateReplyNotifications(), updateLikeNotifications()])
+    : [body.kind === "forum_like"
+        ? await updateLikeNotifications()
+        : await updateReplyNotifications()];
+  const updateError = updates.find((update) => update.error)?.error;
   if (updateError) {
     console.error("Could not mark forum notifications as read", updateError);
     return NextResponse.json(
@@ -191,13 +224,13 @@ export async function DELETE() {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
 
-  const { error: deleteError } = await serviceRole
-    .from("forum_reply_notifications")
-    .delete()
-    .eq("recipient_id", user.id);
+  const [{ error: replyDeleteError }, { error: likeDeleteError }] = await Promise.all([
+    serviceRole.from("forum_reply_notifications").delete().eq("recipient_id", user.id),
+    serviceRole.from("forum_like_notifications").delete().eq("recipient_id", user.id),
+  ]);
 
-  if (deleteError) {
-    console.error("Could not clear forum notifications", deleteError);
+  if (replyDeleteError || likeDeleteError) {
+    console.error("Could not clear forum notifications", replyDeleteError || likeDeleteError);
     return NextResponse.json(
       { error: "Could not clear forum notifications" },
       { status: 500 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
+import { writeAdminAuditEvent } from "@/lib/admin/auditLog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -82,6 +83,19 @@ export async function POST(request: NextRequest) {
       console.error("Could not save changelog entry", error);
       return NextResponse.json({ error: "Could not save changelog entry" }, { status: 500 });
     }
+    if (
+      !(await writeAdminAuditEvent(context.serviceRole, {
+        actorId: context.user.id,
+        action: "changelog.saved",
+        targetType: "changelog_entry",
+        targetId: body.version.trim(),
+      }))
+    ) {
+      return NextResponse.json(
+        { error: "Changelog entry was saved, but the audit log could not be updated." },
+        { status: 500 }
+      );
+    }
     return NextResponse.json({ success: true });
   }
 
@@ -102,17 +116,34 @@ export async function POST(request: NextRequest) {
     ) {
       return NextResponse.json({ error: "Invalid announcement" }, { status: 400 });
     }
-    const { error } = await context.serviceRole.from("site_announcements").insert({
-      title: body.title.trim(),
-      body: body.body.trim(),
-      is_active: body.isActive,
-      starts_at: startsAt,
-      ends_at: endsAt,
-      created_by: context.user.id,
-    });
+    const { data: announcement, error } = await context.serviceRole
+      .from("site_announcements")
+      .insert({
+        title: body.title.trim(),
+        body: body.body.trim(),
+        is_active: body.isActive,
+        starts_at: startsAt,
+        ends_at: endsAt,
+        created_by: context.user.id,
+      })
+      .select("id")
+      .single();
     if (error) {
       console.error("Could not create site announcement", error);
       return NextResponse.json({ error: "Could not create announcement" }, { status: 500 });
+    }
+    if (
+      !(await writeAdminAuditEvent(context.serviceRole, {
+        actorId: context.user.id,
+        action: "announcement.created",
+        targetType: "announcement",
+        targetId: announcement.id,
+      }))
+    ) {
+      return NextResponse.json(
+        { error: "Announcement was created, but the audit log could not be updated." },
+        { status: 500 }
+      );
     }
     return NextResponse.json({ success: true });
   }
@@ -126,16 +157,54 @@ export async function DELETE(request: NextRequest) {
   const kind = request.nextUrl.searchParams.get("kind");
   const id = request.nextUrl.searchParams.get("id");
   if (kind === "changelog" && id) {
-    const { error } = await context.serviceRole.from("site_changelog").delete().eq("version", id);
+    const { data, error } = await context.serviceRole
+      .from("site_changelog")
+      .delete()
+      .eq("version", id)
+      .select("version")
+      .maybeSingle();
     if (error) {
       console.error("Could not delete changelog entry", error);
       return NextResponse.json({ error: "Could not delete changelog entry" }, { status: 500 });
     }
+    if (!data) return NextResponse.json({ error: "Changelog entry not found" }, { status: 404 });
+    if (
+      !(await writeAdminAuditEvent(context.serviceRole, {
+        actorId: context.user.id,
+        action: "changelog.removed",
+        targetType: "changelog_entry",
+        targetId: id,
+      }))
+    ) {
+      return NextResponse.json(
+        { error: "Changelog entry was removed, but the audit log could not be updated." },
+        { status: 500 }
+      );
+    }
   } else if (kind === "announcement" && id) {
-    const { error } = await context.serviceRole.from("site_announcements").delete().eq("id", id);
+    const { data, error } = await context.serviceRole
+      .from("site_announcements")
+      .delete()
+      .eq("id", id)
+      .select("id")
+      .maybeSingle();
     if (error) {
       console.error("Could not delete announcement", error);
       return NextResponse.json({ error: "Could not delete announcement" }, { status: 500 });
+    }
+    if (!data) return NextResponse.json({ error: "Announcement not found" }, { status: 404 });
+    if (
+      !(await writeAdminAuditEvent(context.serviceRole, {
+        actorId: context.user.id,
+        action: "announcement.removed",
+        targetType: "announcement",
+        targetId: id,
+      }))
+    ) {
+      return NextResponse.json(
+        { error: "Announcement was removed, but the audit log could not be updated." },
+        { status: 500 }
+      );
     }
   } else {
     return NextResponse.json({ error: "Invalid content identifier" }, { status: 400 });

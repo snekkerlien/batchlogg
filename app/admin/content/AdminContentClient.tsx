@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
+import ConfirmDialog from "@/app/components/ConfirmDialog";
 
 interface ChangelogEntry {
   version: string;
@@ -19,6 +20,11 @@ interface Announcement {
   is_active: boolean;
   starts_at: string | null;
   ends_at: string | null;
+}
+
+interface PendingRemoval {
+  kind: "changelog" | "announcement";
+  id: string;
 }
 
 async function responseJson(response: Response) {
@@ -46,6 +52,7 @@ export function AdminContentClient() {
   const [maintenanceEnabled, setMaintenanceEnabled] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState("");
   const [savingMaintenance, setSavingMaintenance] = useState(false);
+  const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval | null>(null);
 
   const load = useCallback(async () => {
     const [data, statusData] = await Promise.all([
@@ -123,7 +130,6 @@ export function AdminContentClient() {
   }
 
   async function remove(kind: "changelog" | "announcement", id: string) {
-    if (!window.confirm(`Delete this ${kind} entry?`)) return;
     setError("");
     try {
       await responseJson(await fetch(
@@ -131,9 +137,11 @@ export function AdminContentClient() {
         { method: "DELETE", credentials: "include" }
       ));
       await load();
+      return true;
     } catch (deleteError) {
       console.error(`Could not delete ${kind}`, deleteError);
       setError(deleteError instanceof Error ? deleteError.message : `Could not delete ${kind}.`);
+      return false;
     }
   }
 
@@ -204,7 +212,7 @@ export function AdminContentClient() {
                       <span className="block font-medium">{entry.version} · {entry.title}</span>
                       <span className="text-xs text-white/50">{entry.entry_date}</span>
                     </button>
-                    <button type="button" onClick={() => void remove("changelog", entry.version)} className="text-xs text-red-300 underline">Delete</button>
+                    <button type="button" onClick={() => setPendingRemoval({ kind: "changelog", id: entry.version })} className="text-xs text-red-300 underline">Delete</button>
                   </li>
                 ))}
               </ul>
@@ -243,7 +251,7 @@ export function AdminContentClient() {
                       <p className="line-clamp-2 text-sm text-white/60">{announcement.body}</p>
                       <p className="mt-1 text-xs text-white/45">{announcement.is_active ? "Active" : "Inactive"}</p>
                     </div>
-                    <button type="button" onClick={() => void remove("announcement", announcement.id)} className="shrink-0 text-xs text-red-300 underline">Delete</button>
+                    <button type="button" onClick={() => setPendingRemoval({ kind: "announcement", id: announcement.id })} className="shrink-0 text-xs text-red-300 underline">Delete</button>
                   </li>
                 ))}
               </ul>
@@ -275,6 +283,18 @@ export function AdminContentClient() {
             </button>
           </form>
         </section>
+        <ConfirmDialog
+          open={pendingRemoval !== null}
+          title={`Delete ${pendingRemoval?.kind ?? "content"} entry?`}
+          message="This action permanently removes this entry and cannot be undone."
+          confirmLabel="Delete"
+          onConfirm={() =>
+            pendingRemoval
+              ? remove(pendingRemoval.kind, pendingRemoval.id)
+              : Promise.resolve(false)
+          }
+          onCancel={() => setPendingRemoval(null)}
+        />
       </div>
     </main>
   );

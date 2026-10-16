@@ -3,20 +3,33 @@ export const runtime = "nodejs";
 
 
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
+import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
+import { writeAdminAuditEvent } from "@/lib/admin/auditLog";
 import { revalidatePath } from "next/cache";
 
 export async function POST(req: Request) {
-  const form = await req.formData();
-  const feedbackId = form.get("feedbackId") as string;
+  const { supabase, serviceRole } = supabaseServer();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  const role = authError ? "member" : await getMembershipRole(supabase, user);
+  if (!user || !hasPermission(role, "manage_users")) {
+    return NextResponse.redirect(new URL("/admin/feedback?error=forbidden", req.url));
+  }
 
-  // REAL service role client (bypasses ALL RLS)
-  const serviceRole = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  let form: FormData;
+  try {
+    form = await req.formData();
+  } catch {
+    return NextResponse.redirect(new URL("/admin/feedback?error=invalid", req.url));
+  }
+  const feedbackId = form.get("feedbackId")?.toString();
+  if (!feedbackId) {
+    return NextResponse.redirect(new URL("/admin/feedback?error=invalid", req.url));
+  }
 
-  // 1. Fetch feedback BEFORE deleting it
   const { data: feedback, error: fetchError } = await serviceRole
     .from("feedback")
     .select("*")
@@ -24,49 +37,47 @@ export async function POST(req: Request) {
     .single();
 
   if (fetchError || !feedback) {
-    return NextResponse.redirect(
-      new URL("/admin/feedback?error=notfound", req.url)
-    );
+    return NextResponse.redirect(new URL("/admin/feedback?error=notfound", req.url));
   }
 
-  // 2. Insert into roadmap
-console.log("INSERT START", {
-  feedback_id: feedback.id,
-  user_id: feedback.user_id,
-  category: feedback.category,
-  message: feedback.message,
-});
-
-const { error: roadmapError } = await serviceRole
-  .from("roadmap")
-  .insert({
-    feedback_id: feedback.id,
-    user_id: feedback.user_id,
-    category: feedback.category,
-    message: feedback.message,
-    status: "pending",
-  });
-
-console.log("INSERT END", roadmapError);
-console.log("SUPABASE URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
-console.log("SERVICE ROLE KEY STARTS WITH", process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(0, 10));
-
-
+  const { data: roadmapItem, error: roadmapError } = await serviceRole
+    .from("roadmap")
+    .insert({
+      feedback_id: feedback.id,
+      user_id: feedback.user_id,
+      category: feedback.category,
+      message: feedback.message,
+      status: "pending",
+    })
+    .select("id")
+    .single();
   if (roadmapError) {
-    return NextResponse.redirect(
-      new URL("/admin/feedback?error=roadmap", req.url)
-    );
+    console.error("Could not add feedback to roadmap", roadmapError);
+    return NextResponse.redirect(new URL("/admin/feedback?error=roadmap", req.url));
   }
 
-  // 3. Delete feedback AFTER successful insert
-  await serviceRole.from("feedback").delete().eq("id", feedbackId);
+  const { error: feedbackDeleteError } = await serviceRole
+    .from("feedback")
+    .delete()
+    .eq("id", feedbackId);
+  if (feedbackDeleteError) {
+    console.error("Roadmap item was created but feedback could not be removed", feedbackDeleteError);
+    return NextResponse.redirect(new URL("/admin/feedback?error=delete", req.url));
+  }
+  if (
+    !(await writeAdminAuditEvent(serviceRole, {
+      actorId: user.id,
+      action: "feedback.added_to_roadmap",
+      targetType: "roadmap_entry",
+      targetId: roadmapItem.id,
+      details: { feedback_id: feedback.id },
+    }))
+  ) {
+    return NextResponse.redirect(new URL("/admin/feedback?error=audit", req.url));
+  }
 
-  // 4. Revalidate pages
   revalidatePath("/admin/feedback");
   revalidatePath("/admin/roadmap");
 
-  // 5. Redirect
-  return NextResponse.redirect(
-    new URL("/admin/feedback?added=1", req.url)
-  );
+  return NextResponse.redirect(new URL("/admin/feedback?added=1", req.url));
 }

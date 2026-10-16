@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
+import { SponsorAnalyticsLinks } from "./SponsorAnalyticsLinks";
+import { useUnits } from "@/app/components/Units";
+import { formatQuantity } from "@/lib/units";
 
 interface Metrics {
   accounts: number;
@@ -34,6 +37,7 @@ interface Metrics {
     batchesByType: { label: string; count: number }[];
     recipesByType: { label: string; count: number }[];
     activeBatchStatus: { label: string; count: number }[];
+    activeBatchVolumeLitres: number;
     forumTopicsByCategory: { label: string; count: number }[];
     monthlyTrend: {
       month: string;
@@ -87,14 +91,18 @@ function BreakdownList({
   );
 }
 
-export function AdminAnalyticsClient() {
+export function AdminAnalyticsClient({ sponsorToken }: { sponsorToken?: string } = {}) {
+  const { system } = useUnits();
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
-    fetch("/api/admin/analytics", { cache: "no-store", credentials: "include" })
+    const endpoint = sponsorToken
+      ? `/api/sponsor/analytics/${encodeURIComponent(sponsorToken)}`
+      : "/api/admin/analytics";
+    fetch(endpoint, { cache: "no-store", credentials: "include" })
       .then(async (response) => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Could not load analytics");
@@ -106,7 +114,7 @@ export function AdminAnalyticsClient() {
       })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, []);
+  }, [sponsorToken]);
 
   const cards: [string, number][] = [
     ["Accounts", metrics?.accounts ?? 0],
@@ -141,9 +149,17 @@ export function AdminAnalyticsClient() {
   return (
     <main className="min-h-screen px-5 py-12 text-white">
       <div className="relative mx-auto mt-12 max-w-5xl rounded-xl border border-white/20 bg-zinc-950/95 p-6 pt-16 shadow-2xl backdrop-blur-xl sm:p-10">
-        <Link href="/admin" className="absolute left-4 top-4 rounded border border-white/25 bg-black/70 px-3 py-2 text-sm text-white hover:bg-black">Back to admin</Link>
-        <div className="absolute right-4 top-4"><MenuOverlay current="admin" /></div>
-        <PageHeading title="Community analytics" subtitle="Audience, brewing activity, content sharing, and community engagement, shown as aggregate statistics." />
+        {!sponsorToken && (
+          <>
+            <Link href="/admin" className="absolute left-4 top-4 rounded border border-white/25 bg-black/70 px-3 py-2 text-sm text-white hover:bg-black">Back to admin</Link>
+            <div className="absolute right-4 top-4"><MenuOverlay current="admin" /></div>
+          </>
+        )}
+        <PageHeading
+          title="Community analytics"
+          subtitle="Audience, brewing activity, content sharing, and community engagement, shown as aggregate statistics."
+        />
+        {!sponsorToken && <SponsorAnalyticsLinks />}
         {error && <p role="alert" className="mb-5 rounded border border-red-400/50 bg-red-950/80 p-3 text-red-100">{error}</p>}
         {loading ? (
           <p className="text-center text-white/80">Loading analytics…</p>
@@ -179,6 +195,22 @@ export function AdminAnalyticsClient() {
             </section>
             <section aria-labelledby="brewing-heading" className="mt-8">
               <h2 id="brewing-heading" className="mb-3 text-lg font-semibold">Brewing footprint</h2>
+              <div className="mb-5 rounded-xl border border-white/20 bg-black/75 p-6 text-center shadow-lg sm:p-8">
+                <p className="text-sm text-white/80">
+                  {system === "imperial" ? "Gallons currently logged" : "Liters currently logged"}
+                </p>
+                <p className="mt-3 break-words text-5xl font-bold leading-tight tabular-nums text-green-200 sm:text-6xl">
+                  {formatQuantity(
+                    "volume",
+                    metrics?.activityAnalytics.activeBatchVolumeLitres,
+                    system,
+                    1
+                  ) ?? `0 ${system === "imperial" ? "gal" : "L"}`}
+                </p>
+                <p className="mt-3 text-sm text-white/60">
+                  Total volume in active fermentation across all users
+                </p>
+              </div>
               <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3">
                 <div className="rounded-xl border border-white/20 bg-black/75 p-5 text-center shadow-lg">
                   <p className="text-sm text-white/80">Currently fermenting</p>
@@ -189,7 +221,12 @@ export function AdminAnalyticsClient() {
                 <div className="rounded-xl border border-white/20 bg-black/75 p-5 text-center shadow-lg">
                   <p className="text-sm text-white/80">Batch volume started · 30 days</p>
                   <p className="mt-2 text-3xl font-bold text-green-200">
-                    {(metrics?.activityAnalytics.last30Days.batchVolumeLitres ?? 0).toLocaleString()} L
+                    {formatQuantity(
+                      "volume",
+                      metrics?.activityAnalytics.last30Days.batchVolumeLitres,
+                      system,
+                      1
+                    ) ?? `0 ${system === "imperial" ? "gal" : "L"}`}
                   </p>
                 </div>
                 <div className="rounded-xl border border-white/20 bg-black/75 p-5 text-center shadow-lg">

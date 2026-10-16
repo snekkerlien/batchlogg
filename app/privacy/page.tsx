@@ -159,8 +159,18 @@ export default function PrivacyPage() {
           </h2>
           <p className="text-sm text-zinc-300 leading-relaxed">
             If you have questions about this Privacy Policy or how your data is
-            handled, please reach out through the Feedback section in your
-            account settings.
+            handled, signed-in members can use Feedback in Settings. For
+            non-sensitive questions, you can also use the public{" "}
+            <a
+              href="https://github.com/snekkerlien/batchlogg/issues"
+              target="_blank"
+              rel="noreferrer"
+              className="text-green-300 underline"
+            >
+              GitHub issue tracker
+            </a>
+            . Issues are public; do not include passwords, account details, or
+            private personal information.
           </p>
         </section>
 

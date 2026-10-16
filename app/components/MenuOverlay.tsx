@@ -5,8 +5,11 @@ import Link from "next/link";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import { useRouter } from "next/navigation";
 import NotificationBell from "@/app/components/NotificationBell";
+import PublicNavigationLinks from "@/app/components/PublicNavigationLinks";
+import { useAuthContext } from "@/app/providers/AuthProvider";
 
 export default function MenuOverlay({ current }: { current: string }) {
+  const { user, loading } = useAuthContext();
   const [menuOpen, setMenuOpen] = useState(false);
   const [canManageKegs, setCanManageKegs] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -87,7 +90,17 @@ export default function MenuOverlay({ current }: { current: string }) {
     router.replace("/");
   }
 
-  
+  if (!user) {
+    return (
+      <nav aria-label="Public site navigation" className="flex justify-end text-sm">
+        <PublicNavigationLinks
+          className="flex flex-wrap justify-end gap-x-3 gap-y-2 text-white/75"
+          showAuthLinks={!loading}
+        />
+      </nav>
+    );
+  }
+
   const brewingItems: { href: string; label: string; key: string }[] = [
     { href: "/dashboard", label: "Dashboard", key: "dashboard" },
     { href: "/batch-history", label: "Batch history", key: "batchhistorikk" },

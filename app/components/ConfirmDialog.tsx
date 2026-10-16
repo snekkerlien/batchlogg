@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -24,7 +25,7 @@ export default function ConfirmDialog({
 
   useEffect(() => {
     if (!open) return;
-    cancelButtonRef.current?.focus();
+    cancelButtonRef.current?.focus({ preventScroll: true });
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape" && !confirming) onCancel();
@@ -34,7 +35,7 @@ export default function ConfirmDialog({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [open, confirming, onCancel]);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
   async function handleConfirm() {
     if (confirming) return;
@@ -46,7 +47,7 @@ export default function ConfirmDialog({
     }
   }
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-4"
       onMouseDown={(event) => {
@@ -86,6 +87,7 @@ export default function ConfirmDialog({
           </button>
         </div>
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 }

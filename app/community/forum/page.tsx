@@ -2,10 +2,9 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import MenuOverlay from "@/app/components/MenuOverlay";
+import PublicPageNavigation from "@/app/components/PublicPageNavigation";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
 import PageHeading from "@/app/components/PageHeading";
-import BackButton from "@/app/members/BackButton";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import ReportContentButton from "@/app/components/ReportContentButton";
 import {
@@ -57,6 +56,8 @@ interface ForumReply {
   body: string;
   created_at: string;
   updated_at: string;
+  like_count: number;
+  liked_by_user: boolean;
   author: ForumAuthor;
   images: ForumImage[];
   attachments: ForumAttachment[];
@@ -70,10 +71,71 @@ interface ForumTopic {
   category: ForumCategory;
   created_at: string;
   updated_at: string;
+  like_count: number;
+  liked_by_user: boolean;
   author: ForumAuthor;
   images: ForumImage[];
   attachments: ForumAttachment[];
   replies: ForumReply[];
+}
+
+function ForumLikeButton({
+  contentId,
+  contentType,
+  count,
+  liked,
+  userId,
+  pending,
+  onToggle,
+}: {
+  contentId: string;
+  contentType: "topic" | "reply";
+  count: number;
+  liked: boolean;
+  userId: string | null;
+  pending: boolean;
+  onToggle: (contentType: "topic" | "reply", contentId: string, liked: boolean) => void;
+}) {
+  if (!userId) {
+    return (
+      <Link
+        href="/auth/login"
+        aria-label={`Sign in to like this ${contentType}`}
+        className="inline-flex items-center gap-1.5 text-sm text-white/60 hover:text-white"
+      >
+        <span aria-hidden="true">♡</span>
+        <span>{count}</span>
+      </Link>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle(contentType, contentId, !liked)}
+      disabled={pending}
+      aria-label={`${liked ? "Unlike" : "Like"} ${contentType} (${count})`}
+      aria-pressed={liked}
+      className={`inline-flex items-center gap-1.5 text-sm disabled:cursor-wait disabled:opacity-50 ${
+        liked ? "text-pink-300" : "text-white/60 hover:text-white"
+      }`}
+    >
+      <svg
+        aria-hidden="true"
+        width="17"
+        height="17"
+        viewBox="0 0 24 24"
+        fill={liked ? "currentColor" : "none"}
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z" />
+      </svg>
+      <span>{count}</span>
+    </button>
+  );
 }
 
 interface ForumAttachmentChoice extends ForumAttachmentRef {
@@ -294,6 +356,8 @@ async function cleanUpForumImages(images: ForumImage[]) {
 export default function CommunityForumPage() {
   const [topics, setTopics] = useState<ForumTopic[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
+  const [canModerate, setCanModerate] = useState(false);
+  const [pendingLikes, setPendingLikes] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [topicModalOpen, setTopicModalOpen] = useState(false);
@@ -326,9 +390,67 @@ export default function CommunityForumPage() {
       throw new Error(`Forum request failed (${response.status})`);
     }
 
-    const data: { topics: ForumTopic[] } = await response.json();
+    const data: { topics: ForumTopic[]; canModerate?: boolean } = await response.json();
     setTopics(data.topics);
+    setCanModerate(data.canModerate === true);
   }, []);
+
+  async function setForumLike(
+    contentType: "topic" | "reply",
+    contentId: string,
+    liked: boolean
+  ) {
+    if (!userId) return;
+    const key = `${contentType}:${contentId}`;
+    setPendingLikes((current) => new Set(current).add(key));
+    setError("");
+
+    try {
+      const response = await fetch("/api/community/forum/likes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ contentType, contentId, liked }),
+      });
+      const result: { liked?: boolean; likeCount?: number; error?: string } =
+        await response.json();
+      if (
+        !response.ok ||
+        typeof result.likeCount !== "number" ||
+        typeof result.liked !== "boolean"
+      ) {
+        throw new Error(result.error || "Could not update like");
+      }
+
+      setTopics((current) =>
+        current.map((topic) =>
+          contentType === "topic" && topic.id === contentId
+            ? { ...topic, liked_by_user: result.liked!, like_count: result.likeCount! }
+            : {
+                ...topic,
+                replies: topic.replies.map((reply) =>
+                  contentType === "reply" && reply.id === contentId
+                    ? {
+                        ...reply,
+                        liked_by_user: result.liked!,
+                        like_count: result.likeCount!,
+                      }
+                    : reply
+                ),
+              }
+        )
+      );
+    } catch (likeError) {
+      console.error("Could not update forum like", likeError);
+      setError("Your like could not be updated. Please try again.");
+    } finally {
+      setPendingLikes((current) => {
+        const updated = new Set(current);
+        updated.delete(key);
+        return updated;
+      });
+    }
+  }
 
   useEffect(() => {
     let active = true;
@@ -667,22 +789,37 @@ export default function CommunityForumPage() {
       const targetId = isTopic
         ? pendingDelete.topic.id
         : pendingDelete.reply.id;
-      const result = isTopic
-        ? await supabaseBrowser
-            .from("forum_topics")
-            .delete()
-            .eq("id", targetId)
-            .eq("author_id", userId)
-            .select("id")
-        : await supabaseBrowser
-            .from("forum_replies")
-            .delete()
-            .eq("id", targetId)
-            .eq("author_id", userId)
-            .select("id");
-
-      if (result.error || !result.data?.length) {
-        throw result.error ?? new Error("No matching forum content was deleted");
+      if (canModerate) {
+        const response = await fetch("/api/community/forum/moderation", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            contentType: isTopic ? "topic" : "reply",
+            contentId: targetId,
+          }),
+        });
+        const result: { error?: string } = await response.json();
+        if (!response.ok) {
+          throw new Error(result.error || "Could not remove forum content");
+        }
+      } else {
+        const result = isTopic
+          ? await supabaseBrowser
+              .from("forum_topics")
+              .delete()
+              .eq("id", targetId)
+              .eq("author_id", userId)
+              .select("id")
+          : await supabaseBrowser
+              .from("forum_replies")
+              .delete()
+              .eq("id", targetId)
+              .eq("author_id", userId)
+              .select("id");
+        if (result.error || !result.data?.length) {
+          throw result.error ?? new Error("No matching forum content was deleted");
+        }
       }
 
       try {
@@ -703,13 +840,8 @@ export default function CommunityForumPage() {
 
   return (
     <main className="min-h-screen flex flex-col items-center px-6 py-12 text-white">
-      <div className="relative w-full max-w-3xl rounded-xl border border-white/10 bg-black/60 p-6 pt-16 backdrop-blur-md sm:p-8 sm:pt-16">
-        <div className="absolute right-4 top-4 z-40">
-          <MenuOverlay current="forum" />
-        </div>
-        <div className="absolute left-4 top-4 z-40">
-          <BackButton />
-        </div>
+      <div className="relative w-full max-w-3xl rounded-xl border border-white/10 bg-black/60 p-6 backdrop-blur-md sm:p-8">
+        <PublicPageNavigation current="forum" />
 
         <PageHeading
           title="Community forum"
@@ -858,23 +990,25 @@ export default function CommunityForumPage() {
                           {topic.title}
                         </h2>
                       </div>
-                      {userId === topic.author_id && (
+                      {(userId === topic.author_id || canModerate) && (
                         <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => startEditingTopic(topic)}
-                            disabled={submitting}
-                            className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/20 disabled:opacity-50"
-                          >
-                            Edit discussion
-                          </button>
+                          {userId === topic.author_id && (
+                            <button
+                              type="button"
+                              onClick={() => startEditingTopic(topic)}
+                              disabled={submitting}
+                              className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/20 disabled:opacity-50"
+                            >
+                              Edit discussion
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => setPendingDelete({ type: "topic", topic })}
                             disabled={submitting}
                             className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/20 disabled:opacity-50"
                           >
-                            Delete discussion
+                            {userId === topic.author_id ? "Delete discussion" : "Remove discussion"}
                           </button>
                         </div>
                       )}
@@ -888,15 +1022,26 @@ export default function CommunityForumPage() {
                     <ForumAttachmentCards attachments={topic.attachments} />
                   </div>
                 )}
-                <p className="mt-3 text-sm text-white/50">
-                  <AuthorLink author={topic.author} /> · {formatDate(topic.created_at)}
-                  {new Date(topic.updated_at).getTime() >
-                    new Date(topic.created_at).getTime() && (
-                    <span className="ml-2 rounded-full border border-white/15 bg-white/10 px-2 py-0.5 text-xs text-white/70">
-                      Edited
-                    </span>
-                  )}
-                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <p className="text-sm text-white/50">
+                    <AuthorLink author={topic.author} /> · {formatDate(topic.created_at)}
+                    {new Date(topic.updated_at).getTime() >
+                      new Date(topic.created_at).getTime() && (
+                      <span className="ml-2 rounded-full border border-white/15 bg-white/10 px-2 py-0.5 text-xs text-white/70">
+                        Edited
+                      </span>
+                    )}
+                  </p>
+                  <ForumLikeButton
+                    contentId={topic.id}
+                    contentType="topic"
+                    count={topic.like_count}
+                    liked={topic.liked_by_user}
+                    userId={userId}
+                    pending={pendingLikes.has(`topic:${topic.id}`)}
+                    onToggle={setForumLike}
+                  />
+                </div>
                 {userId && userId !== topic.author_id && (
                   <ReportContentButton
                     contentType="post"
@@ -947,37 +1092,50 @@ export default function CommunityForumPage() {
                               <ForumImages images={reply.images} />
                               <ForumAttachmentCards attachments={reply.attachments} />
                             </div>
-                            {userId === reply.author_id && (
+                            {(userId === reply.author_id || canModerate) && (
                               <div className="flex shrink-0 gap-3">
-                                <button
-                                  type="button"
-                                  onClick={() => startEditingReply(reply)}
-                                  disabled={submitting}
-                                  className="text-xs text-white/60 underline hover:text-white disabled:opacity-50"
-                                >
-                                  Edit
-                                </button>
+                                {userId === reply.author_id && (
+                                  <button
+                                    type="button"
+                                    onClick={() => startEditingReply(reply)}
+                                    disabled={submitting}
+                                    className="text-xs text-white/60 underline hover:text-white disabled:opacity-50"
+                                  >
+                                    Edit
+                                  </button>
+                                )}
                                 <button
                                   type="button"
                                   onClick={() => setPendingDelete({ type: "reply", reply })}
                                   disabled={submitting}
                                   className="text-xs text-white/60 underline hover:text-white disabled:opacity-50"
                                 >
-                                  Delete
+                                  {userId === reply.author_id ? "Delete" : "Remove"}
                                 </button>
                               </div>
                             )}
                           </div>
                         )}
-                        <p className="mt-2 text-xs text-white/50">
-                          <AuthorLink author={reply.author} /> · {formatDate(reply.created_at)}
-                          {new Date(reply.updated_at).getTime() >
-                            new Date(reply.created_at).getTime() && (
-                            <span className="ml-2 rounded-full border border-white/15 bg-white/10 px-2 py-0.5 text-xs text-white/70">
-                              Edited
-                            </span>
-                          )}
-                        </p>
+                        <div className="mt-2 flex flex-wrap items-center gap-3">
+                          <p className="text-xs text-white/50">
+                            <AuthorLink author={reply.author} /> · {formatDate(reply.created_at)}
+                            {new Date(reply.updated_at).getTime() >
+                              new Date(reply.created_at).getTime() && (
+                              <span className="ml-2 rounded-full border border-white/15 bg-white/10 px-2 py-0.5 text-xs text-white/70">
+                                Edited
+                              </span>
+                            )}
+                          </p>
+                          <ForumLikeButton
+                            contentId={reply.id}
+                            contentType="reply"
+                            count={reply.like_count}
+                            liked={reply.liked_by_user}
+                            userId={userId}
+                            pending={pendingLikes.has(`reply:${reply.id}`)}
+                            onToggle={setForumLike}
+                          />
+                        </div>
                         {userId && userId !== reply.author_id && (
                           <ReportContentButton
                             contentType="reply"
@@ -1178,8 +1336,12 @@ export default function CommunityForumPage() {
         }
         message={
           pendingDelete?.type === "topic"
-            ? "This will also permanently delete all replies to the discussion."
-            : "This reply will be permanently deleted."
+            ? pendingDelete.topic.author_id !== userId
+              ? "As a moderator, you are about to permanently remove this discussion and all of its replies."
+              : "This will also permanently delete all replies to the discussion."
+            : pendingDelete?.type === "reply" && pendingDelete.reply.author_id !== userId
+              ? "As a moderator, you are about to permanently remove this reply."
+              : "This reply will be permanently deleted."
         }
         confirmLabel="Delete"
         onConfirm={confirmDelete}

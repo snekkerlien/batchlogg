@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { supabaseServer } from "../../../../lib/supabase/supabaseServerFinal";
 import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
 import { deleteUserData } from "../../../../lib/supabase/deleteUserData";
+import { writeAdminAuditEvent } from "@/lib/admin/auditLog";
 
 export async function deleteAdminUser(userId: string) {
   const { supabase, serviceRole } = supabaseServer();
@@ -12,7 +13,10 @@ export async function deleteAdminUser(userId: string) {
     error: authError,
   } = await supabase.auth.getUser();
 
-  const role = authError ? "member" : await getMembershipRole(supabase, adminUser);
+  if (authError || !adminUser) {
+    throw new Error("Forbidden");
+  }
+  const role = await getMembershipRole(supabase, adminUser);
   if (!hasPermission(role, "manage_users")) {
     throw new Error("Forbidden");
   }
@@ -39,6 +43,17 @@ export async function deleteAdminUser(userId: string) {
   const { error: deleteError } = await serviceRole.auth.admin.deleteUser(userId);
   if (deleteError) {
     throw new Error(`Could not delete Auth user: ${deleteError.message}`);
+  }
+
+  if (
+    !(await writeAdminAuditEvent(serviceRole, {
+      actorId: adminUser.id,
+      action: "user.deleted",
+      targetType: "user",
+      targetId: userId,
+    }))
+  ) {
+    throw new Error("User was deleted, but the audit log could not be updated.");
   }
 
   revalidatePath("/admin/users");

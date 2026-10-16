@@ -10,7 +10,11 @@ const CATEGORY_LABELS: Record<string, string> = {
   bug: "Bug report",
 };
 
-export default async function AdminFeedbackPage() {
+export default async function AdminFeedbackPage({
+  searchParams,
+}: {
+  searchParams?: { error?: string };
+}) {
   const { supabase, serviceRole } = supabaseServer();
   const {
     data: { user },
@@ -66,6 +70,18 @@ console.log("SSR SUPABASE URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
           title="Feedback"
           subtitle="Suggestions and feedback sent in by members."
         />
+
+        {searchParams?.error && (
+          <p role="alert" className="mb-5 rounded-lg border border-red-400/30 bg-red-900/20 p-3 text-sm text-red-200">
+            {searchParams.error === "audit"
+              ? "The change was made, but it could not be added to the audit log."
+              : searchParams.error === "forbidden"
+                ? "You do not have permission to manage feedback."
+                : searchParams.error === "notfound"
+                  ? "That feedback entry no longer exists."
+                  : "The feedback action could not be completed."}
+          </p>
+        )}
 
         {error ? (
           <p className="text-center text-red-300">

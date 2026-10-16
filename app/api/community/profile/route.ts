@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
+import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,6 +15,10 @@ export async function GET(request: NextRequest) {
   if (authError || !user) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
+  const canManageUsers = hasPermission(
+    await getMembershipRole(supabase, user),
+    "manage_users"
+  );
 
   const username = request.nextUrl.searchParams.get("username")?.trim();
   if (!username || username.length > 64) {
@@ -105,7 +110,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  if (!profile.is_public && !isOwner && !isFriend) {
+  if (!profile.is_public && !isOwner && !isFriend && !canManageUsers) {
     return NextResponse.json(
       {
         error: "Profile is private",
@@ -190,12 +195,60 @@ export async function GET(request: NextRequest) {
     };
   }
 
+  let adminDetails: {
+    email: string;
+    can_manage_kegs: boolean;
+    snus_is_true: boolean;
+    restrictions: {
+      user_id: string;
+      restriction_type: "mute" | "ban";
+      starts_at: string;
+      ends_at: string | null;
+      reason: string | null;
+    }[];
+  } | null = null;
+  if (canManageUsers) {
+    const [
+      { data: targetUser, error: targetUserError },
+      { data: targetProfile, error: targetProfileError },
+      { data: restrictions, error: restrictionsError },
+    ] = await Promise.all([
+      serviceRole.auth.admin.getUserById(profile.id),
+      serviceRole
+        .from("profiles")
+        .select("can_manage_kegs, snus_is_true")
+        .eq("id", profile.id)
+        .single(),
+      serviceRole
+        .from("user_restrictions")
+        .select("user_id, restriction_type, starts_at, ends_at, reason")
+        .eq("user_id", profile.id)
+        .is("revoked_at", null)
+        .or(`ends_at.is.null,ends_at.gt.${new Date().toISOString()}`),
+    ]);
+    if (targetUserError || targetProfileError || restrictionsError || !targetUser.user) {
+      console.error(
+        "Could not load admin profile details",
+        targetUserError || targetProfileError || restrictionsError
+      );
+      return NextResponse.json({ error: "Could not load profile admin details" }, { status: 500 });
+    }
+    adminDetails = {
+      email: targetUser.user.email ?? "",
+      can_manage_kegs: targetProfile.can_manage_kegs === true,
+      snus_is_true: targetProfile.snus_is_true === true,
+      restrictions: restrictions ?? [],
+    };
+  }
+
   return NextResponse.json({
     profile,
     canViewContent: isOwner || profile.is_public,
     isFriend,
     friendRequest,
     stats,
+    canManageUsers,
+    adminDetails,
   });
 }
 

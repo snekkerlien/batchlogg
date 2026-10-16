@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
+import { writeAdminAuditEvent } from "@/lib/admin/auditLog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -186,6 +187,20 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Could not update report" }, { status: 500 });
   }
   if (!updated) return NextResponse.json({ error: "Report not found" }, { status: 404 });
+  if (
+    !(await writeAdminAuditEvent(context.serviceRole, {
+      actorId: context.user.id,
+      action: "community_report.status_updated",
+      targetType: "community_report",
+      targetId: body.id,
+      details: { status: body.status },
+    }))
+  ) {
+    return NextResponse.json(
+      { error: "Report status was updated, but the audit log could not be updated." },
+      { status: 500 }
+    );
+  }
   return NextResponse.json({ success: true });
 }
 
@@ -220,6 +235,19 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json(
       { error: "The report or reported content no longer exists" },
       { status: 404 }
+    );
+  }
+  if (
+    !(await writeAdminAuditEvent(context.serviceRole, {
+      actorId: context.user.id,
+      action: "community_report.content_removed",
+      targetType: "community_report",
+      targetId: body.id,
+    }))
+  ) {
+    return NextResponse.json(
+      { error: "Reported content was removed, but the audit log could not be updated." },
+      { status: 500 }
     );
   }
   return NextResponse.json({ success: true });

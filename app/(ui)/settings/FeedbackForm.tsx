@@ -3,8 +3,12 @@
 import { useState } from "react";
 import { submitFeedback } from "@/app/actions/feedback";
 
-export default function FeedbackForm() {
-  const [open, setOpen] = useState(false);
+export default function FeedbackForm({
+  defaultOpen = false,
+}: {
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
   const [category, setCategory] = useState("suggestion");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);

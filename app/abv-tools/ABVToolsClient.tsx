@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import BackButton from "./BackButton";
 import PageHeading from "@/app/components/PageHeading";
-import MenuOverlay from "./MenuOverlay";
+import PublicPageNavigation from "@/app/components/PublicPageNavigation";
 import { Qty, UnitInput, UnitSymbol } from "@/app/components/Units";
 import {
   calculateAbvFromGravity,
@@ -96,14 +95,7 @@ useEffect(() => {
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
       <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-4xl border border-white/10 relative pt-16 sm:pt-16">
 
-        {/* ⭐ TOP BAR */}
-        <div className="absolute top-2 sm:top-4 left-4 z-40">
-          <BackButton />
-        </div>
-
-        <div className="absolute top-2 sm:top-4 right-4 z-40">
-          <MenuOverlay />
-        </div>
+        <PublicPageNavigation current="abvtools" />
 
         <PageHeading
           title="ABV Tools"
@@ -377,9 +369,34 @@ useEffect(() => {
   </div>
 </div>
 
-
-
-
+        <section className="mt-12 rounded-xl border border-white/10 bg-white/5 p-6">
+          <h2 className="text-xl font-semibold text-green-300">
+            Using the brewing calculators
+          </h2>
+          <div className="mt-4 space-y-4 text-sm leading-6 text-white/75">
+            <p>
+              Enter gravity as a specific-gravity value (for example, 1.050),
+              alcohol strength as a percentage, and volume in the unit shown
+              beside each field. The volume unit follows your saved preference
+              when signed in or your local setting when signed out.
+            </p>
+            <p>
+              The gravity ABV estimate uses (OG − FG) × 131.25. Dilution tools
+              assume volumes combine directly and alcohol is conserved; the OG
+              dilution tool assumes the added liquid contains no fermentable
+              sugar. Real mixtures can contract, and fermentation may not reach
+              the assumed final gravity.
+            </p>
+            <p>
+              The sugar and honey estimate assumes fermentation to 1.000 and
+              uses 46 PPG for sugar and 35 PPG for honey. The entered batch
+              volume is the final volume, including the volume displaced by
+              fermentables. Ingredient composition and fermentation conditions
+              can change actual results, so treat outputs as planning estimates
+              and confirm with measurements.
+            </p>
+          </div>
+        </section>
       </div>
     </main>
   );
