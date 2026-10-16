@@ -1,6 +1,6 @@
 [package]
 name = "batchlogg-desktop"
-version = "0.2.8"
+version = "0.2.9"
 description = "Batchlogg desktop application"
 edition = "2024"
 rust-version = "1.90"
@@ -18,4 +18,5 @@ tauri-build = { version = "2.7.3", features = [] }
 serde_json = "1"
 tauri = { version = "2.12.4", features = [] }
 tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
 tauri-plugin-updater = "2"

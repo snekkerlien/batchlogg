@@ -2,6 +2,7 @@
 
 import PageHeading from "@/app/components/PageHeading";
 import PublicPageNavigation from "@/app/components/PublicPageNavigation";
+import IssueTrackerLink from "@/app/components/IssueTrackerLink";
 
 export default function PrivacyPage() {
   return (
@@ -161,14 +162,9 @@ export default function PrivacyPage() {
             If you have questions about this Privacy Policy or how your data is
             handled, signed-in members can use Feedback in Settings. For
             non-sensitive questions, you can also use the public{" "}
-            <a
-              href="https://github.com/snekkerlien/batchlogg/issues"
-              target="_blank"
-              rel="noreferrer"
-              className="text-green-300 underline"
-            >
+            <IssueTrackerLink className="text-green-300 underline">
               GitHub issue tracker
-            </a>
+            </IssueTrackerLink>
             . Issues are public; do not include passwords, account details, or
             private personal information.
           </p>

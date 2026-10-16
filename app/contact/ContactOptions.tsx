@@ -3,6 +3,7 @@
 import Link from "next/link";
 import FeedbackForm from "@/app/(ui)/settings/FeedbackForm";
 import { useAuthContext } from "@/app/providers/AuthProvider";
+import IssueTrackerLink from "@/app/components/IssueTrackerLink";
 
 export default function ContactOptions() {
   const { user, loading } = useAuthContext();
@@ -40,14 +41,11 @@ export default function ContactOptions() {
           Use the public Batchlogg GitHub issue tracker to ask a question,
           suggest an improvement, or describe a bug.
         </p>
-        <a
-          href="https://github.com/snekkerlien/batchlogg/issues"
-          target="_blank"
-          rel="noreferrer"
+        <IssueTrackerLink
           className="mt-5 inline-flex min-h-11 items-center justify-center rounded-lg border border-green-400/40 bg-green-700/50 px-4 py-2 text-center text-sm font-semibold text-white transition hover:bg-green-700"
         >
           Open GitHub issue tracker
-        </a>
+        </IssueTrackerLink>
       </section>
 
       <section className="rounded-xl border border-white/10 bg-white/5 p-5">

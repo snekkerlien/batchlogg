@@ -2,6 +2,7 @@
 
 import PageHeading from "@/app/components/PageHeading";
 import PublicPageNavigation from "@/app/components/PublicPageNavigation";
+import IssueTrackerLink from "@/app/components/IssueTrackerLink";
 
 export default function TermsPage() {
   return (
@@ -178,14 +179,9 @@ export default function TermsPage() {
           <p className="text-sm text-zinc-300 leading-relaxed">
             For bug reports or non-sensitive questions about Batchlogg, use
             the public{" "}
-            <a
-              href="https://github.com/snekkerlien/batchlogg/issues"
-              target="_blank"
-              rel="noreferrer"
-              className="text-green-300 underline"
-            >
+            <IssueTrackerLink className="text-green-300 underline">
               GitHub issue tracker
-            </a>
+            </IssueTrackerLink>
             . Do not post passwords, account details, or other private
             information there. Signed-in members can also send feedback from
             Settings.
