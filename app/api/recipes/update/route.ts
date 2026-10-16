@@ -135,6 +135,25 @@
     const hops = Array.isArray(fields.hops) ? fields.hops : [];
     const dry_hops = Array.isArray(fields.dry_hops) ? fields.dry_hops : [];
     const malts = Array.isArray(fields.malts) ? fields.malts : [];
+
+    if (
+        (fields.type === "Braggot" || beerSubtype === "all_grain") &&
+        hops.some((hop: any) => {
+            const hasAddition = [hop.name, hop.amount, hop.alpha, hop.year].some(
+                (value) => value != null && String(value).trim() !== ""
+            );
+            if (!hasAddition) return false;
+            if (hop.time == null || String(hop.time).trim() === "") return true;
+            return hop.addition_type === "whirlpool" &&
+                (!Number.isFinite(Number(hop.temperature)) ||
+                    Number(hop.temperature) < 0 ||
+                    Number(hop.temperature) > 100);
+        })
+    ) {
+        return NextResponse.json({
+            error: "Enter a time for every hop addition and a whirlpool temperature between 0 and 100°C.",
+        }, { status: 400 });
+    }
     
 
     // ⭐ Normalize alpha (comma → dot)

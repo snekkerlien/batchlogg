@@ -397,7 +397,12 @@ export default function BatchHistoryPage() {
                               <div>
                                 <strong>Hop schedule:</strong>
                                 {batch.hops.map((hop: any, index: number) => (
-                                  <p key={index}>{hop.name}: <Qty kind="g" value={hop.amount} maxDecimals={0} /> @ {hop.time} min</p>
+                                  <p key={index}>
+                                    {hop.name}: <Qty kind="g" value={hop.amount} maxDecimals={0} /> @{" "}
+                                    {hop.addition_type === "whirlpool"
+                                      ? `whirlpool ${hop.time} min at ${hop.temperature}°C`
+                                      : `${hop.time} min boil`}
+                                  </p>
                                 ))}
                               </div>
                             )}

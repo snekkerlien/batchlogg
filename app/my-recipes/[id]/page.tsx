@@ -177,7 +177,10 @@ export default function RecipeNotesPage({ params }: { params: { id: string } }) 
                   <ul className="list-disc ml-6 opacity-80">
                     {recipe.hops.map((h: any, i: number) => (
                       <li key={i}>
-                        {h.name} <Qty kind="g" value={h.amount} maxDecimals={0} /> @ {h.time} min
+                        {h.name} <Qty kind="g" value={h.amount} maxDecimals={0} /> @{" "}
+                        {h.addition_type === "whirlpool"
+                          ? `whirlpool ${h.time} min at ${h.temperature}°C`
+                          : `${h.time} min boil`}
                         {h.alpha && <> - {Number(h.alpha)}% Alpha Acid</>}
                       </li>
                     ))}

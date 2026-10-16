@@ -2,6 +2,8 @@ type HopAddition = {
   amount?: number | string | null;
   alpha?: number | string | null;
   time?: number | string | null;
+  addition_type?: "boil" | "whirlpool" | null;
+  temperature?: number | string | null;
 };
 
 type DryHopAddition = {
@@ -61,7 +63,8 @@ export function calcIBU(
   for (const hop of hops) {
     const amount = numericValue(hop.amount);
     const alpha = numericValue(hop.alpha);
-    const time = hop.time == null || hop.time === "" ? 60 : numericValue(hop.time);
+    const time = numericValue(hop.time);
+    const temperature = numericValue(hop.temperature);
     if (
       amount === null || amount <= 0 ||
       alpha === null || alpha <= 0 || alpha > 100 ||
@@ -70,7 +73,14 @@ export function calcIBU(
       continue;
     }
 
-    const boilFactor = (1 - Math.exp(-0.04 * time)) / 4.15;
+    let temperatureFactor = 1;
+    if (hop.addition_type === "whirlpool") {
+      if (temperature === null || temperature < 60 || temperature > 100) continue;
+      // Approximate utilization halves for each 10°C drop below boiling.
+      temperatureFactor = Math.pow(0.5, (100 - temperature) / 10);
+    }
+
+    const boilFactor = ((1 - Math.exp(-0.04 * time)) / 4.15) * temperatureFactor;
     ibu += (amount * 1000 * (alpha / 100) * bigness * boilFactor) / finalVolumeL;
   }
 

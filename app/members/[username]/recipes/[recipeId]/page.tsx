@@ -180,7 +180,12 @@ export default async function RecipeNotesPage({
         <div>
           <strong>Hop schedule:</strong>
           {recipe.hops.map((h: Hop, i: number) => (
-            <p key={i}>{h.name}: <Qty kind="g" value={h.amount} maxDecimals={0} /> @ {h.time} min</p>
+            <p key={i}>
+              {h.name}: <Qty kind="g" value={h.amount} maxDecimals={0} /> @{" "}
+              {h.addition_type === "whirlpool"
+                ? `whirlpool ${h.time} min at ${h.temperature}°C`
+                : `${h.time} min boil`}
+            </p>
           ))}
         </div>
       )}

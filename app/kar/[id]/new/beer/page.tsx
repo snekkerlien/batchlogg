@@ -42,11 +42,11 @@ export default function NewBeerPage({
 
   // Dynamic hop list
   const [hops, setHops] = useState<
-  { name: string; amount: string; time: string; alpha: string; year: string }[]
+  { name: string; amount: string; time: string; alpha: string; year: string; addition_type: "boil" | "whirlpool"; temperature: string }[]
 >([]);
 
   function addHop() {
-    setHops([...hops, { name: "", amount: "", time: "", alpha: "", year:""}]);
+    setHops([...hops, { name: "", amount: "", time: "", alpha: "", year: "", addition_type: "boil", temperature: "" }]);
   }
 
   function removeHop(index: number) {
@@ -107,6 +107,8 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
           time: String(hop.time ?? ""),
           alpha: String(hop.alpha ?? ""),
           year: String(hop.year ?? ""),
+          addition_type: hop.addition_type === "whirlpool" ? "whirlpool" : "boil",
+          temperature: String(hop.temperature ?? ""),
         }))
       : []
   );
@@ -408,6 +410,20 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
       }}
     />
 
+<select
+  aria-label={`Hop ${i + 1} addition type`}
+  value={h.addition_type}
+  onChange={(event) => {
+    const updated = [...hops];
+    updated[i].addition_type = event.target.value as "boil" | "whirlpool";
+    setHops(updated);
+  }}
+  className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
+>
+  <option value="boil">Boil addition</option>
+  <option value="whirlpool">Whirlpool / hop stand</option>
+</select>
+
 <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-[minmax(6.5rem,0.8fr)_minmax(5rem,0.6fr)_minmax(7rem,1fr)_minmax(9rem,1.4fr)_auto]">
 
     <input
@@ -455,8 +471,9 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
 
     {/* Boil time */}
     <input
-      placeholder="Boil time (min)"
+      placeholder={h.addition_type === "whirlpool" ? "Stand time (min)" : "Boil time (min)"}
       type="text"
+      required={Boolean(h.name || h.amount || h.alpha)}
       className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
       value={h.time}
       onChange={(e) => {
@@ -465,6 +482,25 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
         setHops(updated);
       }}
     />
+
+    {h.addition_type === "whirlpool" && (
+      <input
+        aria-label={`Hop ${i + 1} whirlpool temperature in Celsius`}
+        placeholder="Temperature (°C)"
+        type="number"
+        min="0"
+        max="100"
+        step="any"
+        required={Boolean(h.name || h.amount || h.alpha)}
+        className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
+        value={h.temperature}
+        onChange={(e) => {
+          const updated = [...hops];
+          updated[i].temperature = e.target.value;
+          setHops(updated);
+        }}
+      />
+    )}
 
     {/* Remove */}
     <button

@@ -19,7 +19,16 @@ import { convertIngredientAmount } from "@/lib/inventory/convertIngredientAmount
 
 type Fruit = { name: string; amount: string; unit: string };
 type Malt = { name: string; amount: string; unit: string; ebc: string };
-type Hop = { name: string; amount: string; unit: string; time: string; alpha: string; year: string; };
+type Hop = {
+  name: string;
+  amount: string;
+  unit: string;
+  time: string;
+  alpha: string;
+  year: string;
+  addition_type?: "boil" | "whirlpool";
+  temperature?: string;
+};
 type DryHop = { name: string; amount: string; contact: string; alpha: string; year: string; };
 
 type Ingredient = { name: string; amount: string; unit: string };
@@ -269,10 +278,31 @@ if (
   ((type === "Beer" && beerSubtype === "all_grain") || type === "Braggot") &&
   hops.some(
     (hop) =>
-      (hasValue(hop.name) || hasValue(hop.amount)) && !validAlphaAcid(hop.alpha)
+      (hasValue(hop.name) || hasValue(hop.amount) || hasValue(hop.alpha)) &&
+      !validAlphaAcid(hop.alpha)
   )
 ) {
   throw new Error("Enter an alpha-acid value between 0 and 100 for every hop addition.");
+}
+if (
+  ((type === "Beer" && beerSubtype === "all_grain") || type === "Braggot") &&
+  hops.some((hop) => {
+    const hasAddition =
+      hasValue(hop.name) || hasValue(hop.amount) || hasValue(hop.alpha);
+    if (!hasAddition) return false;
+    if (!hasValue(hop.time)) return true;
+    return (
+      hop.addition_type === "whirlpool" &&
+      (!hasValue(hop.temperature) ||
+        !Number.isFinite(Number(hop.temperature)) ||
+        Number(hop.temperature) < 0 ||
+        Number(hop.temperature) > 100)
+    );
+  })
+) {
+  throw new Error(
+    "Enter a time for every hop addition and a whirlpool temperature between 0 and 100°C."
+  );
 }
 if (
   (type === "Beer" || type === "Braggot") &&
@@ -792,7 +822,13 @@ ${malts.map((m: Malt) => `${m.name}: ${m.amount}${m.unit}`).join("\n")}
 
 Hop additions:
 ${hops
-  .map((h: Hop) => `${h.name}: ${h.amount}${h.unit} @ ${h.time} min (${h.alpha}% - ${h.year})`)
+  .map((h: Hop) =>
+    `${h.name}: ${h.amount}${h.unit} @ ${
+      h.addition_type === "whirlpool"
+        ? `whirlpool ${h.time} min at ${h.temperature}°C`
+        : `${h.time} min boil`
+    } (${h.alpha}% - ${h.year})`
+  )
   .join("\n")}
 
 Dry hop additions:
@@ -1341,6 +1377,99 @@ export async function finishBatch(formData: FormData) {
 // ---------------------------------------------------------
 // 4. OPPDATER AKTIV BATCH  ⭐ NY FUNKSJON
 // ---------------------------------------------------------
+function parseJsonArray<T>(
+  formData: FormData,
+  field: string,
+  parseRow: (row: Record<string, unknown>) => T
+): T[] {
+  const raw = formData.get(field);
+  if (typeof raw !== "string") {
+    throw new Error(`Missing ${field} batch data.`);
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error(`Invalid ${field} batch data.`);
+  }
+  if (!Array.isArray(parsed)) {
+    throw new Error(`Invalid ${field} batch data.`);
+  }
+
+  return parsed.map((value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      throw new Error(`Invalid ${field} batch data.`);
+    }
+    return parseRow(value as Record<string, unknown>);
+  });
+}
+
+function formValue(value: unknown): string {
+  return typeof value === "string" || typeof value === "number"
+    ? String(value)
+    : "";
+}
+
+function parseMaltRow(row: Record<string, unknown>): Malt {
+  return {
+    name: formValue(row.name),
+    amount: formValue(row.amount),
+    unit: formValue(row.unit) || "kg",
+    ebc: formValue(row.ebc),
+  };
+}
+
+function parseHopRow(row: Record<string, unknown>): Hop {
+  const additionType = row.addition_type === "whirlpool" ? "whirlpool" : "boil";
+  return {
+    name: formValue(row.name),
+    amount: formValue(row.amount),
+    unit: formValue(row.unit) || "g",
+    time: formValue(row.time ?? row.boil),
+    alpha: formValue(row.alpha),
+    year: formValue(row.year),
+    addition_type: additionType,
+    temperature: formValue(row.temperature),
+  };
+}
+
+function parseDryHopRow(row: Record<string, unknown>): DryHop {
+  return {
+    name: formValue(row.name),
+    amount: formValue(row.amount),
+    contact: formValue(row.contact),
+    alpha: formValue(row.alpha),
+    year: formValue(row.year),
+  };
+}
+
+function parseIngredientRow(row: Record<string, unknown>): Ingredient {
+  return {
+    name: formValue(row.name),
+    amount: formValue(row.amount),
+    unit: formValue(row.unit),
+  };
+}
+
+function parseJsonStrings(formData: FormData, field: string): string[] {
+  const raw = formData.get(field);
+  if (typeof raw !== "string") {
+    throw new Error(`Missing ${field} batch data.`);
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error(`Invalid ${field} batch data.`);
+  }
+  if (!Array.isArray(parsed) || parsed.some((value) => typeof value !== "string")) {
+    throw new Error(`Invalid ${field} batch data.`);
+  }
+  return parsed;
+}
+
 export async function updateBatch(formData: FormData) {
   const { supabase } = supabaseServer();
 
@@ -1350,25 +1479,31 @@ export async function updateBatch(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const name = formData.get("name") as string;
+  const name = formData.get("name");
   const volume_l = Number(formData.get("volume_l"));
   const og = Number(formData.get("og"));
-  const startdato = formData.get("startdato") as string;
-  const additives = formData.get("additives");
-  const notes = formData.get("notes");
-  const secondary_additions = formData.get("secondary_additions");
-  const secondary_notes = formData.get("secondary_notes");
-  const baseLiquid = formData.get("base_liquid");
-  const baseLiquidAmountRaw = formData.get("base_liquid_amount");
+  const startdato = formData.get("startdato");
 
   if (!user) throw new Error("Authentication required");
   if (!batchId || !karId) {
     throw new Error("Batch ID and vessel ID are required");
   }
+  if (
+    typeof name !== "string" ||
+    !name.trim() ||
+    !Number.isFinite(volume_l) ||
+    volume_l <= 0 ||
+    !Number.isFinite(og) ||
+    og <= 1 ||
+    typeof startdato !== "string" ||
+    !Number.isFinite(new Date(startdato).getTime())
+  ) {
+    throw new Error("Enter a valid batch name, volume, start date, and original gravity.");
+  }
 
   const { data: batch, error: batchLookupError } = await supabase
     .from("batches")
-    .select("id")
+    .select("id, type, fg, dry_hops")
     .eq("id", batchId)
     .eq("aktivt_kar", karId)
     .maybeSingle();
@@ -1377,62 +1512,180 @@ export async function updateBatch(formData: FormData) {
   }
   if (!batch) throw new Error("Batch not found or access denied");
 
-  let fruits: Fruit[] | undefined;
-  if (formData.has("fruits_json")) {
-    const rawFruits = formData.get("fruits_json");
-    if (typeof rawFruits !== "string") {
-      throw new Error("Invalid fruit additions submitted.");
+  const typeUpdates: Record<string, unknown> = {};
+
+  if (batch.type === "Beer" || batch.type === "Braggot") {
+    const malts = parseJsonArray(formData, "malts_json", parseMaltRow);
+    const hops = parseJsonArray(formData, "hops_json", parseHopRow);
+    const dryHops = formData.has("dry_hops_json")
+      ? parseJsonArray(formData, "dry_hops_json", parseDryHopRow)
+      : Array.isArray(batch.dry_hops)
+        ? batch.dry_hops.map((row) => {
+            if (!row || typeof row !== "object" || Array.isArray(row)) {
+              throw new Error("Invalid saved dry-hop additions.");
+            }
+            return parseDryHopRow(row as Record<string, unknown>);
+          })
+        : [];
+
+    if (
+      malts.some((malt) => {
+        const hasAddition = malt.name.trim() !== "" || malt.amount.trim() !== "";
+        const ebc = Number(malt.ebc);
+        return hasAddition && (!malt.ebc.trim() || !Number.isFinite(ebc) || ebc < 0);
+      })
+    ) {
+      throw new Error("Enter a valid EBC value for every malt addition.");
     }
-    const parsedFruits: unknown = JSON.parse(rawFruits);
-    if (!Array.isArray(parsedFruits)) {
-      throw new Error("Invalid fruit additions submitted.");
+
+    if (
+      hops.some((hop) => {
+        const hasAddition =
+          hop.name.trim() !== "" || hop.amount.trim() !== "" || hop.alpha.trim() !== "";
+        const alpha = Number(hop.alpha.replace(",", "."));
+        if (!hasAddition) return false;
+        if (!Number.isFinite(alpha) || alpha <= 0 || alpha > 100) return true;
+        if (!hop.time.trim()) return true;
+        return hop.addition_type === "whirlpool" &&
+          (!(hop.temperature ?? "").trim() ||
+            !Number.isFinite(Number(hop.temperature)) ||
+            Number(hop.temperature) < 0 ||
+            Number(hop.temperature) > 100);
+      })
+    ) {
+      throw new Error(
+        "Enter hop alpha acid and time, plus a whirlpool temperature between 0 and 100°C."
+      );
     }
-    fruits = parsedFruits.map((fruit) => {
-      if (typeof fruit !== "object" || fruit === null) {
-        throw new Error("Invalid fruit additions submitted.");
+
+    if (
+      dryHops.some((hop) => {
+        const hasAddition = hop.name.trim() !== "" || hop.amount.trim() !== "";
+        const alpha = Number(hop.alpha.replace(",", "."));
+        return hasAddition && (!Number.isFinite(alpha) || alpha <= 0 || alpha > 100);
+      })
+    ) {
+      throw new Error("Enter an alpha-acid value between 0 and 100 for every dry-hop addition.");
+    }
+
+    const normalizedMalts = malts.map((malt) => ({
+      ...malt,
+      name: MALT_ALIASES[malt.name.toLowerCase()] || malt.name,
+    }));
+    const normalizedHops = hops.map((hop) => ({
+      ...hop,
+      alpha: hop.alpha.replace(",", "."),
+    }));
+    const normalizedDryHops = dryHops.map((hop) => ({
+      ...hop,
+      alpha: hop.alpha.replace(",", "."),
+    }));
+
+    typeUpdates.malts = normalizedMalts;
+    typeUpdates.hops = normalizedHops;
+    if (formData.has("dry_hops_json")) typeUpdates.dry_hops = normalizedDryHops;
+
+    let boilVolume = volume_l;
+    if (batch.type === "Beer") {
+      const beerSubtype = formData.get("beer_subtype");
+      if (
+        beerSubtype !== "all_grain" &&
+        beerSubtype !== "fresh_wort_kit" &&
+        beerSubtype !== "malt_extract_kit"
+      ) {
+        throw new Error("Choose a valid beer recipe style.");
       }
-      const row = fruit as Record<string, unknown>;
-      return {
-        name: typeof row.name === "string" ? row.name : "",
-        amount: row.amount == null ? "" : String(row.amount),
-        unit: typeof row.unit === "string" ? row.unit : "",
-      };
-    });
+      typeUpdates.beer_subtype = beerSubtype;
+      typeUpdates.kit_url =
+        beerSubtype !== "all_grain" && typeof formData.get("kit_url") === "string"
+          ? (formData.get("kit_url") as string).trim() || null
+          : null;
+
+      if (beerSubtype === "all_grain") {
+        boilVolume = Number(formData.get("boil_volume_l"));
+        if (!Number.isFinite(boilVolume) || boilVolume <= 0) {
+          throw new Error("Enter a valid boil volume.");
+        }
+        typeUpdates.boil_volume_l = boilVolume;
+        typeUpdates.boil_time = Number(formData.get("boil_time")) || null;
+        typeUpdates.malts = normalizedMalts;
+        typeUpdates.hops = normalizedHops;
+      } else {
+        typeUpdates.boil_volume_l = null;
+        typeUpdates.boil_time = null;
+        typeUpdates.malts = [];
+        typeUpdates.hops = [];
+      }
+      typeUpdates.yeast = formData.get("yeast") as string;
+    } else {
+      typeUpdates.boil_time = Number(formData.get("boil_time")) || null;
+      typeUpdates.honey_type = formData.get("honey_type") as string;
+      typeUpdates.honey_amount = Number(formData.get("honey_amount")) || null;
+      typeUpdates.yeast = formData.get("yeast") as string;
+    }
+
+    const ibu = calcIBU(normalizedHops, og, volume_l, boilVolume) +
+      calcDryHopIBU(normalizedDryHops, volume_l);
+    const ebc = calcEBC(normalizedMalts, volume_l).ebc;
+    typeUpdates.ibu = ibu;
+    typeUpdates.ebc = ebc;
+
+  } else if (batch.type === "Mead") {
+    const fruits = parseJsonArray(formData, "fruits_json", parseIngredientRow);
+    const baseLiquid = formData.get("base_liquid");
+    const baseLiquidAmountRaw = formData.get("base_liquid_amount");
+    typeUpdates.base_liquid =
+      typeof baseLiquid === "string" && baseLiquid.trim()
+        ? baseLiquid.trim()
+        : "Water";
+    typeUpdates.base_liquid_amount =
+      typeof baseLiquidAmountRaw === "string" &&
+      baseLiquidAmountRaw.trim() &&
+      Number(baseLiquidAmountRaw) > 0
+        ? Number(baseLiquidAmountRaw)
+        : null;
+    typeUpdates.honey_type = formData.get("honey_type") as string;
+    typeUpdates.honey_amount = Number(formData.get("honey_amount")) || null;
+    typeUpdates.fruits = fruits;
+    typeUpdates.yeast = formData.get("yeast") as string;
+  } else if (batch.type === "Wine" || batch.type === "Cider") {
+    typeUpdates.juice_type = formData.get("juice_type") as string;
+    typeUpdates.sugar_amount = Number(formData.get("sugar_amount")) || null;
+    typeUpdates.yeast = formData.get("yeast") as string;
+  } else if (batch.type === "Seltzer") {
+    typeUpdates.sugar_amount = Number(formData.get("sugar_amount")) || null;
+    typeUpdates.yeast = formData.get("yeast") as string;
+  } else if (batch.type === "Other") {
+    typeUpdates.ingredients = parseJsonArray(
+      formData,
+      "ingredients_json",
+      parseIngredientRow
+    );
+    typeUpdates.steps = parseJsonStrings(formData, "steps_json");
   }
 
+  const additives = formData.get("additives");
+  const notes = formData.get("notes");
+  const secondary_additions = formData.get("secondary_additions");
+  const secondary_notes = formData.get("secondary_notes");
   const { data, error } = await supabase
     .from("batches")
     .update({
-      name,
+      name: name.trim(),
       volume_l,
       og,
       startdato,
       ...(formData.has("additives") ? { additives } : {}),
-      ...(fruits ? { fruits } : {}),
-      ...(formData.has("base_liquid")
-        ? {
-            base_liquid:
-              typeof baseLiquid === "string" && baseLiquid.trim()
-                ? baseLiquid.trim()
-                : "Water",
-          }
-        : {}),
-      ...(formData.has("base_liquid_amount")
-        ? {
-            base_liquid_amount:
-              typeof baseLiquidAmountRaw === "string" &&
-              baseLiquidAmountRaw.trim() &&
-              Number(baseLiquidAmountRaw) > 0
-                ? Number(baseLiquidAmountRaw)
-                : null,
-          }
-        : {}),
       ...(formData.has("notes") ? { notes } : {}),
       ...(formData.has("full_process")
         ? { full_process: formData.get("full_process") as string }
         : {}),
       ...(formData.has("secondary_additions") ? { secondary_additions } : {}),
       ...(formData.has("secondary_notes") ? { secondary_notes } : {}),
+      ...(batch.fg != null && Number.isFinite(Number(batch.fg))
+        ? { abv: (og - Number(batch.fg)) * 131.25 }
+        : {}),
+      ...typeUpdates,
     })
     .eq("id", batchId)
     .eq("aktivt_kar", karId)

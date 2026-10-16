@@ -17,15 +17,18 @@ import QRCode from "qrcode";
 
 import { translateOldRecipe } from "@/lib/translateOldRecipe";
 import { Qty, UnitInput, UnitSymbol, useUnits } from "@/app/components/Units";
-import BaseLiquidField from "@/app/components/BaseLiquidField";
-import {
-  BatchEditAdditiveFields,
-  BatchEditFruitFields,
-} from "./BatchEditAdditionFields";
+import BatchEditTypeFields from "./BatchEditTypeFields";
 
 type Fruit = { name: string; amount: string; unit: string };
 type Malt = { name: string; amount: string; unit: string };
-type Hop = { name: string; amount: string; unit: string; time: string };
+type Hop = {
+  name: string;
+  amount: string;
+  unit: string;
+  time: string;
+  addition_type?: "boil" | "whirlpool";
+  temperature?: number | string;
+};
 type Ingredient = { name: string; amount: string; unit: string };
 
 
@@ -611,8 +614,24 @@ const sharingSection = isOwner ? (
               defaultValue={activeBatch.og}
               className="p-3 rounded bg-black/40 border border-white/20" />
 
-            {/* Type-specific fields */}
-            {/* (Honey, Wine, Beer, etc. — behold samme struktur som primary) */}
+            <BatchEditTypeFields batch={activeBatch} />
+
+            <div>
+              <label className="mb-1 block font-semibold">Secondary additions</label>
+              <textarea
+                name="secondary_additions"
+                defaultValue={activeBatch.secondary_additions ?? ""}
+                className="min-h-24 w-full rounded border border-white/20 bg-black/40 p-3"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block font-semibold">Secondary notes</label>
+              <textarea
+                name="secondary_notes"
+                defaultValue={activeBatch.secondary_notes ?? ""}
+                className="min-h-24 w-full rounded border border-white/20 bg-black/40 p-3"
+              />
+            </div>
 
             <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
               Save changes
@@ -741,7 +760,12 @@ const sharingSection = isOwner ? (
       <div>
         <strong>Hop schedule:</strong>
         {activeBatch.hops.map((h: Hop, i: number) => (
-          <p key={i}>{h.name}: <Qty kind="g" value={h.amount} maxDecimals={0} /> @ {h.time} min</p>
+          <p key={i}>
+            {h.name}: <Qty kind="g" value={h.amount} maxDecimals={0} /> @{" "}
+            {h.addition_type === "whirlpool"
+              ? `whirlpool ${h.time} min at ${h.temperature}°C`
+              : `${h.time} min boil`}
+          </p>
         ))}
       </div>
     )}
@@ -904,213 +928,9 @@ const sharingSection = isOwner ? (
               defaultValue={activeBatch.og}
               className="p-3 rounded bg-black/40 border border-white/20"
             />
-      
-            {/* TYPE-SPECIFIC FIELDS */}
-            {activeBatch.type === "Mead" && (
-              <>
-                <BaseLiquidField
-                  defaultName={activeBatch.base_liquid ?? ""}
-                  defaultAmount={
-                    activeBatch.base_liquid_amount == null
-                      ? ""
-                      : String(activeBatch.base_liquid_amount)
-                  }
-                />
 
-                <label className="font-semibold">Honey type</label>
-                <input
-                  name="honey_type"
-                  defaultValue={activeBatch.honey_type}
-                  className="p-3 rounded bg-black/40 border border-white/20"
-                />
-      
-                <label className="font-semibold">
-                  Honey amount (<UnitSymbol kind="kg" />)
-                </label>
-                <UnitInput
-                  kind="kg"
-                  name="honey_amount"
-                  defaultValue={String(activeBatch.honey_amount ?? "")}
-                  className="p-3 rounded bg-black/40 border border-white/20"
-                />
-      
-                <BatchEditFruitFields
-                  defaultValue={Array.isArray(activeBatch.fruits) ? activeBatch.fruits : []}
-                />
+            <BatchEditTypeFields batch={activeBatch} />
 
-                <BatchEditAdditiveFields defaultValue={activeBatch.additives ?? ""} />
-      
-                <label className="font-semibold">Full process</label>
-                <textarea
-                  name="full_process"
-                  defaultValue={activeBatch.full_process}
-                  className="p-3 rounded bg-black/40 border border-white/20"
-                />
-      
-                <label className="font-semibold">Notes</label>
-                <textarea
-                  name="notes"
-                  defaultValue={activeBatch.notes}
-                  className="p-3 rounded bg-black/40 border border-white/20"
-                />
-              </>
-            )}
-      
-            {activeBatch.type === "Wine" && (
-              <>
-                <label className="font-semibold">Juice type</label>
-                <input
-                  name="juice_type"
-                  defaultValue={activeBatch.juice_type}
-                  className="p-3 rounded bg-black/40 border border-white/20"
-                />
-      
-                <label className="font-semibold">
-                  Sugar added (<UnitSymbol kind="kg" />)
-                </label>
-                <UnitInput
-                  kind="kg"
-                  name="sugar_amount"
-                  defaultValue={String(activeBatch.sugar_amount ?? "")}
-                  className="p-3 rounded bg-black/40 border border-white/20"
-                />
-      
-                <label className="font-semibold">Full process</label>
-                <textarea
-                  name="full_process"
-                  defaultValue={activeBatch.full_process}
-                  className="p-3 rounded bg-black/40 border border-white/20"
-                />
-      
-                <label className="font-semibold">Notes</label>
-                <textarea
-                  name="notes"
-                  defaultValue={activeBatch.notes}
-                  className="p-3 rounded bg-black/40 border border-white/20"
-                />
-              </>
-            )}
-      
-            {activeBatch.type === "Beer" && (
-        <>
-          {/* ⭐ Malt additions */}
-          <div className="flex flex-col gap-2">
-            <label className="font-semibold">Malt additions</label>
-      
-            {activeBatch.malts?.map((m: Malt, i: number) => (
-              <div key={i} className="flex gap-2 items-center">
-                <input name={`malts[${i}][name]`} defaultValue={m.name} className="p-2 rounded bg-black/40 border border-white/20 w-1/2" />
-                <UnitInput
-                  kind="kg"
-                  name={`malts[${i}][amount]`}
-                  defaultValue={String(m.amount ?? "")}
-                  placeholder={`Amount (${label("kg")})`}
-                  className="p-2 rounded bg-black/40 border border-white/20 w-1/4"
-                />
-                <div className="p-2 rounded bg-black/20 border border-white/10 w-1/4 flex items-center justify-center text-sm opacity-80">
-                  <UnitSymbol kind="kg" />
-                </div>
-                <input type="hidden" name={`malts[${i}][unit]`} value="kg" />
-      
-                <button
-                  type="button"
-                  onClick={() => {
-                    const updated = activeBatch.malts.filter((m: Malt, idx: number) => idx !== i);
-                    setActiveBatch({ ...activeBatch, malts: updated });
-                  }}
-                  className="px-2 py-1 bg-white/10 hover:bg-white/20 border border-white/20 rounded text-sm"
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-      
-            <button
-              type="button"
-              onClick={() => {
-                const updated = [...activeBatch.malts, { name: "", amount: "", unit: "kg" }];
-                setActiveBatch({ ...activeBatch, malts: updated });
-              }}
-              className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm"
-            >
-              + Add malt
-            </button>
-          </div>
-      
-          {/* ⭐ Hop schedule */}
-          <div className="flex flex-col gap-2 mt-4">
-            <label className="font-semibold">Hop schedule</label>
-      
-            {activeBatch.hops?.map((h: Hop, i: number) => (
-              <div key={i} className="flex gap-2 items-center">
-                <input name={`hops[${i}][name]`} defaultValue={h.name} className="p-2 rounded bg-black/40 border border-white/20 w-1/3" />
-                <UnitInput
-                  kind="g"
-                  name={`hops[${i}][amount]`}
-                  defaultValue={String(h.amount ?? "")}
-                  placeholder={`Amount (${label("g")})`}
-                  className="p-2 rounded bg-black/40 border border-white/20 w-1/4"
-                />
-                <div className="p-2 rounded bg-black/20 border border-white/10 w-1/4 flex items-center justify-center text-sm opacity-80">
-                  <UnitSymbol kind="g" />
-                </div>
-                <input type="hidden" name={`hops[${i}][unit]`} value="g" />
-                <input name={`hops[${i}][boil]`} defaultValue={h.time} className="p-2 rounded bg-black/40 border border-white/20 w-1/4" />
-      
-                <button
-                  type="button"
-                  onClick={() => {
-                    const updated = activeBatch.hops.filter((h: Hop, idx: number) => idx !== i);
-                    setActiveBatch({ ...activeBatch, hops: updated });
-                  }}
-                  className="px-2 py-1 bg-white/10 hover:bg-white/20 border border-white/20 rounded text-sm"
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-      
-            <button
-              type="button"
-              onClick={() => {
-                const updated = [...activeBatch.hops, { name: "", amount: "", unit: "g", boil: "" }];
-                setActiveBatch({ ...activeBatch, hops: updated });
-              }}
-              className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm"
-            >
-              + Add hop
-            </button>
-          </div>
-      
-          {/* ⭐ Boil time */}
-          <label className="font-semibold mt-4">Total boil time (min)</label>
-          <input name="boil_time" type="number" defaultValue={activeBatch.boil_time} className="p-3 rounded bg-black/40 border border-white/20" />
-      
-          {/* ⭐ Full process */}
-          <label className="font-semibold">Full process</label>
-          <textarea name="full_process" defaultValue={activeBatch.full_process} className="p-3 rounded bg-black/40 border border-white/20" />
-      
-          {/* ⭐ Notes */}
-          <label className="font-semibold">Notes</label>
-          <textarea name="notes" defaultValue={activeBatch.notes} className="p-3 rounded bg-black/40 border border-white/20" />
-        </>
-      )}
-      
-      {activeBatch.type === "Other" && (
-              <>
-                <label className="font-semibold">Notes</label>
-                <textarea
-                  name="notes"
-                  defaultValue={activeBatch.notes}
-                  className="p-3 rounded bg-black/40 border border-white/20"
-                />
-              </>
-            )}
-
-            {activeBatch.type !== "Mead" && (
-              <BatchEditAdditiveFields defaultValue={activeBatch.additives ?? ""} />
-            )}
-      
             <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
               Save changes
             </button>
@@ -1201,7 +1021,12 @@ const sharingSection = isOwner ? (
       <div>
         <strong>Hop schedule:</strong>
         {activeBatch.hops.map((h: Hop, i: number) => (
-          <p key={i}>{h.name}: <Qty kind="g" value={h.amount} maxDecimals={0} /> @ {h.time} min</p>
+          <p key={i}>
+            {h.name}: <Qty kind="g" value={h.amount} maxDecimals={0} /> @{" "}
+            {h.addition_type === "whirlpool"
+              ? `whirlpool ${h.time} min at ${h.temperature}°C`
+              : `${h.time} min boil`}
+          </p>
         ))}
       </div>
     )}

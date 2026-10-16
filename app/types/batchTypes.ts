@@ -10,13 +10,24 @@ export interface Malt {
   name: string;
   amount: number | string;
   unit: string;
+  ebc?: number | string;
 }
 
 export interface Hop {
   name: string;
   amount: number | string;
   unit: string;
-  time: number; // boil time in minutes
+  time: number | string;
+  addition_type?: "boil" | "whirlpool";
+  temperature?: number | string;
+}
+
+export interface DryHop {
+  name: string;
+  amount: number | string;
+  contact: number | string;
+  alpha?: number | string;
+  year?: number | string | null;
 }
 
 export interface Ingredient {
@@ -42,12 +53,16 @@ export interface Batch {
 
   // Gravity
   og: number;
-  fg?: number;
+  fg?: number | null;
+  abv?: number | null;
 
   // Volume
   volume_l: number;
+  boil_volume_l?: number | null;
 
   // Mead fields
+  base_liquid?: string | null;
+  base_liquid_amount?: number | null;
   honey_type?: string;
   honey_amount?: number;
 
@@ -55,9 +70,13 @@ export interface Batch {
   fruits?: Fruit[];
 
   // Beer fields
+  beer_subtype?: string | null;
+  kit_url?: string | null;
   malts?: Malt[];
   hops?: Hop[];
+  dry_hops?: DryHop[];
   boil_time?: number;
+  yeast?: string | null;
 
   // Cider / Wine / Seltzer
   juice_type?: string;

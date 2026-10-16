@@ -42,11 +42,11 @@ export default function NewBraggotPage({
 
   // Dynamic hop list
 const [hops, setHops] = useState<
-  { name: string; amount: string; unit: string; boil: string; alpha: string; year: string }[]
+  { name: string; amount: string; unit: string; boil: string; alpha: string; year: string; addition_type: "boil" | "whirlpool"; temperature: string }[]
 >([]);
 
 function addHop() {
-  setHops([...hops, { name: "", amount: "", unit: "g", boil: "", alpha: "", year: "" }]);
+  setHops([...hops, { name: "", amount: "", unit: "g", boil: "", alpha: "", year: "", addition_type: "boil", temperature: "" }]);
 }
 
 function removeHop(index: number) {
@@ -76,6 +76,8 @@ useEffect(() => {
           boil: String(hop.time ?? hop.boil ?? ""),
           alpha: String(hop.alpha ?? ""),
           year: String(hop.year ?? ""),
+          addition_type: hop.addition_type === "whirlpool" ? "whirlpool" : "boil",
+          temperature: String(hop.temperature ?? ""),
         }))
       : []
   );
@@ -280,6 +282,20 @@ useEffect(() => {
         }}
       />
 
+<select
+  aria-label={`Hop ${i + 1} addition type`}
+  value={h.addition_type}
+  onChange={(event) => {
+    const updated = [...hops];
+    updated[i].addition_type = event.target.value as "boil" | "whirlpool";
+    setHops(updated);
+  }}
+  className="p-3 rounded bg-black/40 border border-white/20 w-full"
+>
+  <option value="boil">Boil addition</option>
+  <option value="whirlpool">Whirlpool / hop stand</option>
+</select>
+
 <div className="grid grid-cols-2 gap-2 sm:grid-cols-[5rem_5rem_minmax(0,1fr)_minmax(0,1.4fr)_auto]">
 
       <input
@@ -323,7 +339,11 @@ useEffect(() => {
       />
 
       <input
-        placeholder="Boil (min)"
+        placeholder={h.addition_type === "whirlpool" ? "Stand (min)" : "Boil (min)"}
+        type="number"
+        min="0"
+        step="any"
+        required={Boolean(h.name || h.amount || h.alpha)}
         className="p-3 rounded bg-black/40 border border-white/20 w-full"
         value={h.boil}
         onChange={(e) => {
@@ -332,6 +352,25 @@ useEffect(() => {
           setHops(updated);
         }}
       />
+
+      {h.addition_type === "whirlpool" && (
+        <input
+          aria-label={`Hop ${i + 1} whirlpool temperature in Celsius`}
+          placeholder="Temperature (°C)"
+          type="number"
+          min="0"
+          max="100"
+          step="any"
+          required={Boolean(h.name || h.amount || h.alpha)}
+          className="p-3 rounded bg-black/40 border border-white/20 w-full"
+          value={h.temperature}
+          onChange={(e) => {
+            const updated = [...hops];
+            updated[i].temperature = e.target.value;
+            setHops(updated);
+          }}
+        />
+      )}
 
       <button
         type="button"

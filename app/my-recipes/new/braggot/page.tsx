@@ -28,12 +28,31 @@ export default function NewBraggotRecipePage() {
 
   // Dynamic hop list
   const [hops, setHops] = useState<
-  { name: string; amount: string; time: string; alpha: string; year: string }[]
+  {
+    name: string;
+    amount: string;
+    time: string;
+    alpha: string;
+    year: string;
+    addition_type: "boil" | "whirlpool";
+    temperature: string;
+  }[]
   >([]);
 
   
     function addHop() {
-  setHops([...hops, { name: "", amount: "", time: "", alpha: "", year: "" }]);
+  setHops([
+    ...hops,
+    {
+      name: "",
+      amount: "",
+      time: "",
+      alpha: "",
+      year: "",
+      addition_type: "boil",
+      temperature: "",
+    },
+  ]);
 }
 
 
@@ -282,11 +301,26 @@ export default function NewBraggotRecipePage() {
   }}
 />
 
+<select
+  aria-label={`Hop addition ${i + 1} type`}
+  value={h.addition_type}
+  onChange={(e) => {
+    const updated = [...hops];
+    updated[i].addition_type = e.target.value as "boil" | "whirlpool";
+    setHops(updated);
+  }}
+  className="p-3 rounded bg-black/40 border border-white/20 w-full"
+>
+  <option value="boil">Boil addition</option>
+  <option value="whirlpool">Whirlpool / hop stand</option>
+</select>
+
 <input
-  placeholder="Boil time (min)"
+  placeholder={h.addition_type === "whirlpool" ? "Stand time (min)" : "Boil time (min)"}
   type="number"
   min="0"
   step="1"
+  required={Boolean(h.name.trim() || h.amount.trim() || h.alpha.trim())}
   className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-20"
   value={h.time}
   onChange={(e) => {
@@ -295,6 +329,25 @@ export default function NewBraggotRecipePage() {
     setHops(updated);
   }}
 />
+
+{h.addition_type === "whirlpool" && (
+  <input
+    aria-label={`Hop addition ${i + 1} whirlpool temperature in Celsius`}
+    placeholder="Temperature (°C)"
+    type="number"
+    min="0"
+    max="100"
+    step="any"
+    required={Boolean(h.name.trim() || h.amount.trim() || h.alpha.trim())}
+    className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-24"
+    value={h.temperature}
+    onChange={(e) => {
+      const updated = [...hops];
+      updated[i].temperature = e.target.value;
+      setHops(updated);
+    }}
+  />
+)}
 
                 <button
                   type="button"

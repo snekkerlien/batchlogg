@@ -109,6 +109,28 @@ export async function createRecipe(formData: FormData) {
   year: h.year ? Number(h.year) : null,
 }));
 
+  if (
+    ((type === "Beer" && beerSubtype === "all_grain") || type === "Braggot") &&
+    hopsRaw.some(
+      (hop: any) =>
+        [hop.name, hop.amount, hop.alpha, hop.year].some(
+          (value) => value != null && String(value).trim() !== ""
+        ) &&
+        (
+          hop.time == null ||
+          String(hop.time).trim() === "" ||
+          (hop.addition_type === "whirlpool" &&
+            (!Number.isFinite(Number(hop.temperature)) ||
+              Number(hop.temperature) < 0 ||
+              Number(hop.temperature) > 100))
+        )
+    )
+  ) {
+    return {
+      success: false,
+      error: "Enter a time for every hop addition and a whirlpool temperature between 0 and 100°C.",
+    };
+  }
 
 
 

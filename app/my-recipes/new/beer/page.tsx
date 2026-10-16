@@ -32,7 +32,17 @@ export default function NewBeerRecipePage() {
   }
 
   // HOPS (name + amount in g + time in min)
-  const [hops, setHops] = useState<{ name: string; amount: string; time: string; alpha: string; year: string }[]>([]);
+  const [hops, setHops] = useState<
+    {
+      name: string;
+      amount: string;
+      time: string;
+      alpha: string;
+      year: string;
+      addition_type: "boil" | "whirlpool";
+      temperature: string;
+    }[]
+  >([]);
  const [dryHops, setDryHops] = useState<{ name: string; amount: string; contact: string; alpha: string; year: string }[]>([]);
 
 function addDryHop() {
@@ -49,7 +59,18 @@ function removeDryHop(index: number) {
 
 
   function addHop() {
-    setHops([...hops, { name: "", amount: "", time: "", alpha: "", year: "" }]);
+    setHops([
+      ...hops,
+      {
+        name: "",
+        amount: "",
+        time: "",
+        alpha: "",
+        year: "",
+        addition_type: "boil",
+        temperature: "",
+      },
+    ]);
   }
 
   function removeHop(index: number) {
@@ -334,6 +355,20 @@ function removeDryHop(index: number) {
                   }}
                 />
 
+                <select
+                  aria-label={`Hop addition ${i + 1} type`}
+                  value={h.addition_type}
+                  onChange={(e) => {
+                    const updated = [...hops];
+                    updated[i].addition_type = e.target.value as "boil" | "whirlpool";
+                    setHops(updated);
+                  }}
+                  className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
+                >
+                  <option value="boil">Boil addition</option>
+                  <option value="whirlpool">Whirlpool / hop stand</option>
+                </select>
+
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(6.5rem,0.8fr)_minmax(5rem,0.6fr)_minmax(7rem,1fr)_minmax(9rem,1.4fr)_auto]">
                 <input
   placeholder="Alpha (%)"
@@ -377,10 +412,16 @@ function removeDryHop(index: number) {
                 />
 
                 <input
-                  placeholder="Boil time (min)"
+                  aria-label={`Hop addition ${i + 1} time in minutes`}
+                  placeholder={
+                    h.addition_type === "whirlpool"
+                      ? "Stand time (min)"
+                      : "Boil time (min)"
+                  }
                   type="number"
                   min="0"
                   step="1"
+                  required={Boolean(h.name.trim() || h.amount.trim() || h.alpha.trim())}
                   className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
                   value={h.time}
                   onChange={(e) => {
@@ -389,6 +430,25 @@ function removeDryHop(index: number) {
                     setHops(updated);
                   }}
                 />
+
+                {h.addition_type === "whirlpool" && (
+                  <input
+                    aria-label={`Hop addition ${i + 1} whirlpool temperature in Celsius`}
+                    placeholder="Temperature (°C)"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="any"
+                    required={Boolean(h.name.trim() || h.amount.trim() || h.alpha.trim())}
+                    className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
+                    value={h.temperature}
+                    onChange={(e) => {
+                      const updated = [...hops];
+                      updated[i].temperature = e.target.value;
+                      setHops(updated);
+                    }}
+                  />
+                )}
 
                 <button
                   type="button"
@@ -400,6 +460,12 @@ function removeDryHop(index: number) {
                 </div>
               </div>
             ))}
+
+            <p className="mb-3 text-sm opacity-70">
+              For whirlpool additions, enter the hop-stand duration and temperature.
+              Whirlpool IBU is estimated from the temperature and may differ from the
+              recipe&apos;s measured or published value.
+            </p>
 
             <button
               type="button"

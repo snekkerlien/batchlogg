@@ -55,6 +55,8 @@ type Hop = {
   year: string;
   amount: string;
   time: string;
+  addition_type: "boil" | "whirlpool";
+  temperature: string;
 };
 
 type DryHop = {
@@ -366,10 +368,21 @@ function removeMalt(index: number) {
 
 
 function addHop() {
-  setEditHops([...editHops, { name: "", alpha: "", year: "", amount: "", time: "" }]);
+  setEditHops([
+    ...editHops,
+    {
+      name: "",
+      alpha: "",
+      year: "",
+      amount: "",
+      time: "",
+      addition_type: "boil",
+      temperature: "",
+    },
+  ]);
 }
 
-function updateHop(index: number, key: keyof Hop, value: string) {
+function updateHop<K extends keyof Hop>(index: number, key: K, value: Hop[K]) {
   const updated = [...editHops];
   updated[index][key] = value;
   setEditHops(updated);
@@ -552,7 +565,17 @@ function removeDryHop(index: number) {
       setSecondaryAdditions(r.secondary_additions || "");
       setSecondaryNotes(r.secondary_notes || "");
       setEditMalts(r.malts || []);
-      setEditHops(r.hops || []);
+      setEditHops(
+        (r.hops || []).map((hop: Partial<Hop>) => ({
+          name: hop.name ?? "",
+          alpha: hop.alpha ?? "",
+          year: hop.year ?? "",
+          amount: hop.amount ?? "",
+          time: hop.time ?? "",
+          addition_type: hop.addition_type === "whirlpool" ? "whirlpool" : "boil",
+          temperature: hop.temperature ?? "",
+        }))
+      );
       setEditDryHops(
         r.dry_hops?.length
           ? r.dry_hops
@@ -747,7 +770,10 @@ function removeDryHop(index: number) {
     <ul className="list-disc ml-6 opacity-80">
       {r.hops.map((h: any, i: number) => (
         <li key={i}>
-          {h.name} <Qty kind="g" value={h.amount} maxDecimals={0} /> @ {h.time} min
+          {h.name} <Qty kind="g" value={h.amount} maxDecimals={0} /> @{" "}
+          {h.addition_type === "whirlpool"
+            ? `whirlpool ${h.time} min at ${h.temperature}°C`
+            : `${h.time} min boil`}
           {h.alpha && (
             <> - {Number(h.alpha)}% Alpha Acid</>
           )}
@@ -1273,6 +1299,18 @@ function removeDryHop(index: number) {
             onChange={(e) => updateHop(i, "name", e.target.value)}
           />
 
+          <select
+            aria-label={`Hop addition ${i + 1} type`}
+            value={h.addition_type}
+            onChange={(e) =>
+              updateHop(i, "addition_type", e.target.value as "boil" | "whirlpool")
+            }
+            className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
+          >
+            <option value="boil">Boil addition</option>
+            <option value="whirlpool">Whirlpool / hop stand</option>
+          </select>
+
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(6.5rem,0.8fr)_minmax(5rem,0.6fr)_minmax(7rem,1fr)_minmax(9rem,1.4fr)_auto]">
           <input
             placeholder="Alpha (%)"
@@ -1297,11 +1335,35 @@ function removeDryHop(index: number) {
           />
 
           <input
-            placeholder="Boil time (min)"
+            aria-label={`Hop addition ${i + 1} time in minutes`}
+            placeholder={
+              h.addition_type === "whirlpool"
+                ? "Stand time (min)"
+                : "Boil time (min)"
+            }
+            type="number"
+            min="0"
+            step="any"
+            required={Boolean(h.name.trim() || h.amount.trim() || h.alpha.trim())}
             className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
             value={h.time}
             onChange={(e) => updateHop(i, "time", e.target.value)}
           />
+
+          {h.addition_type === "whirlpool" && (
+            <input
+              aria-label={`Hop addition ${i + 1} whirlpool temperature in Celsius`}
+              placeholder="Temperature (°C)"
+              type="number"
+              min="0"
+              max="100"
+              step="any"
+              required={Boolean(h.name.trim() || h.amount.trim() || h.alpha.trim())}
+              className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
+              value={h.temperature}
+              onChange={(e) => updateHop(i, "temperature", e.target.value)}
+            />
+          )}
 
           <button
             type="button"
