@@ -42,6 +42,11 @@ function maltWeightInKilograms(malt: MaltAddition): number | null {
   return factor === undefined ? null : amount * factor;
 }
 
+/**
+ * Estimates bitterness with Tinseth utilization; whirlpool utilization is an
+ * additional temperature-based approximation. Results also depend on the
+ * entered alpha-acid values, which can vary by hop crop year.
+ */
 export function calcIBU(
   hops: HopAddition[],
   originalGravity: number,
@@ -110,6 +115,10 @@ export function calcDryHopIBU(
   return Number.isFinite(ibu) ? ibu : 0;
 }
 
+/**
+ * Estimates color with the Morey MCU-to-SRM equation, converted to EBC.
+ * This is a model estimate and can differ from other color equations.
+ */
 export function calcEBC(
   malts: MaltAddition[],
   finalVolumeL: number

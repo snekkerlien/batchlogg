@@ -88,10 +88,10 @@ export default function RecipeNotesPage({ params }: { params: { id: string } }) 
           {recipe.fg != null && <p><strong>FG:</strong> {Number(recipe.fg).toFixed(3)}</p>}
           {recipe.abv != null && <p><strong>ABV:</strong> {Number(recipe.abv).toFixed(1)}%</p>}
           <p><strong>Volume:</strong> <Qty kind="volume" value={recipe.volume} /></p>
-          {(recipe.base_liquid || recipe.base_liquid_amount) && (
+          {(recipe.base_liquid || recipe.base_liquid_amount != null) && (
             <p>
               <strong>Base liquid:</strong> {recipe.base_liquid || "Water"}
-              {recipe.base_liquid_amount ? <> – <Qty kind="volume" value={recipe.base_liquid_amount} /></> : null}
+              {recipe.base_liquid_amount != null && <> up to <Qty kind="volume" value={recipe.base_liquid_amount} /></>}
             </p>
           )}
         </div>
@@ -343,9 +343,6 @@ export default function RecipeNotesPage({ params }: { params: { id: string } }) 
           )}
         </div>
 
-        <p className="text-sm opacity-40 mt-12 text-center">
-          © {new Date().getFullYear()} Batchlog
-        </p>
       </div>
     </main>
   );

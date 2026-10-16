@@ -1,31 +1,13 @@
 "use client";
 
 import PageHeading from "@/app/components/PageHeading";
-import MenuOverlay from "@/app/components/MenuOverlay";
-import { useRouter } from "next/navigation";
+import PublicPageNavigation from "@/app/components/PublicPageNavigation";
 
 export default function TermsPage() {
-  const router = useRouter();
-
   return (
     <main className="min-h-screen flex flex-col items-center px-6 py-12 text-white">
-      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10 relative pt-16 sm:pt-16">
-
-        {/* Menu */}
-        <div className="absolute top-2 sm:top-4 right-4 z-40">
-          <MenuOverlay current="terms" />
-        </div>
-
-        {/* Back button */}
-        <div className="absolute top-2 sm:top-4 left-4 z-40">
-          <button
-            onClick={() => router.back()}
-            className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg"
-            aria-label="Back to my account"
-          >
-            ←
-          </button>
-        </div>
+      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10">
+        <PublicPageNavigation />
 
         <PageHeading
           title="Terms of Service"
@@ -200,9 +182,6 @@ export default function TermsPage() {
           </p>
         </section>
 
-        <p className="text-sm opacity-40 mt-10 text-center">
-          © {new Date().getFullYear()} Batchlogg
-        </p>
       </div>
     </main>
   );

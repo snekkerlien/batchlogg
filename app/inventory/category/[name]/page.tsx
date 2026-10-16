@@ -64,9 +64,6 @@ export default function CategoryPage({ params }: { params: { name: string } }) {
             <p className="opacity-80 text-center mb-10 mt-6">
               You do not have permission to view this category.
             </p>
-            <p className="text-sm opacity-40 mt-12 text-center">
-              © {new Date().getFullYear()} Batchlog
-            </p>
           </>
         ) : (
           <>
@@ -98,9 +95,6 @@ export default function CategoryPage({ params }: { params: { name: string } }) {
                 deleteItem={deleteItem}
               />
             )}
-            <p className="text-sm opacity-40 mt-12 text-center">
-              © {new Date().getFullYear()} Batchlog
-            </p>
           </>
         )}
       </div>

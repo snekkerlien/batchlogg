@@ -177,9 +177,6 @@ useEffect(() => {
           />
         )}
 
-        <p className="text-sm opacity-40 mt-12 text-center">
-          © {new Date().getFullYear()} Batchlog
-        </p>
       </div>
 
       <AddItemModal

@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 import { supabaseServer } from "../../../../../lib/supabase/supabaseServerFinal";
+import { notFound } from "next/navigation";
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import PageHeading from "@/app/components/PageHeading";
@@ -14,67 +15,37 @@ export default async function RecipeNotesPage({
 }: {
   params: { username: string; recipeId: string };
 }) {
-  const { supabase } = supabaseServer();
+  const { supabase, serviceRole } = supabaseServer();
 
-  // Check login
   const {
     data: { user },
+    error: userError,
   } = await supabase.auth.getUser();
+  if (userError) throw new Error(`Could not verify the current user: ${userError.message}`);
 
-  if (!user) {
-    return (
-      <main className="min-h-screen flex items-center justify-center text-white">
-        <h1 className="text-2xl font-bold">You must be logged in</h1>
-      </main>
-    );
-  }
-
-  // Find user by username
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await serviceRole
     .from("profiles")
-    .select("*")
+    .select("id, username, is_public")
     .eq("username", params.username)
-    .single();
+    .maybeSingle();
+  if (profileError) throw new Error(`Could not load recipe author: ${profileError.message}`);
+  if (!profile) notFound();
 
-  if (!profile) {
-    return (
-      <main className="min-h-screen flex items-center justify-center text-white">
-        <h1 className="text-2xl font-bold">Profile not found</h1>
-      </main>
-    );
-  }
+  const viewingOwnProfile = user?.id === profile.id;
+  if (!profile.is_public && !viewingOwnProfile) notFound();
 
-  // ⭐ NEW: Hide private profiles unless owner
-  const viewingOwnProfile = user.id === profile.id;
-
-  if (!profile.is_public && !viewingOwnProfile) {
-    return (
-      <main className="min-h-screen flex items-center justify-center text-white">
-        <h1 className="text-2xl font-bold">This profile is private</h1>
-      </main>
-    );
-  }
-
-  const userId = profile.id;
-
-  // Fetch recipe
-  const { data: recipe } = await supabase
+  const recipeQuery = serviceRole
     .from("recipes")
     .select("*")
     .eq("id", params.recipeId)
-    .eq("user_id", userId)
-    .single();
+    .eq("user_id", profile.id);
+  if (!viewingOwnProfile) recipeQuery.eq("is_public", true);
+  const { data: recipe, error: recipeError } = await recipeQuery.maybeSingle();
+  if (recipeError) throw new Error(`Could not load recipe: ${recipeError.message}`);
 
-  if (!recipe) {
-    return (
-      <main className="min-h-screen flex items-center justify-center text-white">
-        <h1 className="text-2xl font-bold">Recipe not found</h1>
-      </main>
-    );
-  }
+  if (!recipe) notFound();
 
-  // ⭐ Note log
-  const notes = recipe.notes_log || [];
+  const notes = viewingOwnProfile ? recipe.notes_log || [] : [];
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
       <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10 relative">
@@ -87,7 +58,7 @@ export default async function RecipeNotesPage({
 
         <PageHeading
           title={recipe.name.charAt(0).toUpperCase() + recipe.name.slice(1)}
-          subtitle="Note log and details for this recipe."
+          subtitle={`Shared by ${profile.username}. Recipe details${viewingOwnProfile ? " and note log" : ""}.`}
         />
 
         {/* Recipe info */}
@@ -299,13 +270,14 @@ export default async function RecipeNotesPage({
   )}
 
 </div>
-        {/* ⭐ NOTE LOG */}
+        {viewingOwnProfile && (
+          <>
         <h2 className="text-2xl font-semibold mt-12 mb-4 text-center">
           Note log
         </h2>
 
         <div className="space-y-4">
-          {notes && notes.length > 0 ? (
+          {notes.length > 0 ? (
             notes.map((n: any) => (
               <div
                 key={n.id}
@@ -334,10 +306,9 @@ export default async function RecipeNotesPage({
             <p className="opacity-60 text-center">No notes yet.</p>
           )}
         </div>
+          </>
+        )}
 
-        <p className="text-sm opacity-40 mt-12 text-center">
-          © {new Date().getFullYear()} Batchlog
-        </p>
       </div>
     </main>
   );

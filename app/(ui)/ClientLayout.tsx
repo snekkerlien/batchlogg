@@ -12,6 +12,7 @@ import FirstLoginSetup from "../components/FirstLoginSetup";
 import SiteAnnouncementBanner from "../components/SiteAnnouncementBanner";
 import { UnitsProvider } from "../components/Units";
 import SiteStatusBanner from "../components/SiteStatusBanner";
+import SiteFooter from "../components/SiteFooter";
 import {
   DEFAULT_ACCENT_COLOR,
   isAccentColor,
@@ -117,6 +118,7 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
             {children}
           </motion.div>
         </AnimatePresence>
+        <SiteFooter />
         </UnitsProvider>
       </UserAccentTheme>
     </AuthProvider>

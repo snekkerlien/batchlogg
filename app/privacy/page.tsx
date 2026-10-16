@@ -1,31 +1,13 @@
 "use client";
 
 import PageHeading from "@/app/components/PageHeading";
-import MenuOverlay from "@/app/components/MenuOverlay";
-import { useRouter } from "next/navigation";
+import PublicPageNavigation from "@/app/components/PublicPageNavigation";
 
 export default function PrivacyPage() {
-  const router = useRouter();
-
   return (
     <main className="min-h-screen flex flex-col items-center px-6 py-12 text-white">
-      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10 relative pt-16 sm:pt-16">
-
-        {/* Menu */}
-        <div className="absolute top-2 sm:top-4 right-4 z-40">
-          <MenuOverlay current="privacy" />
-        </div>
-
-        {/* Back button */}
-        <div className="absolute top-2 sm:top-4 left-4 z-40">
-          <button
-            onClick={() => router.back()}
-            className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg"
-            aria-label="Back to my account"
-          >
-            s
-          </button>
-        </div>
+      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10">
+        <PublicPageNavigation />
 
         <PageHeading
           title="Privacy Policy"
@@ -117,6 +99,18 @@ export default function PrivacyPage() {
           </div>
         </section>
 
+        <section className="mb-8 border-b border-white/10 pb-6 text-center">
+          <h2 className="text-lg font-semibold text-green-300 mb-3">
+            Advertising
+          </h2>
+          <p className="text-sm text-zinc-300 leading-relaxed">
+            Batchlogg does not currently display third-party advertisements. If
+            advertising is introduced, this policy will be updated before ads
+            are enabled to identify the providers, explain relevant data and
+            cookie use, and describe available consent choices.
+          </p>
+        </section>
+
         {/* BACKUPS */}
         <section className="mb-8 border-b border-white/10 pb-6 text-center">
           <h2 className="text-lg font-semibold text-green-300 mb-3">
@@ -170,9 +164,6 @@ export default function PrivacyPage() {
           </p>
         </section>
 
-        <p className="text-sm opacity-40 mt-10 text-center">
-          © {new Date().getFullYear()} Batchlogg
-        </p>
       </div>
     </main>
   );

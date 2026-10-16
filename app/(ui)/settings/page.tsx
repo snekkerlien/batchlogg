@@ -741,9 +741,6 @@ export default function SettingsPage() {
           
         </div>
 
-        <p className="text-sm opacity-40 mt-10 text-center">
-          © {new Date().getFullYear()} Batchlog
-        </p>
       </div>
 
       {showDeleteConfirmation && (

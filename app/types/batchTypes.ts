@@ -18,6 +18,8 @@ export interface Hop {
   amount: number | string;
   unit: string;
   time: number | string;
+  alpha?: number | string;
+  year?: number | string | null;
   addition_type?: "boil" | "whirlpool";
   temperature?: number | string;
 }

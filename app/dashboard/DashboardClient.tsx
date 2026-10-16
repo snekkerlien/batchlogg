@@ -579,10 +579,6 @@ useEffect(() => {
         )}
       </div>
 
-      <p className="text-sm opacity-40 mb-2 mt-12 text-center">
-        © {new Date().getFullYear()} Batchlog
-      </p>
-
       <ConfirmDialog
         open={confirmDeleteVessels}
         title="Delete selected vessels?"
