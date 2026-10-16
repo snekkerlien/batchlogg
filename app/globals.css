@@ -34,6 +34,12 @@ body.desktop-app a[href="/download-app"] {
   display: none !important;
 }
 
+@media (max-width: 767px) {
+  a[href="/download-app"] {
+    display: none !important;
+  }
+}
+
 .text-green-50,
 .text-green-100,
 .text-green-200,
