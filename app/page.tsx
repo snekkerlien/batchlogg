@@ -96,7 +96,7 @@ export default function Home() {
               </span>
             </Link>
           </li>
-          <li className="desktop-contact-card">
+          <li>
             <Link
               href="/contact"
               className="block h-full rounded-lg border border-white/10 bg-white/5 p-5 transition hover:border-green-300/40 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-300"
