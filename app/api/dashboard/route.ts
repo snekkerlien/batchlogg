@@ -48,13 +48,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Invalid token" }, { status: 401 });
   }
 
+  const { serviceRole } = supabaseServer();
   const [profileResult, karResult, sharesResult] = await Promise.all([
-    supabase
+    serviceRole
       .from("profiles")
       .select("username, account_tier")
       .eq("id", user.id)
       .maybeSingle(),
-    supabase
+    serviceRole
       .from("kar")
       .select("id, nummer, created_at")
       .eq("user_id", user.id)
@@ -79,7 +80,6 @@ export async function GET(request: NextRequest) {
     );
   }
   const ownedVesselIds = (karResult.data ?? []).map((vessel) => vessel.id);
-  const { serviceRole } = supabaseServer();
   const { data: ownedContributors, error: ownedContributorsError } =
     ownedVesselIds.length > 0
       ? await serviceRole
