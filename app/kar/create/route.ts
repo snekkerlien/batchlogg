@@ -2,9 +2,10 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
+import { syncUserVesselLimit } from "@/lib/vessels/limits";
 
 export async function POST() {
-  const { supabase } = supabaseServer();
+  const { supabase, serviceRole } = supabaseServer();
 
   const {
     data: { user },
@@ -12,6 +13,16 @@ export async function POST() {
 
   if (!user) {
     return NextResponse.json({ error: "Not logged in" }, { status: 401 });
+  }
+
+  try {
+    await syncUserVesselLimit(serviceRole, user.id);
+  } catch (error) {
+    console.error("Could not synchronize vessel limit", error);
+    return NextResponse.json(
+      { error: "Could not verify vessel limit" },
+      { status: 500 }
+    );
   }
 
   const { data, error } = await supabase.rpc("create_kar_with_limit");

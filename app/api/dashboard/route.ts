@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
+import { getMaxVessels } from "@/lib/vessels/limits";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
   const [profileResult, karResult, sharesResult] = await Promise.all([
     supabase
       .from("profiles")
-      .select("username, max_vessels")
+      .select("username, account_tier")
       .eq("id", user.id)
       .maybeSingle(),
     supabase
@@ -174,7 +175,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(
     {
       username: profileResult.data?.username ?? "Unknown",
-      maxVessels: profileResult.data?.max_vessels ?? 12,
+      maxVessels: getMaxVessels(profileResult.data?.account_tier),
       kar: vessels.map((vessel, index) => {
         const batch = batchByVessel.get(vessel.id);
         return {

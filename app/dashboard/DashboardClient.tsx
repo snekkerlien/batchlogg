@@ -74,7 +74,7 @@ export default function DashboardClient() {
   >(null);
   const [leavingSharedVessel, setLeavingSharedVessel] = useState(false);
   const [fadeMessage, setFadeMessage] = useState("");
-  const [maxVessels, setMaxVessels] = useState(12);
+  const [maxVessels, setMaxVessels] = useState(6);
   const [creatingKar, setCreatingKar] = useState(false);
   const [showDashboardInfo, setShowDashboardInfo] = useState(true);
   const [infoPreferenceLoaded, setInfoPreferenceLoaded] = useState(false);
@@ -180,7 +180,7 @@ useEffect(() => {
       }
 
       setUsername(data.username ?? "Unknown");
-      setMaxVessels(data.maxVessels ?? 12);
+      setMaxVessels(data.maxVessels);
       setKar(data.kar);
       setSharedKar(data.sharedKar);
     } catch (error) {

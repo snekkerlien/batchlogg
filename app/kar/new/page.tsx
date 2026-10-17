@@ -3,9 +3,10 @@ export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
 import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
+import { syncUserVesselLimit } from "@/lib/vessels/limits";
 
 export default async function NewKarPage() {
-  const { supabase } = supabaseServer();
+  const { supabase, serviceRole } = supabaseServer();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -14,6 +15,7 @@ export default async function NewKarPage() {
     redirect("/auth/login");
   }
 
+  await syncUserVesselLimit(serviceRole, user.id);
   const { data, error } = await supabase.rpc("create_kar_with_limit");
 
   if (error) {

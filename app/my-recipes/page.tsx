@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import VisibilitySwitch from "../components/VisibilitySwitch";
 import RecipeFilters, { type RecipeSort } from "./RecipeFilters";
+import RecipeAdditiveFields from "./new/RecipeAdditiveFields";
 import RecipeSecondaryFields from "./new/RecipeSecondaryFields";
 import {
   getSavedRecipeInventoryIssues,
@@ -894,16 +895,15 @@ function removeDryHop(index: number) {
                         </div>
                       )}
 
-                    {r.has_notes && (
-                      <div className="flex justify-end pt-4">
-                        <Link
-                          href={`/my-recipes/${r.id}`}
-                          className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm font-semibold w-full sm:w-auto text-center"
-                        >
-                          Open note log →
-                        </Link>
-                      </div>
-                    )}
+                    <div className="flex justify-end pt-4">
+                      <Link
+                        href={`/my-recipes/${encodeURIComponent(r.id)}`}
+                        onClick={(event) => event.stopPropagation()}
+                        className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm font-semibold w-full sm:w-auto text-center"
+                      >
+                        View recipe details and history →
+                      </Link>
+                    </div>
                     <div
                       className="pt-4 border-t border-white/10"
                       onClick={(e) => e.stopPropagation()}
@@ -1150,51 +1150,53 @@ function removeDryHop(index: number) {
     />
 
     {/* ⭐ Fruits — identisk med batch creation */}
-    <label className="block mb-2 font-semibold">Fruit additions</label>
+    <div className="space-y-2">
+      <label className="block font-semibold">Fruit additions</label>
 
-    {editFruits.map((f, i) => (
-      <div
-        key={i}
-        className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full"
-      >
-        <input
-          placeholder="Fruit (e.g. Mango, Raspberry)"
-          className="p-3 rounded bg-black/40 border border-white/20 w-full md:flex-1"
-          value={f.name}
-          onChange={(e) => updateFruit(i, "name", e.target.value)}
-        />
-
-        <input
-          placeholder="Amount"
-          className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-24"
-          value={f.amount}
-          onChange={(e) => updateFruit(i, "amount", e.target.value)}
-        />
-
-        <input
-          placeholder="Unit"
-          className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-20"
-          value={f.unit}
-          onChange={(e) => updateFruit(i, "unit", e.target.value)}
-        />
-
-        <button
-          type="button"
-          onClick={() => removeFruit(i)}
-          className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm self-start md:self-auto"
+      {editFruits.map((f, i) => (
+        <div
+          key={i}
+          className="flex w-full flex-col gap-2 md:flex-row md:items-center"
         >
-          Remove
-        </button>
-      </div>
-    ))}
+          <input
+            placeholder="Fruit (e.g. Mango, Raspberry)"
+            className="p-3 rounded bg-black/40 border border-white/20 w-full md:flex-1"
+            value={f.name}
+            onChange={(e) => updateFruit(i, "name", e.target.value)}
+          />
 
-    <button
-      type="button"
-      onClick={addFruit}
-      className="px-4 py-2 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold mt-2"
-    >
-      + Add fruit
-    </button>
+          <input
+            placeholder="Amount"
+            className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-24"
+            value={f.amount}
+            onChange={(e) => updateFruit(i, "amount", e.target.value)}
+          />
+
+          <input
+            placeholder="Unit"
+            className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-20"
+            value={f.unit}
+            onChange={(e) => updateFruit(i, "unit", e.target.value)}
+          />
+
+          <button
+            type="button"
+            onClick={() => removeFruit(i)}
+            className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm self-start md:self-auto"
+          >
+            Remove
+          </button>
+        </div>
+      ))}
+
+      <button
+        type="button"
+        onClick={addFruit}
+        className="inline-flex w-32 self-start items-center justify-center whitespace-nowrap rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm hover:bg-white/20"
+      >
+        + Add fruit
+      </button>
+    </div>
   </>
 )}
 
@@ -1520,12 +1522,12 @@ function removeDryHop(index: number) {
         )}
 
         {/* Shared fields */}
-        <label className="font-semibold">Additives</label>
-        <textarea
-          name="additives"
-          defaultValue={editRecipe.additives}
-          className="p-3 rounded bg-black/40 border border-white/20"
-        />
+        <div>
+          <label className="mb-2 block font-semibold">Additives</label>
+          <RecipeAdditiveFields
+            defaultValue={String(editRecipe.additives ?? "")}
+          />
+        </div>
 
         <label className="font-semibold">Full process</label>
         <textarea

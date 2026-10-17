@@ -57,7 +57,7 @@ export default function PremiumPage() {
     };
   }, []);
 
-  async function openBillingEndpoint(endpoint: "checkout" | "portal") {
+  async function openBillingEndpoint(endpoint: "checkout" | "portal" | "cancel") {
     setBusy(true);
     setMessage("");
     try {
@@ -105,17 +105,16 @@ export default function PremiumPage() {
 
         <ul className="mb-8 grid gap-3 sm:grid-cols-2">
           {[
+            "Track up to 20 vessels (Free includes up to 6)",
             "Shopping list and brew calendar",
             "Brewing insights and advanced batch analytics",
             "SG history and development charts",
             "Recipe version history and comparison",
             "Fermentation schedules and stage reminders",
-            "Advanced brewing calculators",
             "Advanced water chemistry and carbonation tools",
             "Shared vessels with richer collaboration",
             "Turn below-threshold inventory into shopping-list restock plans",
             "Featured public recipe and profile customization",
-            "Saved dashboards, recipe JSON/CSV, and calendar exports",
           ].map((feature) => (
             <li key={feature} className="rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-white/80">
               {feature}
@@ -124,24 +123,43 @@ export default function PremiumPage() {
         </ul>
 
         {profile?.account_tier === "free" && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void openBillingEndpoint("checkout")}
-            className="mx-auto block rounded-lg border border-green-400/40 bg-green-700 px-5 py-3 font-semibold text-white hover:bg-green-600 disabled:opacity-50"
-          >
-            {busy ? "Opening checkout…" : "Upgrade to Premium"}
-          </button>
+          <div className="flex flex-col items-center gap-3">
+            <p className="text-center text-white/80">
+              Premium is NOK 49 per month.
+            </p>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void openBillingEndpoint("checkout")}
+              className="rounded-lg border border-green-400/40 bg-green-700 px-5 py-3 font-semibold text-white hover:bg-green-600 disabled:opacity-50"
+            >
+              {busy ? "Opening checkout…" : "Upgrade to Premium"}
+            </button>
+          </div>
         )}
         {profile?.account_tier === "premium" && profile.premium_grant_source === "stripe" && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void openBillingEndpoint("portal")}
-            className="mx-auto block rounded-lg border border-white/20 bg-white/10 px-5 py-3 font-semibold hover:bg-white/20 disabled:opacity-50"
-          >
-            {busy ? "Opening billing…" : "Manage subscription"}
-          </button>
+          <div className="flex flex-col items-center gap-3">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void openBillingEndpoint("portal")}
+              className="rounded-lg border border-white/20 bg-white/10 px-5 py-3 font-semibold hover:bg-white/20 disabled:opacity-50"
+            >
+              {busy ? "Opening billing…" : "Manage subscription"}
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void openBillingEndpoint("cancel")}
+              className="rounded-lg border border-red-400/40 bg-red-950/40 px-5 py-3 font-semibold text-red-100 hover:bg-red-900/50 disabled:opacity-50"
+            >
+              {busy ? "Opening cancellation…" : "Cancel subscription"}
+            </button>
+            <p className="max-w-md text-center text-sm text-white/60">
+              You’ll review and confirm cancellation securely with Stripe. Your Premium
+              access will continue through the current billing period.
+            </p>
+          </div>
         )}
         {profile?.account_tier === "premium" && profile.premium_grant_source !== "stripe" && (
           <p className="text-center text-sm text-white/60">

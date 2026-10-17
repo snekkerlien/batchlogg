@@ -82,7 +82,7 @@ export default function RecipeAdditiveFields({
             { name: "", amount: "", unit: "" },
           ])
         }
-        className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm hover:bg-white/20"
+        className="inline-flex w-32 items-center justify-center whitespace-nowrap rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm hover:bg-white/20"
       >
         + Add {itemLabel.toLowerCase()}
       </button>

@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Image from "next/image";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import { deleteAvatar, saveAvatarUrl } from "./actions";
@@ -252,6 +253,14 @@ export default function AccountPage() {
           status={profile.membership_status}
           tier={profile.account_tier}
         />
+        <div className="mb-8 text-center">
+          <Link
+            href="/premium"
+            className="inline-flex rounded-lg border border-green-500/40 bg-green-800/60 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700"
+          >
+            Manage tier
+          </Link>
+        </div>
 
         <div className="text-center mb-8">
           <p className="text-zinc-400 text-sm">Registered since</p>

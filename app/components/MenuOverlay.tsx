@@ -129,7 +129,6 @@ export default function MenuOverlay({ current }: { current: string }) {
         { href: "/calendar", label: "Brew calendar", key: "calendar" },
         { href: "/shopping-list", label: "Shopping list", key: "shopping-list" },
         { href: "/brew-insights", label: "Brewing insights", key: "brew-insights" },
-        { href: "/brew-calculators", label: "Advanced calculators", key: "calculators" },
         { href: "/abv-tools", label: "ABV Tools", key: "abvtools" },
       ],
     },
@@ -165,9 +164,8 @@ export default function MenuOverlay({ current }: { current: string }) {
       label: "Account",
       items: [
         { href: "/my-account", label: "My account", key: "account" },
-      { href: "/premium", label: "Premium plan", key: "premium" },
-      { href: "/settings", label: "Settings", key: "settings" },
-    ],
+        { href: "/settings", label: "Settings", key: "settings" },
+      ],
     },
   ];
 

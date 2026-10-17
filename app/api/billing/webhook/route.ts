@@ -2,6 +2,7 @@ import Stripe from "stripe";
 import { NextRequest, NextResponse } from "next/server";
 import { getStripeClient } from "@/lib/billing/stripe";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
+import { getMaxVessels } from "@/lib/vessels/limits";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,7 +36,8 @@ async function syncSubscription(
   const currentPeriodEnds = subscription.items.data
     .map((item) => item.current_period_end)
     .filter((value): value is number => typeof value === "number");
-  const update: Record<string, string | null> = {
+  let accountTier = profile.account_tier;
+  const update: Record<string, string | number | null> = {
     stripe_customer_id: customerId,
     stripe_subscription_id: subscription.id,
     stripe_subscription_status: subscription.status,
@@ -45,9 +47,11 @@ async function syncSubscription(
   };
 
   if (profile.premium_grant_source === "stripe" || !profile.premium_grant_source) {
-    update.account_tier = active ? "premium" : "free";
+    accountTier = active ? "premium" : "free";
+    update.account_tier = accountTier;
     update.premium_grant_source = active ? "stripe" : null;
   }
+  update.max_vessels = getMaxVessels(accountTier);
 
   const { error: updateError } = await serviceRole
     .from("profiles")

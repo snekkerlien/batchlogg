@@ -1,9 +1,10 @@
 "use server";
 
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
+import { syncUserVesselLimit } from "@/lib/vessels/limits";
 
 export async function addKar() {
-  const { supabase } = supabaseServer();
+  const { supabase, serviceRole } = supabaseServer();
 
   const {
     data: { user },
@@ -11,6 +12,7 @@ export async function addKar() {
 
   if (!user) return;
 
+  await syncUserVesselLimit(serviceRole, user.id);
   const { data, error } = await supabase.rpc("create_kar_with_limit");
 
   if (error) {
