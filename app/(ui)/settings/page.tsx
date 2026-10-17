@@ -10,7 +10,6 @@ import FeedbackForm from "./FeedbackForm";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import {
   deleteAccount,
-  downloadUserData,
   saveThemeAccentColor,
 } from "../my-account/actions";
 import { saveUserPreferences } from "@/app/actions/userPreferences";
@@ -272,21 +271,28 @@ export default function SettingsPage() {
     setShowDownloadSpinner(true);
     setDownloadError("");
     try {
-      const base64 = await downloadUserData();
-      const bytes = Uint8Array.from(atob(base64), (character) =>
-        character.charCodeAt(0)
-      );
-      const url = URL.createObjectURL(
-        new Blob([bytes], { type: "application/zip" })
-      );
+      const response = await fetch("/api/account/export", {
+        credentials: "include",
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        const result: { error?: string } = await response.json();
+        throw new Error(result.error || `Backup failed (${response.status})`);
+      }
+      const url = URL.createObjectURL(await response.blob());
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = `${username} profile data - Batchlog.zip`;
+      anchor.download =
+        response.headers
+          .get("Content-Disposition")
+          ?.match(/filename="([^"]+)"/)?.[1] ?? `${username}-batchlog-backup.zip`;
       anchor.click();
-      URL.revokeObjectURL(url);
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (error) {
       console.error("Failed to export account data", error);
-      setDownloadError("Could not create your backup. Please try again.");
+      setDownloadError(
+        error instanceof Error ? error.message : "Could not create your backup. Please try again."
+      );
     } finally {
       setShowDownloadSpinner(false);
     }
@@ -298,6 +304,10 @@ export default function SettingsPage() {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
+    if (file.size > 50 * 1024 * 1024) {
+      setRestoreMessage("Backup ZIP must be 50 MB or smaller.");
+      return;
+    }
     setPendingRestoreFile(file);
   }
 
@@ -306,11 +316,26 @@ export default function SettingsPage() {
     setRestoringBackup(true);
     setRestoreMessage("");
     try {
-      const formData = new FormData();
-      formData.append("backup", pendingRestoreFile);
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabaseBrowser.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (!session) throw new Error("Sign in again before restoring a backup.");
+
+      const storagePath = `${session.user.id}/${crypto.randomUUID()}.zip`;
+      const { error: uploadError } = await supabaseBrowser.storage
+        .from("account-backups")
+        .upload(storagePath, pendingRestoreFile, {
+          contentType: "application/zip",
+          upsert: false,
+        });
+      if (uploadError) throw new Error(`Could not upload backup: ${uploadError.message}`);
+
       const response = await fetch("/api/account/restore", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storagePath }),
         credentials: "include",
       });
       const result: { message?: string; error?: string } = await response.json();
@@ -663,6 +688,9 @@ export default function SettingsPage() {
             Data &amp; account
           </h2>
           <div className="flex flex-col items-center gap-4">
+            <p className="max-w-xl text-center text-sm text-zinc-400">
+              Your archive includes batches, readings and notes, recipes, inventory, reminders, kegs, shopping-list items, saved discussions, private messages, feedback, profile settings, and personal images. Forum posts, friendships, community uploads, passwords, and sign-in credentials are not included. Restore adds missing records and restores profile settings; existing records remain unchanged. Vessel-sharing access is not recreated, so ask vessel owners to share access again. ZIPs are limited to 50 MB.
+            </p>
             <button
               type="button"
               onClick={handleDownload}

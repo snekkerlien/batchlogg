@@ -77,6 +77,7 @@ interface ForumTopic {
   updated_at: string;
   like_count: number;
   liked_by_user: boolean;
+  bookmarked_by_user: boolean;
   author: ForumAuthor;
   images: ForumImage[];
   attachments: ForumAttachment[];
@@ -379,6 +380,9 @@ export default function CommunityForumPage() {
   const [selectedCategory, setSelectedCategory] = useState<
     ForumCategory | "All categories"
   >("All categories");
+  const [topicSearch, setTopicSearch] = useState("");
+  const [topicSort, setTopicSort] = useState<"newest" | "oldest" | "popular" | "active">("newest");
+  const [savedOnly, setSavedOnly] = useState(false);
   const [error, setError] = useState("");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -389,10 +393,34 @@ export default function CommunityForumPage() {
   const [replyImages, setReplyImages] = useState<File[]>([]);
   const [replyAttachments, setReplyAttachments] = useState<string[]>([]);
   const [attachmentChoices, setAttachmentChoices] = useState<ForumAttachmentChoice[]>([]);
-  const visibleTopics =
-    selectedCategory === "All categories"
-      ? topics
-      : topics.filter((topic) => topic.category === selectedCategory);
+  const normalizedTopicSearch = topicSearch.trim().toLocaleLowerCase();
+  const visibleTopics = topics
+    .filter((topic) => {
+      const categoryMatches =
+        selectedCategory === "All categories" || topic.category === selectedCategory;
+      const savedMatches = !savedOnly || topic.bookmarked_by_user;
+      const searchMatches =
+        !normalizedTopicSearch ||
+        [topic.title, topic.body, ...topic.replies.map((reply) => reply.body)]
+          .some((text) => text.toLocaleLowerCase().includes(normalizedTopicSearch));
+      return categoryMatches && savedMatches && searchMatches;
+    })
+    .sort((a, b) => {
+      if (topicSort === "popular") {
+        return b.like_count - a.like_count ||
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+      if (topicSort === "active") {
+        const latestActivity = (topic: ForumTopic) =>
+          Math.max(
+            new Date(topic.created_at).getTime(),
+            ...topic.replies.map((reply) => new Date(reply.created_at).getTime())
+          );
+        return latestActivity(b) - latestActivity(a);
+      }
+      const direction = topicSort === "newest" ? -1 : 1;
+      return direction * (new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    });
 
   const loadTopics = useCallback(async (linkedTopicId?: string) => {
     const query = linkedTopicId
@@ -499,6 +527,39 @@ export default function CommunityForumPage() {
         updated.delete(key);
         return updated;
       });
+    }
+  }
+
+  async function toggleTopicBookmark(topic: ForumTopic) {
+    if (!userId) return;
+    const bookmark = !topic.bookmarked_by_user;
+    setError("");
+    try {
+      const response = await fetch(
+        bookmark
+          ? "/api/community/forum/bookmarks"
+          : `/api/community/forum/bookmarks?topic_id=${encodeURIComponent(topic.id)}`,
+        {
+          method: bookmark ? "POST" : "DELETE",
+          headers: bookmark ? { "Content-Type": "application/json" } : undefined,
+          body: bookmark ? JSON.stringify({ topicId: topic.id }) : undefined,
+          credentials: "include",
+        }
+      );
+      const result: { error?: string } = await response.json();
+      if (!response.ok) throw new Error(result.error || "Could not update saved discussions");
+      setTopics((current) =>
+        current.map((entry) =>
+          entry.id === topic.id ? { ...entry, bookmarked_by_user: bookmark } : entry
+        )
+      );
+    } catch (bookmarkError) {
+      console.error("Could not update saved forum topic", bookmarkError);
+      setError(
+        bookmarkError instanceof Error
+          ? bookmarkError.message
+          : "Could not update saved discussions."
+      );
     }
   }
 
@@ -961,33 +1022,80 @@ export default function CommunityForumPage() {
         )}
 
         <section aria-label="Forum discussions" className="space-y-5">
-          <label className="flex items-center justify-end gap-3 text-sm">
-            Filter category
-            <select
-              value={selectedCategory}
-              onChange={(event) => {
-                const value = event.target.value;
-                setSelectedCategory(
-                  value === "All categories" || isForumCategory(value)
-                    ? value
-                    : "All categories"
-                );
-              }}
-              className="rounded-lg border border-white/20 bg-black/40 p-2"
-            >
-              <option>All categories</option>
-              {FORUM_CATEGORIES.map((option) => (
-                <option key={option}>{option}</option>
-              ))}
-            </select>
-          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="flex flex-col gap-1 text-sm">
+              <span>Search discussions</span>
+              <input
+                type="search"
+                value={topicSearch}
+                onChange={(event) => setTopicSearch(event.target.value)}
+                placeholder="Search titles, posts, and replies"
+                className="rounded-lg border border-white/20 bg-black/40 p-2"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span>Filter category</span>
+              <select
+                value={selectedCategory}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setSelectedCategory(
+                    value === "All categories" || isForumCategory(value)
+                      ? value
+                      : "All categories"
+                  );
+                }}
+                className="rounded-lg border border-white/20 bg-black/40 p-2"
+              >
+                <option>All categories</option>
+                {FORUM_CATEGORIES.map((option) => (
+                  <option key={option}>{option}</option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span>Sort discussions</span>
+              <select
+                value={topicSort}
+                onChange={(event) =>
+                  setTopicSort(
+                    event.target.value as "newest" | "oldest" | "popular" | "active"
+                  )
+                }
+                className="rounded-lg border border-white/20 bg-black/40 p-2"
+              >
+                <option value="newest">Newest</option>
+                <option value="active">Recently active</option>
+                <option value="popular">Most liked</option>
+                <option value="oldest">Oldest</option>
+              </select>
+            </label>
+            {userId && (
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  onClick={() => setSavedOnly((current) => !current)}
+                  aria-pressed={savedOnly}
+                  className={`rounded-lg border px-3 py-2 text-sm ${
+                    savedOnly
+                      ? "border-green-500 bg-green-700"
+                      : "border-white/20 bg-white/10 hover:bg-white/20"
+                  }`}
+                >
+                  {savedOnly ? "Showing saved only" : "Show saved only"}
+                </button>
+              </div>
+            )}
+          </div>
           {loading ? (
             <p className="py-8 text-center text-white/60">Loading discussions…</p>
           ) : visibleTopics.length === 0 ? (
             <p className="py-8 text-center text-white/60">
               {topics.length === 0
                 ? "No discussions yet. Start the first one!"
-                : "No discussions in this category yet."}
+                : savedOnly
+                  ? "No saved discussions match these filters."
+                  : "No discussions match these filters."}
             </p>
           ) : (
             visibleTopics.map((topic) => (
@@ -1040,6 +1148,23 @@ export default function CommunityForumPage() {
                         <span className="inline-block rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-xs text-white/70">
                           {topic.category}
                         </span>
+                        {userId ? (
+                          <button
+                            type="button"
+                            onClick={() => void toggleTopicBookmark(topic)}
+                            aria-pressed={topic.bookmarked_by_user}
+                            className="ml-2 rounded-lg border border-white/20 px-2.5 py-1 text-xs font-semibold hover:bg-white/10"
+                          >
+                            {topic.bookmarked_by_user ? "Saved" : "Save"}
+                          </button>
+                        ) : (
+                          <Link
+                            href="/auth/login"
+                            className="ml-2 text-xs text-green-300 underline"
+                          >
+                            Sign in to save
+                          </Link>
+                        )}
                         <h2 className="mt-2 text-xl font-bold text-green-300">
                           {topic.title}
                         </h2>

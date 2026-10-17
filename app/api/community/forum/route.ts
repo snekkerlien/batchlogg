@@ -101,12 +101,25 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Could not load forum likes" }, { status: 500 });
   }
 
+  const { data: bookmarks, error: bookmarksError } = user
+    ? await serviceRole
+        .from("forum_bookmarks")
+        .select("topic_id")
+        .eq("user_id", user.id)
+        .in("topic_id", topics.map((topic) => topic.id))
+    : { data: [], error: null };
+  if (bookmarksError) {
+    console.error("Could not load forum bookmarks", bookmarksError);
+    return NextResponse.json({ error: "Could not load forum bookmarks" }, { status: 500 });
+  }
+
   const likeCountByContent = new Map(
     (likeCounts ?? []).map((like) => [`${like.target_type}:${like.target_id}`, like.like_count])
   );
   const likedContent = new Set(
     (userLikes ?? []).map((like) => `${like.target_type}:${like.target_id}`)
   );
+  const bookmarkedTopics = new Set((bookmarks ?? []).map((bookmark) => bookmark.topic_id));
   const decodedTopics = topics.map((topic) => ({
     topic,
     content: decodeForumContent(topic.body),
@@ -260,6 +273,7 @@ export async function GET(request: NextRequest) {
         ...topic,
         like_count: likeCountByContent.get(`topic:${topic.id}`) ?? 0,
         liked_by_user: likedContent.has(`topic:${topic.id}`),
+        bookmarked_by_user: bookmarkedTopics.has(topic.id),
         body: content.body,
         images: content.imagePaths
           .map((path) => imageFor(path, topic.author_id))

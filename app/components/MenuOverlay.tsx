@@ -104,14 +104,12 @@ export default function MenuOverlay({ current }: { current: string }) {
   const brewingItems: { href: string; label: string; key: string }[] = [
     { href: "/dashboard", label: "Dashboard", key: "dashboard" },
     { href: "/batch-history", label: "Batch history", key: "batchhistorikk" },
-    { href: "/my-recipes", label: "My recipes", key: "recipes" },
-    { href: "/inventory", label: "Inventory", key: "inventory" },
-    { href: "/abv-tools", label: "ABV Tools", key: "abvtools" },
   ];
 
-  if (canManageKegs) {
-    brewingItems.push({ href: "/kegs", label: "Kegs", key: "kegs" });
-  }
+  const planningItems = [
+    { href: "/my-recipes", label: "My recipes", key: "recipes" },
+    { href: "/inventory", label: "Inventory", key: "inventory" },
+  ];
 
   const groups: {
     label: string;
@@ -122,6 +120,19 @@ export default function MenuOverlay({ current }: { current: string }) {
       items: brewingItems,
     },
     {
+      label: "Recipes & inventory",
+      items: planningItems,
+    },
+    {
+      label: "Tools",
+      items: [
+        { href: "/calendar", label: "Brew calendar", key: "calendar" },
+        { href: "/shopping-list", label: "Shopping list", key: "shopping-list" },
+        { href: "/brew-insights", label: "Brewing insights", key: "brew-insights" },
+        { href: "/abv-tools", label: "ABV Tools", key: "abvtools" },
+      ],
+    },
+    {
       label: "Community",
       items: [
         { href: "/members", label: "Members", key: "profiles" },
@@ -130,16 +141,21 @@ export default function MenuOverlay({ current }: { current: string }) {
         { href: "/community/forum", label: "Forum", key: "forum" },
       ],
     },
-    ...(isAdmin || isModerator
+    ...(isAdmin || isModerator || canManageKegs
       ? [
           {
-            label: isAdmin ? "Admin" : "Moderation",
+            label: isModerator && !isAdmin ? "Moderation" : "Admin",
             items: [
-              {
-                href: isModerator && !isAdmin ? "/admin/community-reports" : "/admin",
-                label: isAdmin ? "Admin panel" : "Community reports",
-                key: "admin",
-              },
+              ...(isAdmin || isModerator
+                ? [{
+                    href: isModerator && !isAdmin ? "/admin/community-reports" : "/admin",
+                    label: isAdmin ? "Admin panel" : "Community reports",
+                    key: "admin",
+                  }]
+                : []),
+              ...(canManageKegs
+                ? [{ href: "/kegs", label: "Kegs", key: "kegs" }]
+                : []),
             ],
           },
         ]
@@ -147,7 +163,6 @@ export default function MenuOverlay({ current }: { current: string }) {
     {
       label: "Account",
       items: [
-        { href: "/download-app", label: "Download desktop app", key: "download-app" },
         { href: "/my-account", label: "My account", key: "account" },
         { href: "/settings", label: "Settings", key: "settings" },
       ],
@@ -194,29 +209,44 @@ export default function MenuOverlay({ current }: { current: string }) {
             text-left
             z-50
             w-56
+            max-h-[calc(100vh-5rem)] overflow-y-auto
           "
         >
           {groups.map((group, groupIndex) => (
             <section
               key={group.label}
-              aria-label={group.label}
               className={groupIndex > 0 ? "mt-3 border-t border-white/10 pt-3" : ""}
             >
               <h2 className="px-2 pb-1 text-xs font-semibold uppercase tracking-wider text-zinc-400">
                 {group.label}
               </h2>
-              {group.items.map((item) => (
+              <div className="mt-1">
+                {group.items.map((item) => (
                   <Link
                     key={item.key}
                     href={item.href}
                     onClick={() => setMenuOpen(false)}
-                    className="flex items-center px-2 py-2 text-white font-semibold hover:text-green-300 hover:bg-white/5 rounded-md whitespace-nowrap"
+                    className="flex items-center rounded-md px-2 py-2 font-semibold text-white hover:bg-white/5 hover:text-green-300"
                   >
                     {item.label}
                   </Link>
                 ))}
+              </div>
             </section>
           ))}
+
+          <section
+            aria-label="Desktop app"
+            className="mt-3 border-t border-white/10 pt-3"
+          >
+            <Link
+              href="/download-app"
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center px-2 py-2 text-white font-semibold hover:text-green-300 hover:bg-white/5 rounded-md whitespace-nowrap"
+            >
+              Download desktop app
+            </Link>
+          </section>
 
           <button
             onClick={logout}

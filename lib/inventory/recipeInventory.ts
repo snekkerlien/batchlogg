@@ -13,7 +13,7 @@ export type InventoryItem = {
   hop_year?: number | null;
 };
 
-type RecipeInventoryRequirement = {
+export type RecipeInventoryRequirement = {
   name: string;
   amount: number | null;
   unit: string;
@@ -181,7 +181,7 @@ export function recipeInventoryRequirements(
   return requirements;
 }
 
-function recipeRequirementsFromSavedRecipe(
+export function recipeRequirementsFromSavedRecipe(
   recipe: Record<string, unknown>
 ): RecipeInventoryRequirement[] | null {
   const formData = new FormData();
@@ -208,6 +208,86 @@ function recipeRequirementsFromSavedRecipe(
   );
 
   return recipeInventoryRequirements(formData);
+}
+
+export function getSavedRecipeShoppingRequirements(
+  recipe: Record<string, unknown>,
+  items: InventoryItem[]
+): { name: string; amount: number | null; unit: string }[] {
+  const requirements = recipeRequirementsFromSavedRecipe(recipe);
+  if (!requirements) {
+    throw new Error("Could not read recipe ingredients for the shopping list.");
+  }
+
+  const normalize = (value: string) =>
+    value.trim().toLocaleLowerCase().replace(/\s+/g, " ");
+  const combinedRequirements: typeof requirements = [];
+  for (const requirement of requirements) {
+    const matchingRequirement = combinedRequirements.find((existing) => {
+      if (normalize(existing.name) !== normalize(requirement.name)) return false;
+      if (existing.amount === null || requirement.amount === null) {
+        return existing.amount === requirement.amount &&
+          convertIngredientAmount(0, requirement.unit, existing.unit) !== null;
+      }
+      return convertIngredientAmount(0, requirement.unit, existing.unit) !== null;
+    });
+    if (!matchingRequirement) {
+      combinedRequirements.push({ ...requirement });
+      continue;
+    }
+    if (matchingRequirement.amount !== null && requirement.amount !== null) {
+      const convertedAmount = convertIngredientAmount(
+        requirement.amount,
+        requirement.unit,
+        matchingRequirement.unit
+      );
+      if (convertedAmount === null) {
+        combinedRequirements.push({ ...requirement });
+        continue;
+      }
+      matchingRequirement.amount += convertedAmount;
+    }
+  }
+
+  return combinedRequirements.map((requirement) => {
+    if (requirement.amount === null) {
+      return { name: requirement.name, amount: null, unit: requirement.unit };
+    }
+
+    const candidates = items.filter(
+      (item) =>
+        normalize(item.name) === normalize(requirement.name) &&
+        (!requirement.category || item.category === requirement.category) &&
+        (!requirement.subcategory ||
+          item.subcategory?.toLocaleLowerCase() === requirement.subcategory.toLocaleLowerCase())
+    );
+    if (candidates.length !== 1) {
+      return {
+        name: requirement.name,
+        amount: requirement.amount,
+        unit: requirement.unit,
+      };
+    }
+
+    const item = candidates[0];
+    const requiredInInventoryUnit = requirement.unit
+      ? convertIngredientAmount(requirement.amount, requirement.unit, item.unit)
+      : requirement.amount;
+    if (requiredInInventoryUnit === null) {
+      return {
+        name: requirement.name,
+        amount: requirement.amount,
+        unit: requirement.unit,
+      };
+    }
+
+    const missing = Math.max(0, requiredInInventoryUnit - item.amount);
+    return {
+      name: requirement.name,
+      amount: missing,
+      unit: item.unit,
+    };
+  });
 }
 
 export function getInventoryRequirementIssues(

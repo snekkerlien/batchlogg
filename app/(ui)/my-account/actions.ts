@@ -3,7 +3,6 @@
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { deleteUserData } from "@/lib/supabase/deleteUserData";
 import { isAccentColor } from "@/lib/theme/accentColor";
-import JSZip from "jszip";
 
 export async function saveThemeAccentColor(color: string) {
   if (!isAccentColor(color)) {
@@ -72,82 +71,6 @@ export async function saveAvatarUrl(newUrl: string) {
 }
 
 
-/* ============================================================
-   DOWNLOAD ALL USER DATA (ZIP-format, base64 return)
-   ============================================================ */
-export async function downloadUserData() {
-  const { supabase, serviceRole } = supabaseServer();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    throw new Error("Authentication required to export account data");
-  }
-
-  const userId = user.id;
-
-  const { data: profile, error: profileError } = await serviceRole
-    .from("profiles")
-    .select("*")
-    .eq("id", userId)
-    .single();
-
-  if (profileError) throw new Error(`Could not export profile: ${profileError.message}`);
-
-  const { data: batches, error: batchesError } = await serviceRole
-    .from("batches")
-    .select("*")
-    .eq("user_id", userId);
-  if (batchesError) throw new Error(`Could not export batches: ${batchesError.message}`);
-
-  const { data: kar, error: karError } = await serviceRole
-    .from("kar")
-    .select("*")
-    .eq("user_id", userId);
-  if (karError) throw new Error(`Could not export vessels: ${karError.message}`);
-
-  const { data: recipes, error: recipesError } = await serviceRole
-    .from("recipes")
-    .select("*")
-    .eq("user_id", userId);
-  if (recipesError) throw new Error(`Could not export recipes: ${recipesError.message}`);
-
-  const { data: inventory, error: inventoryError } = await serviceRole
-    .from("inventory_items")
-    .select("*")
-    .eq("user_id", userId);
-  if (inventoryError) {
-    throw new Error(`Could not export inventory: ${inventoryError.message}`);
-  }
-
-  const zip = new JSZip();
-
-  zip.file(
-    "metadata.json",
-    JSON.stringify(
-      {
-        exported_at: new Date().toISOString(),
-        format_version: 1,
-        username: profile?.username ?? "unknown",
-        user_id: userId,
-      },
-      null,
-      2
-    )
-  );
-
-  zip.file("profile.json", JSON.stringify(profile ?? {}, null, 2));
-  zip.file("batches.json", JSON.stringify(batches ?? [], null, 2));
-  zip.file("kar.json", JSON.stringify(kar ?? [], null, 2));
-  zip.file("recipes.json", JSON.stringify(recipes ?? [], null, 2));
-  zip.file("inventory.json", JSON.stringify(inventory ?? [], null, 2));
-
-  const zipBase64 = await zip.generateAsync({ type: "base64" });
-
-  return zipBase64;
-}
 /* ============================================================
    DELETE AVATAR (tilbakestill til default)
    ============================================================ */
