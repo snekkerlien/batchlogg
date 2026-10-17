@@ -253,6 +253,7 @@ useEffect(() => {
 
       const res = await fetch("/kar/create", {
         method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
         credentials: "include",
       });
 
