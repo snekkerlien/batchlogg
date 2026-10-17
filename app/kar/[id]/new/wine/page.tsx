@@ -168,7 +168,7 @@ export default function NewWinePage({
             <textarea
               name="full_process"
               defaultValue={recipe?.full_process ?? ""}
-              placeholder="Crushing, maceration, fermentation schedule, punch-downs, temperature..."
+              placeholder="Crushing, maceration, punch-downs, temperature..."
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-40"
             />
           </div>

@@ -21,7 +21,6 @@ import { Qty, UnitInput, UnitSymbol, useUnits } from "@/app/components/Units";
 import BatchEditTypeFields from "./BatchEditTypeFields";
 import { formatSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
 import RecipeSecondaryFields from "@/app/my-recipes/new/RecipeSecondaryFields";
-import FermentationSchedule from "./FermentationSchedule";
 import VesselActivity from "./VesselActivity";
 
 const BatchSGChart = dynamic(
@@ -1208,10 +1207,6 @@ const sharingSection = isOwner ? (
       </div>
     </div>
   </div>
-)}
-
-{hasActive && canContribute && (
-  <FermentationSchedule batchId={activeBatch.id} />
 )}
 
 {hasActive && isOwner && (

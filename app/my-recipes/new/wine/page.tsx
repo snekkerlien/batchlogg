@@ -159,7 +159,7 @@ export default function NewWineRecipePage() {
             <label className="block mb-1 font-semibold">Full process</label>
             <textarea
               name="full_process"
-              placeholder="Crushing, maceration, fermentation schedule, punch-downs, temperature..."
+              placeholder="Crushing, maceration, punch-downs, temperature..."
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-40"
             />
           </div>
