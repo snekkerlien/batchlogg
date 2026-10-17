@@ -104,7 +104,7 @@ export default async function RecipeNotesPage({
       )}
 
       {recipe.additives && (
-        <p><strong>Additives:</strong><br />{recipe.additives}</p>
+        <p className="whitespace-pre-line"><strong>Additives:</strong><br />{recipe.additives}</p>
       )}
 
       {recipe.full_process && (
@@ -169,7 +169,7 @@ export default async function RecipeNotesPage({
       )}
 
       {recipe.additives && (
-        <p><strong>Additives:</strong><br />{recipe.additives}</p>
+        <p className="whitespace-pre-line"><strong>Additives:</strong><br />{recipe.additives}</p>
       )}
 
       {recipe.full_process && (
@@ -203,7 +203,7 @@ export default async function RecipeNotesPage({
       )}
 
       {recipe.additives && (
-        <p><strong>Additives:</strong><br />{recipe.additives}</p>
+        <p className="whitespace-pre-line"><strong>Additives:</strong><br />{recipe.additives}</p>
       )}
 
       {recipe.full_process && (
@@ -228,7 +228,7 @@ export default async function RecipeNotesPage({
       )}
 
       {recipe.additives && (
-        <p><strong>Additives:</strong><br />{recipe.additives}</p>
+        <p className="whitespace-pre-line"><strong>Additives:</strong><br />{recipe.additives}</p>
       )}
 
       {recipe.full_process && (
@@ -263,7 +263,7 @@ export default async function RecipeNotesPage({
       )}
 
       {recipe.additives && (
-        <p><strong>Additives:</strong><br />{recipe.additives}</p>
+        <p className="whitespace-pre-line"><strong>Additives:</strong><br />{recipe.additives}</p>
       )}
 
       {recipe.notes && (

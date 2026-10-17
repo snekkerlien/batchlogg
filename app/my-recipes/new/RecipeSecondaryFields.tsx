@@ -73,40 +73,49 @@ export default function RecipeSecondaryFields({
   defaultValue = "",
   defaultNotes = "",
   defaultEnabled = false,
+  showToggle = true,
+  includeHadSecondaryField = true,
 }: {
   defaultValue?: string | null;
   defaultNotes?: string | null;
   defaultEnabled?: boolean;
+  showToggle?: boolean;
+  includeHadSecondaryField?: boolean;
 }) {
   const [hadSecondary, setHadSecondary] = useState(defaultEnabled);
   const [additions, setAdditions] = useState(() => parseSecondaryAdditions(defaultValue));
   const [notes, setNotes] = useState(defaultNotes ?? "");
-  const secondaryAdditions = hadSecondary
+  const secondaryEnabled = showToggle ? hadSecondary : true;
+  const secondaryAdditions = secondaryEnabled
     ? JSON.stringify({ ...additions, version: 1 })
     : "";
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <label className="mb-2 block font-semibold">Secondary fermentation</label>
-        <button
-          type="button"
-          aria-pressed={hadSecondary}
-          onClick={() => setHadSecondary((current) => !current)}
-          className={`rounded-lg border px-4 py-2 ${
-            hadSecondary
-              ? "border-purple-500 bg-purple-700"
-              : "border-white/20 bg-black/40"
-          }`}
-        >
-          {hadSecondary ? "Secondary enabled" : "Enable secondary"}
-        </button>
-      </div>
+      {showToggle && (
+        <div>
+          <label className="mb-2 block font-semibold">Secondary fermentation</label>
+          <button
+            type="button"
+            aria-pressed={hadSecondary}
+            onClick={() => setHadSecondary((current) => !current)}
+            className={`rounded-lg border px-4 py-2 ${
+              hadSecondary
+                ? "border-purple-500 bg-purple-700"
+                : "border-white/20 bg-black/40"
+            }`}
+          >
+            {hadSecondary ? "Secondary enabled" : "Enable secondary"}
+          </button>
+        </div>
+      )}
 
       <input type="hidden" name="secondary_additions" value={secondaryAdditions} />
-      <input type="hidden" name="had_secondary" value={hadSecondary ? "true" : "false"} />
-      {!hadSecondary && <input type="hidden" name="secondary_notes" value="" />}
-      {hadSecondary && (
+      {includeHadSecondaryField && (
+        <input type="hidden" name="had_secondary" value={hadSecondary ? "true" : "false"} />
+      )}
+      {!secondaryEnabled && <input type="hidden" name="secondary_notes" value="" />}
+      {secondaryEnabled && (
         <>
           <div>
             <label className="mb-1 block font-semibold">Secondary additives</label>

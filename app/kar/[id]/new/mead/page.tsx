@@ -176,14 +176,14 @@ export default function NewMeadPage({
   {fruits.map((f, i) => (
     <div
       key={i}
-      className="flex w-full items-start gap-2 mb-2"
+      className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(6rem,0.35fr)_minmax(5rem,0.25fr)_auto]"
     >
       <InventoryIngredientSelect
         selectionKey={`fruit:${i}`}
         placeholder="Fruit"
         category="flavorings"
         subcategory="Fruit"
-        className="p-3 rounded bg-black/40 border border-white/20 w-full md:flex-1"
+        className="col-span-2 min-w-0 rounded border border-white/20 bg-black/40 p-3 sm:col-span-1"
         value={f.name}
         onChange={(value) => {
           const updated = [...fruits];
@@ -200,10 +200,13 @@ export default function NewMeadPage({
         }}
       />
 
-      <div className="contents">
       <input
+        aria-label={`Fruit ${i + 1} amount`}
         placeholder="Amount"
-        className="p-3 rounded bg-black/40 border border-white/20 w-20 sm:w-28 shrink-0"
+        type="number"
+        min="0"
+        step="any"
+        className="min-w-0 rounded border border-white/20 bg-black/40 p-3"
         value={f.amount}
         onChange={(e) => {
           const updated = [...fruits];
@@ -213,8 +216,9 @@ export default function NewMeadPage({
       />
 
       <input
+        aria-label={`Fruit ${i + 1} unit`}
         placeholder="Unit"
-        className="p-3 rounded bg-black/40 border border-white/20 w-16 sm:w-24 shrink-0"
+        className="min-w-0 rounded border border-white/20 bg-black/40 p-3"
         value={f.unit}
         onChange={(e) => {
           const updated = [...fruits];
@@ -226,11 +230,10 @@ export default function NewMeadPage({
       <button
         type="button"
         onClick={() => removeFruit(i)}
-        className="shrink-0 px-2 sm:px-3 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-xs sm:text-sm"
+        className="col-span-2 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm hover:bg-white/20 sm:col-span-1"
       >
         Remove
       </button>
-      </div>
     </div>
   ))}
 

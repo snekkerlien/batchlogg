@@ -4,6 +4,7 @@ import Link from "next/link";
 import { supabaseServer } from "../../../../lib/supabase/supabaseServerFinal";
 import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
 import { writeAdminAuditEvent } from "@/lib/admin/auditLog";
+import { isPlanTier } from "@/lib/auth/plan";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 import DeleteUserButton from "./DeleteUserButton";
@@ -78,11 +79,13 @@ export default async function UserAdminPage({
     const canManageKegs = formData.get("can_manage_kegs") === "on";
     const snusIsTrue = formData.get("snus_is_true") === "on";
     const membershipStatus = formData.get("membership_status")?.toString();
+    const accountTier = formData.get("account_tier")?.toString();
 
     if (
       !email ||
       !username ||
-      !isMembershipStatus(membershipStatus)
+      !isMembershipStatus(membershipStatus) ||
+      !isPlanTier(accountTier)
     ) {
       throw new Error("Email, username, and a valid role are required");
     }
@@ -105,6 +108,8 @@ export default async function UserAdminPage({
         can_manage_kegs: canManageKegs,
         snus_is_true: snusIsTrue,
         membership_status: membershipStatus,
+        account_tier: accountTier,
+        premium_grant_source: accountTier === "premium" ? "manual" : null,
       })
       .eq("id", userId);
 
@@ -120,7 +125,8 @@ export default async function UserAdminPage({
         targetId: userId,
         details: {
           membership_status: membershipStatus,
-          updated_fields: "email,username,membership_status,can_manage_kegs,snus_is_true",
+          account_tier: accountTier,
+          updated_fields: "email,username,membership_status,account_tier,can_manage_kegs,snus_is_true",
         },
       }))
     ) {
@@ -176,6 +182,18 @@ export default async function UserAdminPage({
                 defaultValue={authUser.user?.email ?? ""}
                 className="mt-2 w-full rounded-lg border border-white/20 bg-black/40 p-3 text-white outline-none transition focus:border-green-400/50"
               />
+            </label>
+
+            <label className="block">
+              <span className="text-sm font-medium text-white/80">Plan tier</span>
+              <select
+                name="account_tier"
+                defaultValue={profile?.account_tier ?? "free"}
+                className="mt-2 w-full rounded-lg border border-white/20 bg-black/40 p-3 text-white outline-none transition focus:border-green-400/50"
+              >
+                <option value="free">Free</option>
+                <option value="premium">Premium (manual grant)</option>
+              </select>
             </label>
 
             <label className="block">

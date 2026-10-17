@@ -146,7 +146,7 @@ export default function BatchRecipeCard({ batch }: { batch: Batch }) {
           </div>
         )}
 
-        {hasText(batch.additives) && <p><strong>Additives:</strong><br />{batch.additives}</p>}
+        {hasText(batch.additives) && <p className="whitespace-pre-line"><strong>Additives:</strong><br />{batch.additives}</p>}
         {hasText(batch.full_process) && <p><strong>Full process:</strong><br />{batch.full_process}</p>}
         {hasText(batch.notes) && <p><strong>Notes:</strong><br />{batch.notes}</p>}
       </div>

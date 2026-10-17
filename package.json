@@ -36,6 +36,7 @@
     "react-dom": "18.2.0",
     "react-hot-toast": "^2.6.0",
     "react-markdown": "^10.1.0",
+    "stripe": "^18.5.0",
     "valtio": "^2.3.2"
   },
   "devDependencies": {

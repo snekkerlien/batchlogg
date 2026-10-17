@@ -21,6 +21,8 @@ export default function InventoryPage() {
     deleteItem,
   } = useInventory();
   const [modalOpen, setModalOpen] = useState(false);
+  const [planningBusy, setPlanningBusy] = useState(false);
+  const [planningMessage, setPlanningMessage] = useState("");
   const [cardWidth, setCardWidth] = useState<number | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -39,6 +41,46 @@ export default function InventoryPage() {
     const minimum = Number(i.minimum_amount);
     return current <= minimum;
   });
+  const restockableItems = lowItems.filter(
+    (item) => Number(item.amount) < Number(item.minimum_amount)
+  );
+
+  async function addLowStockToShoppingList() {
+    const restockItems = restockableItems.map((item) => ({
+      name: item.name,
+      amount: Math.max(0, Number(item.minimum_amount) - Number(item.amount)),
+      unit: item.unit ?? "",
+      recipe_id: null,
+    }));
+    setPlanningBusy(true);
+    setPlanningMessage("");
+    let addedItems = 0;
+    try {
+      for (let start = 0; start < restockItems.length; start += 100) {
+        const batch = restockItems.slice(start, start + 100);
+        const response = await fetch("/api/shopping-list", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items: batch }),
+        });
+        const result: { error?: string } = await response.json();
+        if (!response.ok) throw new Error(result.error || "Could not add stock items");
+        addedItems += batch.length;
+      }
+      setPlanningMessage(`Added ${restockItems.length} low-stock item${restockItems.length === 1 ? "" : "s"} to your shopping list.`);
+    } catch (error) {
+      console.error("Could not plan inventory restock", error);
+      const message = error instanceof Error ? error.message : "Could not create a restock plan.";
+      setPlanningMessage(
+        addedItems > 0
+          ? `Added ${addedItems} of ${restockItems.length} items before an error: ${message}`
+          : message
+      );
+    } finally {
+      setPlanningBusy(false);
+    }
+  }
 
 useEffect(() => {
   if (cardRef.current) {
@@ -163,6 +205,25 @@ useEffect(() => {
 
 
         <h2 className="text-2xl font-bold mb-4 text-center">Low stock</h2>
+
+        {profile?.account_tier === "premium" ? (
+          <div className="mb-4 text-center">
+            <button
+              type="button"
+              onClick={() => void addLowStockToShoppingList()}
+              disabled={planningBusy || restockableItems.length === 0}
+              className="rounded-lg border border-green-500/40 bg-green-800/60 px-4 py-2 text-sm font-semibold disabled:opacity-50"
+            >
+              {planningBusy ? "Adding items…" : "Plan restock from low-stock items"}
+            </button>
+            {planningMessage && <p role="status" className="mt-2 text-sm text-white/70">{planningMessage}</p>}
+          </div>
+        ) : (
+          <p className="mb-4 text-center text-sm text-white/60">
+            <Link href="/premium" className="text-green-200 underline">Premium</Link>
+            {" "}can turn low-stock items into a purchase plan.
+          </p>
+        )}
 
         {loading ? (
           <p className="opacity-60 text-center mt-10">Loading…</p>

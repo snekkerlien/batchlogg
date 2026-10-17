@@ -26,6 +26,7 @@ export default function AccountPage() {
   const [pendingAvatar, setPendingAvatar] = useState<string | null>(null);
   const [showcaseBanner, setShowcaseBanner] = useState("");
   const [featuredRecipeId, setFeaturedRecipeId] = useState("");
+  const [profileAccentColor, setProfileAccentColor] = useState<string | null>(null);
   const [showcaseRecipes, setShowcaseRecipes] = useState<{ id: string; name: string }[]>([]);
   const [savingShowcase, setSavingShowcase] = useState(false);
   const [showcaseMessage, setShowcaseMessage] = useState("");
@@ -93,6 +94,7 @@ export default function AccountPage() {
     setProfile(data);
     setShowcaseBanner(data.profile_banner ?? "");
     setFeaturedRecipeId(data.featured_recipe_id ?? "");
+    setProfileAccentColor(data.profile_accent_color ?? null);
     const { data: publicRecipes, error: recipesError } = await supabaseBrowser
       .from("recipes")
       .select("id, name")
@@ -155,6 +157,7 @@ export default function AccountPage() {
         body: JSON.stringify({
           profileBanner: showcaseBanner,
           featuredRecipeId: featuredRecipeId || null,
+          profileAccentColor,
         }),
       });
       const result = await response.json();
@@ -164,6 +167,7 @@ export default function AccountPage() {
         ...current,
         profile_banner: showcaseBanner.trim() || null,
         featured_recipe_id: featuredRecipeId || null,
+        profile_accent_color: profileAccentColor,
       }));
     } catch (saveError) {
       console.error("Could not save profile showcase", saveError);
@@ -244,7 +248,10 @@ export default function AccountPage() {
           </button>
         </div>
 
-        <MembershipStatus status={profile.membership_status} />
+        <MembershipStatus
+          status={profile.membership_status}
+          tier={profile.account_tier}
+        />
 
         <div className="text-center mb-8">
           <p className="text-zinc-400 text-sm">Registered since</p>
@@ -258,7 +265,7 @@ export default function AccountPage() {
         <form onSubmit={saveShowcase} className="mb-10 space-y-3 rounded-xl border border-white/10 bg-white/5 p-4">
           <div>
             <h2 className="font-semibold text-green-200">Profile showcase</h2>
-            <p className="mt-1 text-xs text-white/55">A short banner and one public recipe appear on your public profile.</p>
+            <p className="mt-1 text-xs text-white/55">A short banner is free. Featuring one public recipe is a Premium feature.</p>
           </div>
           <label className="block text-sm">Banner message
             <textarea
@@ -271,10 +278,27 @@ export default function AccountPage() {
             />
             <span className="mt-1 block text-right text-xs text-white/40">{showcaseBanner.length}/280</span>
           </label>
+          <label className="block text-sm">Public profile accent
+            <div className="mt-1 flex items-center gap-3">
+              <input
+                type="color"
+                value={profileAccentColor ?? "#22c55e"}
+                onChange={(event) => setProfileAccentColor(event.target.value)}
+                disabled={profile.account_tier !== "premium"}
+                className="h-10 w-14 rounded border border-white/20 bg-black/40 p-1 disabled:opacity-50"
+              />
+              <span className="text-xs text-white/55">
+                {profile.account_tier === "premium"
+                  ? "Choose an accent color for your public profile."
+                  : "Premium feature"}
+              </span>
+            </div>
+          </label>
           <label className="block text-sm">Featured public recipe
             <select
               value={featuredRecipeId}
               onChange={(event) => setFeaturedRecipeId(event.target.value)}
+              disabled={profile.account_tier !== "premium"}
               className="mt-1 w-full rounded-lg border border-white/20 bg-black/40 p-3"
             >
               <option value="">No featured recipe</option>
@@ -283,6 +307,12 @@ export default function AccountPage() {
               ))}
             </select>
           </label>
+          {profile.account_tier !== "premium" && (
+            <p className="text-sm text-amber-200">
+              Upgrade to Premium to feature a public recipe on your profile.{" "}
+              <a href="/premium" className="underline">See Premium</a>
+            </p>
+          )}
           {showcaseMessage && <p role="status" className="text-sm text-white/70">{showcaseMessage}</p>}
           <button
             type="submit"

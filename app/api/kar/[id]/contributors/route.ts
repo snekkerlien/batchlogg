@@ -1,7 +1,28 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
+import { hasPremiumAccess, premiumGateResponse } from "@/lib/auth/plan";
 
 type RouteContext = { params: { id: string } };
+
+async function recordContributorActivity(
+  serviceRole: ReturnType<typeof supabaseServer>["serviceRole"],
+  karId: string,
+  actorId: string,
+  activityType: "contributor_added" | "contributor_removed",
+  content: string
+) {
+  const { error } = await serviceRole.from("kar_activity").insert({
+    kar_id: karId,
+    actor_id: actorId,
+    activity_type: activityType,
+    content,
+  });
+  if (error) {
+    console.error("Could not record vessel contributor activity", error);
+    return false;
+  }
+  return true;
+}
 
 async function getOwner(
   karId: string,
@@ -41,7 +62,10 @@ export async function GET(_request: Request, { params }: RouteContext) {
     if (sharesError) throw new Error(`Could not load contributors: ${sharesError.message}`);
 
     const userIds = (shares ?? []).map((share) => share.user_id);
-    if (userIds.length === 0) return NextResponse.json({ contributors: [] });
+    const canShare = await hasPremiumAccess(serviceRole, user.id);
+    if (userIds.length === 0) {
+      return NextResponse.json({ contributors: [], canShare });
+    }
 
     const { data: profiles, error: profilesError } = await serviceRole
       .from("profiles")
@@ -54,6 +78,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
         id: profile.id,
         username: profile.username,
       })),
+      canShare,
     });
   } catch (error) {
     console.error("Could not load vessel contributors", error);
@@ -73,6 +98,8 @@ export async function POST(request: Request, { params }: RouteContext) {
   if (!user) {
     return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   }
+  const accessDenied = await premiumGateResponse(serviceRole, user.id);
+  if (accessDenied) return accessDenied;
 
   let body: { userId?: unknown };
   try {
@@ -148,16 +175,29 @@ export async function POST(request: Request, { params }: RouteContext) {
       return NextResponse.json({ error: "Friend not found." }, { status: 404 });
     }
 
-    const { error: shareError } = await serviceRole
+    const { data: insertedShares, error: shareError } = await serviceRole
       .from("kar_contributors")
       .upsert(
         { kar_id: params.id, user_id: profile.id },
         { onConflict: "kar_id,user_id", ignoreDuplicates: true }
-      );
+      )
+      .select("user_id");
     if (shareError) throw new Error(`Could not add contributor: ${shareError.message}`);
 
+    const activityRecorded =
+      !insertedShares?.length ||
+      await recordContributorActivity(
+        serviceRole,
+        params.id,
+        user.id,
+        "contributor_added",
+        `Added ${profile.username} as a vessel contributor`
+      );
     return NextResponse.json({
       contributor: { id: profile.id, username: profile.username },
+      ...(!activityRecorded && {
+        activityWarning: "Contributor added, but the activity history could not be updated.",
+      }),
     });
   } catch (error) {
     console.error("Could not add vessel contributor", error);
@@ -213,24 +253,64 @@ export async function DELETE(request: Request, { params }: RouteContext) {
         );
       }
 
-      return NextResponse.json({ success: true });
+      const activityRecorded = await recordContributorActivity(
+        serviceRole,
+        params.id,
+        user.id,
+        "contributor_removed",
+        `${user.user_metadata.username ?? "A contributor"} left the vessel`
+      );
+      return NextResponse.json({
+        success: true,
+        ...(!activityRecorded && {
+          activityWarning: "You left the vessel, but the activity history could not be updated.",
+        }),
+      });
     }
 
-    if (typeof body.userId !== "string") {
+    if (
+      typeof body.userId !== "string" ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        body.userId
+      )
+    ) {
       return NextResponse.json({ error: "Contributor is required." }, { status: 400 });
     }
     if (!(await getOwner(params.id, user.id, serviceRole))) {
       return NextResponse.json({ error: "Vessel not found." }, { status: 404 });
     }
 
-    const { error } = await serviceRole
+    const [
+      { data: contributorProfile, error: profileError },
+      { data: removed, error },
+    ] = await Promise.all([
+      serviceRole.from("profiles").select("username").eq("id", body.userId).maybeSingle(),
+      serviceRole
       .from("kar_contributors")
       .delete()
       .eq("kar_id", params.id)
-      .eq("user_id", body.userId);
+      .eq("user_id", body.userId)
+      .select("user_id")
+      .maybeSingle(),
+    ]);
+    if (profileError) throw new Error(`Could not load contributor profile: ${profileError.message}`);
     if (error) throw new Error(`Could not remove contributor: ${error.message}`);
 
-    return NextResponse.json({ success: true });
+    const activityRecorded =
+      !removed ||
+      await recordContributorActivity(
+        serviceRole,
+        params.id,
+        user.id,
+        "contributor_removed",
+        `Removed ${contributorProfile?.username ?? "a contributor"} from the vessel`
+      );
+    return NextResponse.json({
+      success: true,
+      ...(!activityRecorded && {
+        activityWarning: "Contributor removed, but the activity history could not be updated.",
+      }),
+    });
   } catch (error) {
     console.error("Could not remove vessel contributor", error);
     return NextResponse.json(

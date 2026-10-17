@@ -52,6 +52,7 @@ export default function BatchHistoryPage() {
   const [kars, setKars] = useState<any[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [sgReadingsError, setSgReadingsError] = useState("");
+  const [sgPremiumRequired, setSgPremiumRequired] = useState(false);
   const [batchLoadError, setBatchLoadError] = useState("");
 
   // ⭐ NEW: delete confirmation modal state
@@ -106,18 +107,22 @@ export default function BatchHistoryPage() {
       let readingsByBatch = new Map<string, any[]>();
 
       if (batchIds.length > 0) {
-        const { data: readings, error: readingsError } = await supabaseBrowser
-          .from("sg_readings")
-          .select("id, batch_id, sg, created_at")
-          .in("batch_id", batchIds)
-          .order("created_at", { ascending: true });
-
-        if (readingsError) {
-          console.error("Could not load SG readings for batch timelines", readingsError);
+        const readingsResponse = await fetch("/api/sg", {
+          credentials: "include",
+          cache: "no-store",
+        });
+        const readingsResult: {
+          readings?: any[];
+          error?: string;
+        } = await readingsResponse.json();
+        if (readingsResponse.status === 403) {
+          setSgPremiumRequired(true);
+        } else if (!readingsResponse.ok) {
+          console.error("Could not load SG readings for batch timelines", readingsResult.error);
           setSgReadingsError("SG readings could not be loaded.");
         } else {
           readingsByBatch = new Map();
-          for (const reading of readings ?? []) {
+          for (const reading of readingsResult.readings ?? []) {
             if (!reading.batch_id) continue;
             const batchReadings = readingsByBatch.get(reading.batch_id) ?? [];
             batchReadings.push(reading);
@@ -320,7 +325,12 @@ export default function BatchHistoryPage() {
                       <h3 className="text-xl font-bold mb-3 text-green-300">
                         SG development
                       </h3>
-                      {batch.sgReadings.length > 0 ? (
+                      {sgPremiumRequired ? (
+                        <p className="text-sm text-white/70">
+                          SG history is part of Premium.{" "}
+                          <a href="/premium" className="text-green-200 underline">Explore Premium</a>
+                        </p>
+                      ) : batch.sgReadings.length > 0 ? (
                         <div className="bg-black/40 p-4 rounded-lg border border-white/10">
                           <BatchSGChart readings={batch.sgReadings} />
                         </div>
@@ -480,7 +490,7 @@ export default function BatchHistoryPage() {
                         )}
 
                         {batch.additives && (
-                          <p><strong>Additives:</strong><br />{batch.additives}</p>
+                          <p className="whitespace-pre-line"><strong>Additives:</strong><br />{batch.additives}</p>
                         )}
                         {batch.full_process && (
                           <p><strong>Full process:</strong><br />{batch.full_process}</p>

@@ -17,6 +17,7 @@ export interface MemberAdminDetails {
   email: string;
   can_manage_kegs: boolean;
   snus_is_true: boolean;
+  account_tier: "free" | "premium";
   restrictions: UserRestriction[];
 }
 
@@ -40,6 +41,7 @@ export default function MemberAdminActions({
   );
   const [canManageKegs, setCanManageKegs] = useState(details.can_manage_kegs);
   const [snusIsTrue, setSnusIsTrue] = useState(details.snus_is_true);
+  const [accountTier, setAccountTier] = useState<"free" | "premium">(details.account_tier);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -60,6 +62,7 @@ export default function MemberAdminActions({
           email,
           username: editedUsername,
           membershipStatus: role,
+          accountTier,
           canManageKegs,
           snusIsTrue,
         }),
@@ -133,6 +136,17 @@ export default function MemberAdminActions({
                 {membershipLabel(status)}
               </option>
             ))}
+          </select>
+        </label>
+        <label className="block text-sm font-medium text-white/80">
+          Plan tier
+          <select
+            value={accountTier}
+            onChange={(event) => setAccountTier(event.target.value === "premium" ? "premium" : "free")}
+            className="mt-2 w-full rounded-lg border border-white/20 bg-black/40 p-3 text-white"
+          >
+            <option value="free">Free</option>
+            <option value="premium">Premium (manual grant)</option>
           </select>
         </label>
         <label className="flex items-center gap-3 rounded-lg border border-white/10 bg-black/20 p-4 text-sm text-white/80">

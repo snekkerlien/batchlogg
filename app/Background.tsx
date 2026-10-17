@@ -1,5 +1,7 @@
 "use client";
 
+import FermentationBubbles from "./components/FermentationBubbles";
+
 export default function Background({
   children,
   background = "/background3.png", // default
@@ -32,8 +34,10 @@ export default function Background({
         }}
       />
 
+      <FermentationBubbles variant="viewport" count={14} />
+
       {/* Innhold */}
-      <div className="relative min-h-screen bg-black/40">
+      <div className="relative z-[1] min-h-screen bg-black/40">
         {children}
       </div>
     </div>

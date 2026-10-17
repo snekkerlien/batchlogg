@@ -20,6 +20,11 @@ import {
   type InventoryItem,
   type RecipeInventoryRequirement,
 } from "@/lib/inventory/recipeInventory";
+import {
+  parseRecipeAdditions,
+  type AdditionItem,
+} from "@/lib/recipes/additions";
+import RecipeAdditiveFields from "@/app/my-recipes/new/RecipeAdditiveFields";
 
 type InventoryUsage = {
   inventory_item_id: string;
@@ -239,16 +244,6 @@ export function BatchInventoryProvider({
           type="hidden"
           name="secondary_notes"
           value={typeof recipe?.secondary_notes === "string" ? recipe.secondary_notes : ""}
-        />
-        <input
-          type="hidden"
-          name="had_secondary"
-          value={
-            recipe?.had_secondary === true ||
-            Boolean(recipe?.secondary_additions || recipe?.secondary_notes)
-              ? "true"
-              : "false"
-          }
         />
         {error && (
           <p role="alert" className="rounded-lg border border-amber-400/40 bg-amber-950/40 p-3 text-sm text-amber-200">
@@ -837,9 +832,12 @@ export function InventoryAdditiveFields({
   if (!context) {
     throw new Error("Inventory additive fields must be inside BatchInventoryProvider");
   }
-  const [additives, setAdditives] = useState<BatchAdditive[]>([
-    { inventory_item_id: "", amount: "" },
-  ]);
+  const [additives, setAdditives] = useState<BatchAdditive[]>(() => {
+    const initial = parseRecipeAdditions(defaultValue);
+    return (initial.length ? initial : [{ name: "", amount: "", unit: "" }])
+      .map((item) => ({ inventory_item_id: "", amount: item.amount }));
+  });
+  const [appliedDefault, setAppliedDefault] = useState<string | null>(null);
   const items = context.items.filter((item) => item.category === "additives");
   const selectedAdditives = additives
     .map((additive) => ({
@@ -848,7 +846,9 @@ export function InventoryAdditiveFields({
     }))
     .filter((additive) => additive.item);
   const additiveText = selectedAdditives
-    .map(({ item, amount }) => `${item?.name}: ${amount} ${item?.unit}`)
+    .map(({ item, amount }) =>
+      amount.trim() ? `${item?.name}: ${amount} ${item?.unit}` : item?.name ?? ""
+    )
     .join("\n");
   const additiveUsage = additives.filter(
     (additive) => additive.inventory_item_id || additive.amount.trim()
@@ -862,15 +862,34 @@ export function InventoryAdditiveFields({
     );
   }
 
+  useEffect(() => {
+    if (!context.enabled || !context.loaded || appliedDefault === defaultValue) return;
+
+    const initial = parseRecipeAdditions(defaultValue);
+    setAdditives((initial.length ? initial : [{ name: "", amount: "", unit: "" }])
+      .map((addition: AdditionItem) => {
+        const matches = items.filter(
+          (item) => item.name.trim().toLocaleLowerCase() === addition.name.trim().toLocaleLowerCase()
+        );
+        const item = matches.length === 1 ? matches[0] : undefined;
+        const convertedAmount =
+          item && addition.unit.trim() && Number.isFinite(Number(addition.amount))
+            ? convertIngredientAmount(Number(addition.amount), addition.unit, item.unit)
+            : null;
+        return {
+          inventory_item_id: item?.id ?? "",
+          amount: convertedAmount === null
+            ? addition.unit.trim() && item
+              ? ""
+              : addition.amount
+            : String(convertedAmount),
+        };
+      }));
+    setAppliedDefault(defaultValue);
+  }, [appliedDefault, context.enabled, context.loaded, defaultValue, items]);
+
   if (!context.enabled) {
-    return (
-      <textarea
-        name="additives"
-        defaultValue={defaultValue}
-        placeholder="Optional additives, nutrients, salts, and other additions (water is not tracked)"
-        className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
-      />
-    );
+    return <RecipeAdditiveFields defaultValue={defaultValue} />;
   }
 
   return (

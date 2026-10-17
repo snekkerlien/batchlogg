@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
+import { premiumGateResponse } from "@/lib/auth/plan";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -56,6 +57,8 @@ export async function GET() {
   if (authError || !user) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
+  const accessDenied = await premiumGateResponse(serviceRole, user.id);
+  if (accessDenied) return accessDenied;
 
   const { data, error } = await serviceRole
     .from("shopping_list_items")
@@ -91,6 +94,8 @@ export async function POST(request: NextRequest) {
   }
 
   const { serviceRole } = supabaseServer();
+  const accessDenied = await premiumGateResponse(serviceRole, user.id);
+  if (accessDenied) return accessDenied;
   const validItems = items.filter(
     (item): item is NonNullable<typeof item> => item !== null
   );
@@ -167,6 +172,8 @@ export async function PATCH(request: NextRequest) {
   }
 
   const { serviceRole } = supabaseServer();
+  const accessDenied = await premiumGateResponse(serviceRole, user.id);
+  if (accessDenied) return accessDenied;
   const { data, error } = await serviceRole
     .from("shopping_list_items")
     .update(update)
@@ -189,6 +196,8 @@ export async function DELETE(request: NextRequest) {
   }
 
   const { serviceRole } = supabaseServer();
+  const accessDenied = await premiumGateResponse(serviceRole, user.id);
+  if (accessDenied) return accessDenied;
   const id = request.nextUrl.searchParams.get("id");
   if (id === null) {
     const { error } = await serviceRole

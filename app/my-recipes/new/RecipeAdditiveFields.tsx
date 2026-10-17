@@ -1,34 +1,27 @@
 "use client";
 
 import { useState } from "react";
-
-type RecipeAdditive = {
-  name: string;
-  amount: string;
-  unit: string;
-};
+import {
+  formatRecipeAdditions,
+  parseRecipeAdditions,
+  type AdditionItem,
+} from "@/lib/recipes/additions";
 
 export default function RecipeAdditiveFields({
   fieldName = "additives",
   itemLabel = "Additive",
+  defaultValue = "",
 }: {
   fieldName?: string;
   itemLabel?: string;
+  defaultValue?: string;
 }) {
-  const [additives, setAdditives] = useState<RecipeAdditive[]>([]);
-  const additiveText = additives
-    .map(({ name, amount, unit }) => {
-      const cleanName = name.trim();
-      if (!cleanName) return "";
-      const quantity = amount.trim()
-        ? `: ${amount.trim()}${unit.trim() ? ` ${unit.trim()}` : ""}`
-        : "";
-      return `${cleanName}${quantity}`;
-    })
-    .filter(Boolean)
-    .join("\n");
+  const [additives, setAdditives] = useState<AdditionItem[]>(() =>
+    parseRecipeAdditions(defaultValue)
+  );
+  const additiveText = formatRecipeAdditions(additives);
 
-  function updateAdditive(index: number, changes: Partial<RecipeAdditive>) {
+  function updateAdditive(index: number, changes: Partial<AdditionItem>) {
     setAdditives((current) =>
       current.map((additive, additiveIndex) =>
         additiveIndex === index ? { ...additive, ...changes } : additive

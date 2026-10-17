@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
 import MenuOverlay from "../MenuOverlay";
 import BackButton from "../BackButton";
@@ -83,6 +84,22 @@ export default function RecipeNotesPage({ params }: { params: { id: string } }) 
           title={recipe.name.charAt(0).toUpperCase() + recipe.name.slice(1)}
           subtitle="Full recipe details and brewer's notes."
         />
+        <div className="mb-6 text-center">
+          <Link
+            href={`/my-recipes/${encodeURIComponent(recipe.id)}/versions`}
+            className="text-sm font-semibold text-green-200 underline"
+          >
+            Recipe history and comparison
+          </Link>
+          <div className="mt-2 flex flex-wrap justify-center gap-4 text-sm">
+            <a href={`/api/recipes/${encodeURIComponent(recipe.id)}/export?format=json`} className="text-green-200 underline">
+              Export JSON
+            </a>
+            <a href={`/api/recipes/${encodeURIComponent(recipe.id)}/export?format=csv`} className="text-green-200 underline">
+              Export CSV
+            </a>
+          </div>
+        </div>
 
         {/* BASE VALUES OUTSIDE CARD */}
         <div className="space-y-2 mb-10 text-lg">

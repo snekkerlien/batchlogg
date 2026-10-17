@@ -30,6 +30,61 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+.fermentation-bubble-container {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.fermentation-bubble-container--viewport {
+  position: fixed;
+  z-index: 0;
+  inset: auto 0 0;
+  height: clamp(10rem, 32vh, 22rem);
+  --bubble-rise-distance: -360px;
+  background: linear-gradient(to top, rgb(255 255 255 / 3%), transparent 72%);
+}
+
+.fermentation-bubble {
+  position: absolute;
+  bottom: -8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, rgb(255 255 255 / 55%), rgb(210 230 230 / 18%) 70%);
+  filter: blur(1.2px);
+  box-shadow: 0 0 6px rgb(210 240 255 / 18%);
+  opacity: 0;
+  animation-name: fermentation-bubble-rise;
+  animation-duration: 2.5s;
+  animation-delay: 0s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@keyframes fermentation-bubble-rise {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.65);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.2;
+  }
+  65% {
+    opacity: 0.28;
+  }
+  100% {
+    transform: translate3d(var(--bubble-drift, 0px), var(--bubble-rise-distance, -180px), 0) scale(1.15);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fermentation-bubble {
+    animation-duration: 3.5s !important;
+  }
+}
+
 body.desktop-app a[href="/download-app"] {
   display: none !important;
 }

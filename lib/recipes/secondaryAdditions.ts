@@ -62,14 +62,14 @@ export function parseSecondaryAdditions(value: unknown): SecondaryAdditions {
 export function formatSecondaryAdditions(value: unknown): string {
   const additions = parseSecondaryAdditions(value);
   const lines = [
-    ...additions.fruits.flatMap(({ name, amount, unit }) =>
-      name.trim()
-        ? [`Fruit: ${name.trim()}${amount.trim() ? ` — ${amount.trim()}${unit.trim() ? ` ${unit.trim()}` : ""}` : ""}`]
-        : []
-    ),
     ...additions.additives.flatMap(({ name, amount, unit }) =>
       name.trim()
         ? [`${name.trim()}${amount.trim() ? ` — ${amount.trim()}${unit.trim() ? ` ${unit.trim()}` : ""}` : ""}`]
+        : []
+    ),
+    ...additions.fruits.flatMap(({ name, amount, unit }) =>
+      name.trim()
+        ? [`Fruit: ${name.trim()}${amount.trim() ? ` — ${amount.trim()}${unit.trim() ? ` ${unit.trim()}` : ""}` : ""}`]
         : []
     ),
   ];

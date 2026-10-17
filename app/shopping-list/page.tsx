@@ -59,6 +59,7 @@ export default function ShoppingListPage() {
   const [newAmount, setNewAmount] = useState("");
   const [newUnit, setNewUnit] = useState("");
   const [loading, setLoading] = useState(true);
+  const [premiumRequired, setPremiumRequired] = useState(false);
   const [busy, setBusy] = useState(false);
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
   const [error, setError] = useState("");
@@ -75,8 +76,15 @@ export default function ShoppingListPage() {
       return;
     }
 
-    const [listResponse, recipesResult, inventoryResult] = await Promise.all([
-      fetch("/api/shopping-list", { cache: "no-store", credentials: "include" }),
+    const listResponse = await fetch("/api/shopping-list", {
+      cache: "no-store",
+      credentials: "include",
+    });
+    if (listResponse.status === 403) {
+      setPremiumRequired(true);
+      return;
+    }
+    const [recipesResult, inventoryResult] = await Promise.all([
       supabaseBrowser
         .from("recipes")
         .select("*")
@@ -119,6 +127,21 @@ export default function ShoppingListPage() {
       active = false;
     };
   }, [load]);
+
+  if (premiumRequired) {
+    return (
+      <main className="min-h-screen px-4 py-10 text-white sm:px-6">
+        <div className="relative mx-auto max-w-3xl rounded-xl border border-white/10 bg-black/60 p-6 pt-16 text-center backdrop-blur-md sm:p-8">
+          <div className="absolute right-4 top-3"><MenuOverlay current="shopping-list" /></div>
+          <PageHeading title="Shopping list" subtitle="Plan ingredients for your next brew." />
+          <p className="text-white/75">The shopping list is part of Batchlogg Premium.</p>
+          <Link href="/premium" className="mt-5 inline-block rounded-lg bg-green-700 px-5 py-3 font-semibold hover:bg-green-600">
+            Explore Premium
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   async function addRecipeIngredients() {
     const recipe = recipes.find((item) => item.id === recipeId);

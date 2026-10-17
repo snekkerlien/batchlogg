@@ -7,6 +7,7 @@ import { getNextMotd } from "../../lib/motd/motdList";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
 import PageHeading from "@/app/components/PageHeading";
+import FermentationBubbles from "@/app/components/FermentationBubbles";
 
 
 interface KarType {
@@ -456,21 +457,7 @@ useEffect(() => {
             )}
             {/* ⭐ Only show bubbles when the vessel has an active batch */}
 {(k.status === "Aktiv" || k.status === "Sekundær") && (
-  <div className="bubble-container">
-    {[...Array(6)].map((_, i) => (
-      <span
-        key={i}
-        className="bubble"
-        style={{
-          left: `${(i * 37 + 11) % 100}%`,
-          animationDuration: `${2 + (i % 3)}s`,
-          animationDelay: `${((i * 7) % 20) / 10}s`,
-          width: `${4 + (i % 3) * 2}px`,
-          height: `${4 + (i % 3) * 2}px`,
-        }}
-      />
-    ))}
-  </div>
+  <FermentationBubbles />
 )}
 
 
@@ -542,21 +529,7 @@ useEffect(() => {
                   </svg>
                 </span>
                 {(vessel.status === "Aktiv" || vessel.status === "Sekundær") && (
-                  <div className="bubble-container">
-                    {[...Array(6)].map((_, index) => (
-                      <span
-                        key={index}
-                        className="bubble"
-                        style={{
-                          left: `${(index * 37 + 11) % 100}%`,
-                          animationDuration: `${2 + (index % 3)}s`,
-                          animationDelay: `${((index * 7) % 20) / 10}s`,
-                          width: `${4 + (index % 3) * 2}px`,
-                          height: `${4 + (index % 3) * 2}px`,
-                        }}
-                      />
-                    ))}
-                  </div>
+                  <FermentationBubbles />
                 )}
                 <span className="relative z-10 line-clamp-2 text-base font-bold leading-tight text-green-300">
                   {vessel.batchName ?? `Vessel ${vessel.nummer}`}
@@ -714,43 +687,6 @@ useEffect(() => {
         .animate-fadeIn {
           animation: fadeIn 0.4s ease-out;
         }
-          .bubble-container {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.bubble {
-  position: absolute;
-  bottom: -28px;
-  background: rgba(223, 228, 226, 0.28); /* tydelig, men ikke sterk */
-  border-radius: 50%;
-  filter: blur(1.2px); /* smooth, moderne */
-  animation-name: sleekRise;
-  animation-timing-function: linear; /* jevn hastighet */
-  animation-iteration-count: infinite;
-  opacity: 0;
-}
-
-@keyframes sleekRise {
-  0% {
-    transform: translateY(0) scale(0.8);
-    opacity: 0;
-  }
-  20% {
-    opacity: 0.45; /* subtil, men synlig */
-  }
-  60% {
-    opacity: 0.55; /* peak, men ikke for sterk */
-  }
-  100% {
-    transform: translateY(-150px) scale(1.05);
-    opacity: 0;
-  }
-}
-
       `}</style>
     </div>
   );

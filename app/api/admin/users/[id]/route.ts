@@ -3,6 +3,7 @@ import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
 import { isMembershipStatus } from "@/lib/auth/membership";
 import { writeAdminAuditEvent } from "@/lib/admin/auditLog";
+import { isPlanTier } from "@/lib/auth/plan";
 
 export const runtime = "nodejs";
 
@@ -48,6 +49,7 @@ export async function PATCH(
     !username ||
     username.length > 64 ||
     !isMembershipStatus(body.membershipStatus) ||
+    !isPlanTier(body.accountTier) ||
     typeof body.canManageKegs !== "boolean" ||
     typeof body.snusIsTrue !== "boolean"
   ) {
@@ -84,6 +86,8 @@ export async function PATCH(
     .update({
       username,
       membership_status: body.membershipStatus,
+      account_tier: body.accountTier,
+      premium_grant_source: body.accountTier === "premium" ? "manual" : null,
       can_manage_kegs: body.canManageKegs,
       snus_is_true: body.snusIsTrue,
     })
@@ -113,7 +117,8 @@ export async function PATCH(
       targetId: params.id,
       details: {
         membership_status: body.membershipStatus,
-        updated_fields: "email,username,membership_status,can_manage_kegs,snus_is_true",
+        account_tier: body.accountTier,
+        updated_fields: "email,username,membership_status,account_tier,can_manage_kegs,snus_is_true",
       },
     }))
   ) {

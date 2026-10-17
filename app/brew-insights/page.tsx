@@ -21,6 +21,12 @@ type Batch = {
   volume_l: number | string | null;
 };
 
+type SavedAnalyticsView = {
+  id: string;
+  name: string;
+  filters: { type?: string };
+};
+
 function finiteNumber(value: number | string | null) {
   if (value === null || value === "") return null;
   const number = Number(value);
@@ -45,6 +51,12 @@ export default function BrewInsightsPage() {
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [premiumRequired, setPremiumRequired] = useState(false);
+  const [selectedType, setSelectedType] = useState("All");
+  const [savedViews, setSavedViews] = useState<SavedAnalyticsView[]>([]);
+  const [viewName, setViewName] = useState("");
+  const [viewMessage, setViewMessage] = useState("");
+  const [savingView, setSavingView] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -59,13 +71,26 @@ export default function BrewInsightsPage() {
         return;
       }
 
-      const { data, error: batchesError } = await supabaseBrowser
-        .from("batches")
-        .select("id, name, type, status, startdato, finished_date, og, fg, abv, volume_l")
-        .eq("user_id", session.user.id)
-        .order("startdato", { ascending: false });
-      if (batchesError) throw batchesError;
-      if (active) setBatches(data ?? []);
+      const response = await fetch("/api/brew-insights", {
+        cache: "no-store",
+        credentials: "include",
+      });
+      const result: { batches?: Batch[]; error?: string } = await response.json();
+      if (response.status === 403) {
+        if (active) setPremiumRequired(true);
+        return;
+      }
+      if (!response.ok) throw new Error(result.error || "Could not load brewing insights");
+      if (active) setBatches(result.batches ?? []);
+
+      const viewsResponse = await fetch("/api/saved-analytics-views", {
+        credentials: "include",
+        cache: "no-store",
+      });
+      const viewsResult: { views?: SavedAnalyticsView[]; error?: string } =
+        await viewsResponse.json();
+      if (!viewsResponse.ok) throw new Error(viewsResult.error || "Could not load saved views");
+      if (active) setSavedViews(viewsResult.views ?? []);
     }
 
     load()
@@ -81,7 +106,9 @@ export default function BrewInsightsPage() {
     };
   }, [router]);
 
-  const completed = batches.filter(isFinished);
+  const visibleBatches =
+    selectedType === "All" ? batches : batches.filter((batch) => batch.type === selectedType);
+  const completed = visibleBatches.filter(isFinished);
   const durations = completed.flatMap((batch) => {
     if (!batch.startdato || !batch.finished_date) return [];
     const start = new Date(batch.startdato).getTime();
@@ -102,7 +129,7 @@ export default function BrewInsightsPage() {
   const avgAbv = abvValues.length
     ? abvValues.reduce((total, abv) => total + abv, 0) / abvValues.length
     : null;
-  const totalVolume = batches.reduce(
+  const totalVolume = visibleBatches.reduce(
     (total, batch) => total + (finiteNumber(batch.volume_l) ?? 0),
     0
   );
@@ -137,8 +164,82 @@ export default function BrewInsightsPage() {
       date: month,
       count: counts.get(monthKey(month)) ?? 0,
     }));
-  }, [batches]);
+  }, [visibleBatches]);
   const maxMonthly = Math.max(1, ...monthlyFinished.map((month) => month.count));
+  const attenuationValues = completed.flatMap((batch) => {
+    const og = finiteNumber(batch.og);
+    const fg = finiteNumber(batch.fg);
+    if (og === null || fg === null || og <= 1 || fg > og) return [];
+    return [((og - fg) / (og - 1)) * 100];
+  });
+  const averageAttenuation = attenuationValues.length
+    ? attenuationValues.reduce((sum, value) => sum + value, 0) / attenuationValues.length
+    : null;
+
+  async function saveAnalyticsView(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSavingView(true);
+    setViewMessage("");
+    try {
+      const response = await fetch("/api/saved-analytics-views", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: viewName, type: selectedType }),
+      });
+      const result: { view?: SavedAnalyticsView; error?: string } = await response.json();
+      if (!response.ok) throw new Error(result.error || "Could not save analytics view");
+      if (result.view) setSavedViews((current) => [result.view!, ...current]);
+      setViewName("");
+      setViewMessage("Analytics view saved.");
+    } catch (saveError) {
+      console.error("Could not save analytics view", saveError);
+      setViewMessage(saveError instanceof Error ? saveError.message : "Could not save view.");
+    } finally {
+      setSavingView(false);
+    }
+  }
+
+  async function deleteAnalyticsView(id: string) {
+    try {
+      const response = await fetch(`/api/saved-analytics-views?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const result: { error?: string } = await response.json();
+      if (!response.ok) throw new Error(result.error || "Could not delete saved view");
+      setSavedViews((current) => current.filter((view) => view.id !== id));
+    } catch (deleteError) {
+      console.error("Could not delete analytics view", deleteError);
+      setViewMessage(deleteError instanceof Error ? deleteError.message : "Could not delete view.");
+    }
+  }
+
+  function downloadCsv() {
+    const rows = [
+      ["Batch", "Type", "Status", "Started", "Finished", "OG", "FG", "ABV", "Volume"],
+      ...visibleBatches.map((batch) => [
+        batch.name ?? "",
+        batch.type ?? "",
+        batch.status ?? "",
+        batch.startdato ?? "",
+        batch.finished_date ?? "",
+        batch.og ?? "",
+        batch.fg ?? "",
+        batch.abv ?? "",
+        batch.volume_l ?? "",
+      ]),
+    ];
+    const csv = rows
+      .map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(","))
+      .join("\r\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "batchlogg-brewing-insights.csv";
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <main className="min-h-screen px-4 py-10 text-white sm:px-6">
@@ -154,10 +255,15 @@ export default function BrewInsightsPage() {
           subtitle="Private trends from the batches you’ve logged."
         />
 
-        {error && <p role="alert" className="mb-5 rounded-lg bg-red-950/50 p-3 text-center text-red-200">{error}</p>}
-        {loading ? (
+        {premiumRequired ? (
+          <div className="rounded-xl border border-green-400/20 bg-green-500/10 p-6 text-center">
+            <p className="text-white/80">Brewing insights are part of Batchlogg Premium.</p>
+            <a href="/premium" className="mt-4 inline-block rounded-lg bg-green-700 px-5 py-3 font-semibold hover:bg-green-600">Explore Premium</a>
+          </div>
+        ) : error && <p role="alert" className="mb-5 rounded-lg bg-red-950/50 p-3 text-center text-red-200">{error}</p>}
+        {!premiumRequired && loading ? (
           <p className="py-12 text-center text-white/60">Loading your brewing history…</p>
-        ) : batches.length === 0 ? (
+        ) : !premiumRequired && batches.length === 0 ? (
           <div className="rounded-xl border border-white/10 bg-white/5 p-6 text-center">
             <p className="text-white/70">Log a batch to start building your brewing insights.</p>
             <button
@@ -168,13 +274,73 @@ export default function BrewInsightsPage() {
               Go to dashboard
             </button>
           </div>
-        ) : (
+        ) : !premiumRequired ? (
           <>
-            <section aria-label="Brewing summary" className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Metric label="Batches logged" value={batches.length.toString()} />
+            <section className="mt-8 rounded-xl border border-white/10 bg-white/5 p-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="text-sm text-white/70">
+                  Analyze batch type
+                  <select
+                    value={selectedType}
+                    onChange={(event) => setSelectedType(event.target.value)}
+                    className="mt-1 w-full rounded-lg border border-white/20 bg-black/40 p-3 text-white"
+                  >
+                    <option value="All">All batch types</option>
+                    {[...new Set(batches.map((batch) => batch.type).filter((type): type is string => Boolean(type)))].sort().map((type) => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-sm text-white/70">
+                  Saved analytics view
+                  <select
+                    value=""
+                    onChange={(event) => {
+                      const view = savedViews.find((item) => item.id === event.target.value);
+                      if (view) setSelectedType(view.filters.type || "All");
+                    }}
+                    className="mt-1 w-full rounded-lg border border-white/20 bg-black/40 p-3 text-white"
+                  >
+                    <option value="">Choose a saved view</option>
+                    {savedViews.map((view) => <option key={view.id} value={view.id}>{view.name}</option>)}
+                  </select>
+                </label>
+              </div>
+              <form onSubmit={saveAnalyticsView} className="mt-3 flex flex-wrap gap-2">
+                <input
+                  required
+                  maxLength={80}
+                  value={viewName}
+                  onChange={(event) => setViewName(event.target.value)}
+                  placeholder="Name this view"
+                  className="min-w-0 flex-1 rounded-lg border border-white/20 bg-black/40 p-3 text-white"
+                />
+                <button disabled={savingView} className="rounded-lg bg-green-800 px-4 py-2 font-semibold disabled:opacity-50">
+                  {savingView ? "Saving…" : "Save view"}
+                </button>
+                <button type="button" onClick={downloadCsv} className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold hover:bg-white/20">
+                  Export CSV
+                </button>
+              </form>
+              {savedViews.length > 0 && (
+                <ul className="mt-3 flex flex-wrap gap-2">
+                  {savedViews.map((view) => (
+                    <li key={view.id} className="flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-xs text-white/70">
+                      {view.name}
+                      <button type="button" onClick={() => void deleteAnalyticsView(view.id)} aria-label={`Delete ${view.name}`} className="text-red-300">×</button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {viewMessage && <p role="status" className="mt-2 text-sm text-white/70">{viewMessage}</p>}
+            </section>
+
+            <section aria-label="Brewing summary" className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
+              <Metric label="Batches logged" value={visibleBatches.length.toString()} />
               <Metric label="Finished batches" value={completed.length.toString()} />
               <Metric label="Average final ABV" value={avgAbv === null ? "—" : `${avgAbv.toFixed(1)}%`} />
               <Metric label="Average time to finish" value={avgDuration === null ? "—" : `${avgDuration.toFixed(0)} days`} />
+              <Metric label="Average attenuation" value={averageAttenuation === null ? "—" : `${averageAttenuation.toFixed(1)}%`} />
             </section>
 
             <section className="mt-8 rounded-xl border border-white/10 bg-white/5 p-4 sm:p-6">
@@ -258,7 +424,7 @@ export default function BrewInsightsPage() {
               </ul>
             </section>
           </>
-        )}
+        ) : null}
       </div>
     </main>
   );

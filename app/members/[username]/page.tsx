@@ -15,6 +15,7 @@ import { membershipLabel } from "@/lib/auth/membership";
 import ProfileOverview, { ProfileAchievements } from "@/app/components/ProfileOverview";
 import { Qty } from "@/app/components/Units";
 import MemberAdminActions, { type MemberAdminDetails } from "./MemberAdminActions";
+import FermentationBubbles from "@/app/components/FermentationBubbles";
 
 
 export default function ProfileDetailPage({ params }: { params: { username: string } }) {
@@ -34,6 +35,7 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
     username: string;
     avatar_url: string | null;
     membership_status: string | null;
+    account_tier: string | null;
   } | null>(null);
   const [canViewContent, setCanViewContent] = useState(false);
   const [canManageUsers, setCanManageUsers] = useState(false);
@@ -201,7 +203,10 @@ const secondary = batchesRaw
           />
           <h1 className="text-2xl font-bold">{name}</h1>
           <p className="          text-sm font-semibold text-white/70">
-                      {membershipLabel(privateProfile.membership_status)}
+            {membershipLabel(privateProfile.membership_status)}
+          </p>
+          <p className="text-sm font-semibold text-green-200">
+            {privateProfile.account_tier === "premium" ? "Premium" : "Free"} tier
           </p>
           {privateProfile.allow_friend_requests && (
             <div className="mt-2 flex flex-wrap justify-center gap-3">
@@ -411,7 +416,17 @@ const secondary = batchesRaw
   }
 />
 
-<MembershipStatus status={profile.membership_status} />
+<MembershipStatus
+  status={profile.membership_status}
+  tier={profile.account_tier}
+/>
+{profile.account_tier === "premium" && profile.profile_accent_color && (
+  <div
+    aria-hidden="true"
+    className="mx-auto mb-6 h-1 w-24 rounded-full"
+    style={{ backgroundColor: profile.profile_accent_color }}
+  />
+)}
 
 {!isOwner && (
   <div className="mb-6 flex justify-center">
@@ -478,7 +493,7 @@ const secondary = batchesRaw
 {profileStats && (
   <ProfileOverview stats={profileStats} />
 )}
-{canViewContent && profile.is_public && profile.featured_recipe_id && (() => {
+{canViewContent && profile.is_public && profile.account_tier === "premium" && profile.featured_recipe_id && (() => {
   const featuredRecipe = recipes.find((recipe) => recipe.id === profile.featured_recipe_id);
   if (!featuredRecipe) return null;
   return (
@@ -507,21 +522,7 @@ const secondary = batchesRaw
                 className="relative border border-white/10 rounded-xl p-4 bg-white/5 w-32 h-32 flex flex-col items-center justify-center transition overflow-hidden hover:bg-white/10"
               >
                 {(k.status === "Primary" || k.status === "Secondary") && (
-                  <div className="bubble-container">
-                    {[...Array(12)].map((_, i) => (
-                      <span
-                        key={i}
-                        className="bubble"
-                        style={{
-                          left: `${Math.random() * 100}%`,
-                          animationDuration: `${2 + Math.random() * 3}s`,
-                          animationDelay: `${Math.random() * 2}s`,
-                          width: `${4 + Math.random() * 6}px`,
-                          height: `${4 + Math.random() * 6}px`,
-                        }}
-                      />
-                    ))}
-                  </div>
+                  <FermentationBubbles count={12} />
                 )}
 
                 <span
@@ -693,7 +694,7 @@ const secondary = batchesRaw
 
             {/* Shared fields */}
             {r.additives && (
-              <p><strong>Additives:</strong><br />{r.additives}</p>
+              <p className="whitespace-pre-line"><strong>Additives:</strong><br />{r.additives}</p>
             )}
 
             {r.full_process && (
@@ -741,46 +742,6 @@ const secondary = batchesRaw
     Their vessels and recipes are private.
   </p>
 )}
-
-        {/* ⭐ BUBBLE CSS */}
-        <style jsx>{`
-          .bubble-container {
-            position: absolute;
-            inset: 0;
-            overflow: hidden;
-            pointer-events: none;
-            z-index: 1;
-          }
-
-          .bubble {
-            position: absolute;
-            bottom: -28px;
-            background: rgba(223, 228, 226, 0.28);
-            border-radius: 50%;
-            filter: blur(1.2px);
-            animation-name: sleekRise;
-            animation-timing-function: linear;
-            animation-iteration-count: infinite;
-            opacity: 0;
-          }
-
-          @keyframes sleekRise {
-            0% {
-              transform: translateY(0) scale(0.8);
-              opacity: 0;
-            }
-            20% {
-              opacity: 0.45;
-            }
-            60% {
-              opacity: 0.55;
-            }
-            100% {
-              transform: translateY(-150px) scale(1.05);
-              opacity: 0;
-            }
-          }
-        `}</style>
 
       </div>
     </main>

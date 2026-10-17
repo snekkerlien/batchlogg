@@ -56,7 +56,7 @@ export async function createBatch(formData: FormData) {
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("use_inventory_for_batches")
+    .select("use_inventory_for_batches, account_tier")
     .eq("id", userId)
     .maybeSingle();
   if (profileError || !profile) {
@@ -1022,7 +1022,7 @@ ${notes}
     batch = data;
   }
 
-  if (!useInventory) {
+  if (!useInventory && profile.account_tier === "premium") {
     // SG reading
     await supabase.from("sg_readings").insert({
       batch_id: batch.id,

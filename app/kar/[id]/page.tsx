@@ -20,6 +20,9 @@ import { translateOldRecipe } from "@/lib/translateOldRecipe";
 import { Qty, UnitInput, UnitSymbol, useUnits } from "@/app/components/Units";
 import BatchEditTypeFields from "./BatchEditTypeFields";
 import { formatSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
+import RecipeSecondaryFields from "@/app/my-recipes/new/RecipeSecondaryFields";
+import FermentationSchedule from "./FermentationSchedule";
+import VesselActivity from "./VesselActivity";
 
 const BatchSGChart = dynamic(
   () => import("@/app/components/BatchSGChart"),
@@ -90,6 +93,7 @@ export default function KarPage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(true);
   const [openEdit, setOpenEdit] = useState(false);
   const [sgReadings, setSgReadings] = useState<any[]>([]);
+  const [sgPremiumRequired, setSgPremiumRequired] = useState(false);
   const [openSG, setOpenSG] = useState(false);
   const [sgValue, setSgValue] = useState("");
   const [sgError, setSgError] = useState("");
@@ -225,14 +229,34 @@ export default function KarPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
   if (!activeBatch) return;
-
-  supabase
-    .from("sg_readings")
-    .select("*")
-    .eq("batch_id", activeBatch.id)
-    .order("created_at", { ascending: true })
-    .then(({ data }) => setSgReadings(data ?? []));
-}, [activeBatch]);
+    let active = true;
+    fetch(`/api/sg?batchId=${encodeURIComponent(activeBatch.id)}`, {
+      credentials: "include",
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        const result: { readings?: any[]; error?: string } = await response.json();
+        if (response.status === 403) {
+          if (active) {
+            setSgPremiumRequired(true);
+            setSgReadings([]);
+          }
+          return;
+        }
+        if (!response.ok) throw new Error(result.error || "Could not load SG readings");
+        if (active) {
+          setSgPremiumRequired(false);
+          setSgReadings(result.readings ?? []);
+        }
+      })
+      .catch((error) => {
+        console.error("Could not load specific gravity readings", error);
+        if (active) setSgError("SG readings could not be loaded.");
+      });
+    return () => {
+      active = false;
+    };
+  }, [activeBatch]);
 
 
   if (loading) {
@@ -297,21 +321,28 @@ async function saveSG() {
   setSavingSG(true);
   setSgError("");
   try {
-    const { error } = await supabase.from("sg_readings").insert({
-      batch_id: activeBatch.id,
-      sg: value,
+    const response = await fetch("/api/sg", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ batchId: activeBatch.id, sg: value }),
     });
-    if (error) throw error;
+    const result: { error?: string } = await response.json();
+    if (response.status === 403) setSgPremiumRequired(true);
+    if (!response.ok) throw new Error(result.error || "Could not save SG reading");
 
-    const { data, error: readingsError } = await supabase
-      .from("sg_readings")
-      .select("*")
-      .eq("batch_id", activeBatch.id)
-      .order("created_at", { ascending: true });
-    if (readingsError) throw readingsError;
+    const readingsResponse = await fetch(
+      `/api/sg?batchId=${encodeURIComponent(activeBatch.id)}`,
+      { credentials: "include", cache: "no-store" }
+    );
+    const readingsResult: { readings?: any[]; error?: string } =
+      await readingsResponse.json();
+    if (!readingsResponse.ok) {
+      throw new Error(readingsResult.error || "Could not load SG readings");
+    }
 
     setSgValue("");
-    setSgReadings(data ?? []);
+    setSgReadings(readingsResult.readings ?? []);
   } catch (error) {
     console.error("Could not save specific gravity reading", error);
     setSgError("Could not save this reading. Please try again.");
@@ -419,6 +450,7 @@ const sharingSection = isOwner ? (
 )}
 
 {sharingSection}
+{canContribute && <VesselActivity karId={kar.id} />}
 
 {showQR && (
   <div
@@ -622,22 +654,13 @@ const sharingSection = isOwner ? (
 
             <BatchEditTypeFields batch={activeBatch} />
 
-            <div>
-              <label className="mb-1 block font-semibold">Secondary additions</label>
-              <textarea
-                name="secondary_additions"
-                defaultValue={formatSecondaryAdditions(activeBatch.secondary_additions)}
-                className="min-h-24 w-full rounded border border-white/20 bg-black/40 p-3"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block font-semibold">Secondary notes</label>
-              <textarea
-                name="secondary_notes"
-                defaultValue={activeBatch.secondary_notes ?? ""}
-                className="min-h-24 w-full rounded border border-white/20 bg-black/40 p-3"
-              />
-            </div>
+            <RecipeSecondaryFields
+              defaultValue={activeBatch.secondary_additions}
+              defaultNotes={activeBatch.secondary_notes}
+              defaultEnabled
+              showToggle={false}
+              includeHadSecondaryField={false}
+            />
 
             <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
               Save changes
@@ -864,16 +887,10 @@ const sharingSection = isOwner ? (
           <input type="hidden" name="batch_id" value={activeBatch.id} />
           <input type="hidden" name="kar_id" value={kar.id} />
 
-          <textarea
-            name="secondary_additions"
-            placeholder="Secondary additions"
-            className="p-3 rounded bg-black/40 border border-white/20"
-          />
-
-          <textarea
-            name="secondary_notes"
-            placeholder="Secondary notes"
-            className="p-3 rounded bg-black/40 border border-white/20"
+          <RecipeSecondaryFields
+            defaultEnabled
+            showToggle={false}
+            includeHadSecondaryField={false}
           />
 
           <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
@@ -890,7 +907,14 @@ const sharingSection = isOwner ? (
 
            {hasActive && canContribute && (
   <div id="sg-log" className="scroll-mt-6 bg-white/5 border border-white/10 rounded-lg p-4 mt-6 mb-6">
-    <button
+               {sgPremiumRequired ? (
+                 <div className="text-center">
+                   <p className="text-white/80">SG readings and development history are part of Premium.</p>
+                   <a href="/premium" className="mt-3 inline-block text-green-200 underline">Explore Premium</a>
+                 </div>
+               ) : (
+                 <>
+               <button
       type="button"
       onClick={() => setOpenSG(!openSG)}
       className="w-full flex items-center justify-between font-semibold text-green-300 cursor-pointer"
@@ -971,7 +995,13 @@ const sharingSection = isOwner ? (
         )}
         </div>
     </div>
+      </>
+    )}
   </div>
+)}
+
+{hasActive && canContribute && (
+  <FermentationSchedule batchId={activeBatch.id} />
 )}
 
 {/* Finish batch under Rack to secondary */}

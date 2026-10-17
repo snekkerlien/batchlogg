@@ -66,6 +66,7 @@ export default async function UsersPage() {
       avatar_url: profile?.avatar_url ?? null,
       is_public: profile?.is_public ?? false,
       membership_status: profile?.membership_status ?? "member",
+      account_tier: profile?.account_tier === "premium" ? "premium" : "free",
     };
   });
 
@@ -142,6 +143,9 @@ export default async function UsersPage() {
                     </p>
                     <p className="mt-1 text-sm capitalize text-green-200/75">
                       Role: {membershipLabel(u.membership_status)}
+                    </p>
+                    <p className="mt-1 text-sm text-green-200">
+                      Tier: {u.account_tier === "premium" ? "Premium" : "Free"}
                     </p>
                   </div>
                   <span

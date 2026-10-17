@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
   for (const candidate of usernames) {
     const result = await serviceRole
       .from("profiles")
-      .select("id, username, avatar_url, is_public, allow_friend_requests, membership_status, award_winning_brewer, profile_banner, featured_recipe_id")
+      .select("id, username, avatar_url, is_public, allow_friend_requests, membership_status, account_tier, profile_accent_color, award_winning_brewer, profile_banner, featured_recipe_id")
       .eq("username", candidate)
       .maybeSingle();
 
@@ -122,6 +122,7 @@ export async function GET(request: NextRequest) {
           username: profile.username,
           avatar_url: profile.avatar_url,
           membership_status: profile.membership_status,
+          account_tier: profile.account_tier,
         },
       },
       { status: 403 }
@@ -199,6 +200,7 @@ export async function GET(request: NextRequest) {
     email: string;
     can_manage_kegs: boolean;
     snus_is_true: boolean;
+    account_tier: string;
     restrictions: {
       user_id: string;
       restriction_type: "mute" | "ban";
@@ -216,7 +218,7 @@ export async function GET(request: NextRequest) {
       serviceRole.auth.admin.getUserById(profile.id),
       serviceRole
         .from("profiles")
-        .select("can_manage_kegs, snus_is_true")
+        .select("can_manage_kegs, snus_is_true, account_tier")
         .eq("id", profile.id)
         .single(),
       serviceRole
@@ -237,6 +239,7 @@ export async function GET(request: NextRequest) {
       email: targetUser.user.email ?? "",
       can_manage_kegs: targetProfile.can_manage_kegs === true,
       snus_is_true: targetProfile.snus_is_true === true,
+      account_tier: targetProfile.account_tier,
       restrictions: restrictions ?? [],
     };
   }
@@ -274,8 +277,9 @@ export async function PATCH(request: NextRequest) {
   }
 
   if (!Object.prototype.hasOwnProperty.call(body, "profileBanner") ||
-    !Object.prototype.hasOwnProperty.call(body, "featuredRecipeId")) {
-    return NextResponse.json({ error: "Both profile showcase fields are required" }, { status: 400 });
+    !Object.prototype.hasOwnProperty.call(body, "featuredRecipeId") ||
+    !Object.prototype.hasOwnProperty.call(body, "profileAccentColor")) {
+    return NextResponse.json({ error: "All profile showcase fields are required" }, { status: 400 });
   }
   const banner =
     typeof body.profileBanner === "string" ? body.profileBanner.trim() : null;
@@ -283,15 +287,44 @@ export async function PATCH(request: NextRequest) {
     typeof body.featuredRecipeId === "string" && body.featuredRecipeId.length > 0
       ? body.featuredRecipeId
       : null;
+  const profileAccentColor =
+    typeof body.profileAccentColor === "string" && body.profileAccentColor
+      ? body.profileAccentColor
+      : null;
   if (
     (body.profileBanner !== null &&
       (typeof body.profileBanner !== "string" || body.profileBanner.trim().length > 280)) ||
     (body.featuredRecipeId !== null &&
       typeof body.featuredRecipeId !== "string") ||
+    (body.profileAccentColor !== null &&
+      (typeof body.profileAccentColor !== "string" ||
+        !/^#[0-9a-fA-F]{6}$/.test(body.profileAccentColor))) ||
     (featuredRecipeId !== null &&
       !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(featuredRecipeId))
   ) {
     return NextResponse.json({ error: "Invalid profile showcase settings" }, { status: 400 });
+  }
+  if (featuredRecipeId || profileAccentColor) {
+    const { data: currentProfile, error: currentProfileError } = await serviceRole
+      .from("profiles")
+      .select("account_tier, featured_recipe_id, profile_accent_color")
+      .eq("id", user.id)
+      .single();
+    if (currentProfileError) {
+      console.error("Could not verify profile showcase access", currentProfileError);
+      return NextResponse.json({ error: "Could not verify profile showcase access" }, { status: 500 });
+    }
+    const isFree = currentProfile.account_tier !== "premium";
+    if (
+      isFree &&
+      ((featuredRecipeId && currentProfile.featured_recipe_id !== featuredRecipeId) ||
+        (profileAccentColor && currentProfile.profile_accent_color !== profileAccentColor))
+    ) {
+      return NextResponse.json(
+        { error: "Profile recipe featuring and accent customization are Premium features.", upgradeUrl: "/premium" },
+        { status: 403 }
+      );
+    }
   }
   if (featuredRecipeId) {
     const { data: recipe, error } = await serviceRole
@@ -318,6 +351,7 @@ export async function PATCH(request: NextRequest) {
     .update({
       profile_banner: banner || null,
       featured_recipe_id: featuredRecipeId,
+      profile_accent_color: profileAccentColor,
     })
     .eq("id", user.id);
   if (error) {

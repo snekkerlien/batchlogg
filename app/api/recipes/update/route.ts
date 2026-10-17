@@ -2,6 +2,8 @@
     import { cookies } from "next/headers";
     import { createServerClient } from "@supabase/ssr";
     import { calcIBU, calcDryHopIBU, calcEBC } from "@/lib/brewing/beerCalculators";
+    import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
+    import { hasPremiumAccess } from "@/lib/auth/plan";
 
 
     export const runtime = "nodejs";
@@ -41,6 +43,9 @@
 
         const body = await req.json();
         const { id, ...fields } = body;
+        const changeNote =
+            typeof fields.changeNote === "string" ? fields.changeNote.trim() : null;
+        delete fields.changeNote;
         const beerSubtype = fields.beer_subtype;
         const kitUrl = fields.kit_url;
         delete fields.beer_subtype;
@@ -206,6 +211,45 @@
         fields.abv = (ogNum - fgNum) * 131.25;
     }
     }
+        const { data: previousRecipe, error: previousRecipeError } = await supabase
+        .from("recipes")
+        .select("*")
+        .eq("id", id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+        if (previousRecipeError) {
+            return NextResponse.json(
+                { error: "Could not load the current recipe", details: previousRecipeError.message },
+                { status: 500 }
+            );
+        }
+        if (!previousRecipe) {
+            return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
+        }
+
+        const { serviceRole } = supabaseServer();
+        if (await hasPremiumAccess(serviceRole, user.id)) {
+            const { data: latestVersion, error: versionLookupError } = await serviceRole
+                .from("recipe_versions")
+                .select("version_number")
+                .eq("recipe_id", id)
+                .order("version_number", { ascending: false })
+                .limit(1)
+                .maybeSingle();
+            if (versionLookupError) throw versionLookupError;
+
+            const { error: versionInsertError } = await serviceRole
+                .from("recipe_versions")
+                .insert({
+                    recipe_id: id,
+                    user_id: user.id,
+                    version_number: (latestVersion?.version_number ?? 0) + 1,
+                    recipe_snapshot: previousRecipe,
+                    change_note: changeNote || null,
+                });
+            if (versionInsertError) throw versionInsertError;
+        }
+
         const { error } = await supabase
         .from("recipes")
         .update(fields)

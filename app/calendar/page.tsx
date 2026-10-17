@@ -66,6 +66,7 @@ export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState(() => dateKey(new Date()));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [premiumRequired, setPremiumRequired] = useState(false);
 
   const loadCalendar = useCallback(async () => {
     const {
@@ -88,6 +89,10 @@ export default function CalendarPage() {
       reminders?: CalendarReminder[];
       error?: string;
     } = await response.json();
+    if (response.status === 403) {
+      setPremiumRequired(true);
+      return;
+    }
     if (!response.ok) throw new Error(result.error || "Could not load calendar");
     setBatches(result.batches ?? []);
     setReminders(result.reminders ?? []);
@@ -187,6 +192,13 @@ export default function CalendarPage() {
           title="Brew calendar"
           subtitle="See batch milestones and scheduled reminders in one place."
         />
+        {!premiumRequired && !loading && (
+          <div className="mb-5 text-center">
+            <a href="/api/calendar/export" className="text-sm font-semibold text-green-200 underline">
+              Export calendar for external apps (.ics)
+            </a>
+          </div>
+        )}
 
         <section aria-label="Calendar" className="mt-8">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -224,14 +236,21 @@ export default function CalendarPage() {
             </h2>
           </div>
 
-          {error && (
+          {premiumRequired ? (
+            <div className="rounded-xl border border-green-400/20 bg-green-500/10 p-6 text-center">
+              <p className="text-white/80">The brew calendar is part of Batchlogg Premium.</p>
+              <Link href="/premium" className="mt-4 inline-block rounded-lg bg-green-700 px-5 py-3 font-semibold hover:bg-green-600">
+                Explore Premium
+              </Link>
+            </div>
+          ) : error ? (
             <div role="alert" className="mb-4 rounded-lg border border-red-500/40 bg-red-950/40 p-4 text-center">
               <p>{error}</p>
               <button type="button" onClick={() => void loadCalendar()} className="mt-2 underline">
                 Try again
               </button>
             </div>
-          )}
+          ) : null}
 
           <div className="grid grid-cols-7 overflow-hidden rounded-lg border border-white/10">
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((weekday) => (
@@ -296,11 +315,11 @@ export default function CalendarPage() {
               year: "numeric",
             })}
           </h2>
-          {loading ? (
+          {!premiumRequired && loading ? (
             <p className="mt-3 text-sm text-white/60">Loading calendar…</p>
-          ) : selectedEvents.length === 0 ? (
+          ) : !premiumRequired && selectedEvents.length === 0 ? (
             <p className="mt-3 text-sm text-white/60">No batch milestones or reminders scheduled.</p>
-          ) : (
+          ) : !premiumRequired ? (
             <ul className="mt-3 space-y-2">
               {selectedEvents.map((event) => (
                 <li key={event.id}>
@@ -314,7 +333,7 @@ export default function CalendarPage() {
                 </li>
               ))}
             </ul>
-          )}
+          ) : null}
         </section>
 
         <div className="mt-4 flex flex-wrap justify-center gap-4 text-xs text-white/65">

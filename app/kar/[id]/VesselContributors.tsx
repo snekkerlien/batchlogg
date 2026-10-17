@@ -7,6 +7,7 @@ type Friend = { id: string; username: string };
 
 export default function VesselContributors({ karId }: { karId: string }) {
   const [contributors, setContributors] = useState<Contributor[]>([]);
+  const [canShare, setCanShare] = useState<boolean | null>(null);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -23,10 +24,11 @@ export default function VesselContributors({ karId }: { karId: string }) {
         credentials: "include",
         cache: "no-store",
       });
-      const result: { contributors?: Contributor[]; error?: string } =
+      const result: { contributors?: Contributor[]; canShare?: boolean; error?: string } =
         await response.json();
       if (!response.ok) throw new Error(result.error ?? "Could not load contributors.");
       setContributors(result.contributors ?? []);
+      setCanShare(result.canShare === true);
     } catch (loadError) {
       console.error("Could not load vessel contributors", loadError);
       setError(
@@ -76,7 +78,7 @@ export default function VesselContributors({ karId }: { karId: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: friend.id }),
       });
-      const result: { contributor?: Contributor; error?: string } =
+      const result: { contributor?: Contributor; error?: string; activityWarning?: string } =
         await response.json();
       if (!response.ok) throw new Error(result.error ?? "Could not add contributor.");
       const addedContributor = result.contributor;
@@ -86,7 +88,7 @@ export default function VesselContributors({ karId }: { karId: string }) {
       ) {
         setContributors((current) => [...current, addedContributor]);
       }
-      setMessage("Contributor added.");
+      setMessage(result.activityWarning ?? "Contributor added.");
     } catch (addError) {
       console.error("Could not add vessel contributor", addError);
       setError(
@@ -107,12 +109,12 @@ export default function VesselContributors({ karId }: { karId: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: contributor.id }),
       });
-      const result: { error?: string } = await response.json();
+      const result: { error?: string; activityWarning?: string } = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Could not remove contributor.");
       setContributors((current) =>
         current.filter((currentContributor) => currentContributor.id !== contributor.id)
       );
-      setMessage("Contributor removed.");
+      setMessage(result.activityWarning ?? "Contributor removed.");
     } catch (removeError) {
       console.error("Could not remove vessel contributor", removeError);
       setError(
@@ -180,7 +182,14 @@ export default function VesselContributors({ karId }: { karId: string }) {
         <h3 className="mb-2 text-sm font-semibold text-zinc-200">
           Friends
         </h3>
-        {friendsLoading ? (
+        {canShare === null ? (
+          <p className="text-sm text-zinc-400">Loading sharing access…</p>
+        ) : !canShare ? (
+          <p className="text-sm text-white/70">
+            Vessel collaboration is a Premium feature.{" "}
+            <a href="/premium" className="text-green-200 underline">Explore Premium</a>
+          </p>
+        ) : friendsLoading ? (
           <p className="text-sm text-zinc-400">Loading friends…</p>
         ) : friends.length === 0 ? (
           <p className="text-sm text-zinc-400">

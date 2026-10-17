@@ -208,7 +208,7 @@ batch = translateOldRecipe(batch);
           </div>
         )}
 
-        <p><strong>Additives:</strong><br />{batch.additives || "None"}</p>
+        <p className="whitespace-pre-line"><strong>Additives:</strong><br />{batch.additives || "None"}</p>
         <p><strong>Full process:</strong><br />{batch.full_process || "No process described"}</p>
         <p><strong>Notes:</strong><br />{batch.notes || "No notes"}</p>
       </>
@@ -245,7 +245,7 @@ batch = translateOldRecipe(batch);
         )}
 
         <p><strong>Total boil time:</strong> {batch.boil_time || "Unknown"} min</p>
-        <p><strong>Additives:</strong><br />{batch.additives || "None"}</p>
+        <p className="whitespace-pre-line"><strong>Additives:</strong><br />{batch.additives || "None"}</p>
         <p><strong>Full process:</strong><br />{batch.full_process || "No process described"}</p>
         <p><strong>Notes:</strong><br />{batch.notes || "No notes"}</p>
       </>
@@ -265,7 +265,7 @@ batch = translateOldRecipe(batch);
 
         <p><strong>Boil time:</strong> {batch.boil_time || "Unknown"} min</p>
         <p><strong>Honey:</strong> <Qty kind="kg" value={batch.honey_amount} fallback="?" /></p>
-        <p><strong>Additives:</strong><br />{batch.additives || "None"}</p>
+        <p className="whitespace-pre-line"><strong>Additives:</strong><br />{batch.additives || "None"}</p>
         <p><strong>Full process:</strong><br />{batch.full_process || "No process described"}</p>
         <p><strong>Notes:</strong><br />{batch.notes || "No notes"}</p>
       </>
@@ -278,7 +278,7 @@ batch = translateOldRecipe(batch);
       <>
         <p><strong>Juice type:</strong> {batch.juice_type || "Unknown"}</p>
         <p><strong>Sugar added:</strong> <Qty kind="kg" value={batch.sugar_amount} fallback="?" /></p>
-        <p><strong>Additives:</strong><br />{batch.additives || "None"}</p>
+        <p className="whitespace-pre-line"><strong>Additives:</strong><br />{batch.additives || "None"}</p>
         <p><strong>Full process:</strong><br />{batch.full_process || "No process described"}</p>
         <p><strong>Notes:</strong><br />{batch.notes || "No notes"}</p>
       </>
@@ -305,7 +305,7 @@ batch = translateOldRecipe(batch);
           </div>
         )}
 
-        <p><strong>Additives:</strong><br />{batch.additives || "None"}</p>
+        <p className="whitespace-pre-line"><strong>Additives:</strong><br />{batch.additives || "None"}</p>
         <p><strong>Notes:</strong><br />{batch.notes || "No notes"}</p>
       </>
     )}
