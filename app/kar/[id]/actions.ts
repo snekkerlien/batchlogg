@@ -11,6 +11,7 @@ import {
 } from "@/lib/brewing/beerCalculators";
 import { convertIngredientAmount } from "@/lib/inventory/convertIngredientAmount";
 import { parseSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
+import { hasPremiumAccess } from "@/lib/auth/plan";
 
 
 
@@ -1525,8 +1526,37 @@ function parseJsonStrings(formData: FormData, field: string): string[] {
   return parsed;
 }
 
+type SGReadingChange =
+  | { type: "updated"; id: string; previousSg: number }
+  | { type: "inserted"; id: string };
+
+async function rollbackSGReadingChange(
+  serviceRole: ReturnType<typeof supabaseServer>["serviceRole"],
+  batchId: string,
+  change: SGReadingChange | null
+) {
+  if (!change) return;
+
+  const rollback =
+    change.type === "updated"
+      ? await serviceRole
+          .from("sg_readings")
+          .update({ sg: change.previousSg })
+          .eq("id", change.id)
+          .eq("batch_id", batchId)
+      : await serviceRole
+          .from("sg_readings")
+          .delete()
+          .eq("id", change.id)
+          .eq("batch_id", batchId);
+
+  if (rollback.error) {
+    console.error("Could not roll back SG reading after batch update failed", rollback.error);
+  }
+}
+
 export async function updateBatch(formData: FormData) {
-  const { supabase } = supabaseServer();
+  const { supabase, serviceRole } = supabaseServer();
 
   const batchId = formData.get("batch_id") as string;
   const karId = formData.get("kar_id") as string;
@@ -1558,7 +1588,7 @@ export async function updateBatch(formData: FormData) {
 
   const { data: batch, error: batchLookupError } = await supabase
     .from("batches")
-    .select("id, type, fg, dry_hops")
+    .select("id, user_id, type, fg, dry_hops, og")
     .eq("id", batchId)
     .eq("aktivt_kar", karId)
     .maybeSingle();
@@ -1740,6 +1770,52 @@ export async function updateBatch(formData: FormData) {
   const notes = formData.get("notes");
   const secondary_additions = formData.get("secondary_additions");
   const secondary_notes = formData.get("secondary_notes");
+
+  const { data: firstReading, error: readingLookupError } = await serviceRole
+    .from("sg_readings")
+    .select("id, sg")
+    .eq("batch_id", batchId)
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (readingLookupError) {
+    throw new Error(`Could not load the first SG reading: ${readingLookupError.message}`);
+  }
+
+  let sgReadingChange: SGReadingChange | null = null;
+
+  if (firstReading) {
+    const { data: updatedReading, error: readingUpdateError } = await serviceRole
+      .from("sg_readings")
+      .update({ sg: og })
+      .eq("id", firstReading.id)
+      .eq("batch_id", batchId)
+      .select("id")
+      .maybeSingle();
+    if (readingUpdateError) {
+      throw new Error(`Could not update the first SG reading: ${readingUpdateError.message}`);
+    }
+    if (!updatedReading) {
+      throw new Error("Could not update the first SG reading because access was denied");
+    }
+    sgReadingChange = {
+      type: "updated",
+      id: firstReading.id,
+      previousSg: Number(firstReading.sg),
+    };
+  } else if (await hasPremiumAccess(serviceRole, batch.user_id)) {
+    const { data: insertedReading, error: readingInsertError } = await serviceRole
+      .from("sg_readings")
+      .insert({ batch_id: batchId, sg: og, created_at: startdato })
+      .select("id")
+      .single();
+    if (readingInsertError) {
+      throw new Error(`Could not add the initial SG reading: ${readingInsertError.message}`);
+    }
+    sgReadingChange = { type: "inserted", id: insertedReading.id };
+  }
+
   const { data, error } = await supabase
     .from("batches")
     .update({
@@ -1765,10 +1841,13 @@ export async function updateBatch(formData: FormData) {
     .maybeSingle();
 
   if (error) {
+    await rollbackSGReadingChange(serviceRole, batchId, sgReadingChange);
     throw new Error(`Could not update batch: ${error.message}`);
   }
-  if (!data) throw new Error("Could not update batch because access was denied");
+  if (!data) {
+    await rollbackSGReadingChange(serviceRole, batchId, sgReadingChange);
+    throw new Error("Could not update batch because access was denied");
+  }
 
   revalidatePath(`/kar/${karId}`);
-  redirect(`/kar/${karId}`);
 }

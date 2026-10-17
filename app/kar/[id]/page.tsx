@@ -87,11 +87,14 @@ export default function KarPage({ params }: { params: { id: string } }) {
   const [user, setUser] = useState<any>(null);
   const [kar, setKar] = useState<any>(null);
   const [isContributor, setIsContributor] = useState(false);
+  const [hasSharedContributors, setHasSharedContributors] = useState(false);
   const [activeBatch, setActiveBatch] = useState<any>(null);
   const [historyBatch, setHistoryBatch] = useState<any>(null);
   const [notes, setNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [openEdit, setOpenEdit] = useState(false);
+  const [savingBatch, setSavingBatch] = useState(false);
+  const [editBatchError, setEditBatchError] = useState("");
   const [sgReadings, setSgReadings] = useState<any[]>([]);
   const [sgPremiumRequired, setSgPremiumRequired] = useState(false);
   const [openSG, setOpenSG] = useState(false);
@@ -155,6 +158,34 @@ export default function KarPage({ params }: { params: { id: string } }) {
         }
         setIsContributor(!!data);
       });
+  }, [kar, user]);
+
+  useEffect(() => {
+    if (!kar || !user || kar.user_id !== user.id) {
+      setHasSharedContributors(false);
+      return;
+    }
+
+    let active = true;
+    fetch(`/api/kar/${encodeURIComponent(kar.id)}/contributors`, {
+      credentials: "include",
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        const result: { contributors?: unknown[]; error?: string } = await response.json();
+        if (!response.ok) {
+          throw new Error(result.error || "Could not load vessel contributors");
+        }
+        if (active) setHasSharedContributors((result.contributors?.length ?? 0) > 0);
+      })
+      .catch((error) => {
+        console.error("Could not check whether vessel is shared", error);
+        if (active) setHasSharedContributors(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, [kar, user]);
 
   useEffect(() => {
@@ -311,6 +342,22 @@ export default function KarPage({ params }: { params: { id: string } }) {
 
   const hasHistory = !!historyBatch;
 
+  async function saveBatchChanges(formData: FormData) {
+    setSavingBatch(true);
+    setEditBatchError("");
+    try {
+      await Actions.updateBatch(formData);
+      setOpenEdit(false);
+      window.location.reload();
+    } catch (error) {
+      console.error("Could not save batch changes", error);
+      setEditBatchError(
+        error instanceof Error ? error.message : "Could not save batch changes."
+      );
+      setSavingBatch(false);
+    }
+  }
+
 async function saveSG() {
   const value = Number(sgValue);
   if (!Number.isFinite(value) || value <= 0 || !activeBatch) {
@@ -387,7 +434,10 @@ const sharingSection = isOwner ? (
     </button>
     {openSharing && (
       <div className="mt-4">
-        <VesselContributors karId={kar.id} />
+        <VesselContributors
+          karId={kar.id}
+          onSharingChange={setHasSharedContributors}
+        />
       </div>
     )}
   </div>
@@ -450,7 +500,6 @@ const sharingSection = isOwner ? (
 )}
 
 {sharingSection}
-{canContribute && <VesselActivity karId={kar.id} />}
 
 {showQR && (
   <div
@@ -623,7 +672,7 @@ const sharingSection = isOwner ? (
       {/* Edit form */}
       {openEdit && (
         <div className="p-4 bg-white/5 border border-white/10 rounded-lg mb-4">
-          <form action={Actions.updateBatch} className="flex flex-col gap-4">
+          <form action={saveBatchChanges} className="flex flex-col gap-4">
             <input type="hidden" name="batch_id" value={activeBatch.id} />
             <input type="hidden" name="kar_id" value={kar.id} />
 
@@ -662,8 +711,11 @@ const sharingSection = isOwner ? (
               includeHadSecondaryField={false}
             />
 
-            <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
-              Save changes
+            {editBatchError && (
+              <p role="alert" className="text-sm text-amber-300">{editBatchError}</p>
+            )}
+            <button disabled={savingBatch} className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold disabled:opacity-50">
+              {savingBatch ? "Saving…" : "Save changes"}
             </button>
           </form>
         </div>
@@ -762,7 +814,7 @@ const sharingSection = isOwner ? (
       {/* Edit form */}
       {openEdit && (
         <div className="p-4 bg-white/5 border border-white/10 rounded-lg mb-4">
-          <form action={Actions.updateBatch} className="flex flex-col gap-4">
+          <form action={saveBatchChanges} className="flex flex-col gap-4">
             <input type="hidden" name="batch_id" value={activeBatch.id} />
             <input type="hidden" name="kar_id" value={kar.id} />
       
@@ -803,8 +855,11 @@ const sharingSection = isOwner ? (
 
             <BatchEditTypeFields batch={activeBatch} />
 
-            <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
-              Save changes
+            {editBatchError && (
+              <p role="alert" className="text-sm text-amber-300">{editBatchError}</p>
+            )}
+            <button disabled={savingBatch} className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold disabled:opacity-50">
+              {savingBatch ? "Saving…" : "Save changes"}
             </button>
           </form>
         </div>
@@ -1000,10 +1055,6 @@ const sharingSection = isOwner ? (
   </div>
 )}
 
-{hasActive && canContribute && (
-  <FermentationSchedule batchId={activeBatch.id} />
-)}
-
 {/* Finish batch under Rack to secondary */}
 {canContribute && hasActive && (
   <div className="bg-white/5 border border-white/10 rounded-lg p-4 mt-6">
@@ -1063,7 +1114,6 @@ const sharingSection = isOwner ? (
     </div>
   </div>
 )}
-
 
 {/* Cancel batch */}
 {canContribute && hasActive && (
@@ -1160,17 +1210,26 @@ const sharingSection = isOwner ? (
   </div>
 )}
 
+{hasActive && canContribute && (
+  <FermentationSchedule batchId={activeBatch.id} />
+)}
+
 {hasActive && isOwner && (
   <BatchReminders key={activeBatch.id} batchId={activeBatch.id} />
 )}
 
 {hasActive && (
-  <KarNotesClient
-    batchId={activeBatch.id}
-    karId={kar.id}
-    userId={user.id}
-    notes={notes}
-  />
+  <>
+    {(isContributor || hasSharedContributors) && (
+      <VesselActivity karId={kar.id} />
+    )}
+    <KarNotesClient
+      batchId={activeBatch.id}
+      karId={kar.id}
+      userId={user.id}
+      notes={notes}
+    />
+  </>
 )}
   </div>
     </main>

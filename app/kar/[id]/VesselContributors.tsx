@@ -5,7 +5,13 @@ import { useCallback, useEffect, useState } from "react";
 type Contributor = { id: string; username: string };
 type Friend = { id: string; username: string };
 
-export default function VesselContributors({ karId }: { karId: string }) {
+export default function VesselContributors({
+  karId,
+  onSharingChange,
+}: {
+  karId: string;
+  onSharingChange?: (isShared: boolean) => void;
+}) {
   const [contributors, setContributors] = useState<Contributor[]>([]);
   const [canShare, setCanShare] = useState<boolean | null>(null);
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -28,6 +34,7 @@ export default function VesselContributors({ karId }: { karId: string }) {
         await response.json();
       if (!response.ok) throw new Error(result.error ?? "Could not load contributors.");
       setContributors(result.contributors ?? []);
+      onSharingChange?.((result.contributors?.length ?? 0) > 0);
       setCanShare(result.canShare === true);
     } catch (loadError) {
       console.error("Could not load vessel contributors", loadError);
@@ -37,7 +44,7 @@ export default function VesselContributors({ karId }: { karId: string }) {
     } finally {
       setLoading(false);
     }
-  }, [karId]);
+  }, [karId, onSharingChange]);
 
   useEffect(() => {
     void loadContributors();
@@ -87,6 +94,7 @@ export default function VesselContributors({ karId }: { karId: string }) {
         !contributors.some((contributor) => contributor.id === addedContributor.id)
       ) {
         setContributors((current) => [...current, addedContributor]);
+        onSharingChange?.(true);
       }
       setMessage(result.activityWarning ?? "Contributor added.");
     } catch (addError) {
@@ -111,9 +119,11 @@ export default function VesselContributors({ karId }: { karId: string }) {
       });
       const result: { error?: string; activityWarning?: string } = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Could not remove contributor.");
-      setContributors((current) =>
-        current.filter((currentContributor) => currentContributor.id !== contributor.id)
+      const remainingContributors = contributors.filter(
+        (currentContributor) => currentContributor.id !== contributor.id
       );
+      setContributors(remainingContributors);
+      onSharingChange?.(remainingContributors.length > 0);
       setMessage(result.activityWarning ?? "Contributor removed.");
     } catch (removeError) {
       console.error("Could not remove vessel contributor", removeError);

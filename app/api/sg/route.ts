@@ -102,7 +102,8 @@ export async function GET(request: Request) {
     .from("sg_readings")
     .select("id, batch_id, sg, created_at")
     .in("batch_id", batchIds)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
   if (error) {
     console.error("Could not load SG readings", error);
     return NextResponse.json({ error: "Could not load SG readings" }, { status: 500 });

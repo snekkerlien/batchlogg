@@ -95,6 +95,44 @@ export function KarNotesClient({
         Notes & pictures
       </h3>
 
+      {/* ADD NEW NOTE */}
+      <h3 className="text-xl font-semibold mb-4">Add note</h3>
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4 mb-10">
+
+        <input type="hidden" name="batch_id" value={batchId} />
+        <input type="hidden" name="kar_id" value={karId} />
+        <input type="hidden" name="user_id" value={userId} />
+
+        <textarea
+          name="note"
+          value={noteText}
+          onChange={(e) => setNoteText(e.target.value)}
+          placeholder="Make a note..."
+          className="p-3 rounded bg-black/40 border border-white/20"
+        />
+
+        {/* IMAGE INPUT WITH PREVIEW */}
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleImageChange}
+          className="p-3 rounded bg-black/40 border border-white/20"
+        />
+
+        {imagePreview && (
+          <img
+            src={imagePreview}
+            alt="Preview"
+            className="rounded-lg border border-white/20 mt-2 max-h-80 object-contain"
+          />
+        )}
+
+        <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
+          Save note
+        </button>
+      </form>
+
       {/* SHOW NOTES */}
       <div className="flex flex-col gap-4 mb-10">
         {deleteError && (
@@ -154,43 +192,6 @@ export function KarNotesClient({
         ))}
       </div>
 
-      {/* ADD NEW NOTE */}
-      <h3 className="text-xl font-semibold mb-4">Add note</h3>
-
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-
-        <input type="hidden" name="batch_id" value={batchId} />
-        <input type="hidden" name="kar_id" value={karId} />
-        <input type="hidden" name="user_id" value={userId} />
-
-        <textarea
-          name="note"
-          value={noteText}
-          onChange={(e) => setNoteText(e.target.value)}
-          placeholder="Make a note..."
-          className="p-3 rounded bg-black/40 border border-white/20"
-        />
-
-        {/* IMAGE INPUT WITH PREVIEW */}
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleImageChange}
-          className="p-3 rounded bg-black/40 border border-white/20"
-        />
-
-        {imagePreview && (
-          <img
-            src={imagePreview}
-            alt="Preview"
-            className="rounded-lg border border-white/20 mt-2 max-h-80 object-contain"
-          />
-        )}
-
-        <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
-          Save note
-        </button>
-      </form>
       <ConfirmDialog
         open={pendingDelete !== null}
         title={pendingDelete?.isImage ? "Delete picture?" : "Delete note?"}

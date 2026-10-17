@@ -26,6 +26,7 @@ export default function BatchReminders({
   );
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [deleteError, setDeleteError] = useState("");
@@ -127,90 +128,115 @@ export default function BatchReminders({
 
   return (
     <section className="mt-6 mb-6 rounded-xl border border-white/10 bg-white/5 p-4">
-      <h2 className="text-xl font-semibold text-green-300">Batch reminders</h2>
-      <p className="mt-1 text-sm text-white/70">
-        Set a reminder for this batch. You’ll also be gently reminded if it goes
-        7 days without a gravity reading.
-      </p>
-
-      <form onSubmit={createReminder} className="mt-4 grid gap-3 sm:grid-cols-2">
-        <label className="flex flex-col gap-1 text-sm">
-          Reminder date and time
-          <input
-            type="datetime-local"
-            required
-            min={localDateTimeValue(new Date())}
-            value={remindAt}
-            onChange={(event) => setRemindAt(event.target.value)}
-            className="rounded-lg border border-white/20 bg-black/40 p-3 text-white"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-          What should we remind you about?
-          <input
-            type="text"
-            required
-            maxLength={300}
-            value={message}
-            onChange={(event) => setMessage(event.target.value)}
-            placeholder="For example, check gravity or prepare to bottle"
-            className="rounded-lg border border-white/20 bg-black/40 p-3 text-white"
-          />
-        </label>
-        <button
-          type="submit"
-          disabled={saving}
-          className="w-fit rounded-lg border border-green-500/50 bg-green-700/70 px-4 py-2 font-semibold hover:bg-green-700 disabled:opacity-50"
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        aria-expanded={open}
+        aria-controls="batch-reminders-content"
+        className="flex w-full items-center justify-between text-left text-xl font-semibold text-green-300"
+      >
+        Batch reminders
+        <span
+          aria-hidden="true"
+          className={`text-xl text-white transition-transform duration-300 ${
+            open ? "rotate-90" : "rotate-180"
+          }`}
         >
-          {saving ? "Saving…" : "Set reminder"}
-        </button>
-      </form>
+          ▶
+        </span>
+      </button>
+      <div
+        id="batch-reminders-content"
+        className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+          open ? "[grid-template-rows:1fr]" : "[grid-template-rows:0fr]"
+        }`}
+      >
+        <div className="overflow-hidden">
+          <p className="mt-1 text-sm text-white/70">
+            Set a reminder for this batch. You’ll also be gently reminded if it goes
+            7 days without a gravity reading.
+          </p>
 
-      {error && (
-        <p role="alert" className="mt-3 text-sm text-amber-300">
-          {error}
-        </p>
-      )}
+          <form onSubmit={createReminder} className="mt-4 grid gap-3 sm:grid-cols-2">
+            <label className="flex flex-col gap-1 text-sm">
+              Reminder date and time
+              <input
+                type="datetime-local"
+                required
+                min={localDateTimeValue(new Date())}
+                value={remindAt}
+                onChange={(event) => setRemindAt(event.target.value)}
+                className="rounded-lg border border-white/20 bg-black/40 p-3 text-white"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm sm:col-span-2">
+              What should we remind you about?
+              <input
+                type="text"
+                required
+                maxLength={300}
+                value={message}
+                onChange={(event) => setMessage(event.target.value)}
+                placeholder="For example, check gravity or prepare to bottle"
+                className="rounded-lg border border-white/20 bg-black/40 p-3 text-white"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={saving}
+              className="w-fit rounded-lg border border-green-500/50 bg-green-700/70 px-4 py-2 font-semibold hover:bg-green-700 disabled:opacity-50"
+            >
+              {saving ? "Saving…" : "Set reminder"}
+            </button>
+          </form>
 
-      <div className="mt-5 border-t border-white/10 pt-4">
-        <h3 className="font-semibold">Scheduled reminders</h3>
-        {loading ? (
-          <p className="mt-2 text-sm text-white/60">Loading reminders…</p>
-        ) : reminders.length === 0 ? (
-          <p className="mt-2 text-sm text-white/60">No reminders scheduled.</p>
-        ) : (
-          <ul className="mt-2 space-y-2">
-            {reminders.map((reminder) => (
-              <li
-                key={reminder.id}
-                className="flex flex-col gap-2 rounded-lg bg-black/20 p-3 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div>
-                  <p className="text-sm">{reminder.message}</p>
-                  <p className="mt-1 text-xs text-white/50">
-                    {reminder.type === "manual" ? "Scheduled" : "Gravity check"} ·{" "}
-                    {new Date(reminder.remind_at).toLocaleString("en-GB", {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    })}
-                  </p>
-                </div>
-                {reminder.type === "manual" && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDeleteError("");
-                      setReminderToDelete(reminder);
-                    }}
-                    className="w-fit rounded-lg border border-white/15 px-3 py-1.5 text-sm hover:bg-white/10"
+          {error && (
+            <p role="alert" className="mt-3 text-sm text-amber-300">
+              {error}
+            </p>
+          )}
+
+          <div className="mt-5 border-t border-white/10 pt-4">
+            <h3 className="font-semibold">Scheduled reminders</h3>
+            {loading ? (
+              <p className="mt-2 text-sm text-white/60">Loading reminders…</p>
+            ) : reminders.length === 0 ? (
+              <p className="mt-2 text-sm text-white/60">No reminders scheduled.</p>
+            ) : (
+              <ul className="mt-2 space-y-2">
+                {reminders.map((reminder) => (
+                  <li
+                    key={reminder.id}
+                    className="flex flex-col gap-2 rounded-lg bg-black/20 p-3 sm:flex-row sm:items-center sm:justify-between"
                   >
-                    Cancel
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
+                    <div>
+                      <p className="text-sm">{reminder.message}</p>
+                      <p className="mt-1 text-xs text-white/50">
+                        {reminder.type === "manual" ? "Scheduled" : "Gravity check"} ·{" "}
+                        {new Date(reminder.remind_at).toLocaleString("en-GB", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
+                      </p>
+                    </div>
+                    {reminder.type === "manual" && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDeleteError("");
+                          setReminderToDelete(reminder);
+                        }}
+                        className="w-fit rounded-lg border border-white/15 px-3 py-1.5 text-sm hover:bg-white/10"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
       </div>
 
       <ConfirmDialog

@@ -18,6 +18,7 @@ export default function FermentationSchedule({ batchId }: { batchId: string }) {
   const [notes, setNotes] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
   const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
   const [premiumRequired, setPremiumRequired] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -125,7 +126,28 @@ export default function FermentationSchedule({ batchId }: { batchId: string }) {
 
   return (
     <section className="mt-6 rounded-xl border border-white/10 bg-white/5 p-4">
-      <h3 className="mb-3 text-lg font-semibold text-green-200">Fermentation schedule</h3>
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between text-left font-semibold text-green-200"
+      >
+        Fermentation schedule
+        <span
+          aria-hidden="true"
+          className={`text-xl text-white transition-transform duration-300 ${
+            open ? "rotate-90" : "rotate-180"
+          }`}
+        >
+          ▶
+        </span>
+      </button>
+      <div
+        className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+          open ? "[grid-template-rows:1fr]" : "[grid-template-rows:0fr]"
+        }`}
+      >
+        <div className="overflow-hidden">
       {premiumRequired ? (
         <p className="text-sm text-white/75">
           Custom fermentation stages and reminders are Premium features.{" "}
@@ -209,6 +231,8 @@ export default function FermentationSchedule({ batchId }: { batchId: string }) {
         </>
       )}
       {error && <p role="alert" className="mt-3 text-sm text-red-300">{error}</p>}
+        </div>
+      </div>
     </section>
   );
 }
