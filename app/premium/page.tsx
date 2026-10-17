@@ -111,7 +111,6 @@ export default function PremiumPage() {
             "SG history and development charts",
             "Recipe version history and comparison",
             "Fermentation schedules and stage reminders",
-            "Advanced water chemistry and carbonation tools",
             "Shared vessels with richer collaboration",
             "Turn below-threshold inventory into shopping-list restock plans",
             "Featured public recipe and profile customization",
