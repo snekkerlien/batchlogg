@@ -34,6 +34,7 @@ function AuthorLink({ author }: { author: ForumAuthor }) {
         width={24}
         height={24}
         sizes="24px"
+        unoptimized
         className="h-6 w-6 rounded-full border border-white/20 object-cover"
       />
       <span>{author.username}</span>

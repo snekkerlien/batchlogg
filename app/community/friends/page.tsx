@@ -325,6 +325,7 @@ function PersonLink({ person }: { person: Person }) {
         width={40}
         height={40}
         sizes="40px"
+        unoptimized
         className="h-10 w-10 rounded-full border border-white/20 object-cover"
       />
       <span className="truncate font-medium">{person.username}</span>

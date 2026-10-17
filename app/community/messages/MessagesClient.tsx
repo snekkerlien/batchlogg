@@ -262,7 +262,7 @@ export default function MessagesPage() {
                 </button>
                 {peer && (
                   <div className="flex items-center gap-3">
-                    <Image src={peer.avatar_url || "/default-avatar.png"} alt="" width={40} height={40} sizes="40px" className="h-10 w-10 rounded-full object-cover" />
+                    <Image src={peer.avatar_url || "/default-avatar.png"} alt="" width={40} height={40} sizes="40px" unoptimized className="h-10 w-10 rounded-full object-cover" />
                     <h2 className="font-semibold">{peer.username}</h2>
                   </div>
                 )}
@@ -377,7 +377,7 @@ export default function MessagesPage() {
                       onClick={() => router.push(`/community/messages?peer_id=${conversation.id}`)}
                       className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-4 text-left hover:bg-white/10"
                     >
-                      <Image src={conversation.avatar_url || "/default-avatar.png"} alt="" width={48} height={48} sizes="48px" className="h-12 w-12 rounded-full object-cover" />
+                      <Image src={conversation.avatar_url || "/default-avatar.png"} alt="" width={48} height={48} sizes="48px" unoptimized className="h-12 w-12 rounded-full object-cover" />
                       <span className="min-w-0 flex-1">
                         <span className="block font-semibold">{conversation.username}</span>
                         <span className="block truncate text-sm text-white/60">

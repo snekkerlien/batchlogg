@@ -233,6 +233,7 @@ export default function AccountPage() {
             width={176}
             height={176}
             sizes="176px"
+            unoptimized
             className="w-44 h-44 rounded-full object-cover border border-white/20"
           />
           <button

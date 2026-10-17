@@ -149,6 +149,7 @@ export default function ProfilesList({
                   width={48}
                   height={48}
                   sizes="48px"
+                  unoptimized
                   className="w-12 h-12 rounded-full object-cover object-center overflow-hidden border border-white/20"
                 />
 

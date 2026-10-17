@@ -196,6 +196,7 @@ const secondary = batchesRaw
             width={80}
             height={80}
             sizes="80px"
+            unoptimized
             className="h-20 w-20 rounded-full border border-white/20 object-cover"
           />
           <h1 className="text-2xl font-bold">{name}</h1>
@@ -394,6 +395,7 @@ const secondary = batchesRaw
     width={176}
     height={176}
     sizes="176px"
+    unoptimized
     className="w-44 h-44 rounded-full object-cover object-center border border-white/20"
   />
 </div>
