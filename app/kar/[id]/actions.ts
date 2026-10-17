@@ -226,7 +226,6 @@ export async function createBatch(formData: FormData) {
   const secondaryNotesRaw = formData.get("secondary_notes");
   const secondary_notes =
     typeof secondaryNotesRaw === "string" ? secondaryNotesRaw : "";
-  const had_secondary = formData.get("had_secondary") === "true";
   const parsedSecondaryAdditions = parseSecondaryAdditions(secondary_additions);
 
   // Cider fields
@@ -950,7 +949,6 @@ ${notes}
       full_process,
       notes,
       oppskrift,
-      had_secondary,
       secondary_additions,
       secondary_notes,
 

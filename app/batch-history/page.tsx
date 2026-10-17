@@ -365,7 +365,9 @@ export default function BatchHistoryPage() {
                       </p>
                     )}
 
-                    {(batch.secondary_startdate || batch.had_secondary) && (
+                    {(batch.secondary_startdate ||
+                      batch.secondary_additions ||
+                      batch.secondary_notes) && (
                       <>
                         
                         {batch.secondary_startdate && (
