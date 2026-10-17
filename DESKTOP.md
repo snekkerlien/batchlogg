@@ -33,7 +33,7 @@ code signing and notarization, especially on macOS.
 
 ## Publishing downloads
 
-Push a version tag matching the app version, such as `desktop-v0.2.3`, to start
+Push a version tag matching the app version, such as `desktop-v2.0.0`, to start
 the GitHub Actions workflow. It builds signed Windows MSI/EXE installers and a
 universal macOS DMG plus `.app.tar.gz` updater bundle, then attaches them and an
 update manifest to a release in this repository. When the desktop app starts,

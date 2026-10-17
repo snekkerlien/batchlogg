@@ -193,6 +193,7 @@ function ForumImages({ images }: { images: ForumImage[] }) {
             width={640}
             height={384}
             sizes="(max-width: 640px) 100vw, 50vw"
+            unoptimized
             loading="lazy"
             className="max-h-96 w-full object-contain"
           />
