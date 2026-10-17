@@ -34,10 +34,6 @@ body.desktop-app a[href="/download-app"] {
   display: none !important;
 }
 
-body.desktop-app .public-explore-grid > .desktop-download-card {
-  display: none;
-}
-
 @media (min-width: 640px) {
   body.desktop-app .public-explore-grid > .desktop-contact-card {
     grid-column: 1 / -1;

@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import { deleteAvatar, saveAvatarUrl } from "./actions";
 import MenuOverlay from "../../components/MenuOverlay";
@@ -226,8 +227,12 @@ export default function AccountPage() {
               ? profile.username.charAt(0).toUpperCase() + profile.username.slice(1)
               : ""}
           </p>
-          <img
+          <Image
             src={profile.avatar_url || "/default-avatar.png"}
+            alt=""
+            width={176}
+            height={176}
+            sizes="176px"
             className="w-44 h-44 rounded-full object-cover border border-white/20"
           />
           <button

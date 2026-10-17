@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
 import {
@@ -9,7 +9,15 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+const TOPICS_PER_PAGE = 20;
+
+export async function GET(request: NextRequest) {
+  const requestedPage = Number(request.nextUrl.searchParams.get("page") ?? "1");
+  const topicId = request.nextUrl.searchParams.get("topic_id");
+  if (!Number.isInteger(requestedPage) || requestedPage < 1) {
+    return NextResponse.json({ error: "Invalid forum page" }, { status: 400 });
+  }
+
   const { supabase, serviceRole } = supabaseServer();
   const {
     data: { user },
@@ -22,10 +30,22 @@ export async function GET() {
   const role = user ? await getMembershipRole(supabase, user) : "member";
   const canModerate = hasPermission(role, "delete_reported_content");
 
-  const { data: topicRows, error: topicsError } = await serviceRole
+  let topicQuery = serviceRole
     .from("forum_topics")
-    .select("id, author_id, title, body, category, created_at, updated_at")
-    .order("created_at", { ascending: false });
+    .select("id, author_id, title, body, category, created_at, updated_at");
+  if (topicId) {
+    topicQuery = topicQuery.eq("id", topicId);
+  } else {
+    topicQuery = topicQuery
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: true })
+      .range(
+        (requestedPage - 1) * TOPICS_PER_PAGE,
+        requestedPage * TOPICS_PER_PAGE
+      );
+  }
+
+  const { data: topicRows, error: topicsError } = await topicQuery;
 
   if (topicsError) {
     console.error("Could not load forum topics", topicsError);
@@ -35,9 +55,10 @@ export async function GET() {
     );
   }
 
-  const topics = topicRows ?? [];
+  const hasMoreTopics = !topicId && (topicRows ?? []).length > TOPICS_PER_PAGE;
+  const topics = (topicRows ?? []).slice(0, TOPICS_PER_PAGE);
   if (topics.length === 0) {
-    return NextResponse.json({ topics: [], canModerate });
+    return NextResponse.json({ topics: [], canModerate, hasMore: false });
   }
 
   const { data: replyRows, error: repliesError } = await serviceRole
@@ -94,6 +115,12 @@ export async function GET() {
     reply,
     content: decodeForumContent(reply.body),
   }));
+  const repliesByTopic = new Map<string, typeof decodedReplies>();
+  for (const decodedReply of decodedReplies) {
+    const topicReplies = repliesByTopic.get(decodedReply.reply.topic_id) ?? [];
+    topicReplies.push(decodedReply);
+    repliesByTopic.set(decodedReply.reply.topic_id, topicReplies);
+  }
   const attachmentRefs = [
     ...decodedTopics.flatMap(({ content }) => content.attachments),
     ...decodedReplies.flatMap(({ content }) => content.attachments),
@@ -227,6 +254,7 @@ export async function GET() {
 
   return NextResponse.json({
     canModerate,
+    hasMore: hasMoreTopics,
     topics: decodedTopics.map(({ topic, content }) => {
       return {
         ...topic,
@@ -238,8 +266,7 @@ export async function GET() {
           .filter((image) => image !== null),
         attachments: content.attachments.map(attachmentFor),
         author: authorFor(topic.author_id),
-        replies: decodedReplies
-          .filter(({ reply }) => reply.topic_id === topic.id)
+        replies: (repliesByTopic.get(topic.id) ?? [])
           .map(({ reply, content: replyContent }) => {
             return {
               ...reply,

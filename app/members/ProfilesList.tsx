@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { membershipLabel } from "@/lib/auth/membership";
 import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
 
@@ -138,12 +139,16 @@ export default function ProfilesList({
                 }
                 className="flex flex-col items-center justify-center gap-3"
             >
-                <img
+                <Image
                   src={
                     p.avatar_url && p.avatar_url.length > 5
                       ? p.avatar_url
                       : "/default-avatar.png"
                   }
+                  alt=""
+                  width={48}
+                  height={48}
+                  sizes="48px"
                   className="w-12 h-12 rounded-full object-cover object-center overflow-hidden border border-white/20"
                 />
 

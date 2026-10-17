@@ -34,15 +34,18 @@ export async function GET() {
     return NextResponse.json({ error: "Could not load site updates" }, { status: 500 });
   }
 
-  return NextResponse.json({
-    changelog: changelog
-      ? {
-          version: changelog.version,
-          date: changelog.entry_date,
-          title: changelog.title,
-          body: changelog.body,
-        }
-      : null,
-    announcement: announcements ?? null,
-  });
+  return NextResponse.json(
+    {
+      changelog: changelog
+        ? {
+            version: changelog.version,
+            date: changelog.entry_date,
+            title: changelog.title,
+            body: changelog.body,
+          }
+        : null,
+      announcement: announcements ?? null,
+    },
+    { headers: { "Cache-Control": "public, max-age=30, stale-while-revalidate=60" } }
+  );
 }

@@ -44,7 +44,7 @@ export default function SiteAnnouncementBanner() {
 
     async function loadAnnouncement() {
       try {
-        const response = await fetch("/api/changelog", { cache: "no-store" });
+        const response = await fetch("/api/changelog");
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Could not load announcement");
         if (!active) return;
@@ -60,10 +60,15 @@ export default function SiteAnnouncementBanner() {
     }
 
     void loadAnnouncement();
-    const interval = window.setInterval(() => void loadAnnouncement(), 60_000);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") void loadAnnouncement();
+    };
+    const interval = window.setInterval(refreshWhenVisible, 5 * 60_000);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
     return () => {
       active = false;
       window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
   }, [loading, user?.id]);
 

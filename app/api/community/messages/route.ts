@@ -7,6 +7,17 @@ export const dynamic = "force-dynamic";
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+type MessageInboxSummary = {
+  peer_id: string;
+  latest_message_id: string;
+  latest_sender_id: string;
+  latest_recipient_id: string;
+  latest_body: string;
+  latest_created_at: string;
+  latest_read_at: string | null;
+  unread_count: number | string;
+};
+
 function pairFor(a: string, b: string) {
   return a < b ? [a, b] : [b, a];
 }
@@ -165,40 +176,42 @@ export async function GET(request: NextRequest) {
 
   const [
     { data: friends, error: friendsError },
-    { data: messages, error: messagesError },
+    { data: summaries, error: summariesError },
   ] = await Promise.all([
     serviceRole
       .from("profiles")
       .select("id, username, avatar_url")
       .in("id", friendIds)
       .order("username", { ascending: true }),
-    serviceRole
-      .from("community_messages")
-      .select("id, sender_id, recipient_id, body, created_at, read_at")
-      .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
-      .order("created_at", { ascending: false })
-      .limit(1000),
+    serviceRole.rpc("community_message_inbox_summaries", {
+      target_user_id: user.id,
+    }),
   ]);
-  if (friendsError || messagesError) {
-    console.error("Could not load message inbox", friendsError || messagesError);
+  if (friendsError || summariesError) {
+    console.error("Could not load message inbox", friendsError || summariesError);
     return NextResponse.json({ error: "Could not load inbox" }, { status: 500 });
   }
 
-  const byFriend = new Map<string, typeof messages>();
-  for (const message of messages ?? []) {
-    const friendId = message.sender_id === user.id ? message.recipient_id : message.sender_id;
-    if (!byFriend.has(friendId)) byFriend.set(friendId, []);
-    byFriend.get(friendId)?.push(message);
-  }
+  const summaryRows = (summaries ?? []) as MessageInboxSummary[];
+  const summaryByFriend = new Map(
+    summaryRows.map((summary) => [summary.peer_id, summary])
+  );
 
   const conversations = (friends ?? []).map((friend) => {
-      const thread = byFriend.get(friend.id) ?? [];
+      const summary = summaryByFriend.get(friend.id);
       return {
         ...friend,
-        latest: thread[0] ?? null,
-        unreadCount: thread.filter(
-          (message) => message.recipient_id === user.id && !message.read_at
-        ).length,
+        latest: summary
+          ? {
+              id: summary.latest_message_id,
+              sender_id: summary.latest_sender_id,
+              recipient_id: summary.latest_recipient_id,
+              body: summary.latest_body,
+              created_at: summary.latest_created_at,
+              read_at: summary.latest_read_at,
+            }
+          : null,
+        unreadCount: Number(summary?.unread_count ?? 0),
       };
     });
 

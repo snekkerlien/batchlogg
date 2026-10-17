@@ -1,12 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
-import BatchSGChart from "../components/BatchSGChart";
 import PageHeading from "../components/PageHeading";
 import { Qty } from "@/app/components/Units";
+
+const BatchSGChart = dynamic(
+  () => import("../components/BatchSGChart"),
+  { ssr: false, loading: () => <p className="text-sm text-white/60">Loading chart…</p> }
+);
 
 function hasTypeSpecificRecipe(batch: any) {
   return Boolean(
@@ -37,6 +44,7 @@ function getCurrentAbv(og: unknown, readings: Array<{ sg: unknown }>) {
 }
 
 export default function BatchHistoryPage() {
+  const router = useRouter();
 
   const [loading, setLoading] = useState(true);
   const [batches, setBatches] = useState<any[]>([]);
@@ -54,7 +62,7 @@ export default function BatchHistoryPage() {
       } = await supabaseBrowser.auth.getSession();
 
       if (!session) {
-        window.location.href = "/auth/login";
+        router.replace("/auth/login");
         return;
       }
 
@@ -506,9 +514,13 @@ export default function BatchHistoryPage() {
                             </p>
 
                             {n.note_type === "image" && n.image_url && (
-                              <img
+                              <Image
                                 src={n.image_url}
                                 alt="Batch note image"
+                                width={960}
+                                height={720}
+                                sizes="(max-width: 768px) 100vw, 768px"
+                                loading="lazy"
                                 className="rounded-lg mt-3"
                               />
                             )}

@@ -114,6 +114,14 @@ export async function downloadUserData() {
     .eq("user_id", userId);
   if (recipesError) throw new Error(`Could not export recipes: ${recipesError.message}`);
 
+  const { data: inventory, error: inventoryError } = await serviceRole
+    .from("inventory_items")
+    .select("*")
+    .eq("user_id", userId);
+  if (inventoryError) {
+    throw new Error(`Could not export inventory: ${inventoryError.message}`);
+  }
+
   const zip = new JSZip();
 
   zip.file(
@@ -134,6 +142,7 @@ export async function downloadUserData() {
   zip.file("batches.json", JSON.stringify(batches ?? [], null, 2));
   zip.file("kar.json", JSON.stringify(kar ?? [], null, 2));
   zip.file("recipes.json", JSON.stringify(recipes ?? [], null, 2));
+  zip.file("inventory.json", JSON.stringify(inventory ?? [], null, 2));
 
   const zipBase64 = await zip.generateAsync({ type: "base64" });
 

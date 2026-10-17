@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import PublicPageNavigation from "@/app/components/PublicPageNavigation";
+import PublicRecipeList from "./PublicRecipeList";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,6 +22,16 @@ type PublicRecipe = {
   abv: number | null;
   volume: number | null;
   created_at: string;
+  ingredients: unknown;
+  malts: unknown;
+  hops: unknown;
+  dry_hops: unknown;
+  fruits: unknown;
+  honey_type: string | null;
+  juice_type: string | null;
+  base_liquid: string | null;
+  yeast: string | null;
+  additives: string | null;
 };
 
 export default async function PublicRecipesPage() {
@@ -45,7 +55,9 @@ export default async function PublicRecipesPage() {
   if (authorIds.length > 0) {
     const { data: recipeRows, error: recipesError } = await serviceRole
       .from("recipes")
-      .select("id, user_id, name, type, og, abv, volume, created_at")
+      .select(
+        "id, user_id, name, type, og, abv, volume, created_at, ingredients, malts, hops, dry_hops, fruits, honey_type, juice_type, base_liquid, yeast, additives"
+      )
       .eq("is_public", true)
       .in("user_id", authorIds)
       .order("created_at", { ascending: false })
@@ -76,37 +88,12 @@ export default async function PublicRecipesPage() {
           </p>
         </header>
 
-        {publicRecipes.length > 0 ? (
-          <ul className="space-y-4">
-            {publicRecipes.map((recipe) => {
-              const username = authorsById.get(recipe.user_id);
-              if (!username) return null;
-              return (
-                <li key={recipe.id}>
-                  <Link
-                    href={`/members/${encodeURIComponent(username)}/recipes/${recipe.id}`}
-                    className="block rounded-xl border border-white/10 bg-white/5 p-5 transition hover:bg-white/10"
-                  >
-                    <h2 className="text-xl font-semibold">{recipe.name}</h2>
-                    <p className="mt-1 text-sm text-white/65">
-                      {recipe.type} · by {username}
-                    </p>
-                    <p className="mt-3 text-sm text-white/75">
-                      {recipe.og != null && <>OG {Number(recipe.og).toFixed(3)} · </>}
-                      {recipe.abv != null && <>ABV {Number(recipe.abv).toFixed(1)}% · </>}
-                      {recipe.volume != null && <>Volume {recipe.volume} L</>}
-                    </p>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
-          <p className="rounded-lg border border-white/10 bg-white/5 p-5 text-white/70">
-            No public recipes are available yet. Members can choose which
-            recipes to share from their recipe library.
-          </p>
-        )}
+        <PublicRecipeList
+          recipes={publicRecipes.flatMap((recipe) => {
+            const author = authorsById.get(recipe.user_id);
+            return author ? [{ ...recipe, author }] : [];
+          })}
+        />
       </div>
     </main>
   );

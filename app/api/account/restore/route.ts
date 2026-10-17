@@ -79,6 +79,7 @@ export async function POST(request: Request) {
   let kar: JsonRecord[];
   let batches: JsonRecord[];
   let recipes: JsonRecord[];
+  let inventory: JsonRecord[] = [];
 
   try {
     const zip = await JSZip.loadAsync(await uploadedFile.arrayBuffer());
@@ -88,6 +89,13 @@ export async function POST(request: Request) {
       readJsonFile(zip, "batches.json").then((value) => readRows(value, "batches.json")),
       readJsonFile(zip, "recipes.json").then((value) => readRows(value, "recipes.json")),
     ]);
+    const inventoryFile = zip.file("inventory.json");
+    if (inventoryFile) {
+      inventory = readRows(
+        await readJsonFile(zip, "inventory.json"),
+        "inventory.json"
+      );
+    }
 
     if (!isJsonRecord(metadata) || metadata.format_version !== 1) {
       return NextResponse.json(
@@ -104,6 +112,7 @@ export async function POST(request: Request) {
     { name: "kar", rows: kar },
     { name: "batches", rows: batches },
     { name: "recipes", rows: recipes },
+    { name: "inventory_items", rows: inventory },
   ] as const;
 
   let processed = 0;

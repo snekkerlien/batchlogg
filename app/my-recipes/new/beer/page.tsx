@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import * as Actions from "../../actions/createRecipe";
 import MenuOverlay from "../../MenuOverlay";
 import BackButton from "../../BackButton";
@@ -8,6 +9,7 @@ import { UnitInput, UnitSymbol, useUnits } from "../../../components/Units";
 import RecipeAdditiveFields from "../RecipeAdditiveFields";
 
 export default function NewBeerRecipePage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const { label } = useUnits();
   const [beerSubtype, setBeerSubtype] = useState("");
@@ -99,7 +101,7 @@ function removeDryHop(index: number) {
 
   // ✔ Alt OK → redirect
   if (result?.success === true) {
-    window.location.href = "/my-recipes";
+    router.push("/my-recipes");
     return;
   }
 }

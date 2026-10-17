@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
@@ -318,9 +319,12 @@ export default function FriendsPage() {
 function PersonLink({ person }: { person: Person }) {
   return (
     <Link href={`/members/${encodeURIComponent(person.username)}`} className="flex min-w-0 items-center gap-3">
-      <img
+      <Image
         src={person.avatar_url || "/default-avatar.png"}
         alt=""
+        width={40}
+        height={40}
+        sizes="40px"
         className="h-10 w-10 rounded-full border border-white/20 object-cover"
       />
       <span className="truncate font-medium">{person.username}</span>

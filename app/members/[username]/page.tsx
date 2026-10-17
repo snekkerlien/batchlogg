@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
 import MenuOverlay from "./MenuOverlay";
 import { useRouter } from "next/navigation";
@@ -185,13 +186,16 @@ const secondary = batchesRaw
     return (
       <main className="min-h-screen flex items-center justify-center px-6 text-white">
         <div className="flex flex-col items-center gap-3 rounded-xl border border-white/10 bg-black/60 px-8 py-8 text-center backdrop-blur-md">
-          <img
+          <Image
             src={
               privateProfile.avatar_url && privateProfile.avatar_url.length > 5
                 ? privateProfile.avatar_url
                 : "/default-avatar.png"
             }
             alt=""
+            width={80}
+            height={80}
+            sizes="80px"
             className="h-20 w-20 rounded-full border border-white/20 object-cover"
           />
           <h1 className="text-2xl font-bold">{name}</h1>
@@ -380,12 +384,16 @@ const secondary = batchesRaw
 
        {/* PROFILE AVATAR */}
 <div className="w-full flex justify-center mb-6">
-  <img
+  <Image
     src={
       profile.avatar_url && profile.avatar_url.length > 5
         ? profile.avatar_url
         : "/default-avatar.png"
     }
+    alt=""
+    width={176}
+    height={176}
+    sizes="176px"
     className="w-44 h-44 rounded-full object-cover object-center border border-white/20"
   />
 </div>

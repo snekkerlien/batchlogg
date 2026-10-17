@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
 import { getNextMotd } from "../../lib/motd/motdList";
@@ -77,6 +77,8 @@ export default function DashboardClient() {
   const [creatingKar, setCreatingKar] = useState(false);
   const [showDashboardInfo, setShowDashboardInfo] = useState(true);
   const [infoPreferenceLoaded, setInfoPreferenceLoaded] = useState(false);
+  const dashboardLoadInProgress = useRef(false);
+  const lastSilentDashboardLoad = useRef(0);
 
 useEffect(() => {
   try {
@@ -137,6 +139,15 @@ useEffect(() => {
 }
 
   async function loadDashboardData(silent = false) {
+    if (dashboardLoadInProgress.current) return;
+    if (
+      silent &&
+      Date.now() - lastSilentDashboardLoad.current < 15_000
+    ) {
+      return;
+    }
+    dashboardLoadInProgress.current = true;
+    if (silent) lastSilentDashboardLoad.current = Date.now();
     if (!silent) setLoading(true);
     setLoadError("");
 
@@ -175,6 +186,7 @@ useEffect(() => {
       console.error("Failed to load dashboard data", error);
       setLoadError("Could not load your dashboard. Please try again.");
     } finally {
+      dashboardLoadInProgress.current = false;
       setLoading(false);
     }
   }
@@ -386,8 +398,8 @@ useEffect(() => {
 
       <div className="flex flex-wrap justify-center gap-6">
         {kar.map((k) => (
+          <div key={k.id} className="flex w-32 flex-col items-center gap-1">
           <a
-            key={k.id}
             href={selectMode ? "#" : `/kar/${k.id}`}
             onClick={(e) => {
               if (selectMode) {
@@ -479,6 +491,7 @@ useEffect(() => {
                 : "Empty"}
             </span>
           </a>
+          </div>
         ))}
 
         {!selectMode && kar.length < maxVessels && (

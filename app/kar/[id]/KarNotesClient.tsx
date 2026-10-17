@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Image from "next/image";
 import { deleteNoteServer } from "./deleteNoteServer";
 import { deleteImageServer } from "./deleteImage";
 import { addNote } from "@/app/actions/addNote";
@@ -32,6 +33,11 @@ export function KarNotesClient({
     isImage: boolean;
   } | null>(null);
   const [deleteError, setDeleteError] = useState("");
+
+  useEffect(() => {
+    if (!imagePreview) return;
+    return () => URL.revokeObjectURL(imagePreview);
+  }, [imagePreview]);
 
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -114,9 +120,13 @@ export function KarNotesClient({
             )}
 
             {note.image_url && (
-              <img
+              <Image
                 src={note.image_url}
                 alt="Batch image"
+                width={960}
+                height={720}
+                sizes="(max-width: 768px) 100vw, 768px"
+                loading="lazy"
                 className="rounded-lg mt-2 border border-white/20 max-h-80 object-contain"
               />
             )}

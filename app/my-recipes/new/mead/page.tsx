@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import * as Actions from "../../actions/createRecipe";
 import MenuOverlay from "../../MenuOverlay";
 import BackButton from "../../BackButton";
@@ -9,6 +10,7 @@ import BaseLiquidField from "../../../components/BaseLiquidField";
 import RecipeAdditiveFields from "../RecipeAdditiveFields";
 
 export default function NewMeadRecipePage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -47,7 +49,7 @@ export default function NewMeadRecipePage() {
     }
 
     if (result?.success === true) {
-      window.location.href = "/my-recipes";
+      router.push("/my-recipes");
       return;
     }
   }

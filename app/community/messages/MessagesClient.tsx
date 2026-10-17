@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
@@ -114,6 +115,7 @@ export default function MessagesPage() {
     const selectedPeerId = peerId;
 
     async function refreshConversation() {
+      if (document.visibilityState !== "visible") return;
       try {
         await Promise.all([loadInbox(), loadConversation(selectedPeerId, true)]);
       } catch (refreshError) {
@@ -124,9 +126,11 @@ export default function MessagesPage() {
 
     const interval = window.setInterval(refreshConversation, 30_000);
     window.addEventListener("focus", refreshConversation);
+    document.addEventListener("visibilitychange", refreshConversation);
     return () => {
       window.clearInterval(interval);
       window.removeEventListener("focus", refreshConversation);
+      document.removeEventListener("visibilitychange", refreshConversation);
     };
   }, [loadConversation, loadInbox, peerId]);
 
@@ -258,7 +262,7 @@ export default function MessagesPage() {
                 </button>
                 {peer && (
                   <div className="flex items-center gap-3">
-                    <img src={peer.avatar_url || "/default-avatar.png"} alt="" className="h-10 w-10 rounded-full object-cover" />
+                    <Image src={peer.avatar_url || "/default-avatar.png"} alt="" width={40} height={40} sizes="40px" className="h-10 w-10 rounded-full object-cover" />
                     <h2 className="font-semibold">{peer.username}</h2>
                   </div>
                 )}
@@ -373,7 +377,7 @@ export default function MessagesPage() {
                       onClick={() => router.push(`/community/messages?peer_id=${conversation.id}`)}
                       className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-4 text-left hover:bg-white/10"
                     >
-                      <img src={conversation.avatar_url || "/default-avatar.png"} alt="" className="h-12 w-12 rounded-full object-cover" />
+                      <Image src={conversation.avatar_url || "/default-avatar.png"} alt="" width={48} height={48} sizes="48px" className="h-12 w-12 rounded-full object-cover" />
                       <span className="min-w-0 flex-1">
                         <span className="block font-semibold">{conversation.username}</span>
                         <span className="block truncate text-sm text-white/60">

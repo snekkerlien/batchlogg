@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import PublicPageNavigation from "@/app/components/PublicPageNavigation";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
 import PageHeading from "@/app/components/PageHeading";
@@ -27,9 +28,12 @@ interface ForumAuthor {
 function AuthorLink({ author }: { author: ForumAuthor }) {
   const content = (
     <>
-      <img
+      <Image
         src={author.avatar_url || "/default-avatar.png"}
         alt=""
+        width={24}
+        height={24}
+        sizes="24px"
         className="h-6 w-6 rounded-full border border-white/20 object-cover"
       />
       <span>{author.username}</span>
@@ -181,9 +185,12 @@ function ForumImages({ images }: { images: ForumImage[] }) {
           rel="noreferrer"
           className="block overflow-hidden rounded-lg border border-white/10"
         >
-          <img
+          <Image
             src={image.url}
             alt="Image attached to forum post"
+            width={640}
+            height={384}
+            sizes="(max-width: 640px) 100vw, 50vw"
             loading="lazy"
             className="max-h-96 w-full object-contain"
           />
@@ -355,6 +362,9 @@ async function cleanUpForumImages(images: ForumImage[]) {
 
 export default function CommunityForumPage() {
   const [topics, setTopics] = useState<ForumTopic[]>([]);
+  const [topicPage, setTopicPage] = useState(1);
+  const [hasMoreTopics, setHasMoreTopics] = useState(false);
+  const [loadingMoreTopics, setLoadingMoreTopics] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [canModerate, setCanModerate] = useState(false);
   const [pendingLikes, setPendingLikes] = useState<Set<string>>(new Set());
@@ -384,16 +394,56 @@ export default function CommunityForumPage() {
       ? topics
       : topics.filter((topic) => topic.category === selectedCategory);
 
-  const loadTopics = useCallback(async () => {
-    const response = await fetch("/api/community/forum", { cache: "no-store" });
+  const loadTopics = useCallback(async (linkedTopicId?: string) => {
+    const query = linkedTopicId
+      ? `?topic_id=${encodeURIComponent(linkedTopicId)}`
+      : "?page=1";
+    const response = await fetch(`/api/community/forum${query}`, { cache: "no-store" });
     if (!response.ok) {
       throw new Error(`Forum request failed (${response.status})`);
     }
 
-    const data: { topics: ForumTopic[]; canModerate?: boolean } = await response.json();
+    const data: {
+      topics: ForumTopic[];
+      canModerate?: boolean;
+      hasMore?: boolean;
+    } = await response.json();
     setTopics(data.topics);
+    setTopicPage(1);
+    setHasMoreTopics(data.hasMore === true);
     setCanModerate(data.canModerate === true);
   }, []);
+
+  async function loadMoreTopics() {
+    if (!hasMoreTopics || loadingMoreTopics) return;
+    setLoadingMoreTopics(true);
+    try {
+      const nextPage = topicPage + 1;
+      const response = await fetch(
+        `/api/community/forum?page=${nextPage}`,
+        { cache: "no-store" }
+      );
+      if (!response.ok) {
+        throw new Error(`Forum request failed (${response.status})`);
+      }
+      const data: { topics: ForumTopic[]; hasMore?: boolean } =
+        await response.json();
+      setTopics((current) => {
+        const existingIds = new Set(current.map((topic) => topic.id));
+        return [
+          ...current,
+          ...data.topics.filter((topic) => !existingIds.has(topic.id)),
+        ];
+      });
+      setTopicPage(nextPage);
+      setHasMoreTopics(data.hasMore === true);
+    } catch (loadError) {
+      console.error("Could not load more forum topics", loadError);
+      setError("More discussions could not be loaded. Please try again.");
+    } finally {
+      setLoadingMoreTopics(false);
+    }
+  }
 
   async function setForumLike(
     contentType: "topic" | "reply",
@@ -521,7 +571,11 @@ export default function CommunityForumPage() {
           }
         }
 
-        await loadTopics();
+        const hashPrefix = "#forum-topic-";
+        const hash = window.location.hash;
+        await loadTopics(
+          hash.startsWith(hashPrefix) ? hash.slice(hashPrefix.length) : undefined
+        );
       } catch (loadError) {
         console.error("Could not load community forum", loadError);
         if (active) setError("The forum could not be loaded. Please try again.");
@@ -1214,6 +1268,18 @@ export default function CommunityForumPage() {
                 )}
               </article>
             ))
+          )}
+          {!loading && hasMoreTopics && (
+            <div className="flex justify-center pt-2">
+              <button
+                type="button"
+                onClick={() => void loadMoreTopics()}
+                disabled={loadingMoreTopics}
+                className="rounded-lg border border-white/20 bg-white/10 px-5 py-3 font-semibold hover:bg-white/20 disabled:cursor-wait disabled:opacity-60"
+              >
+                {loadingMoreTopics ? "Loading…" : "Load more discussions"}
+              </button>
+            </div>
           )}
         </section>
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import * as Actions from "../../actions/createRecipe";
 import MenuOverlay from "../../MenuOverlay";
 import BackButton from "../../BackButton";
@@ -8,6 +9,7 @@ import { UnitInput, UnitSymbol } from "../../../components/Units";
 import RecipeAdditiveFields from "../RecipeAdditiveFields";
 
 export default function NewCiderRecipePage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   // Cider har ingen malt/humle-warnings
@@ -30,7 +32,7 @@ export default function NewCiderRecipePage() {
 
     // Redirect når alt er OK
     if (result?.success === true) {
-      window.location.href = "/my-recipes";
+      router.push("/my-recipes");
       return;
     }
   }

@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
+import dynamic from "next/dynamic";
 import * as Actions from "./actions";
 import { KarNotesClient } from "./KarNotesClient";
 import VesselContributors from "./VesselContributors";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import VisibilitySwitch from "@/app/components/VisibilitySwitch";
-import BatchSGChart from "@/app/components/BatchSGChart";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
 import PageHeading from "@/app/components/PageHeading";
 import BatchReminders from "./BatchReminders";
@@ -19,6 +19,11 @@ import QRCode from "qrcode";
 import { translateOldRecipe } from "@/lib/translateOldRecipe";
 import { Qty, UnitInput, UnitSymbol, useUnits } from "@/app/components/Units";
 import BatchEditTypeFields from "./BatchEditTypeFields";
+
+const BatchSGChart = dynamic(
+  () => import("@/app/components/BatchSGChart"),
+  { ssr: false, loading: () => <p className="text-sm text-white/60">Loading chart…</p> }
+);
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -62,6 +67,7 @@ function dayLabel(days: number) {
 
 
 export default function KarPage({ params }: { params: { id: string } }) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const inventoryError = searchParams.get("inventory_error");
   const { label } = useUnits();
@@ -85,6 +91,8 @@ export default function KarPage({ params }: { params: { id: string } }) {
   const [sgReadings, setSgReadings] = useState<any[]>([]);
   const [openSG, setOpenSG] = useState(false);
   const [sgValue, setSgValue] = useState("");
+  const [sgError, setSgError] = useState("");
+  const [savingSG, setSavingSG] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [qrPng, setQrPng] = useState<string | null>(null);
   const [karLoading, setKarLoading] = useState(true);
@@ -101,10 +109,6 @@ export default function KarPage({ params }: { params: { id: string } }) {
       ? ((Number(activeBatch.og) - latestSG) * 131.25).toFixed(2)
       : null;
 
-
-
-
-  
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user);
@@ -242,7 +246,7 @@ export default function KarPage({ params }: { params: { id: string } }) {
 
   if (!user) {
   if (typeof window !== "undefined") {
-    window.location.href = `/auth/login?redirect=/kar/${params.id}`;
+    router.replace(`/auth/login?redirect=/kar/${params.id}`);
   }
   return null;
   }
@@ -265,7 +269,7 @@ export default function KarPage({ params }: { params: { id: string } }) {
         </p>
 
         <button
-  onClick={() => (window.location.href = "/dashboard")}
+  onClick={() => router.push("/dashboard")}
   className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg transition"
 >
   Go back
@@ -283,22 +287,35 @@ export default function KarPage({ params }: { params: { id: string } }) {
   const hasHistory = !!historyBatch;
 
 async function saveSG() {
-  const { data, error } = await supabase
-    .from("sg_readings")
-    .insert({
-      batch_id: activeBatch.id,
-      sg: Number(sgValue),
-    });
+  const value = Number(sgValue);
+  if (!Number.isFinite(value) || value <= 0 || !activeBatch) {
+    setSgError("Enter a valid specific gravity reading.");
+    return;
+  }
 
-  if (!error) {
-    setSgValue("");
-    // Refresh SG list
-    supabase
+  setSavingSG(true);
+  setSgError("");
+  try {
+    const { error } = await supabase.from("sg_readings").insert({
+      batch_id: activeBatch.id,
+      sg: value,
+    });
+    if (error) throw error;
+
+    const { data, error: readingsError } = await supabase
       .from("sg_readings")
       .select("*")
       .eq("batch_id", activeBatch.id)
-      .order("created_at", { ascending: true })
-      .then(({ data }) => setSgReadings(data ?? []));
+      .order("created_at", { ascending: true });
+    if (readingsError) throw readingsError;
+
+    setSgValue("");
+    setSgReadings(data ?? []);
+  } catch (error) {
+    console.error("Could not save specific gravity reading", error);
+    setSgError("Could not save this reading. Please try again.");
+  } finally {
+    setSavingSG(false);
   }
 }
 
@@ -352,7 +369,7 @@ const sharingSection = isOwner ? (
         {/* Top bar */}
         <div className="flex items-center justify-between mb-6">
           <button
-            onClick={() => (window.location.href = "/dashboard")}
+            onClick={() => router.push("/dashboard")}
             className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg flex items-center justify-center"
           >
             <svg
@@ -524,7 +541,7 @@ const sharingSection = isOwner ? (
           <button
             key={type}
             onClick={() => {
-              window.location.href = `/kar/${kar.id}/new/${type.toLowerCase()}`;
+              router.push(`/kar/${kar.id}/new/${type.toLowerCase()}`);
             }}
             className="px-4 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
           >
@@ -871,7 +888,7 @@ const sharingSection = isOwner ? (
         
 
            {hasActive && canContribute && (
-  <div className="bg-white/5 border border-white/10 rounded-lg p-4 mt-6 mb-6">
+  <div id="sg-log" className="scroll-mt-6 bg-white/5 border border-white/10 rounded-lg p-4 mt-6 mb-6">
     <button
       type="button"
       onClick={() => setOpenSG(!openSG)}
@@ -898,19 +915,26 @@ const sharingSection = isOwner ? (
         <div className="mt-4 flex flex-col gap-4">
           <input
             type="number"
+            min="0.001"
             step="0.001"
             value={sgValue}
-            onChange={(e) => setSgValue(e.target.value)}
+            onChange={(e) => {
+              setSgValue(e.target.value);
+              setSgError("");
+            }}
             placeholder="Enter SG"
             className="p-3 rounded bg-black/40 border border-white/20"
           />
 
           <button
+            type="button"
             onClick={saveSG}
-            className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold"
+            disabled={savingSG}
+            className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold disabled:cursor-wait disabled:opacity-60"
           >
-            Save SG
+            {savingSG ? "Saving…" : "Save SG"}
           </button>
+          {sgError && <p role="alert" className="text-sm text-red-300">{sgError}</p>}
         </div>
 
         {/* SG graph */}

@@ -54,21 +54,6 @@ export default function Home() {
         <ul className="public-explore-grid grid gap-4 sm:grid-cols-2">
           <li>
             <Link
-              href="/about"
-              className="block h-full rounded-lg border border-white/10 bg-white/5 p-5 transition hover:border-green-300/40 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-300"
-            >
-              <h3 className="text-lg font-semibold">About Batchlogg</h3>
-              <p className="mt-2 text-sm text-white/70">
-                Learn how Batchlogg helps brewers organize recipes and follow
-                each batch from brew day through fermentation.
-              </p>
-              <span className="mt-4 inline-block text-sm font-semibold text-green-300">
-                Learn about Batchlogg →
-              </span>
-            </Link>
-          </li>
-          <li>
-            <Link
               href="/recipes"
               className="block h-full rounded-lg border border-white/10 bg-white/5 p-5 transition hover:border-green-300/40 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-300"
             >
@@ -108,20 +93,6 @@ export default function Home() {
               </p>
               <span className="mt-4 inline-block text-sm font-semibold text-green-300">
                 Explore discussions →
-              </span>
-            </Link>
-          </li>
-          <li className="desktop-download-card">
-            <Link
-              href="/download-app"
-              className="block h-full rounded-lg border border-white/10 bg-white/5 p-5 transition hover:border-green-300/40 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-300"
-            >
-              <h3 className="text-lg font-semibold">Batchlogg for desktop</h3>
-              <p className="mt-2 text-sm text-white/70">
-                Learn about the desktop app and download the latest release.
-              </p>
-              <span className="mt-4 inline-block text-sm font-semibold text-green-300">
-                View desktop app →
               </span>
             </Link>
           </li>

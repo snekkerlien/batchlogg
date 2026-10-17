@@ -7,7 +7,13 @@ const nextConfig = {
   },
 
   images: {
-    domains: ["cvwydrbrxbvezyhvtfma.supabase.co"]
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "cvwydrbrxbvezyhvtfma.supabase.co",
+        pathname: "/storage/v1/object/public/**",
+      },
+    ],
   },
 };
 

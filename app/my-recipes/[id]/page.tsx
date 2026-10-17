@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
 import MenuOverlay from "../MenuOverlay";
 import BackButton from "../BackButton";
@@ -323,9 +324,13 @@ export default function RecipeNotesPage({ params }: { params: { id: string } }) 
 
                 {/* Image */}
                 {n.note_type === "image" && n.image_url && (
-                  <img
+                  <Image
                     src={n.image_url}
                     alt="Note image"
+                    width={960}
+                    height={720}
+                    sizes="(max-width: 768px) 100vw, 768px"
+                    loading="lazy"
                     className="rounded-lg mt-3"
                   />
                 )}

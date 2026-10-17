@@ -152,14 +152,16 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
     }
 
     refresh();
-    function handleFocus() {
-      refresh();
+    function refreshWhenVisible() {
+      if (document.visibilityState === "visible") refresh();
     }
-    window.addEventListener("focus", handleFocus);
-    const refreshInterval = window.setInterval(refresh, 60_000);
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    const refreshInterval = window.setInterval(refreshWhenVisible, 60_000);
     return () => {
       active = false;
-      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
       window.clearInterval(refreshInterval);
     };
   }, [loadNotifications]);

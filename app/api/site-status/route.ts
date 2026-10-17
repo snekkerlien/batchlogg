@@ -17,11 +17,14 @@ export async function GET() {
     console.error("Could not load site status", error);
     return NextResponse.json({ error: "Could not load site status" }, { status: 500 });
   }
-  return NextResponse.json({
-    maintenanceNotice: data?.maintenance_notice_enabled
-      ? data.maintenance_notice
-      : null,
-  });
+  return NextResponse.json(
+    {
+      maintenanceNotice: data?.maintenance_notice_enabled
+        ? data.maintenance_notice
+        : null,
+    },
+    { headers: { "Cache-Control": "public, max-age=30, stale-while-revalidate=60" } }
+  );
 }
 
 export async function PATCH(request: NextRequest) {

@@ -122,7 +122,7 @@ export default function RecipesPage() {
     } = await supabaseBrowser.auth.getSession();
 
     if (!session) {
-      window.location.href = "/auth/login";
+      router.replace("/auth/login");
       return;
     }
 
@@ -1722,7 +1722,7 @@ function removeDryHop(index: number) {
                   <button
                     key={type}
                     onClick={() => {
-                      window.location.href = `/my-recipes/new/${type.toLowerCase()}`;
+                      router.push(`/my-recipes/new/${type.toLowerCase()}`);
                     }}
                     className="px-4 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
                   >

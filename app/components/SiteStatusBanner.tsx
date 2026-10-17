@@ -9,7 +9,7 @@ export default function SiteStatusBanner() {
     let active = true;
     async function loadStatus() {
       try {
-        const response = await fetch("/api/site-status", { cache: "no-store" });
+        const response = await fetch("/api/site-status");
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Could not load site status");
         if (active) setMessage(data.maintenanceNotice ?? "");
@@ -19,11 +19,16 @@ export default function SiteStatusBanner() {
     }
     void loadStatus();
     window.addEventListener("site-status-updated", loadStatus);
-    const interval = window.setInterval(loadStatus, 60_000);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") void loadStatus();
+    };
+    const interval = window.setInterval(refreshWhenVisible, 5 * 60_000);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
     return () => {
       active = false;
       window.removeEventListener("site-status-updated", loadStatus);
       window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
   }, []);
 

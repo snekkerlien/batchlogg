@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import ReactMarkdown from "react-markdown";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 
@@ -97,9 +98,9 @@ export default function ChangelogClient() {
                     Version {log.version}
                   </p>
 
-                  <p className="mt-4 whitespace-pre-wrap break-words">
-                    {log.body}
-                  </p>
+                  <div className="mt-4 break-words text-sm leading-6 text-white/85 [&_h1]:mb-3 [&_h1]:mt-5 [&_h1]:text-xl [&_h1]:font-bold [&_h2]:mb-2 [&_h2]:mt-5 [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:mt-5 [&_h3]:text-base [&_h3]:font-semibold [&_li]:ml-5 [&_li]:list-disc [&_ol_li]:list-decimal [&_p]:my-2 [&_ul]:my-2 [&_ul]:space-y-1 [&_ol]:my-2 [&_ol]:space-y-1">
+                    <ReactMarkdown>{log.body}</ReactMarkdown>
+                  </div>
                 </li>
               ))
             ) : (

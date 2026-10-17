@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 import { supabaseServer } from "../../../../../lib/supabase/supabaseServerFinal";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import PageHeading from "@/app/components/PageHeading";
 import PublicPageNavigation from "@/app/components/PublicPageNavigation";
@@ -314,9 +315,13 @@ export default async function RecipeNotesPage({
                 </p>
 
                 {n.note_type === "image" && n.image_url && (
-                  <img
+                  <Image
                     src={n.image_url}
                     alt="Note image"
+                    width={960}
+                    height={720}
+                    sizes="(max-width: 768px) 100vw, 768px"
+                    loading="lazy"
                     className="rounded-lg mt-3"
                   />
                 )}

@@ -97,6 +97,12 @@ export default function HomeAuthActions() {
         <Link href="/auth/signup" className="block rounded-lg bg-green-600 p-3 font-semibold hover:bg-green-700">
           Sign up
         </Link>
+        <Link
+          href="/download-app"
+          className="text-sm font-medium text-white/70 underline decoration-white/30 underline-offset-4 hover:text-white"
+        >
+          Batchlogg for desktop
+        </Link>
       </div>
     );
   }
