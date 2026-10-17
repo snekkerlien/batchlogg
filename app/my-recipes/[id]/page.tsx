@@ -8,6 +8,7 @@ import BackButton from "../BackButton";
 import { useRouter } from "next/navigation";
 import PageHeading from "@/app/components/PageHeading";
 import { Qty } from "@/app/components/Units";
+import { formatSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
 
 export default function RecipeNotesPage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(true);
@@ -285,13 +286,13 @@ export default function RecipeNotesPage({ params }: { params: { id: string } }) 
           )}
 
           {/* Secondary */}
-          {recipe.had_secondary && (
+          {(recipe.had_secondary || recipe.secondary_additions || recipe.secondary_notes) && (
             <div className="mt-6">
               <h4 className="font-semibold text-white/90 mb-2">Secondary fermentation</h4>
 
               {recipe.secondary_additions && (
                 <p className="whitespace-pre-line opacity-80">
-                  <strong>Secondary additions:</strong>{"\n"}{recipe.secondary_additions}
+                  <strong>Secondary additions:</strong>{"\n"}{formatSecondaryAdditions(recipe.secondary_additions)}
                 </p>
               )}
 
@@ -330,6 +331,7 @@ export default function RecipeNotesPage({ params }: { params: { id: string } }) 
                     width={960}
                     height={720}
                     sizes="(max-width: 768px) 100vw, 768px"
+                    unoptimized
                     loading="lazy"
                     className="rounded-lg mt-3"
                   />

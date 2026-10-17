@@ -126,6 +126,7 @@ export function KarNotesClient({
                 width={960}
                 height={720}
                 sizes="(max-width: 768px) 100vw, 768px"
+                unoptimized
                 loading="lazy"
                 className="rounded-lg mt-2 border border-white/20 max-h-80 object-contain"
               />

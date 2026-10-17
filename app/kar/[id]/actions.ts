@@ -10,6 +10,7 @@ import {
   calcIBU,
 } from "@/lib/brewing/beerCalculators";
 import { convertIngredientAmount } from "@/lib/inventory/convertIngredientAmount";
+import { parseSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
 
 
 
@@ -219,6 +220,14 @@ export async function createBatch(formData: FormData) {
       : null;
   const fruits_json = formData.get("fruits_json") as string;
   const fruits: Fruit[] = fruits_json ? JSON.parse(fruits_json) : [];
+  const secondaryAdditionsRaw = formData.get("secondary_additions");
+  const secondary_additions =
+    typeof secondaryAdditionsRaw === "string" ? secondaryAdditionsRaw : "";
+  const secondaryNotesRaw = formData.get("secondary_notes");
+  const secondary_notes =
+    typeof secondaryNotesRaw === "string" ? secondaryNotesRaw : "";
+  const had_secondary = formData.get("had_secondary") === "true";
+  const parsedSecondaryAdditions = parseSecondaryAdditions(secondary_additions);
 
   // Cider fields
   const juice_type = (formData.get("juice_type") as string) || "";
@@ -463,7 +472,7 @@ if (type === "Beer" && beerSubtype === "fresh_wort_kit") {
       ingredientUses.push({
         name: typeof name === "string" ? name : "",
         amount: numericAmount,
-        unit: typeof unit === "string" && unit.trim() ? unit : "kg",
+        unit: typeof unit === "string" ? unit : "kg",
         selectionKey,
         category,
         subcategory,
@@ -556,6 +565,25 @@ if (type === "Beer" && beerSubtype === "fresh_wort_kit") {
     for (const [index, fruit] of fruits.entries()) {
       addIngredientUse(fruit.name, fruit.amount, fruit.unit, `fruit:${index}`, "flavorings", "Fruit");
     }
+    for (const [index, fruit] of parsedSecondaryAdditions.fruits.entries()) {
+      addIngredientUse(
+        fruit.name,
+        fruit.amount,
+        fruit.unit,
+        `secondary-fruit:${index}`,
+        "flavorings",
+        "Fruit"
+      );
+    }
+    for (const [index, additive] of parsedSecondaryAdditions.additives.entries()) {
+      addIngredientUse(
+        additive.name,
+        additive.amount,
+        additive.unit,
+        `secondary-additive:${index}`,
+        "additives"
+      );
+    }
     for (const [index, ingredient] of ingredients.entries()) {
       addIngredientUse(
         ingredient.name,
@@ -587,7 +615,8 @@ if (type === "Beer" && beerSubtype === "fresh_wort_kit") {
               (!ingredient.subcategory ||
                 item.subcategory?.toLocaleLowerCase() ===
                   ingredient.subcategory.toLocaleLowerCase()) &&
-              convertIngredientAmount(ingredient.amount, ingredient.unit, item.unit) !== null
+              (!ingredient.unit ||
+                convertIngredientAmount(ingredient.amount, ingredient.unit, item.unit) !== null)
           );
       if (!selectedItemId && matchingItems.length === 0 && ingredient.subcategory) {
         const normalizedIngredient = normalizeInventoryName(ingredient.name);
@@ -609,7 +638,8 @@ if (type === "Beer" && beerSubtype === "fresh_wort_kit") {
             (isGeneric
               ? sameSubcategory || normalizedItemName.includes(normalizedIngredient)
               : nameMatches) &&
-            convertIngredientAmount(ingredient.amount, ingredient.unit, item.unit) !== null
+            (!ingredient.unit ||
+              convertIngredientAmount(ingredient.amount, ingredient.unit, item.unit) !== null)
           );
         });
       }
@@ -621,11 +651,9 @@ if (type === "Beer" && beerSubtype === "fresh_wort_kit") {
         );
       }
       const item = matchingItems[0];
-      const convertedAmount = convertIngredientAmount(
-        ingredient.amount,
-        ingredient.unit,
-        item.unit
-      );
+      const convertedAmount = ingredient.unit
+        ? convertIngredientAmount(ingredient.amount, ingredient.unit, item.unit)
+        : ingredient.amount;
       if (convertedAmount === null) {
         redirect(
           `/kar/${karId}?inventory_error=${encodeURIComponent(
@@ -922,6 +950,9 @@ ${notes}
       full_process,
       notes,
       oppskrift,
+      had_secondary,
+      secondary_additions,
+      secondary_notes,
 
       // Cider / Wine / Seltzer
       juice_type,

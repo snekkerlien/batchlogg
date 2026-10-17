@@ -1,4 +1,5 @@
 import { convertIngredientAmount } from "@/lib/inventory/convertIngredientAmount";
+import { parseSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
 
 export type InventoryItem = {
   id: string;
@@ -77,6 +78,29 @@ export function recipeInventoryRequirements(
     });
     return true;
   };
+  const addMeasuredTextRows = (
+    raw: unknown,
+    selectionPrefix: string,
+    category: string,
+    subcategory?: string
+  ) => {
+    if (typeof raw !== "string") return;
+    raw.split(/\r?\n/).forEach((line, index) => {
+      const match = line.trim().match(/^(.+?):\s*([+-]?(?:\d+\.?\d*|\.\d+))\s*(.*?)$/);
+      if (!match) return;
+      const name = match[1].trim();
+      const amount = formNumber(match[2]);
+      if (!name || /\bwater\b/i.test(name) || amount === null || amount <= 0) return;
+      requirements.push({
+        name,
+        amount,
+        unit: match[3].trim(),
+        selectionKey: `${selectionPrefix}:${index}`,
+        category,
+        subcategory,
+      });
+    });
+  };
 
   const type = formData.get("type");
   if (
@@ -108,6 +132,41 @@ export function recipeInventoryRequirements(
   if (type === "Other" && !addRows("ingredients_json", "ingredient")) {
     return null;
   }
+
+  addMeasuredTextRows(formData.get("additives"), "additive", "additives");
+  const secondaryAdditions = parseSecondaryAdditions(
+    formData.get("secondary_additions")
+  );
+  for (const [index, fruit] of secondaryAdditions.fruits.entries()) {
+    const name = fruit.name.trim();
+    const amount = formNumber(fruit.amount);
+    if (!name || /\bwater\b/i.test(name) || amount === null || amount <= 0) continue;
+    requirements.push({
+      name,
+      amount,
+      unit: fruit.unit.trim(),
+      selectionKey: `secondary-fruit:${index}`,
+      category: "flavorings",
+      subcategory: "Fruit",
+    });
+  }
+  for (const [index, additive] of secondaryAdditions.additives.entries()) {
+    const name = additive.name.trim();
+    const amount = formNumber(additive.amount);
+    if (!name || /\bwater\b/i.test(name) || amount === null || amount <= 0) continue;
+    requirements.push({
+      name,
+      amount,
+      unit: additive.unit.trim(),
+      selectionKey: `secondary-additive:${index}`,
+      category: "additives",
+    });
+  }
+  addMeasuredTextRows(
+    secondaryAdditions.legacyText,
+    "secondary-additive-legacy",
+    "additives"
+  );
 
   const addNamedAmount = (
     nameField: string,
@@ -189,6 +248,11 @@ export function recipeRequirementsFromSavedRecipe(
     formData.set(fieldName, JSON.stringify(Array.isArray(value) ? value : []));
   };
   formData.set("type", typeof recipe.type === "string" ? recipe.type : "");
+  formData.set("additives", typeof recipe.additives === "string" ? recipe.additives : "");
+  formData.set(
+    "secondary_additions",
+    typeof recipe.secondary_additions === "string" ? recipe.secondary_additions : ""
+  );
   appendJson("malts_json", recipe.malts);
   appendJson("hops_json", recipe.hops);
   appendJson("dry_hops_json", recipe.dry_hops);

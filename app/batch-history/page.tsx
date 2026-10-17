@@ -9,6 +9,7 @@ import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import PageHeading from "../components/PageHeading";
 import { Qty } from "@/app/components/Units";
+import { formatSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
 
 const BatchSGChart = dynamic(
   () => import("../components/BatchSGChart"),
@@ -51,6 +52,7 @@ export default function BatchHistoryPage() {
   const [kars, setKars] = useState<any[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [sgReadingsError, setSgReadingsError] = useState("");
+  const [batchLoadError, setBatchLoadError] = useState("");
 
   // ⭐ NEW: delete confirmation modal state
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -68,10 +70,18 @@ export default function BatchHistoryPage() {
 
       const userId = session.user.id;
 
-      const { data: batchesRaw } = await supabaseBrowser
+      const { data: batchesRaw, error: batchesError } = await supabaseBrowser
         .from("batches")
         .select("*")
+        .eq("user_id", userId)
         .order("created_at", { ascending: false });
+
+      if (batchesError) {
+        console.error("Could not load batch history", batchesError);
+        setBatchLoadError("Batch history could not be loaded.");
+        setLoading(false);
+        return;
+      }
 
       const { data: karsRaw } = await supabaseBrowser
         .from("kar")
@@ -187,15 +197,21 @@ export default function BatchHistoryPage() {
           subtitle="Review your batches, fermentation details, and SG readings."
         />
 
+        {batchLoadError && (
+          <p role="alert" className="mb-6 text-center text-sm text-red-300">
+            {batchLoadError}
+          </p>
+        )}
+
         {sgReadingsError && (
           <p role="alert" className="mb-6 text-center text-sm text-amber-300">
             {sgReadingsError}
           </p>
         )}
 
-        {batches.length === 0 ? (
+        {!batchLoadError && batches.length === 0 ? (
           <p className="text-center opacity-70">No batches found.</p>
-        ) : (
+        ) : !batchLoadError ? (
           <div className="space-y-4">
             {batches.map((batch) => {
               const isFinished =
@@ -362,7 +378,7 @@ export default function BatchHistoryPage() {
                         {batch.secondary_additions && (
                           <p className="text-sm whitespace-pre-line">
                             <strong>Additions:</strong>{"\n"}
-                            {batch.secondary_additions}
+                            {formatSecondaryAdditions(batch.secondary_additions)}
                           </p>
                         )}
 
@@ -520,6 +536,7 @@ export default function BatchHistoryPage() {
                                 width={960}
                                 height={720}
                                 sizes="(max-width: 768px) 100vw, 768px"
+                                unoptimized
                                 loading="lazy"
                                 className="rounded-lg mt-3"
                               />
@@ -541,7 +558,7 @@ export default function BatchHistoryPage() {
               );
             })}
           </div>
-        )}
+        ) : null}
 
         {/* ⭐ CONFIRM DELETE MODAL */}
         {confirmDeleteId && (

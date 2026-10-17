@@ -19,6 +19,7 @@ import QRCode from "qrcode";
 import { translateOldRecipe } from "@/lib/translateOldRecipe";
 import { Qty, UnitInput, UnitSymbol, useUnits } from "@/app/components/Units";
 import BatchEditTypeFields from "./BatchEditTypeFields";
+import { formatSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
 
 const BatchSGChart = dynamic(
   () => import("@/app/components/BatchSGChart"),
@@ -625,7 +626,7 @@ const sharingSection = isOwner ? (
               <label className="mb-1 block font-semibold">Secondary additions</label>
               <textarea
                 name="secondary_additions"
-                defaultValue={activeBatch.secondary_additions ?? ""}
+                defaultValue={formatSecondaryAdditions(activeBatch.secondary_additions)}
                 className="min-h-24 w-full rounded border border-white/20 bg-black/40 p-3"
               />
             </div>
@@ -690,7 +691,7 @@ const sharingSection = isOwner ? (
       {activeBatch.secondary_additions && (
         <p className="opacity-80 mt-2 whitespace-pre-wrap">
           Secondary additions:<br />
-          {activeBatch.secondary_additions}
+          {formatSecondaryAdditions(activeBatch.secondary_additions)}
         </p>
       )}
 

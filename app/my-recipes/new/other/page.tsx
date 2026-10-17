@@ -7,6 +7,7 @@ import MenuOverlay from "../../MenuOverlay";
 import BackButton from "../../BackButton";
 import { UnitInput, UnitSymbol } from "../../../components/Units";
 import RecipeAdditiveFields from "../RecipeAdditiveFields";
+import RecipeSecondaryFields from "../RecipeSecondaryFields";
 
 export default function NewOtherRecipePage() {
   const router = useRouter();
@@ -251,7 +252,14 @@ export default function NewOtherRecipePage() {
             <label className="block mb-1 font-semibold">Additives</label>
             <RecipeAdditiveFields />
           </div>
-
+          <div>
+            <label className="block mb-1 font-semibold">Full process</label>
+            <textarea
+              name="full_process"
+              placeholder="Describe the overall preparation and fermentation process..."
+              className="h-40 w-full rounded border border-white/20 bg-black/40 p-3"
+            />
+          </div>
           {/* Notes */}
           <div>
             <label className="block mb-1 font-semibold">Notes</label>
@@ -261,6 +269,7 @@ export default function NewOtherRecipePage() {
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
             />
           </div>
+          <RecipeSecondaryFields />
 
           {/* Submit */}
           <button

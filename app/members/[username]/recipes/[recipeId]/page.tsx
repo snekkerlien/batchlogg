@@ -9,6 +9,7 @@ import PageHeading from "@/app/components/PageHeading";
 import PublicPageNavigation from "@/app/components/PublicPageNavigation";
 import type { Fruit, Malt, Hop, Ingredient } from "@/app/types/batchTypes";
 import { Qty } from "@/app/components/Units";
+import { formatSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
 
 export default async function RecipeNotesPage({
   params,
@@ -281,7 +282,7 @@ export default async function RecipeNotesPage({
               <p className="whitespace-pre-line text-sm opacity-90">
                 <strong>Secondary additions:</strong>
                 <br />
-                {recipe.secondary_additions}
+                {formatSecondaryAdditions(recipe.secondary_additions)}
               </p>
             ) : recipe.had_secondary ? (
               <p className="text-sm opacity-75">
@@ -321,6 +322,7 @@ export default async function RecipeNotesPage({
                     width={960}
                     height={720}
                     sizes="(max-width: 768px) 100vw, 768px"
+                    unoptimized
                     loading="lazy"
                     className="rounded-lg mt-3"
                   />

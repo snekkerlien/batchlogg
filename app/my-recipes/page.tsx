@@ -10,10 +10,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import VisibilitySwitch from "../components/VisibilitySwitch";
 import RecipeFilters, { type RecipeSort } from "./RecipeFilters";
+import RecipeSecondaryFields from "./new/RecipeSecondaryFields";
 import {
   getSavedRecipeInventoryIssues,
   type InventoryItem,
 } from "@/lib/inventory/recipeInventory";
+import { formatSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
 
 function ebcToHex(ebc: number | string) {
   const value = Number(ebc);
@@ -104,9 +106,6 @@ export default function RecipesPage() {
   const [editError, setEditError] = useState<string | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
   const [editFruits, setEditFruits] = useState<Fruit[]>([]);
-  const [hadSecondary, setHadSecondary] = useState(false);
-  const [secondaryAdditions, setSecondaryAdditions] = useState("");
-  const [secondaryNotes, setSecondaryNotes] = useState("");
   const [editMalts, setEditMalts] = useState<Malt[]>([]);
   const [editHops, setEditHops] = useState<Hop[]>([]);
   const [editDryHops, setEditDryHops] = useState<DryHop[]>([]);
@@ -561,9 +560,6 @@ function removeDryHop(index: number) {
       setEditBeerSubtype(r.type === "Beer" ? r.ingredients?.beer_subtype ?? "all_grain" : "all_grain");
       setEditFruits(r.fruits || []);
       setOpenEdit(r.id); 
-      setHadSecondary(r.had_secondary || false);
-      setSecondaryAdditions(r.secondary_additions || "");
-      setSecondaryNotes(r.secondary_notes || "");
       setEditMalts(r.malts || []);
       setEditHops(
         (r.hops || []).map((hop: Partial<Hop>) => ({
@@ -874,12 +870,12 @@ function removeDryHop(index: number) {
                       )}
 
                       {/* Secondary */}
-                      {r.had_secondary && (
+                      {(r.had_secondary || r.secondary_additions || r.secondary_notes) && (
                         <div className="mt-6">
                           <h4 className="font-semibold text-white/90 mb-2">Secondary fermentation</h4>
                           {r.secondary_additions && (
                             <p className="whitespace-pre-line opacity-80">
-                              <strong>Secondary additions:</strong>{"\n"}{r.secondary_additions}
+                              <strong>Secondary additions:</strong>{"\n"}{formatSecondaryAdditions(r.secondary_additions)}
                             </p>
                           )}
                           {r.secondary_notes && (
@@ -1545,52 +1541,15 @@ function removeDryHop(index: number) {
           className="p-3 rounded bg-black/40 border border-white/20"
         />
 
-        {/* Secondary fermentation toggle */}
-<div>
-  <label className="block mb-2 font-semibold">Secondary fermentation</label>
-
-  <button
-    type="button"
-    onClick={() => setHadSecondary(!hadSecondary)}
-    className={`px-4 py-2 rounded-lg border ${
-      hadSecondary
-        ? "bg-purple-700 border-purple-500"
-        : "bg-black/40 border-white/20"
-    }`}
-  >
-    {hadSecondary ? "Secondary enabled" : "Enable secondary"}
-  </button>
-</div>
-
-{/* Secondary fields */}
-{hadSecondary && (
-  <div className="flex flex-col gap-4">
-
-    <div>
-      <label className="block mb-1 font-semibold">Secondary additions</label>
-      <textarea
-        name="secondary_additions"
-        placeholder="Fruit additions, spices, oak, etc..."
-        className="w-full p-3 rounded bg-black/40 border border-white/20 h-28"
-        value={secondaryAdditions}
-        onChange={(e) => setSecondaryAdditions(e.target.value)}
-      />
-    </div>
-
-    <div>
-      <label className="block mb-1 font-semibold">Secondary notes</label>
-      <textarea
-        name="secondary_notes"
-        placeholder="Notes about racking, stabilization, clearing..."
-        className="w-full p-3 rounded bg-black/40 border border-white/20 h-28"
-        value={secondaryNotes}
-        onChange={(e) => setSecondaryNotes(e.target.value)}
-      />
-    </div>
-  </div>
-)}
-
-<input type="hidden" name="had_secondary" value={hadSecondary ? "true" : "false"} />
+        <RecipeSecondaryFields
+          key={editRecipe.id}
+          defaultValue={editRecipe.secondary_additions}
+          defaultNotes={editRecipe.secondary_notes}
+          defaultEnabled={
+            editRecipe.had_secondary === true ||
+            Boolean(editRecipe.secondary_additions || editRecipe.secondary_notes)
+          }
+        />
 
 
         <button

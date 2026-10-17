@@ -16,7 +16,9 @@ import {
   getInventoryRequirementIssues,
   getSavedRecipeInventoryIssues,
   recipeInventoryRequirements,
+  recipeRequirementsFromSavedRecipe,
   type InventoryItem,
+  type RecipeInventoryRequirement,
 } from "@/lib/inventory/recipeInventory";
 
 type InventoryUsage = {
@@ -57,6 +59,11 @@ export function BatchInventoryProvider({
   const [inventoryIssues, setInventoryIssues] = useState<string[] | null>(null);
   const [recipeInventoryWarnings, setRecipeInventoryWarnings] = useState<string[]>([]);
   const inventoryFormContent = useRef<HTMLDivElement>(null);
+  const secondaryInventoryRequirements: RecipeInventoryRequirement[] = recipe
+    ? (recipeRequirementsFromSavedRecipe(recipe) ?? []).filter((requirement) =>
+        requirement.selectionKey.startsWith("secondary-")
+      )
+    : [];
 
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get("skip_inventory") === "true") {
@@ -223,6 +230,26 @@ export function BatchInventoryProvider({
           name="inventory_load_error"
           value={error ? "true" : "false"}
         />
+        <input
+          type="hidden"
+          name="secondary_additions"
+          value={typeof recipe?.secondary_additions === "string" ? recipe.secondary_additions : ""}
+        />
+        <input
+          type="hidden"
+          name="secondary_notes"
+          value={typeof recipe?.secondary_notes === "string" ? recipe.secondary_notes : ""}
+        />
+        <input
+          type="hidden"
+          name="had_secondary"
+          value={
+            recipe?.had_secondary === true ||
+            Boolean(recipe?.secondary_additions || recipe?.secondary_notes)
+              ? "true"
+              : "false"
+          }
+        />
         {error && (
           <p role="alert" className="rounded-lg border border-amber-400/40 bg-amber-950/40 p-3 text-sm text-amber-200">
             {error}
@@ -242,6 +269,22 @@ export function BatchInventoryProvider({
                 <li key={`${index}:${warning}`}>{warning}</li>
               ))}
             </ul>
+          </div>
+        )}
+        {enabled && secondaryInventoryRequirements.length > 0 && (
+          <div className="space-y-3 rounded-lg border border-white/10 bg-white/5 p-4">
+            <p className="font-semibold">Secondary additions</p>
+            {secondaryInventoryRequirements.map((requirement) => (
+              <InventoryIngredientSelect
+                key={requirement.selectionKey}
+                selectionKey={requirement.selectionKey}
+                defaultValue={requirement.name}
+                placeholder={requirement.subcategory ?? "Additive"}
+                category={requirement.category}
+                subcategory={requirement.subcategory}
+                className="w-full rounded border border-white/20 bg-black/40 p-3"
+              />
+            ))}
           </div>
         )}
         {children}

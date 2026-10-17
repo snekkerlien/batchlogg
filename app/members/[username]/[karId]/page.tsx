@@ -9,6 +9,7 @@ import { translateOldRecipe } from "@/lib/translateOldRecipe";
 import PageHeading from "@/app/components/PageHeading";
 import ReportContentButton from "@/app/components/ReportContentButton";
 import { Qty } from "@/app/components/Units";
+import { formatSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
 
 type KarDetailParams = {
   username: string;
@@ -172,7 +173,7 @@ batch = translateOldRecipe(batch);
 
             {batch.secondary_additions && (
               <p className="opacity-80 mt-2 whitespace-pre-wrap">
-                Additions:<br />{batch.secondary_additions}
+                Additions:<br />{formatSecondaryAdditions(batch.secondary_additions)}
               </p>
             )}
 

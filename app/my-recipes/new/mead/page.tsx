@@ -8,6 +8,7 @@ import BackButton from "../../BackButton";
 import { UnitInput, UnitSymbol } from "../../../components/Units";
 import BaseLiquidField from "../../../components/BaseLiquidField";
 import RecipeAdditiveFields from "../RecipeAdditiveFields";
+import RecipeSecondaryFields from "../RecipeSecondaryFields";
 
 export default function NewMeadRecipePage() {
   const router = useRouter();
@@ -29,10 +30,6 @@ export default function NewMeadRecipePage() {
     updated.splice(index, 1);
     setFruits(updated);
   }
-
-  const [hadSecondary, setHadSecondary] = useState(false);
-  const [secondaryAdditions, setSecondaryAdditions] = useState("");
-  const [secondaryNotes, setSecondaryNotes] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -246,7 +243,6 @@ export default function NewMeadRecipePage() {
             <label className="block mb-1 font-semibold">Additives</label>
             <RecipeAdditiveFields />
           </div>
-
           {/* Full process */}
           <div>
             <label className="block mb-1 font-semibold">Full process</label>
@@ -266,53 +262,7 @@ export default function NewMeadRecipePage() {
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
             />
           </div>
-
-          {/* Secondary fermentation toggle */}
-          <div>
-            <label className="block mb-2 font-semibold">Secondary fermentation</label>
-
-            <button
-              type="button"
-              onClick={() => setHadSecondary(!hadSecondary)}
-              className={`px-4 py-2 rounded-lg border ${
-                hadSecondary
-                  ? "bg-purple-700 border-purple-500"
-                  : "bg-black/40 border-white/20"
-              }`}
-            >
-              {hadSecondary ? "Secondary enabled" : "Enable secondary"}
-            </button>
-          </div>
-
-          {/* Secondary fields */}
-          {hadSecondary && (
-            <div className="flex flex-col gap-4">
-
-              <div>
-                <label className="block mb-1 font-semibold">Secondary additions</label>
-                <textarea
-                  name="secondary_additions"
-                  placeholder="Fruit additions, spices, oak, etc..."
-                  className="w-full p-3 rounded bg-black/40 border border-white/20 h-28"
-                  value={secondaryAdditions}
-                  onChange={(e) => setSecondaryAdditions(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label className="block mb-1 font-semibold">Secondary notes</label>
-                <textarea
-                  name="secondary_notes"
-                  placeholder="Notes about racking, stabilization, clearing..."
-                  className="w-full p-3 rounded bg-black/40 border border-white/20 h-28"
-                  value={secondaryNotes}
-                  onChange={(e) => setSecondaryNotes(e.target.value)}
-                />
-              </div>
-            </div>
-          )}
-
-          <input type="hidden" name="had_secondary" value={hadSecondary ? "true" : "false"} />
+          <RecipeSecondaryFields />
 
           {/* Submit */}
           <button

@@ -7,6 +7,7 @@ import MenuOverlay from "../../MenuOverlay";
 import BackButton from "../../BackButton";
 import { UnitInput, UnitSymbol } from "../../../components/Units";
 import RecipeAdditiveFields from "../RecipeAdditiveFields";
+import RecipeSecondaryFields from "../RecipeSecondaryFields";
 
 export default function NewWineRecipePage() {
   const router = useRouter();
@@ -153,7 +154,6 @@ export default function NewWineRecipePage() {
             <label className="block mb-1 font-semibold">Additives</label>
             <RecipeAdditiveFields />
           </div>
-
           {/* Full process */}
           <div>
             <label className="block mb-1 font-semibold">Full process</label>
@@ -173,6 +173,7 @@ export default function NewWineRecipePage() {
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
             />
           </div>
+          <RecipeSecondaryFields />
 
           {/* Submit */}
           <button
