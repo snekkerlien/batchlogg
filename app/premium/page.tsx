@@ -120,19 +120,24 @@ export default function PremiumPage() {
           ))}
         </ul>
 
-        {profile?.account_tier === "free" && (
+        {!loading && profile?.account_tier !== "premium" && (
           <div className="flex flex-col items-center gap-3">
             <p className="text-center text-white/80">
-              Premium is NOK 49 per month.
+              Premium is NOK 49 per month, before VAT.
             </p>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void openBillingEndpoint("checkout")}
-              className="rounded-lg border border-green-400/40 bg-green-700 px-5 py-3 font-semibold text-white hover:bg-green-600 disabled:opacity-50"
-            >
-              {busy ? "Opening checkout…" : "Upgrade to Premium"}
-            </button>
+            <p className="max-w-md text-center text-sm text-white/60">
+              Applicable VAT will be calculated and added during checkout based on your billing address. The final total will be shown before payment.
+            </p>
+            {profile?.account_tier === "free" && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void openBillingEndpoint("checkout")}
+                className="rounded-lg border border-green-400/40 bg-green-700 px-5 py-3 font-semibold text-white hover:bg-green-600 disabled:opacity-50"
+              >
+                {busy ? "Opening checkout…" : "Upgrade to Premium"}
+              </button>
+            )}
           </div>
         )}
         {profile?.account_tier === "premium" && profile.premium_grant_source === "stripe" && (
