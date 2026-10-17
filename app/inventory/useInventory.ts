@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   addInventoryItem,
-  updateInventoryAmount,
+  updateInventoryItem,
   deleteInventoryItem,
 } from "@/app/actions/inventoryActions";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
@@ -91,10 +91,13 @@ export function useInventory() {
 
   const updateItem = useCallback(async (
     id: string,
+    name: string,
+    category: string,
+    subcategory: string,
     amount: number,
     minimumAmount: number
   ) => {
-    await updateInventoryAmount(id, amount, minimumAmount);
+    await updateInventoryItem(id, name, category, subcategory, amount, minimumAmount);
     await loadItems();
   }, [loadItems]);
 

@@ -2,6 +2,11 @@
 
 import { useState } from "react";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
+import {
+  INVENTORY_CATEGORIES,
+  LEGACY_CATEGORY_ALIASES,
+  SNUS_CATEGORIES,
+} from "@/lib/inventory/categories";
 
 export default function InventoryItem({
   item,
@@ -11,15 +16,55 @@ export default function InventoryItem({
 }: {
   item: any;
   profile: any;
-  updateItem: (id: string, amount: number, minimumAmount: number) => Promise<void>;
+  updateItem: (
+    id: string,
+    name: string,
+    category: string,
+    subcategory: string,
+    amount: number,
+    minimumAmount: number
+  ) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
 }) {
   const [editMode, setEditMode] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [editError, setEditError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [name, setName] = useState(item.name);
+  const [category, setCategory] = useState(item.category);
+  const [subcategory, setSubcategory] = useState(item.subcategory ?? "");
   const [amount, setAmount] = useState(item.amount);
   const [minimumAmount, setMinimumAmount] = useState(item.minimum_amount ?? "");
   const snusCategories = ["snus", "snusessens"];
+  const visibleCategories: {
+    id: string;
+    label: string;
+    subcategories: readonly string[];
+  }[] = profile?.snus_is_true
+    ? [
+        ...INVENTORY_CATEGORIES,
+        ...SNUS_CATEGORIES.map((id) => ({ id, label: id, subcategories: [] })),
+      ]
+    : [...INVENTORY_CATEGORIES];
+  const categoryIsListed = visibleCategories.some(
+    (itemCategory) => itemCategory.id === category
+  );
+  if (
+    !categoryIsListed &&
+    Object.prototype.hasOwnProperty.call(LEGACY_CATEGORY_ALIASES, category)
+  ) {
+    visibleCategories.push({
+      id: category,
+      label: category,
+      subcategories: [],
+    });
+  }
+  const selectedCategory = INVENTORY_CATEGORIES.find(
+    (itemCategory) =>
+      itemCategory.id ===
+      (LEGACY_CATEGORY_ALIASES[category] ?? category)
+  );
   const minimum = Number(item.minimum_amount);
   const current = Number(item.amount);
 
@@ -35,20 +80,44 @@ export default function InventoryItem({
   }
 
   function startEdit() {
+    setName(item.name);
+    setCategory(item.category);
+    setSubcategory(item.subcategory ?? "");
     setAmount(item.amount);
     setMinimumAmount(item.minimum_amount ?? "");
+    setEditError("");
     setEditMode(true);
   }
 
   function cancelEdit() {
     setEditMode(false);
+    setName(item.name);
+    setCategory(item.category);
+    setSubcategory(item.subcategory ?? "");
     setAmount(item.amount);
     setMinimumAmount(item.minimum_amount ?? "");
+    setEditError("");
   }
 
   async function confirmEdit() {
-    await updateItem(item.id, Number(amount), Number(minimumAmount));
-    setEditMode(false);
+    setSaving(true);
+    setEditError("");
+    try {
+      await updateItem(
+        item.id,
+        name,
+        category,
+        subcategory,
+        Number(amount),
+        Number(minimumAmount)
+      );
+      setEditMode(false);
+    } catch (error) {
+      console.error("Could not update inventory item", error);
+      setEditError("Could not update this item. Check the values and try again.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function deleteInventoryItemConfirmed() {
@@ -114,6 +183,49 @@ export default function InventoryItem({
 
       {editMode && (
         <div className="mt-1 flex flex-col gap-3">
+          <label className="flex flex-col gap-1 text-sm">
+            Name
+            <input
+              required
+              className="rounded border border-white/20 bg-black/40 p-2 text-base"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            Category
+            <select
+              className="rounded border border-white/20 bg-black/40 p-2 text-base"
+              value={category}
+              onChange={(event) => {
+                setCategory(event.target.value);
+                setSubcategory("");
+              }}
+            >
+              {visibleCategories.map((itemCategory) => (
+                <option key={itemCategory.id} value={itemCategory.id}>
+                  {itemCategory.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {selectedCategory && selectedCategory.subcategories.length > 0 && (
+            <label className="flex flex-col gap-1 text-sm">
+              Subcategory
+              <select
+                className="rounded border border-white/20 bg-black/40 p-2 text-base"
+                value={subcategory}
+                onChange={(event) => setSubcategory(event.target.value)}
+              >
+                <option value="">Choose a subcategory</option>
+                {selectedCategory.subcategories.map((value) => (
+                  <option key={value} value={value}>
+                    {value}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label className="flex items-center justify-between gap-2 text-sm">
             Amount
             <input
@@ -132,15 +244,24 @@ export default function InventoryItem({
               onChange={(event) => setMinimumAmount(event.target.value)}
             />
           </label>
+          {editError && (
+            <p role="alert" className="text-sm text-amber-300">
+              {editError}
+            </p>
+          )}
           <div className="flex justify-end gap-2">
             <button
+              type="button"
               onClick={confirmEdit}
+              disabled={saving}
               className="rounded border border-green-500 bg-green-700 px-4 py-2 text-sm font-semibold hover:bg-green-600"
             >
-              Confirm
+              {saving ? "Saving…" : "Confirm"}
             </button>
             <button
+              type="button"
               onClick={cancelEdit}
+              disabled={saving}
               className="rounded border border-zinc-500 bg-zinc-700 px-4 py-2 text-sm font-semibold hover:bg-zinc-600"
             >
               Cancel

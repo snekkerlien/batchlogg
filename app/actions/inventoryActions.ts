@@ -2,7 +2,11 @@
 
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { revalidatePath } from "next/cache";
-import { INVENTORY_CATEGORIES, SNUS_CATEGORIES } from "@/lib/inventory/categories";
+import {
+  INVENTORY_CATEGORIES,
+  LEGACY_CATEGORY_ALIASES,
+  SNUS_CATEGORIES,
+} from "@/lib/inventory/categories";
 
 /**
  * ADD INVENTORY ITEM
@@ -88,10 +92,13 @@ export async function addInventoryItem(formData: FormData, shouldRevalidate = tr
 }
 
 /**
- * UPDATE INVENTORY AMOUNT
+ * UPDATE INVENTORY ITEM
  */
-export async function updateInventoryAmount(
+export async function updateInventoryItem(
   id: string,
+  name: string,
+  category: string,
+  subcategory: string,
   newAmount: number,
   newMinimumAmount: number
 ) {
@@ -99,19 +106,44 @@ export async function updateInventoryAmount(
 
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) throw new Error("Authentication required");
+  const selectedCategory =
+    INVENTORY_CATEGORIES.find((item) => item.id === category) ??
+    INVENTORY_CATEGORIES.find(
+      (item) => item.id === LEGACY_CATEGORY_ALIASES[category]
+    );
+  const isSnusCategory = SNUS_CATEGORIES.some((value) => value === category);
   if (
     !id ||
+    !name.trim() ||
+    (!selectedCategory && !isSnusCategory) ||
+    (selectedCategory &&
+      subcategory &&
+      !selectedCategory.subcategories.some((value) => value === subcategory)) ||
+    (!selectedCategory && subcategory) ||
     !Number.isFinite(newAmount) ||
     newAmount < 0 ||
     !Number.isFinite(newMinimumAmount) ||
     newMinimumAmount < 0
   ) {
-    throw new Error("Invalid inventory amounts");
+    throw new Error("Invalid inventory item");
+  }
+
+  if (isSnusCategory) {
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("snus_is_true")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (profileError) throw new Error("Could not verify inventory category access");
+    if (!profile?.snus_is_true) throw new Error("Forbidden inventory category");
   }
 
   const { error } = await supabase
     .from("inventory_items")
     .update({
+      name: name.trim(),
+      category,
+      subcategory: subcategory || null,
       amount: newAmount,
       minimum_amount: newMinimumAmount,
     })

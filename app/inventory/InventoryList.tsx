@@ -10,7 +10,14 @@ export default function InventoryList({
 }: {
   items: any[];
   profile: any;
-  updateItem: (id: string, amount: number, minimumAmount: number) => Promise<void>;
+  updateItem: (
+    id: string,
+    name: string,
+    category: string,
+    subcategory: string,
+    amount: number,
+    minimumAmount: number
+  ) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
 }) {
   const snusCategories = ["snus", "snusessens"];
