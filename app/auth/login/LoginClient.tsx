@@ -85,6 +85,7 @@ export default function LoginClient() {
         <input
           type="password"
           name="password"
+          autoComplete="current-password"
           placeholder="Password"
           required
           className="w-full px-4 py-3 rounded-lg bg-black/40 border border-white/20"
