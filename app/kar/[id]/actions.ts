@@ -10,6 +10,10 @@ import {
   calcIBU,
 } from "@/lib/brewing/beerCalculators";
 import { convertIngredientAmount } from "@/lib/inventory/convertIngredientAmount";
+import {
+  isBatchAdditiveInventoryCategory,
+  isFruitInventoryCategory,
+} from "@/lib/inventory/categories";
 import { parseSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
 import { hasPremiumAccess } from "@/lib/auth/plan";
 
@@ -532,10 +536,13 @@ if (type === "Beer" && beerSubtype === "fresh_wort_kit") {
     const inventoryJuiceAmount = formData.get("inventory_juice_amount");
     if ((type === "Cider" || type === "Wine") && (juice_type || inventoryJuiceAmount)) {
       const juiceItem = (inventoryItems ?? []).find(
-        (item) =>
-          item.id === inventorySelections.juice &&
-          item.category === "fermentables" &&
-          item.subcategory?.toLocaleLowerCase() === "juice"
+        (item) => {
+          if (item.id !== inventorySelections.juice) return false;
+          if (item.category === "fermentables") {
+            return item.subcategory?.toLocaleLowerCase() === "juice";
+          }
+          return type === "Wine" && isFruitInventoryCategory(item.category, item.subcategory);
+        }
       );
       const juiceAmount = Number(inventoryJuiceAmount);
       if (
@@ -551,7 +558,14 @@ if (type === "Beer" && beerSubtype === "fresh_wort_kit") {
           )}`
         );
       }
-      addIngredientUse(juice_type || juiceItem.name, juiceAmount, juiceItem.unit, "juice", "fermentables", "Juice");
+      addIngredientUse(
+        juice_type || juiceItem.name,
+        juiceAmount,
+        juiceItem.unit,
+        "juice",
+        juiceItem.category,
+        juiceItem.subcategory ?? undefined
+      );
     }
     for (const [index, malt] of malts.entries()) {
       addIngredientUse(malt.name, malt.amount, malt.unit || "kg", `malt:${index}`, "malts");
@@ -563,7 +577,7 @@ if (type === "Beer" && beerSubtype === "fresh_wort_kit") {
       addIngredientUse(hop.name, hop.amount, "g", `dryhop:${index}`, "hops");
     }
     for (const [index, fruit] of fruits.entries()) {
-      addIngredientUse(fruit.name, fruit.amount, fruit.unit, `fruit:${index}`, "flavorings", "Fruit");
+      addIngredientUse(fruit.name, fruit.amount, fruit.unit, `fruit:${index}`, "fruit");
     }
     for (const [index, fruit] of parsedSecondaryAdditions.fruits.entries()) {
       addIngredientUse(
@@ -571,8 +585,7 @@ if (type === "Beer" && beerSubtype === "fresh_wort_kit") {
         fruit.amount,
         fruit.unit,
         `secondary-fruit:${index}`,
-        "flavorings",
-        "Fruit"
+        "fruit"
       );
     }
     for (const [index, additive] of parsedSecondaryAdditions.additives.entries()) {
@@ -599,24 +612,38 @@ if (type === "Beer" && beerSubtype === "fresh_wort_kit") {
       const selectedItemId = inventorySelections[ingredient.selectionKey];
       let matchingItems = selectedItemId
         ? (inventoryItems ?? []).filter(
-            (item) =>
-              item.id === selectedItemId &&
-              !/\bwater\b/i.test(item.name) &&
-              (!ingredient.category || item.category === ingredient.category) &&
-              (!ingredient.subcategory ||
-                item.subcategory?.toLocaleLowerCase() ===
-                  ingredient.subcategory.toLocaleLowerCase())
+            (item) => {
+              const categoryMatches =
+                ingredient.category === "fruit"
+                  ? isFruitInventoryCategory(item.category, item.subcategory)
+                  : !ingredient.category || item.category === ingredient.category;
+              return (
+                item.id === selectedItemId &&
+                !/\bwater\b/i.test(item.name) &&
+                categoryMatches &&
+                (!ingredient.subcategory ||
+                  item.subcategory?.toLocaleLowerCase() ===
+                    ingredient.subcategory.toLocaleLowerCase())
+              );
+            }
           )
         : (inventoryItems ?? []).filter(
-            (item) =>
-              normalizeInventoryName(item.name) === normalizeInventoryName(ingredient.name) &&
-              !/\bwater\b/i.test(item.name) &&
-              (!ingredient.category || item.category === ingredient.category) &&
-              (!ingredient.subcategory ||
-                item.subcategory?.toLocaleLowerCase() ===
-                  ingredient.subcategory.toLocaleLowerCase()) &&
-              (!ingredient.unit ||
-                convertIngredientAmount(ingredient.amount, ingredient.unit, item.unit) !== null)
+            (item) => {
+              const categoryMatches =
+                ingredient.category === "fruit"
+                  ? isFruitInventoryCategory(item.category, item.subcategory)
+                  : !ingredient.category || item.category === ingredient.category;
+              return (
+                normalizeInventoryName(item.name) === normalizeInventoryName(ingredient.name) &&
+                !/\bwater\b/i.test(item.name) &&
+                categoryMatches &&
+                (!ingredient.subcategory ||
+                  item.subcategory?.toLocaleLowerCase() ===
+                    ingredient.subcategory.toLocaleLowerCase()) &&
+                (!ingredient.unit ||
+                  convertIngredientAmount(ingredient.amount, ingredient.unit, item.unit) !== null)
+              );
+            }
           );
       if (!selectedItemId && matchingItems.length === 0 && ingredient.subcategory) {
         const normalizedIngredient = normalizeInventoryName(ingredient.name);
@@ -626,7 +653,9 @@ if (type === "Beer" && beerSubtype === "fresh_wort_kit") {
             item.subcategory?.toLocaleLowerCase() ===
             ingredient.subcategory?.toLocaleLowerCase();
           const sameCategory =
-            !ingredient.category || item.category === ingredient.category;
+            ingredient.category === "fruit"
+              ? isFruitInventoryCategory(item.category, item.subcategory)
+              : !ingredient.category || item.category === ingredient.category;
           const isWater = /\bwater\b/i.test(item.name);
           const isGeneric = normalizedIngredient === "honey" || normalizedIngredient === "sugar";
           const nameMatches =
@@ -680,7 +709,10 @@ if (type === "Beer" && beerSubtype === "fresh_wort_kit") {
       const item = (inventoryItems ?? []).find(
         (inventoryItem) =>
           inventoryItem.id === additive.inventory_item_id &&
-          inventoryItem.category === "additives" &&
+          isBatchAdditiveInventoryCategory(
+            inventoryItem.category,
+            inventoryItem.subcategory
+          ) &&
           !/\bwater\b/i.test(inventoryItem.name)
       );
       if (!item) {

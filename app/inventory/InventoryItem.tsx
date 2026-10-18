@@ -4,6 +4,8 @@ import { useState } from "react";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
 import {
   INVENTORY_CATEGORIES,
+  getInventoryItemCategory,
+  getInventorySubcategoryOptions,
   LEGACY_CATEGORY_ALIASES,
   SNUS_CATEGORIES,
 } from "@/lib/inventory/categories";
@@ -32,8 +34,12 @@ export default function InventoryItem({
   const [editError, setEditError] = useState("");
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState(item.name);
-  const [category, setCategory] = useState(item.category);
-  const [subcategory, setSubcategory] = useState(item.subcategory ?? "");
+  const [category, setCategory] = useState(
+    () => getInventoryItemCategory(item.category, item.subcategory).category
+  );
+  const [subcategory, setSubcategory] = useState(
+    () => getInventoryItemCategory(item.category, item.subcategory).subcategory
+  );
   const [amount, setAmount] = useState(item.amount);
   const [minimumAmount, setMinimumAmount] = useState(item.minimum_amount ?? "");
   const snusCategories = ["snus", "snusessens"];
@@ -67,6 +73,7 @@ export default function InventoryItem({
   );
   const minimum = Number(item.minimum_amount);
   const current = Number(item.amount);
+  const itemCategory = getInventoryItemCategory(item.category, item.subcategory);
 
   let status = "OK";
   let statusColor = "text-green-400";
@@ -81,8 +88,8 @@ export default function InventoryItem({
 
   function startEdit() {
     setName(item.name);
-    setCategory(item.category);
-    setSubcategory(item.subcategory ?? "");
+    setCategory(itemCategory.category);
+    setSubcategory(itemCategory.subcategory);
     setAmount(item.amount);
     setMinimumAmount(item.minimum_amount ?? "");
     setEditError("");
@@ -92,8 +99,8 @@ export default function InventoryItem({
   function cancelEdit() {
     setEditMode(false);
     setName(item.name);
-    setCategory(item.category);
-    setSubcategory(item.subcategory ?? "");
+    setCategory(itemCategory.category);
+    setSubcategory(itemCategory.subcategory);
     setAmount(item.amount);
     setMinimumAmount(item.minimum_amount ?? "");
     setEditError("");
@@ -145,9 +152,9 @@ export default function InventoryItem({
           )}
         </div>
         <div className="mt-1 text-xs text-white/60">
-          {item.subcategory
-            ? `${item.category.charAt(0).toUpperCase() + item.category.slice(1)} · ${item.subcategory}`
-            : item.category.charAt(0).toUpperCase() + item.category.slice(1)}
+          {itemCategory.subcategory
+            ? `${INVENTORY_CATEGORIES.find((category) => category.id === itemCategory.category)?.label ?? itemCategory.category} · ${itemCategory.subcategory}`
+            : INVENTORY_CATEGORIES.find((category) => category.id === itemCategory.category)?.label ?? itemCategory.category}
         </div>
         {item.category === "hops" && (
           <div className="mt-2 flex flex-wrap gap-2 text-xs">
@@ -218,9 +225,9 @@ export default function InventoryItem({
                 onChange={(event) => setSubcategory(event.target.value)}
               >
                 <option value="">Choose a subcategory</option>
-                {selectedCategory.subcategories.map((value) => (
-                  <option key={value} value={value}>
-                    {value}
+                {getInventorySubcategoryOptions(selectedCategory.id).map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
                   </option>
                 ))}
               </select>

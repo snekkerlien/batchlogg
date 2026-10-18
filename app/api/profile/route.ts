@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
 
   const { data: profile, error: profileError } = await serviceRole
     .from("profiles")
-    .select("username, is_public, avatar_url, snus_is_true, can_manage_kegs, theme_accent_color, membership_status, account_tier, premium_grant_source, stripe_subscription_status, profile_accent_color, created_at, profile_banner, featured_recipe_id, preferred_unit_system, use_inventory_for_batches, batch_reminders_enabled, onboarding_completed")
+    .select("username, is_public, avatar_url, snus_is_true, can_manage_kegs, theme_accent_color, membership_status, account_tier, premium_grant_source, stripe_subscription_status, created_at, profile_banner, featured_recipe_id, preferred_unit_system, use_inventory_for_batches, batch_reminders_enabled, onboarding_completed")
     .eq("id", user.id)
     .single();
 
@@ -81,7 +81,6 @@ export async function GET(request: NextRequest) {
     account_tier: profile.account_tier,
     premium_grant_source: profile.premium_grant_source,
     stripe_subscription_status: profile.stripe_subscription_status,
-    profile_accent_color: profile.profile_accent_color,
     profile_banner: profile.profile_banner,
     featured_recipe_id: profile.featured_recipe_id,
   });

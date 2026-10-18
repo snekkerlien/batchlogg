@@ -39,24 +39,10 @@ export default function NewOtherPage({
     setIngredients(updated);
   }
 
-  // Dynamic process steps
-  const [steps, setSteps] = useState<string[]>([]);
-
   useEffect(() => {
     if (!recipe) return;
     setIngredients(Array.isArray(recipe.ingredients) ? recipe.ingredients : []);
-    setSteps(Array.isArray(recipe.steps) ? recipe.steps : []);
   }, [recipe]);
-
-  function addStep() {
-    setSteps([...steps, ""]);
-  }
-
-  function removeStep(index: number) {
-    const updated = [...steps];
-    updated.splice(index, 1);
-    setSteps(updated);
-  }
 
   return (
     <main className="min-h-screen px-6 py-12 text-white flex justify-center">
@@ -85,7 +71,11 @@ export default function NewOtherPage({
           className="flex flex-col gap-6"
           onSubmit={() => setLoading(true)}
         >
-          <BatchInventoryProvider recipeId={recipe?.id} recipe={recipe}>
+          <BatchInventoryProvider
+            recipeId={recipe?.id}
+            recipe={recipe}
+            className="flex flex-col gap-6"
+          >
           {/* Hidden fields */}
           <input type="hidden" name="kar" value={params.id} />
           <input type="hidden" name="type" value="Other" />
@@ -203,49 +193,21 @@ export default function NewOtherPage({
           {/* Hidden JSON field */}
           <input type="hidden" name="ingredients_json" value={JSON.stringify(ingredients)} />
 
-          {/* Dynamic process steps */}
-          <div>
-            <label className="block mb-2 font-semibold">Process steps</label>
-
-            {steps.map((step, i) => (
-              <div key={i} className="flex gap-2 mb-2 items-center">
-                <textarea
-                  placeholder={`Step ${i + 1}`}
-                  className="flex-1 p-3 rounded bg-black/40 border border-white/20 h-24"
-                  value={step}
-                  onChange={(e) => {
-                    const updated = [...steps];
-                    updated[i] = e.target.value;
-                    setSteps(updated);
-                  }}
-                />
-
-                <button
-                  type="button"
-                  onClick={() => removeStep(i)}
-                  className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm h-fit"
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
-
-            <button
-              type="button"
-              onClick={addStep}
-              className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
-            >
-              + Add step
-            </button>
-          </div>
-
-          {/* Hidden JSON field */}
-          <input type="hidden" name="steps_json" value={JSON.stringify(steps)} />
-
           {/* Additives */}
           <div>
             <label className="block mb-1 font-semibold">Additives</label>
             <InventoryAdditiveFields defaultValue={recipe?.additives ?? ""} />
+          </div>
+
+          {/* Full process */}
+          <div>
+            <label className="block mb-1 font-semibold">Full process</label>
+            <textarea
+              name="full_process"
+              defaultValue={recipe?.full_process ?? ""}
+              placeholder="Describe the full process..."
+              className="w-full p-3 rounded bg-black/40 border border-white/20 h-40"
+            />
           </div>
 
           {/* Notes */}
@@ -262,7 +224,7 @@ export default function NewOtherPage({
           {/* Submit */}
           <button
             disabled={loading || recipeLoading}
-            className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold"
+            className="w-full rounded-lg border border-green-500 bg-green-500/10 px-4 py-3 font-semibold text-green-300 transition hover:bg-green-500/20 disabled:opacity-50"
           >
             {loading ? "Creating..." : "Create batch"}
           </button>

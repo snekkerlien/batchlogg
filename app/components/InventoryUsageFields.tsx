@@ -9,7 +9,11 @@ import {
   type ReactNode,
 } from "react";
 import { addInventoryItem } from "@/app/actions/inventoryActions";
-import { INVENTORY_CATEGORIES } from "@/lib/inventory/categories";
+import {
+  getInventorySubcategoryOptions,
+  isBatchAdditiveInventoryCategory,
+  INVENTORY_CATEGORIES,
+} from "@/lib/inventory/categories";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import { convertIngredientAmount } from "@/lib/inventory/convertIngredientAmount";
 import {
@@ -355,6 +359,7 @@ export function InventoryIngredientSelect({
   category,
   subcategory,
   subcategories,
+  inventoryFilters,
   enabledOnly = false,
   trackAmount = false,
   amountFieldName,
@@ -372,6 +377,7 @@ export function InventoryIngredientSelect({
   category?: string;
   subcategory?: string;
   subcategories?: string[];
+  inventoryFilters?: { category: string; subcategory?: string }[];
   enabledOnly?: boolean;
   trackAmount?: boolean;
   amountFieldName?: string;
@@ -387,6 +393,19 @@ export function InventoryIngredientSelect({
   const amountEdited = useRef(false);
   const currentValue = value ?? localValue;
   const normalizedValue = currentValue.trim().toLocaleLowerCase();
+  const matchesInventoryFilter = (item: InventoryItem) =>
+    inventoryFilters
+      ? inventoryFilters.some(
+          (filter) =>
+            item.category === filter.category &&
+            (!filter.subcategory ||
+              item.subcategory?.toLocaleLowerCase() ===
+                filter.subcategory.toLocaleLowerCase())
+        )
+      : (!category || item.category === category) &&
+        (!subcategories ||
+          subcategories.some((s) => item.subcategory?.toLowerCase() === s.toLowerCase())) &&
+        (!subcategory || item.subcategory?.toLowerCase() === subcategory.toLowerCase());
 
   useEffect(() => {
     if (value === undefined) setLocalValue(defaultValue ?? "");
@@ -397,8 +416,7 @@ export function InventoryIngredientSelect({
     const candidates = context.items.filter(
       (item) =>
         item.name.trim().toLocaleLowerCase() === normalizedValue &&
-        (!category || item.category === category) &&
-        (!subcategory || item.subcategory?.toLowerCase() === subcategory.toLowerCase())
+        matchesInventoryFilter(item)
     );
     if (candidates.length === 1) context.setSelection(selectionKey, candidates[0].id);
   }, [
@@ -409,16 +427,11 @@ export function InventoryIngredientSelect({
     selectionKey,
     category,
     subcategory,
+    inventoryFilters,
     normalizedValue,
   ]);
 
-  const options = context.items.filter(
-    (item) =>
-      (!category || item.category === category) &&
-      (!subcategories ||
-        subcategories.some((s) => item.subcategory?.toLowerCase() === s.toLowerCase())) &&
-      (!subcategory || item.subcategory?.toLowerCase() === subcategory.toLowerCase())
-  );
+  const options = context.items.filter(matchesInventoryFilter);
   const selected = context.items.find(
     (item) => item.id === context.selections[selectionKey]
   );
@@ -708,9 +721,9 @@ function InventoryItemCreator({
             className="rounded border border-white/20 bg-zinc-900 p-3"
           >
             <option value="">Choose a subcategory (optional)</option>
-            {selectedCategory.subcategories.map((value) => (
-              <option key={value} value={value}>
-                {value}
+            {getInventorySubcategoryOptions(selectedCategory.id).map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
             ))}
           </select>
@@ -834,11 +847,12 @@ export function InventoryAdditiveFields({
   }
   const [additives, setAdditives] = useState<BatchAdditive[]>(() => {
     const initial = parseRecipeAdditions(defaultValue);
-    return (initial.length ? initial : [{ name: "", amount: "", unit: "" }])
-      .map((item) => ({ inventory_item_id: "", amount: item.amount }));
+    return initial.map((item) => ({ inventory_item_id: "", amount: item.amount }));
   });
   const [appliedDefault, setAppliedDefault] = useState<string | null>(null);
-  const items = context.items.filter((item) => item.category === "additives");
+  const items = context.items.filter((item) =>
+    isBatchAdditiveInventoryCategory(item.category, item.subcategory)
+  );
   const selectedAdditives = additives
     .map((additive) => ({
       ...additive,
@@ -866,8 +880,8 @@ export function InventoryAdditiveFields({
     if (!context.enabled || !context.loaded || appliedDefault === defaultValue) return;
 
     const initial = parseRecipeAdditions(defaultValue);
-    setAdditives((initial.length ? initial : [{ name: "", amount: "", unit: "" }])
-      .map((addition: AdditionItem) => {
+    setAdditives(
+      initial.map((addition: AdditionItem) => {
         const matches = items.filter(
           (item) => item.name.trim().toLocaleLowerCase() === addition.name.trim().toLocaleLowerCase()
         );
@@ -884,7 +898,8 @@ export function InventoryAdditiveFields({
               : addition.amount
             : String(convertedAmount),
         };
-      }));
+      })
+    );
     setAppliedDefault(defaultValue);
   }, [appliedDefault, context.enabled, context.loaded, defaultValue, items]);
 
@@ -958,8 +973,7 @@ export function InventoryAdditiveFields({
                   current.filter((_, additiveIndex) => additiveIndex !== index)
                 )
               }
-              disabled={additives.length === 1}
-              className="rounded-lg border border-white/20 px-3 py-2 text-sm disabled:opacity-40"
+              className="rounded-lg border border-white/20 px-3 py-2 text-sm"
               aria-label={`Remove additive ${index + 1}`}
             >
               Remove

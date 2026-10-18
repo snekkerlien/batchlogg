@@ -1,7 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { INVENTORY_CATEGORIES, SNUS_CATEGORIES } from "@/lib/inventory/categories";
+import {
+  getInventorySubcategoryOptions,
+  INVENTORY_CATEGORIES,
+  SNUS_CATEGORIES,
+} from "@/lib/inventory/categories";
 
 type AddItemFormProps = {
   onSubmitComplete?: () => void;
@@ -96,9 +100,9 @@ export default function AddItemForm({
           }
         >
           <option value="">Choose a subcategory</option>
-          {selectedCategory.subcategories.map((subcategory) => (
-            <option key={subcategory} value={subcategory}>
-              {subcategory}
+          {getInventorySubcategoryOptions(selectedCategory.id).map((subcategory) => (
+            <option key={subcategory.value} value={subcategory.value}>
+              {subcategory.label}
             </option>
           ))}
         </select>

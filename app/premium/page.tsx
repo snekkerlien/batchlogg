@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
@@ -78,6 +79,9 @@ export default function PremiumPage() {
   return (
     <main className="min-h-screen px-6 py-12 text-white">
       <div className="relative mx-auto mt-12 max-w-3xl rounded-xl border border-white/10 bg-black/60 p-6 pt-16 backdrop-blur-md sm:p-10">
+        <div className="absolute left-4 top-2 z-40 sm:top-4">
+          <BackButton />
+        </div>
         <div className="absolute right-4 top-2 z-40 sm:top-4">
           <MenuOverlay current="premium" />
         </div>

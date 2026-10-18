@@ -420,13 +420,6 @@ const secondary = batchesRaw
   status={profile.membership_status}
   tier={profile.account_tier}
 />
-{profile.account_tier === "premium" && profile.profile_accent_color && (
-  <div
-    aria-hidden="true"
-    className="mx-auto mb-6 h-1 w-24 rounded-full"
-    style={{ backgroundColor: profile.profile_accent_color }}
-  />
-)}
 
 {!isOwner && (
   <div className="mb-6 flex justify-center">

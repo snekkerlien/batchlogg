@@ -12,6 +12,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function itemKey(name: string, unit: string) {
+  return `${name.trim().toLocaleLowerCase().replace(/\s+/g, " ")}\u0000${unit
+    .trim()
+    .toLocaleLowerCase()}`;
+}
+
 function validateItem(value: unknown) {
   if (!isRecord(value)) return null;
   const name = typeof value.name === "string" ? value.name.trim() : "";
@@ -115,15 +121,91 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const { data, error } = await serviceRole
+  const { data: existingItems, error: existingItemsError } = await serviceRole
     .from("shopping_list_items")
-    .insert(validItems.map((item) => ({ ...item, user_id: user.id })))
-    .select("id, recipe_id, name, amount, unit, is_checked, created_at, updated_at");
-  if (error) {
-    console.error("Could not add shopping-list items", error);
+    .select("id, recipe_id, name, amount, unit, is_checked, created_at, updated_at")
+    .eq("user_id", user.id)
+    .eq("is_checked", false)
+    .order("created_at", { ascending: true });
+  if (existingItemsError) {
+    console.error("Could not check for matching shopping-list items", existingItemsError);
     return NextResponse.json({ error: "Could not add shopping-list items" }, { status: 500 });
   }
-  return NextResponse.json({ items: data ?? [] }, { status: 201 });
+
+  const workingItems = [...(existingItems ?? [])];
+  const changedItems = [];
+  const deletedIds: string[] = [];
+
+  for (const item of validItems) {
+    const matchingItems =
+      item.amount > 0
+        ? workingItems.filter(
+            (existing) =>
+              existing.amount > 0 &&
+              itemKey(existing.name, existing.unit) === itemKey(item.name, item.unit)
+          )
+        : [];
+
+    if (matchingItems.length > 0) {
+      const primary = matchingItems[0];
+      const amount =
+        matchingItems.reduce((total, existing) => total + Number(existing.amount), item.amount);
+      if (!Number.isFinite(amount) || amount > 1_000_000) {
+        return NextResponse.json(
+          { error: "Combined shopping-list quantity cannot exceed 1,000,000" },
+          { status: 400 }
+        );
+      }
+
+      const { data: updatedItem, error: updateError } = await serviceRole
+        .from("shopping_list_items")
+        .update({ amount, updated_at: new Date().toISOString() })
+        .eq("id", primary.id)
+        .eq("user_id", user.id)
+        .select("id, recipe_id, name, amount, unit, is_checked, created_at, updated_at")
+        .single();
+      if (updateError) {
+        console.error("Could not combine shopping-list items", updateError);
+        return NextResponse.json({ error: "Could not add shopping-list items" }, { status: 500 });
+      }
+
+      const duplicateIds = matchingItems.slice(1).map((existing) => existing.id);
+      if (duplicateIds.length > 0) {
+        const { error: deleteError } = await serviceRole
+          .from("shopping_list_items")
+          .delete()
+          .eq("user_id", user.id)
+          .in("id", duplicateIds);
+        if (deleteError) {
+          console.error("Could not remove duplicate shopping-list items", deleteError);
+          return NextResponse.json({ error: "Could not add shopping-list items" }, { status: 500 });
+        }
+        deletedIds.push(...duplicateIds);
+      }
+
+      for (const existing of matchingItems) {
+        const index = workingItems.findIndex((entry) => entry.id === existing.id);
+        if (index !== -1) workingItems.splice(index, 1);
+      }
+      workingItems.push(updatedItem);
+      changedItems.push(updatedItem);
+      continue;
+    }
+
+    const { data: insertedItem, error: insertError } = await serviceRole
+      .from("shopping_list_items")
+      .insert({ ...item, user_id: user.id })
+      .select("id, recipe_id, name, amount, unit, is_checked, created_at, updated_at")
+      .single();
+    if (insertError) {
+      console.error("Could not add shopping-list items", insertError);
+      return NextResponse.json({ error: "Could not add shopping-list items" }, { status: 500 });
+    }
+    workingItems.push(insertedItem);
+    changedItems.push(insertedItem);
+  }
+
+  return NextResponse.json({ items: changedItems, deleted_ids: deletedIds }, { status: 201 });
 }
 
 export async function PATCH(request: NextRequest) {

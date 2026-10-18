@@ -2,14 +2,16 @@
 
 import { useRouter } from "next/navigation";
 
-export default function BackButton() {
+export default function BackButton({ href }: { href?: string } = {}) {
   const router = useRouter();
 
   return (
     <button
       type="button"
       onClick={() => {
-        if (window.history.length > 1) {
+        if (href) {
+          router.push(href);
+        } else if (window.history.length > 1) {
           router.back();
         } else {
           router.replace("/dashboard");

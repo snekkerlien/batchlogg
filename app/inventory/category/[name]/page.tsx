@@ -9,6 +9,7 @@ import MenuOverlay from "../../../components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 import {
   INVENTORY_CATEGORIES,
+  getInventoryItemCategory,
   LEGACY_CATEGORY_ALIASES,
   SNUS_CATEGORIES,
 } from "@/lib/inventory/categories";
@@ -37,7 +38,9 @@ export default function CategoryPage({ params }: { params: { name: string } }) {
     INVENTORY_CATEGORIES.some((item) => item.id === category) ||
     SNUS_CATEGORIES.some((item) => item === category);
   const filtered = items
-    .filter((item) => item.category === category)
+    .filter(
+      (item) => getInventoryItemCategory(item.category, item.subcategory).category === category
+    )
     .sort((a, b) =>
       String(a.name ?? "").localeCompare(String(b.name ?? ""), undefined, {
         sensitivity: "base",

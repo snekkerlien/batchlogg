@@ -4,6 +4,7 @@ import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { revalidatePath } from "next/cache";
 import {
   INVENTORY_CATEGORIES,
+  isInventorySubcategory,
   LEGACY_CATEGORY_ALIASES,
   SNUS_CATEGORIES,
 } from "@/lib/inventory/categories";
@@ -46,7 +47,7 @@ export async function addInventoryItem(formData: FormData, shouldRevalidate = tr
     minimum < 0 ||
     (selectedCategory &&
       subcategory &&
-      !selectedCategory.subcategories.some((value) => value === subcategory))
+      !isInventorySubcategory(selectedCategory.id, subcategory))
   ) {
     throw new Error("Invalid inventory item");
   }
@@ -118,7 +119,7 @@ export async function updateInventoryItem(
     (!selectedCategory && !isSnusCategory) ||
     (selectedCategory &&
       subcategory &&
-      !selectedCategory.subcategories.some((value) => value === subcategory)) ||
+      !isInventorySubcategory(selectedCategory.id, subcategory)) ||
     (!selectedCategory && subcategory) ||
     !Number.isFinite(newAmount) ||
     newAmount < 0 ||

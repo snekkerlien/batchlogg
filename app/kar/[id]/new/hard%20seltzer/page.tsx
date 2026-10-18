@@ -50,7 +50,11 @@ export default function NewSeltzerPage({
           className="flex flex-col gap-6"
           onSubmit={() => setLoading(true)}
         >
-          <BatchInventoryProvider recipeId={recipe?.id} recipe={recipe}>
+          <BatchInventoryProvider
+            recipeId={recipe?.id}
+            recipe={recipe}
+            className="flex flex-col gap-6"
+          >
           {/* Hidden fields */}
           <input type="hidden" name="kar" value={params.id} />
           <input type="hidden" name="type" value="Seltzer" />
@@ -171,7 +175,7 @@ export default function NewSeltzerPage({
           {/* Submit */}
           <button
             disabled={loading || recipeLoading}
-            className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold"
+            className="w-full rounded-lg border border-green-500 bg-green-500/10 px-4 py-3 font-semibold text-green-300 transition hover:bg-green-500/20 disabled:opacity-50"
           >
             {loading ? "Creating..." : "Create batch"}
           </button>

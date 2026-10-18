@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
+import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
@@ -36,6 +37,14 @@ export default function MessagesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const peerId = searchParams.get("peer_id");
+  const requestedReturnTo = searchParams.get("return_to");
+  const returnTo =
+    requestedReturnTo?.startsWith("/") &&
+    !requestedReturnTo.startsWith("//") &&
+    !requestedReturnTo.startsWith("/community/messages")
+      ? requestedReturnTo
+      : undefined;
+  const returnToQuery = returnTo ? `&return_to=${encodeURIComponent(returnTo)}` : "";
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [peer, setPeer] = useState<Peer | null>(null);
   const [messages, setMessages] = useState<CommunityMessage[]>([]);
@@ -238,6 +247,9 @@ export default function MessagesPage() {
   return (
     <main className="min-h-screen px-6 py-12 text-white">
       <div className="relative mx-auto w-full max-w-4xl rounded-xl border border-white/10 bg-black/60 p-6 pt-16 backdrop-blur-md sm:p-8 sm:pt-16">
+        <div className="absolute left-4 top-4 z-40">
+          <BackButton href={returnTo} />
+        </div>
         <div className="absolute right-4 top-4 z-40">
           <MenuOverlay current="messages" />
         </div>
@@ -254,7 +266,11 @@ export default function MessagesPage() {
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => router.push("/community/messages")}
+                  onClick={() =>
+                    router.replace(
+                      `/community/messages${returnToQuery ? `?${returnToQuery.slice(1)}` : ""}`
+                    )
+                  }
                   className="rounded-lg border border-white/20 px-3 py-2 hover:bg-white/10"
                   aria-label="Back to inbox"
                 >
@@ -341,6 +357,17 @@ export default function MessagesPage() {
               <textarea
                 value={messageText}
                 onChange={(event) => setMessageText(event.target.value)}
+                onKeyDown={(event) => {
+                  if (
+                    event.key !== "Enter" ||
+                    event.shiftKey ||
+                    event.nativeEvent.isComposing
+                  ) {
+                    return;
+                  }
+                  event.preventDefault();
+                  if (!sending) event.currentTarget.form?.requestSubmit();
+                }}
                 maxLength={2000}
                 required
                 rows={2}
@@ -374,7 +401,11 @@ export default function MessagesPage() {
                   <li key={conversation.id}>
                     <button
                       type="button"
-                      onClick={() => router.push(`/community/messages?peer_id=${conversation.id}`)}
+                      onClick={() =>
+                        router.replace(
+                          `/community/messages?peer_id=${encodeURIComponent(conversation.id)}${returnToQuery}`
+                        )
+                      }
                       className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-4 text-left hover:bg-white/10"
                     >
                       <Image src={conversation.avatar_url || "/default-avatar.png"} alt="" width={48} height={48} sizes="48px" unoptimized className="h-12 w-12 rounded-full object-cover" />

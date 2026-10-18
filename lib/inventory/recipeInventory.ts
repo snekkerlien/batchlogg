@@ -1,4 +1,8 @@
 import { convertIngredientAmount } from "@/lib/inventory/convertIngredientAmount";
+import {
+  isBatchAdditiveInventoryCategory,
+  isFruitInventoryCategory,
+} from "@/lib/inventory/categories";
 import { parseSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
 
 export type InventoryItem = {
@@ -21,8 +25,34 @@ export type RecipeInventoryRequirement = {
   selectionKey: string;
   category?: string;
   subcategory?: string;
+  inventoryFilters?: { category: string; subcategory?: string }[];
   requireAmount?: boolean;
 };
+
+function matchesRequirementInventoryCategory(
+  item: InventoryItem,
+  requirement: RecipeInventoryRequirement
+) {
+  if (requirement.inventoryFilters) {
+    return requirement.inventoryFilters.some(
+      (filter) =>
+        item.category === filter.category &&
+        (!filter.subcategory ||
+          item.subcategory?.toLocaleLowerCase() === filter.subcategory.toLocaleLowerCase())
+    );
+  }
+  if (requirement.category === "fruit") {
+    return isFruitInventoryCategory(item.category, item.subcategory);
+  }
+  if (requirement.category === "additives") {
+    return isBatchAdditiveInventoryCategory(item.category, item.subcategory);
+  }
+  return (
+    (!requirement.category || item.category === requirement.category) &&
+    (!requirement.subcategory ||
+      item.subcategory?.toLocaleLowerCase() === requirement.subcategory.toLocaleLowerCase())
+  );
+}
 
 function parseIngredientRows(
   formData: FormData,
@@ -126,7 +156,7 @@ export function recipeInventoryRequirements(
       });
     });
   }
-  if (type === "Mead" && !addRows("fruits_json", "fruit", "flavorings", "Fruit")) {
+  if (type === "Mead" && !addRows("fruits_json", "fruit", "fruit")) {
     return null;
   }
   if (type === "Other" && !addRows("ingredients_json", "ingredient")) {
@@ -146,8 +176,7 @@ export function recipeInventoryRequirements(
       amount,
       unit: fruit.unit.trim(),
       selectionKey: `secondary-fruit:${index}`,
-      category: "flavorings",
-      subcategory: "Fruit",
+      category: "fruit",
     });
   }
   for (const [index, additive] of secondaryAdditions.additives.entries()) {
@@ -203,7 +232,7 @@ export function recipeInventoryRequirements(
       true
     );
   }
-  if (type === "Cider" || type === "Wine") {
+  if (type === "Cider") {
     addNamedAmount(
       "juice_type",
       "inventory_juice_amount",
@@ -213,6 +242,24 @@ export function recipeInventoryRequirements(
       "",
       true
     );
+  } else if (type === "Wine") {
+    const name = formData.get("juice_type");
+    const amount = formNumber(formData.get("inventory_juice_amount"));
+    if (typeof name === "string" && name.trim()) {
+      requirements.push({
+        name: name.trim(),
+        amount: amount !== null && amount > 0 ? amount : null,
+        unit: "",
+        selectionKey: "juice",
+        inventoryFilters: [
+          { category: "fermentables", subcategory: "Juice" },
+          { category: "fruit", subcategory: "Grapes" },
+          { category: "flavorings", subcategory: "Fruit" },
+          { category: "flavorings", subcategory: "Fruit / Grapes" },
+        ],
+        requireAmount: true,
+      });
+    }
   }
   const sugarAmount = formNumber(formData.get("sugar_amount"));
   if (sugarAmount !== null && sugarAmount > 0) {
@@ -321,9 +368,7 @@ export function getSavedRecipeShoppingRequirements(
     const candidates = items.filter(
       (item) =>
         normalize(item.name) === normalize(requirement.name) &&
-        (!requirement.category || item.category === requirement.category) &&
-        (!requirement.subcategory ||
-          item.subcategory?.toLocaleLowerCase() === requirement.subcategory.toLocaleLowerCase())
+        matchesRequirementInventoryCategory(item, requirement)
     );
     if (candidates.length !== 1) {
       return {
@@ -373,9 +418,7 @@ export function getInventoryRequirementIssues(
     }
 
     const isAllowed = (item: InventoryItem) =>
-      (!requirement.category || item.category === requirement.category) &&
-      (!requirement.subcategory ||
-        item.subcategory?.toLocaleLowerCase() === requirement.subcategory.toLocaleLowerCase());
+      matchesRequirementInventoryCategory(item, requirement);
     const selectedId = selections[requirement.selectionKey];
     let candidates = selectedId
       ? items.filter((item) => item.id === selectedId && isAllowed(item))

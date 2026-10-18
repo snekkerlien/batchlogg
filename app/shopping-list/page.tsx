@@ -44,7 +44,11 @@ async function requestShoppingList(
     headers: body ? { "Content-Type": "application/json" } : undefined,
     body: body ? JSON.stringify(body) : undefined,
   });
-  const result: { error?: string; items?: ShoppingItem[] } = await response.json();
+  const result: {
+    error?: string;
+    items?: ShoppingItem[];
+    deleted_ids?: string[];
+  } = await response.json();
   if (!response.ok) throw new Error(result.error || "Shopping-list request failed");
   return result;
 }
@@ -64,6 +68,22 @@ export default function ShoppingListPage() {
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+
+  function applyAddedShoppingItems(result: {
+    items?: ShoppingItem[];
+    deleted_ids?: string[];
+  }) {
+    const deletedIds = new Set(result.deleted_ids ?? []);
+    setItems((current) => {
+      const next = current.filter((item) => !deletedIds.has(item.id));
+      for (const addedItem of result.items ?? []) {
+        const index = next.findIndex((item) => item.id === addedItem.id);
+        if (index === -1) next.push(addedItem);
+        else next[index] = addedItem;
+      }
+      return next;
+    });
+  }
 
   const load = useCallback(async () => {
     const {
@@ -164,7 +184,7 @@ export default function ShoppingListPage() {
         return;
       }
       const result = await requestShoppingList("POST", { items: missing });
-      setItems((current) => [...current, ...(result.items ?? [])]);
+      applyAddedShoppingItems(result);
       setMessage(`Added ${missing.length} ingredient${missing.length === 1 ? "" : "s"} from ${recipe.name}.`);
     } catch (addError) {
       console.error("Could not add recipe ingredients to shopping list", addError);
@@ -190,7 +210,7 @@ export default function ShoppingListPage() {
         unit: newUnit,
         recipe_id: null,
       });
-      setItems((current) => [...current, ...(result.items ?? [])]);
+      applyAddedShoppingItems(result);
       setNewName("");
       setNewAmount("");
       setNewUnit("");

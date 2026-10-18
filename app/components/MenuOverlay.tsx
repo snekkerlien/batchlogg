@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import NotificationBell from "@/app/components/NotificationBell";
 import PublicNavigationLinks from "@/app/components/PublicNavigationLinks";
 import { useAuthContext } from "@/app/providers/AuthProvider";
@@ -16,6 +16,8 @@ export default function MenuOverlay({ current }: { current: string }) {
   const [isModerator, setIsModerator] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     let active = true;
@@ -224,7 +226,19 @@ export default function MenuOverlay({ current }: { current: string }) {
                 {group.items.map((item) => (
                   <Link
                     key={item.key}
-                    href={item.href}
+                    href={
+                      item.key === "messages"
+                        ? (() => {
+                            const currentReturnTo =
+                              pathname === "/community/messages"
+                                ? searchParams.get("return_to")
+                                : `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
+                            return currentReturnTo
+                              ? `${item.href}?return_to=${encodeURIComponent(currentReturnTo)}`
+                              : item.href;
+                          })()
+                        : item.href
+                    }
                     onClick={() => setMenuOpen(false)}
                     className="flex items-center rounded-md px-2 py-2 font-semibold text-white hover:bg-white/5 hover:text-green-300"
                   >

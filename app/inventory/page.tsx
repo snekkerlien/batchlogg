@@ -9,7 +9,11 @@ import { useInventory } from "./useInventory";
 import Link from "next/link";
 import { useRef } from "react";
 import PageHeading from "@/app/components/PageHeading";
-import { INVENTORY_CATEGORIES, SNUS_CATEGORIES } from "@/lib/inventory/categories";
+import {
+  getInventoryItemCategory,
+  INVENTORY_CATEGORIES,
+  SNUS_CATEGORIES,
+} from "@/lib/inventory/categories";
 
 export default function InventoryPage() {
   const {
@@ -41,17 +45,19 @@ export default function InventoryPage() {
     const minimum = Number(i.minimum_amount);
     return current <= minimum;
   });
-  const restockableItems = lowItems.filter(
-    (item) => Number(item.amount) < Number(item.minimum_amount)
-  );
+  const restockableItems = lowItems;
 
   async function addLowStockToShoppingList() {
-    const restockItems = restockableItems.map((item) => ({
-      name: item.name,
-      amount: Math.max(0, Number(item.minimum_amount) - Number(item.amount)),
-      unit: item.unit ?? "",
-      recipe_id: null,
-    }));
+    const restockItems = restockableItems.map((item) => {
+      const amount = Number(item.amount);
+      const minimum = Number(item.minimum_amount);
+      return {
+        name: item.name,
+        amount: amount < minimum ? minimum - amount : minimum,
+        unit: item.unit ?? "",
+        recipe_id: null,
+      };
+    });
     setPlanningBusy(true);
     setPlanningMessage("");
     let addedItems = 0;
@@ -118,9 +124,11 @@ useEffect(() => {
         <h2 className="text-2xl font-bold mt-2 mb-4 text-center text-green-300">Categories</h2>
 
 {/* Vanlige kategorier */}
-<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-12">
-  {INVENTORY_CATEGORIES.map((cat) => {
-    const catItems = items.filter((i) => i.category === cat.id);
+<div className="grid grid-cols-1 gap-6 mb-12 sm:grid-cols-2 md:grid-cols-6">
+  {INVENTORY_CATEGORIES.map((cat, index) => {
+    const catItems = items.filter(
+      (item) => getInventoryItemCategory(item.category, item.subcategory).category === cat.id
+    );
     const catCount = catItems.length;
 
     const catLow = catItems.filter((i) => {
@@ -129,8 +137,20 @@ useEffect(() => {
       return current <= minimum;
     });
 
+    const isLastRow = index >= INVENTORY_CATEGORIES.length - 2;
+    const centeredLastRowClass =
+      index === INVENTORY_CATEGORIES.length - 2
+        ? "md:col-start-2"
+        : index === INVENTORY_CATEGORIES.length - 1
+          ? "md:col-start-4"
+          : "";
+
     return (
-      <Link key={cat.id} href={`/inventory/category/${cat.id}`}>
+      <Link
+        key={cat.id}
+        href={`/inventory/category/${cat.id}`}
+        className={`md:col-span-2 ${isLastRow ? centeredLastRowClass : ""}`}
+      >
   <div
     ref={cat.id === INVENTORY_CATEGORIES[0].id ? cardRef : null}
     className="p-6 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition flex flex-col"
