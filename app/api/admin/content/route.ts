@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       !/^\d{4}-\d{2}-\d{2}$/.test(body.date) ||
       Number.isNaN(Date.parse(`${body.date}T00:00:00Z`))
     ) {
-      return NextResponse.json({ error: "Invalid changelog entry" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid release note" }, { status: 400 });
     }
     const { error } = await context.serviceRole.from("site_changelog").upsert({
       version: body.version.trim(),
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
     });
     if (error) {
       console.error("Could not save changelog entry", error);
-      return NextResponse.json({ error: "Could not save changelog entry" }, { status: 500 });
+      return NextResponse.json({ error: "Could not save release note" }, { status: 500 });
     }
     if (
       !(await writeAdminAuditEvent(context.serviceRole, {
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
       }))
     ) {
       return NextResponse.json(
-        { error: "Changelog entry was saved, but the audit log could not be updated." },
+        { error: "Release note was saved, but the audit log could not be updated." },
         { status: 500 }
       );
     }
@@ -165,9 +165,9 @@ export async function DELETE(request: NextRequest) {
       .maybeSingle();
     if (error) {
       console.error("Could not delete changelog entry", error);
-      return NextResponse.json({ error: "Could not delete changelog entry" }, { status: 500 });
+      return NextResponse.json({ error: "Could not delete release note" }, { status: 500 });
     }
-    if (!data) return NextResponse.json({ error: "Changelog entry not found" }, { status: 404 });
+    if (!data) return NextResponse.json({ error: "Release note not found" }, { status: 404 });
     if (
       !(await writeAdminAuditEvent(context.serviceRole, {
         actorId: context.user.id,
@@ -177,7 +177,7 @@ export async function DELETE(request: NextRequest) {
       }))
     ) {
       return NextResponse.json(
-        { error: "Changelog entry was removed, but the audit log could not be updated." },
+        { error: "Release note was removed, but the audit log could not be updated." },
         { status: 500 }
       );
     }

@@ -7,13 +7,12 @@ import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
 import MenuOverlay from "./MenuOverlay";
 import { useRouter } from "next/navigation";
 import PageHeading from "@/app/components/PageHeading";
-import type { Fruit, Malt, Hop, Ingredient } from "@/app/types/batchTypes";
 import MembershipStatus from "@/app/components/MembershipStatus";
 import ReportContentButton from "@/app/components/ReportContentButton";
 import RecipeFilters, { type RecipeSort } from "@/app/my-recipes/RecipeFilters";
 import { membershipLabel } from "@/lib/auth/membership";
 import ProfileOverview, { ProfileAchievements } from "@/app/components/ProfileOverview";
-import { Qty } from "@/app/components/Units";
+import RecipePresentation from "@/app/components/RecipePresentation";
 import MemberAdminActions, { type MemberAdminDetails } from "./MemberAdminActions";
 import FermentationBubbles from "@/app/components/FermentationBubbles";
 
@@ -576,127 +575,11 @@ const secondary = batchesRaw
         {/* Slide-down content */}
         <div
           className={`transition-all duration-300 ease-in-out overflow-hidden ${
-            expanded === r.id ? "max-h-[3000px] mt-4" : "max-h-0"
+            expanded === r.id ? "max-h-[6000px] mt-4" : "max-h-0"
           }`}
         >
-          <div className="space-y-4 opacity-90 text-sm whitespace-pre-wrap">
-
-            {/* Basic stats */}
-            <p>
-              <strong>OG:</strong> {r.og}
-              <strong className="ml-4">FG:</strong> {r.fg}
-              <strong className="ml-4">ABV:</strong> {r.abv?.toFixed?.(1)}%
-            </p>
-
-            <p><strong>Volume:</strong> <Qty kind="volume" value={r.volume} /></p>
-
-            {/* MEAD */}
-            {r.type === "Mead" && (
-              <>
-                <p><strong>Honey type:</strong> {r.honey_type}</p>
-                <p><strong>Honey amount:</strong> <Qty kind="kg" value={r.honey_amount} /></p>
-
-                {r.fruits?.length > 0 && (
-                  <div>
-                    <strong>Fruits:</strong>
-                    {r.fruits.map((f: Fruit, i: number) => (
-                      <p key={i}>{f.name}: {f.amount}{f.unit}</p>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* BEER */}
-            {r.type === "Beer" && (
-              <>
-                {r.malts?.length > 0 && (
-                  <div>
-                    <strong>Malt additions:</strong>
-                    {r.malts.map((m: Malt, i: number) => (
-                      <p key={i}>{m.name}: <Qty kind="kg" value={m.amount} /></p>
-                    ))}
-                  </div>
-                )}
-
-                {r.hops?.length > 0 && (
-                  <div>
-                    <strong>Hop schedule:</strong>
-                    {r.hops.map((h: Hop, i: number) => (
-                      <p key={i}>
-                        {h.name}: <Qty kind="g" value={h.amount} maxDecimals={0} /> @{" "}
-                        {h.addition_type === "whirlpool"
-                          ? `whirlpool ${h.time} min at ${h.temperature}°C`
-                          : `${h.time} min boil`}
-                      </p>
-                    ))}
-                  </div>
-                )}
-
-                <p><strong>Total boil time:</strong> {r.boil_time} min</p>
-              </>
-            )}
-
-            {/* BRAGGOT */}
-            {r.type === "Braggot" && (
-              <>
-                {r.malts?.length > 0 && (
-                  <div>
-                    <strong>Malt additions:</strong>
-                    {r.malts.map((m: Malt, i: number) => (
-                      <p key={i}>{m.name}: <Qty kind="kg" value={m.amount} /></p>
-                    ))}
-                  </div>
-                )}
-
-                <p><strong>Boil time:</strong> {r.boil_time} min</p>
-                <p><strong>Honey:</strong> <Qty kind="kg" value={r.honey_amount} /></p>
-              </>
-            )}
-
-            {/* CIDER / WINE / SELTZER */}
-            {["Cider", "Wine", "Seltzer"].includes(r.type) && (
-              <>
-                <p><strong>Juice type:</strong> {r.juice_type}</p>
-                <p><strong>Sugar added:</strong> <Qty kind="kg" value={r.sugar_amount} /></p>
-              </>
-            )}
-
-            {/* OTHER */}
-            {r.type === "Other" && (
-              <>
-                {r.ingredients?.length > 0 && (
-                  <div>
-                    <strong>Ingredients:</strong>
-                    {r.ingredients.map((ing: Ingredient, idx: number) => (
-                      <p key={idx}>{ing.name}: {ing.amount}{ing.unit}</p>
-                    ))}
-                  </div>
-                )}
-
-                {r.steps?.length > 0 && (
-                  <div>
-                    <strong>Process steps:</strong>
-                    {r.steps.map((s: string, idx: number) => (
-                      <p key={idx}>{idx + 1}. {s}</p>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* Shared fields */}
-            {r.additives && (
-              <p className="whitespace-pre-line"><strong>Additives:</strong><br />{r.additives}</p>
-            )}
-
-            {r.full_process && (
-              <p><strong>Full process:</strong><br />{r.full_process}</p>
-            )}
-
-            {r.notes && (
-              <p><strong>Notes:</strong><br />{r.notes}</p>
-            )}
+          <div className="space-y-4 opacity-90 text-sm">
+            <RecipePresentation recipe={r} />
 
             {/* Link to full recipe */}
             <div className="flex justify-end pt-4">

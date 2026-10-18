@@ -10,6 +10,9 @@ export default function SiteFooter() {
         <Link href="/contact" className="underline hover:text-white">
           Contact
         </Link>
+        <Link href="/changelog" className="underline hover:text-white">
+          Changelogs
+        </Link>
         <Link href="/privacy" className="underline hover:text-white">
           Privacy Policy
         </Link>

@@ -138,7 +138,33 @@ export async function createRecipe(formData: FormData) {
 
   // ⭐ NEW: Dry hops
   const dry_hops_json = formData.get("dry_hops_json") as string;
-  const dry_hops = dry_hops_json ? JSON.parse(dry_hops_json) : null;
+  const dryHopsRaw = dry_hops_json ? JSON.parse(dry_hops_json) : null;
+  if (dryHopsRaw !== null && !Array.isArray(dryHopsRaw)) {
+    return { success: false, error: "Dry hop additions must be a list." };
+  }
+  const dry_hops = dryHopsRaw?.map((hop: any) => {
+    const alpha = hop.alpha == null || hop.alpha === ""
+      ? null
+      : Number(String(hop.alpha).replace(",", "."));
+    const year = hop.year == null || hop.year === ""
+      ? null
+      : Number(hop.year);
+
+    if (alpha !== null && (!Number.isFinite(alpha) || alpha < 0 || alpha > 100)) {
+      return null;
+    }
+    if (year !== null && (!Number.isInteger(year) || year < 1900)) {
+      return null;
+    }
+
+    return { ...hop, alpha, year };
+  }) ?? null;
+  if (dry_hops?.some((hop: any) => hop === null)) {
+    return {
+      success: false,
+      error: "Dry hop alpha must be between 0 and 100%, and crop year must be a valid year.",
+    };
+  }
 
   const boil_time = formData.get("boil_time") as string;
   const boilVolumeRaw = formData.get("boil_volume_l") as string;

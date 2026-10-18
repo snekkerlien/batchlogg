@@ -28,12 +28,12 @@ export default function ChangelogClient() {
         });
 
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Could not load changelog");
+        if (!response.ok) throw new Error(data.error || "Could not load changelogs");
 
         setLogs(data.logs);
       } catch (err) {
         console.error("Could not load changelog", err);
-        setError(err instanceof Error ? err.message : "Could not load changelog.");
+        setError(err instanceof Error ? err.message : "Could not load changelogs.");
       } finally {
         setLoading(false);
       }
@@ -45,7 +45,7 @@ export default function ChangelogClient() {
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center text-white">
-        Loading changelog…
+        Loading changelogs…
       </main>
     );
   }
@@ -69,7 +69,7 @@ export default function ChangelogClient() {
         </div>
 
         <PageHeading
-          title="Changelog"
+          title="Changelogs"
           subtitle="See what’s new and what has changed over time."
         />
 
@@ -105,7 +105,7 @@ export default function ChangelogClient() {
               ))
             ) : (
               <li className="m-auto text-sm text-white/55">
-                No changelog entries yet.
+                No changelogs yet.
               </li>
             )}
           </ol>

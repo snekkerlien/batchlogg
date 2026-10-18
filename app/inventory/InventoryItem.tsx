@@ -173,7 +173,7 @@ export default function InventoryItem({
         {item.category === "malts" && item.ebc != null && item.ebc !== "" && (
           <div className="mt-2">
             <span className="rounded-md border border-orange-300/20 bg-orange-300/10 px-2 py-1 text-xs text-orange-100">
-              EBC {Number(item.ebc)}
+              EBC {Number(item.ebc).toFixed(0)}
             </span>
           </div>
         )}

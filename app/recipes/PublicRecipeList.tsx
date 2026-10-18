@@ -2,27 +2,13 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import RecipePresentation, { type RecipePresentationData } from "@/app/components/RecipePresentation";
 
-type PublicRecipe = {
-  id: number;
+type PublicRecipe = RecipePresentationData & {
+  id: string;
   user_id: string;
-  name: string;
-  type: string;
-  og: number | null;
-  abv: number | null;
-  volume: number | null;
   created_at: string;
   author: string;
-  ingredients: unknown;
-  malts: unknown;
-  hops: unknown;
-  dry_hops: unknown;
-  fruits: unknown;
-  honey_type: string | null;
-  juice_type: string | null;
-  base_liquid: string | null;
-  yeast: string | null;
-  additives: string | null;
 };
 
 function searchableText(value: unknown): string {
@@ -47,6 +33,7 @@ export default function PublicRecipeList({
   const [type, setType] = useState("All types");
   const [minimumAbv, setMinimumAbv] = useState("");
   const [maximumAbv, setMaximumAbv] = useState("");
+  const [expandedRecipeId, setExpandedRecipeId] = useState<string | null>(null);
   const types = useMemo(
     () => [...new Set(recipes.map((recipe) => recipe.type).filter(Boolean))].sort(),
     [recipes]
@@ -150,23 +137,60 @@ export default function PublicRecipeList({
       </section>
 
       {filteredRecipes.length ? (
-        <ul className="space-y-4">
+        <ul className="space-y-3">
           {filteredRecipes.map((recipe) => (
-            <li key={recipe.id}>
-              <Link
-                href={`/members/${encodeURIComponent(recipe.author)}/recipes/${recipe.id}`}
-                className="block rounded-xl border border-white/10 bg-white/5 p-5 transition hover:bg-white/10"
+            <li
+              key={recipe.id}
+              className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.04] transition-colors hover:border-white/20"
+            >
+              <button
+                type="button"
+                aria-expanded={expandedRecipeId === recipe.id}
+                aria-controls={`public-recipe-${recipe.id}`}
+                onClick={() => setExpandedRecipeId(
+                  expandedRecipeId === recipe.id ? null : recipe.id
+                )}
+                className="flex w-full items-center justify-between gap-4 p-4 text-left sm:p-5"
               >
-                <h2 className="text-xl font-semibold">{recipe.name}</h2>
-                <p className="mt-1 text-sm text-white/65">
-                  {recipe.type} · by {recipe.author}
-                </p>
-                <p className="mt-3 text-sm text-white/75">
-                  {recipe.og != null && <>OG {Number(recipe.og).toFixed(3)} · </>}
-                  {recipe.abv != null && <>ABV {Number(recipe.abv).toFixed(1)}% · </>}
-                  {recipe.volume != null && <>Volume {recipe.volume} L</>}
-                </p>
-              </Link>
+                <span className="min-w-0">
+                  <span className="block truncate text-lg font-semibold text-white">{recipe.name}</span>
+                  <span className="mt-1 block text-sm text-white/60">
+                    {recipe.type} <span aria-hidden="true">·</span> by {recipe.author}
+                    {recipe.abv != null && <> <span aria-hidden="true">·</span> {Number(recipe.abv).toFixed(1)}% ABV</>}
+                  </span>
+                </span>
+                <span
+                  aria-hidden="true"
+                  className={`shrink-0 text-2xl text-white transition-transform duration-200 ${
+                    expandedRecipeId === recipe.id ? "rotate-90" : "rotate-180"
+                  }`}
+                >
+                  ▶
+                </span>
+              </button>
+              <div
+                id={`public-recipe-${recipe.id}`}
+                aria-hidden={expandedRecipeId !== recipe.id}
+                className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                  expandedRecipeId === recipe.id ? "max-h-[6000px] mt-4" : "max-h-0"
+                }`}
+              >
+                <div className="border-t border-white/10 px-4 pb-5 pt-5 sm:px-5">
+                  <RecipePresentation
+                    recipe={recipe}
+                    linkTabIndex={expandedRecipeId === recipe.id ? undefined : -1}
+                  />
+                  <div className="mt-5 flex justify-end">
+                    <Link
+                      tabIndex={expandedRecipeId === recipe.id ? 0 : -1}
+                      href={`/members/${encodeURIComponent(recipe.author)}/recipes/${recipe.id}`}
+                      className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10 hover:text-white"
+                    >
+                      Open standalone recipe
+                    </Link>
+                  </div>
+                </div>
+              </div>
             </li>
           ))}
         </ul>

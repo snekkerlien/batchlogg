@@ -169,6 +169,32 @@
 
     fields.hops = normalizedHops;
 
+    const normalizedDryHops = dry_hops.map((hop: any) => {
+        if (!hop || typeof hop !== "object" || Array.isArray(hop)) return hop;
+
+        const alpha = hop.alpha == null || hop.alpha === ""
+            ? null
+            : Number(String(hop.alpha).replace(",", "."));
+        const year = hop.year == null || hop.year === ""
+            ? null
+            : Number(hop.year);
+
+        if (alpha !== null && (!Number.isFinite(alpha) || alpha < 0 || alpha > 100)) {
+            return null;
+        }
+        if (year !== null && (!Number.isInteger(year) || year < 1900)) {
+            return null;
+        }
+
+        return { ...hop, alpha, year };
+    });
+
+    if (normalizedDryHops.some((hop: any) => hop === null)) {
+        return NextResponse.json({
+            error: "Dry hop alpha must be between 0 and 100%, and crop year must be a valid year.",
+        }, { status: 400 });
+    }
+    fields.dry_hops = normalizedDryHops;
 
     if (fields.type === "Beer" && beerSubtype === "fresh_wort_kit") {
         if (
@@ -189,11 +215,29 @@
         }
     } else {
         const ibuBoil = calcIBU(normalizedHops, og, volume, boil_volume);
-        const ibuDry = calcDryHopIBU(dry_hops, volume);
+        const ibuDry = calcDryHopIBU(normalizedDryHops, volume);
         fields.ibu = ibuBoil + ibuDry;
 
+        const hasCompleteMaltColorData = malts.length === 0 || malts.every((malt: any) => {
+            if (
+                !malt ||
+                typeof malt !== "object" ||
+                Array.isArray(malt) ||
+                malt.ebc == null ||
+                malt.ebc === "" ||
+                malt.amount == null ||
+                malt.amount === ""
+            ) {
+                return false;
+            }
+            const ebc = Number(String(malt.ebc).replace(",", "."));
+            const amount = Number(String(malt.amount).replace(",", "."));
+            return Number.isFinite(ebc) && ebc >= 0 && Number.isFinite(amount) && amount >= 0;
+        });
         const ebcResult = calcEBC(malts, volume);
-        fields.ebc = ebcResult.ebc;
+        if (hasCompleteMaltColorData) {
+            fields.ebc = ebcResult.ebc;
+        }
         fields.malt_warnings = ebcResult.warnings;
     }
 

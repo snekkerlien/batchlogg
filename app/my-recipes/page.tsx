@@ -12,32 +12,12 @@ import VisibilitySwitch from "../components/VisibilitySwitch";
 import RecipeFilters, { type RecipeSort } from "./RecipeFilters";
 import RecipeAdditiveFields from "./new/RecipeAdditiveFields";
 import RecipeSecondaryFields from "./new/RecipeSecondaryFields";
+import RecipePresentation from "@/app/components/RecipePresentation";
+import BeerColorGlass from "@/app/components/BeerColorGlass";
 import {
   getSavedRecipeInventoryIssues,
   type InventoryItem,
 } from "@/lib/inventory/recipeInventory";
-import { formatSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
-
-function ebcToHex(ebc: number | string) {
-  const value = Number(ebc);
-
-  if (isNaN(value) || value <= 0) return "#f3f3f3"; // pale fallback
-
-  const srm = value / 1.97;
-
-  const r = Math.round(255 * Math.pow(0.975, srm));
-  const g = Math.round(245 * Math.pow(0.88, srm));
-  const b = Math.round(220 * Math.pow(0.7, srm));
-
-  const clamp = (v: number) => Math.max(0, Math.min(255, v));
-
-  return (
-    "#" +
-    [clamp(r), clamp(g), clamp(b)]
-      .map((v) => v.toString(16).padStart(2, "0"))
-      .join("")
-  );
-}
 
 
 
@@ -50,6 +30,8 @@ type Fruit = {
 type Malt = {
   name: string;
   amount: string;
+  unit: string;
+  ebc: string;
 };
 
 type Hop = {
@@ -66,6 +48,8 @@ type DryHop = {
   name: string;
   amount: string;
   contact: string;
+  alpha: string;
+  year: string;
 };
 
 const batchFormRoutes: Record<string, string> = {
@@ -351,7 +335,7 @@ function removeFruit(index: number) {
 }
 
 function addMalt() {
-  setEditMalts([...editMalts, { name: "", amount: "" }]);
+  setEditMalts([...editMalts, { name: "", amount: "", unit: "kg", ebc: "" }]);
 }
 
 function updateMalt(index: number, key: keyof Malt, value: string) {
@@ -396,7 +380,7 @@ function removeHop(index: number) {
 
 
 function addDryHop() {
-  setEditDryHops([...editDryHops, { name: "", amount: "", contact: "" }]);
+  setEditDryHops([...editDryHops, { name: "", amount: "", contact: "", alpha: "", year: "" }]);
 }
 
 function updateDryHop(index: number, key: keyof DryHop, value: string) {
@@ -561,7 +545,14 @@ function removeDryHop(index: number) {
       setEditBeerSubtype(r.type === "Beer" ? r.ingredients?.beer_subtype ?? "all_grain" : "all_grain");
       setEditFruits(r.fruits || []);
       setOpenEdit(r.id); 
-      setEditMalts(r.malts || []);
+      setEditMalts(
+        (r.malts || []).map((malt: Partial<Malt>) => ({
+          name: malt.name ?? "",
+          amount: malt.amount ?? "",
+          unit: malt.unit ?? "kg",
+          ebc: malt.ebc == null ? "" : String(malt.ebc),
+        }))
+      );
       setEditHops(
         (r.hops || []).map((hop: Partial<Hop>) => ({
           name: hop.name ?? "",
@@ -575,15 +566,23 @@ function removeDryHop(index: number) {
       );
       setEditDryHops(
         r.dry_hops?.length
-          ? r.dry_hops
-          : r.type === "Beer" &&
-              (r.ingredients?.beer_subtype === "fresh_wort_kit" ||
-                r.ingredients?.beer_subtype === "malt_extract_kit")
-            ? (r.hops || []).map((hop: Hop) => ({
-                name: hop.name,
-                amount: hop.amount,
-                contact: "",
+            ? r.dry_hops.map((hop: Partial<DryHop>) => ({
+                name: hop.name ?? "",
+                amount: hop.amount ?? "",
+                contact: hop.contact ?? "",
+                alpha: hop.alpha == null ? "" : String(hop.alpha),
+                year: hop.year == null ? "" : String(hop.year),
               }))
+            : r.type === "Beer" &&
+                (r.ingredients?.beer_subtype === "fresh_wort_kit" ||
+                  r.ingredients?.beer_subtype === "malt_extract_kit")
+              ? (r.hops || []).map((hop: Hop) => ({
+                  name: hop.name,
+                  amount: hop.amount,
+                  contact: "",
+                  alpha: hop.alpha ?? "",
+                  year: hop.year ?? "",
+                }))
             : []
       );
 
@@ -622,24 +621,19 @@ function removeDryHop(index: number) {
 <p className="text-sm mt-3 grid grid-cols-3 gap-y-1 gap-x-4 sm:flex sm:flex-wrap sm:items-center">
   <span><strong>OG:</strong> {og}</span>
   <span><strong>FG:</strong> {fg}</span>
+  <span><strong>ABV:</strong> {abv}%</span>
 
   {(r.type === "Beer" || r.type === "Braggot") && (
     <>
       <span><strong>IBU:</strong> {ibu}</span>
-      <span><strong>EBC:</strong> {ebc !== null ? ebc.toFixed(0) : "—"}</span>
-
-      {ebc > 0 && (
-        <span
-          className="inline-block w-4 h-4 rounded-md border border-white/20 shadow-sm"
-          style={{ backgroundColor: ebcToHex(ebc) }}
-        ></span>
-      )}
+      <span className="inline-flex items-center gap-1.5">
+        <strong>EBC:</strong> {Number.isFinite(ebc) ? ebc.toFixed(0) : "—"}
+        {Number.isFinite(ebc) && <BeerColorGlass ebc={ebc} compact />}
+      </span>
 
     
     </>
   )}
-
-  <span><strong>ABV:</strong> {abv}%</span>
 
   
 </p>
@@ -683,215 +677,21 @@ function removeDryHop(index: number) {
                   {/* SLIDER CONTENT */}
                   <div
                     className={`transition-all duration-300 ease-in-out overflow-hidden ${
-                      expanded === r.id ? "max-h-[2000px] mt-4" : "max-h-0"
+                      expanded === r.id ? "max-h-[6000px] mt-4" : "max-h-0"
                     }`}
                   >
                     <div className="space-y-3 opacity-90">
-
-                      <p className="text-sm">
-                        <strong>Volume:</strong> <Qty kind="volume" value={volume} />
-                      </p>
-
-                      {/* TYPE-SPECIFIC */}
-                      {r.type === "Mead" && (
-                        <>
-                          {r.honey_type && <p><strong>Honey type:</strong> {r.honey_type}</p>}
-                          {r.honey_amount && <p><strong>Honey amount:</strong> <Qty kind="kg" value={r.honey_amount} /></p>}
-                          {r.fruits?.length > 0 && (
-                            <div>
-                              <strong>Fruits:</strong>
-                              <ul className="list-disc ml-6 opacity-80">
-                                {r.fruits.map((f: any, i: number) => (
-                                  <li key={i}>{f.name} — {f.amount} {f.unit}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </>
-                      )}
-
-                      {(r.type === "Beer" || r.type === "Braggot") && (
-  <>
-                          {r.type === "Beer" && r.ingredients?.beer_subtype && (
-                            <div className="text-sm">
-                              <strong>Recipe style:</strong>{" "}
-                              {r.ingredients.beer_subtype === "fresh_wort_kit"
-                                ? "Fresh wort kit"
-                                : r.ingredients.beer_subtype === "malt_extract_kit"
-                                  ? "Malt extract kit"
-                                  : "All-grain"}
-                              {r.ingredients.kit_url && (
-                                <>
-                                  {" · "}
-                                  <a
-                                    href={r.ingredients.kit_url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="text-green-300 underline"
-                                  >
-                                    Kit link
-                                  </a>
-                                </>
-                              )}
-                            </div>
-                          )}
-                          {(r.type === "Braggot" || r.ingredients?.beer_subtype === "all_grain") && (
-                          <p className="text-xs opacity-60 mt-2">
-      Note: If the IBU or EBC values differ from the recipe you imported,
-      this is because Batchlogg uses more accurate brewing models
-      (Tinseth for bitterness and Morey for color). Many recipe kits use
-      simplified or inconsistent calculations, so their numbers may not match.
-    </p>
-                          )}
-
-    {r.malts?.length > 0 && (
-      <div>
-        <strong>Malts:</strong>
-        <ul className="list-disc ml-6 opacity-80">
-          {r.malts.map((m: any, i: number) => (
-            <li key={i}>{m.name} — <Qty kind="kg" value={m.amount} /></li>
-          ))}
-        </ul>
-
-        <p className="mt-2 opacity-80">
-          <strong>Total malt:</strong>{" "}
-          <Qty
-            kind="kg"
-            value={r.malts.reduce((sum: number, m: any) => sum + Number(m.amount), 0)}
-          />
-        </p>
-      </div>
-    )}
-
-    {r.hops?.length > 0 && (
-  <div>
-    <strong>Hops:</strong>
-    <ul className="list-disc ml-6 opacity-80">
-      {r.hops.map((h: any, i: number) => (
-        <li key={i}>
-          {h.name} <Qty kind="g" value={h.amount} maxDecimals={0} /> @{" "}
-          {h.addition_type === "whirlpool"
-            ? `whirlpool ${h.time} min at ${h.temperature}°C`
-            : `${h.time} min boil`}
-          {h.alpha && (
-            <> - {Number(h.alpha)}% Alpha Acid</>
-          )}
-        </li>
-      ))}
-    </ul>
-
-    <p className="mt-2 opacity-80">
-      <strong>Total hops:</strong>{" "}
-      <Qty
-        kind="g"
-        value={
-          r.hops.reduce((sum: number, h: any) => sum + Number(h.amount), 0) +
-          (r.dry_hops?.reduce((sum: number, h: any) => sum + Number(h.amount), 0) || 0)
-        }
-        maxDecimals={0}
-      />
-    </p>
-  </div>
-)}
-
-    {r.dry_hops?.length > 0 && (
-      <div className="mt-3">
-        <strong>Dry hops:</strong>
-        <ul className="list-disc ml-6 opacity-80">
-          {r.dry_hops.map((h: any, i: number) => (
-            <li key={i}>{h.name} — <Qty kind="g" value={h.amount} maxDecimals={0} /> — {h.contact} days contact</li>
-          ))}
-        </ul>
-
-        <p className="mt-2 opacity-80">
-          <strong>Total dry hops:</strong>{" "}
-          <Qty
-            kind="g"
-            value={r.dry_hops.reduce((sum: number, h: any) => sum + Number(h.amount), 0)}
-            maxDecimals={0}
-          />
-        </p>
-      </div>
-    )}
-
-    {r.boil_time && (
-      <p><strong>Boil time:</strong> {r.boil_time} min</p>
-    )}
-
-    
-  </>
-)}
-
-
-                      {(r.type === "Wine" || r.type === "Cider" || r.type === "Seltzer") && (
-                        <>
-                          {r.juice_type && <p><strong>Juice / Must:</strong> {r.juice_type}</p>}
-                          {r.sugar_amount && <p><strong>Sugar added:</strong> <Qty kind="kg" value={r.sugar_amount} /></p>}
-                        </>
-                      )}
-
-                      {r.type === "Other" && r.ingredients && (
-                        <div>
-                          <strong>Ingredients:</strong>
-                          <ul className="list-disc ml-6 opacity-80">
-                            {r.ingredients.map((ing: any, i: number) => (
-                              <li key={i}>{ing.name} — {ing.amount} {ing.unit}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {r.steps?.length > 0 && (
-                        <div>
-                          <strong>Steps:</strong>
-                          <ul className="list-disc ml-6 opacity-80">
-                            {r.steps.map((s: string, i: number) => (
-                              <li key={i}>{s}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {/* Shared */}
-                      {r.yeast && <p><strong>Yeast:</strong> {r.yeast}</p>}
-                      {r.additives && (
-                        <p className="whitespace-pre-line">
-                          <strong>Additives:</strong>{"\n"}{r.additives}
-                        </p>
-                      )}
-                      {r.full_process && (
-                        <p className="whitespace-pre-line">
-                          <strong>Full process:</strong>{"\n"}{r.full_process}
-                        </p>
-                      )}
-                      {r.notes && (
-                        <p className="whitespace-pre-line">
-                          <strong>Notes:</strong>{"\n"}{r.notes}
-                        </p>
-                      )}
-
-                      {/* Secondary */}
-                      {(r.had_secondary || r.secondary_additions || r.secondary_notes) && (
-                        <div className="mt-6">
-                          <h4 className="font-semibold text-white/90 mb-2">Secondary fermentation</h4>
-                          {r.secondary_additions && (
-                            <p className="whitespace-pre-line opacity-80">
-                              <strong>Secondary additions:</strong>{"\n"}{formatSecondaryAdditions(r.secondary_additions)}
-                            </p>
-                          )}
-                          {r.secondary_notes && (
-                            <p className="whitespace-pre-line opacity-80 mt-2">
-                              <strong>Secondary notes:</strong>{"\n"}{r.secondary_notes}
-                            </p>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Note log */}
+                      <RecipePresentation recipe={r} />
                       {r.notes_log?.length > 0 && (
-                        <div className="whitespace-pre-line">
-                          <strong>Note log:</strong>{"\n"}
-                          {r.notes_log.map((n: any) => `• ${n.note}`).join("\n")}
+                        <div className="rounded-xl border border-white/10 bg-white/[0.04] p-5">
+                          <h3 className="mb-3 text-lg font-semibold text-green-300">Recipe note log</h3>
+                          <ul className="space-y-2">
+                            {r.notes_log.map((note: any, index: number) => (
+                              <li key={note.id ?? index} className="whitespace-pre-line text-sm text-white/80">
+                                {note.note}
+                              </li>
+                            ))}
+                          </ul>
                         </div>
                       )}
 
@@ -1289,6 +1089,17 @@ function removeDryHop(index: number) {
             onChange={(e) => updateMalt(i, "name", e.target.value)}
           />
 
+          <input
+            type="number"
+            min="0"
+            step="any"
+            placeholder="EBC"
+            aria-label={`Malt ${i + 1} EBC`}
+            className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-24"
+            value={m.ebc}
+            onChange={(e) => updateMalt(i, "ebc", e.target.value)}
+          />
+
           <UnitInput
             kind="kg"
             placeholder={`Amount (${label("kg")})`}
@@ -1444,7 +1255,30 @@ function removeDryHop(index: number) {
             onChange={(e) => updateDryHop(i, "name", e.target.value)}
           />
 
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(7rem,1fr)_minmax(9rem,1.4fr)_auto]">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(6rem,0.8fr)_minmax(5rem,0.6fr)_minmax(7rem,1fr)_minmax(9rem,1.4fr)_auto]">
+          <input
+            type="number"
+            min="0"
+            max="100"
+            step="any"
+            placeholder="Alpha (%)"
+            aria-label={`Dry hop ${i + 1} alpha acid percentage`}
+            className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
+            value={h.alpha}
+            onChange={(e) => updateDryHop(i, "alpha", e.target.value)}
+          />
+
+          <input
+            type="number"
+            min="1900"
+            step="1"
+            placeholder="Year"
+            aria-label={`Dry hop ${i + 1} crop year`}
+            className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
+            value={h.year}
+            onChange={(e) => updateDryHop(i, "year", e.target.value)}
+          />
+
           <UnitInput
             kind="g"
             placeholder={`Amount (${label("g")})`}

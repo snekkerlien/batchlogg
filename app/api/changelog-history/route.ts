@@ -14,7 +14,7 @@ export async function GET() {
 
   if (error) {
     console.error("Could not load changelog history", error);
-    return NextResponse.json({ error: "Could not load changelog history" }, { status: 500 });
+    return NextResponse.json({ error: "Could not load changelogs" }, { status: 500 });
   }
 
   return NextResponse.json({ logs: data });

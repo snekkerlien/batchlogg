@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import PublicPageNavigation from "@/app/components/PublicPageNavigation";
 import PublicRecipeList from "./PublicRecipeList";
+import type { RecipePresentationData } from "@/app/components/RecipePresentation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,25 +14,10 @@ export const metadata: Metadata = {
   alternates: { canonical: "/recipes" },
 };
 
-type PublicRecipe = {
-  id: number;
+type PublicRecipe = RecipePresentationData & {
+  id: string;
   user_id: string;
-  name: string;
-  type: string;
-  og: number | null;
-  abv: number | null;
-  volume: number | null;
   created_at: string;
-  ingredients: unknown;
-  malts: unknown;
-  hops: unknown;
-  dry_hops: unknown;
-  fruits: unknown;
-  honey_type: string | null;
-  juice_type: string | null;
-  base_liquid: string | null;
-  yeast: string | null;
-  additives: string | null;
 };
 
 export default async function PublicRecipesPage() {
@@ -56,7 +42,7 @@ export default async function PublicRecipesPage() {
     const { data: recipeRows, error: recipesError } = await serviceRole
       .from("recipes")
       .select(
-        "id, user_id, name, type, og, abv, volume, created_at, ingredients, malts, hops, dry_hops, fruits, honey_type, juice_type, base_liquid, yeast, additives"
+        "id, user_id, name, type, og, fg, abv, volume, ibu, ebc, ingredients, malts, hops, dry_hops, boil_volume, boil_time, yeast, honey_type, honey_amount, base_liquid, base_liquid_amount, fruits, juice_type, sugar_amount, steps, additives, full_process, notes, had_secondary, secondary_additions, secondary_notes, created_at"
       )
       .eq("is_public", true)
       .in("user_id", authorIds)
@@ -80,11 +66,10 @@ export default async function PublicRecipesPage() {
             recipes belonging to private profiles are not shown here.
           </p>
           <p className="mt-3 text-sm leading-6 text-white/65">
-            Each recipe is shared by its brewer, so available details vary.
-            Open a recipe to review its ingredients, fermentation guidance, and
-            notes before deciding whether it fits your equipment and process.
-            Gravity, alcohol, and batch-volume figures are supplied as recipe
-            data and may be estimates; verify measurements for your own brew.
+            Expand a recipe to see its ingredients, fermentation guidance, and
+            notes. Gravity, alcohol, and batch-volume figures are supplied as
+            recipe data and may be estimates; verify measurements for your own
+            brew.
           </p>
         </header>
 

@@ -740,7 +740,7 @@ export default function SettingsPage() {
               onClick={() => router.push("/changelog")}
               className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm"
             >
-              Changelog
+              Changelogs
             </button>
 
             <button

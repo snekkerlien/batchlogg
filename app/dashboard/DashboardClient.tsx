@@ -26,6 +26,12 @@ interface DashboardResponse {
   sharedKar: (KarType & { ownerUsername: string })[];
 }
 
+function sharedVesselName(vessel: KarType & { ownerUsername: string }): string {
+  if (vessel.batchName) return vessel.batchName;
+  if (vessel.status === "Ledig") return `${vessel.ownerUsername}'s vessel`;
+  return `Vessel ${vessel.nummer}`;
+}
+
 const sharedVesselCardStyle = {
   borderColor: "var(--user-accent)",
   boxShadow:
@@ -533,18 +539,18 @@ useEffect(() => {
                   <FermentationBubbles />
                 )}
                 <span className="relative z-10 line-clamp-2 text-base font-bold leading-tight text-green-300">
-                  {vessel.batchName ?? `Vessel ${vessel.nummer}`}
+                  {sharedVesselName(vessel)}
                 </span>
-                <span className="relative z-10 mt-2 text-xs text-zinc-300">
-                  {vessel.status === "Aktiv"
-                    ? "Primary"
-                    : vessel.status === "Sekundær"
-                      ? "Secondary"
-                      : "Empty"}
-                </span>
-                <span className="relative z-10 mt-1 line-clamp-1 text-xs text-zinc-400">
-                  Shared by {vessel.ownerUsername}
-                </span>
+                {vessel.status !== "Ledig" && (
+                  <>
+                    <span className="relative z-10 mt-2 text-xs text-zinc-300">
+                      {vessel.status === "Aktiv" ? "Primary" : "Secondary"}
+                    </span>
+                    <span className="relative z-10 mt-1 line-clamp-1 text-xs text-zinc-400">
+                      Shared by {vessel.ownerUsername}
+                    </span>
+                  </>
+                )}
                 </a>
                 <button
                   type="button"
@@ -627,7 +633,7 @@ useEffect(() => {
         title="Leave shared vessel?"
         message={
           sharedVesselToLeave
-            ? `You will lose access to ${sharedVesselToLeave.batchName ?? `Vessel ${sharedVesselToLeave.nummer}`} shared by ${sharedVesselToLeave.ownerUsername}. The owner can share it with you again later.`
+            ? `You will lose access to ${sharedVesselName(sharedVesselToLeave)} shared by ${sharedVesselToLeave.ownerUsername}. The owner can share it with you again later.`
             : ""
         }
         confirmLabel={leavingSharedVessel ? "Leaving…" : "Leave vessel"}

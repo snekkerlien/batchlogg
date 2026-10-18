@@ -13,11 +13,12 @@ import ConfirmDialog from "@/app/components/ConfirmDialog";
 import PageHeading from "@/app/components/PageHeading";
 import BatchReminders from "./BatchReminders";
 import BatchRecipeCard from "./BatchRecipeCard";
+import ActiveBatchOverview from "./ActiveBatchOverview";
 import QRCode from "qrcode";
 
 
 import { translateOldRecipe } from "@/lib/translateOldRecipe";
-import { Qty, UnitInput, UnitSymbol, useUnits } from "@/app/components/Units";
+import { UnitInput, UnitSymbol } from "@/app/components/Units";
 import BatchEditTypeFields from "./BatchEditTypeFields";
 import { formatSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
 import RecipeSecondaryFields from "@/app/my-recipes/new/RecipeSecondaryFields";
@@ -33,47 +34,11 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-function ebcToHex(ebc: number) {
-  if (!ebc || ebc <= 0) return "#F3F3F3"; // very pale
-
-  // Convert EBC → SRM
-  const srm = ebc / 1.97;
-
-  // SRM → RGB (Morey approximation)
-  const r = Math.max(0, Math.min(255, 255 * Math.pow(0.975, srm)));
-  const g = Math.max(0, Math.min(255, 245 * Math.pow(0.88, srm)));
-  const b = Math.max(0, Math.min(255, 220 * Math.pow(0.7, srm)));
-
-  return (
-    "#" +
-    [r, g, b]
-      .map((v) => Math.round(v).toString(16).padStart(2, "0"))
-      .join("")
-  );
-}
-
-
-function daysSince(dateString: string) {
-  const start = new Date(dateString);
-  const now = new Date();
-
-  const diffMs = now.getTime() - start.getTime();
-  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  return days;
-}
-
-function dayLabel(days: number) {
-  return days === 1 ? "day" : "days";
-}
-
-
-
 export default function KarPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const inventoryError = searchParams.get("inventory_error");
-  const { label } = useUnits();
+  const batchRefreshKey = searchParams.get("cancelled");
   const [openSecondary, setOpenSecondary] = useState(false);
   const [openSecondaryActive, setOpenSecondaryActive] = useState(false);
   const [openFinish, setOpenFinish] = useState(false);
@@ -189,6 +154,8 @@ export default function KarPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     if (!kar) return;
+    let active = true;
+    setActiveBatch(null);
     supabase
       .from("batches")
       .select("*")
@@ -196,8 +163,17 @@ export default function KarPage({ params }: { params: { id: string } }) {
       .in("status", ["Aktiv", "Sekundær", "secondary"])
       .order("created_at", { ascending: false })
       .maybeSingle()
-      .then(({ data }) => setActiveBatch(data));
-  }, [kar]);
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("Could not load active batch", error);
+          return;
+        }
+        if (active) setActiveBatch(data);
+      });
+    return () => {
+      active = false;
+    };
+  }, [kar, batchRefreshKey]);
 
 
 
@@ -645,7 +621,7 @@ const sharingSection = isOwner ? (
 {/* SECONDARY FERMENTATION */}
 {hasActive && ["Sekundær", "secondary"].includes(activeBatch?.status) && (
   <>
-    <h2 className="text-2xl font-semibold mb-4 text-center">
+    <h2 className="text-2xl font-semibold mb-4 text-center text-green-300">
       Secondary fermentation
     </h2>
 
@@ -722,60 +698,34 @@ const sharingSection = isOwner ? (
 
       
 
-      {/* Batch info */}
-      <p className="opacity-80">Batch ID: {activeBatch.batchnummer}</p>
-      <p className="opacity-80">
-        Start date: {new Date(activeBatch.startdato).toLocaleDateString("en-US")}
-        <span className="ml-2 opacity-70">
-          ({daysSince(activeBatch.startdato)} {dayLabel(daysSince(activeBatch.startdato))})
-        </span>
-      </p>
-
-      <p className="opacity-80">Batch volume: <Qty kind="volume" value={activeBatch.volume_l} /></p>
-      <p className="opacity-80">Original Gravity (OG): {activeBatch.og}</p>
-
-      {(activeBatch.type === "Beer" || activeBatch.type === "Braggot") && (
-        <>
-          {activeBatch.ibu !== null && (
-            <p className="opacity-80">
-              IBU: {Number(activeBatch.ibu).toFixed(0)}
+      <ActiveBatchOverview batch={activeBatch} secondary />
+      <section className="mb-5 rounded-xl border border-white/10 bg-white/[0.04] p-5">
+        <h3 className="mb-3 text-lg font-semibold text-green-300">Secondary fermentation</h3>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-white/50">Racked on</p>
+            <p className="mt-1 font-medium text-white">
+              {new Date(activeBatch.secondary_startdate).toLocaleDateString("en-US")}
             </p>
-          )}
-
-          {activeBatch.ebc !== null && (
-            <div className="flex items-center gap-2 opacity-80">
-              <p>
-                EBC {activeBatch.beer_subtype === "fresh_wort_kit" ? "(from kit)" : "(calculated)"}:{" "}
-                {Number(activeBatch.ebc).toFixed(0)}
-              </p>
-              <span
-                className="inline-block w-6 h-6 rounded border border-white/30"
-                style={{ backgroundColor: ebcToHex(Number(activeBatch.ebc)) }}
-              ></span>
-            </div>
-          )}
-        </>
-      )}
-
-      <p className="opacity-80">
-        Racked to secondary on{" "}
-        {new Date(activeBatch.secondary_startdate).toLocaleDateString("en-US")}
-      </p>
-
-      {activeBatch.secondary_additions && (
-        <p className="opacity-80 mt-2 whitespace-pre-wrap">
-          Secondary additions:<br />
-          {formatSecondaryAdditions(activeBatch.secondary_additions)}
-        </p>
-      )}
-
-      <p className="opacity-80 mt-2 whitespace-pre-wrap">
-        Secondary notes:<br />
-        {activeBatch.secondary_notes?.trim() || "No secondary notes recorded."}
-      </p>
-
+          </div>
+          <div className="rounded-lg border border-white/10 bg-black/20 p-4 sm:col-span-2">
+            <p className="text-xs font-medium uppercase tracking-wide text-white/50">Additions</p>
+            <p className="mt-1 whitespace-pre-wrap text-sm text-white/85">
+              {activeBatch.secondary_additions
+                ? formatSecondaryAdditions(activeBatch.secondary_additions)
+                : "No secondary additions recorded."}
+            </p>
+          </div>
+          <div className="rounded-lg border border-white/10 bg-black/20 p-4 sm:col-span-2">
+            <p className="text-xs font-medium uppercase tracking-wide text-white/50">Notes</p>
+            <p className="mt-1 whitespace-pre-wrap text-sm text-white/85">
+              {activeBatch.secondary_notes?.trim() || "No secondary notes recorded."}
+            </p>
+          </div>
+        </div>
+      </section>
       <BatchRecipeCard batch={activeBatch} />
-      <p className="opacity-80 mt-4">
+      <p className="mt-4 text-sm text-white/50">
         Created: {new Date(activeBatch.created_at).toLocaleDateString("en-US")}
       </p>
     </div>
@@ -864,47 +814,12 @@ const sharingSection = isOwner ? (
         </div>
       )}
       
-                  
-                    <p className="opacity-80">Batch ID: {activeBatch.batchnummer}</p>
-                    <p className="opacity-80">
-                      Start date: {new Date(activeBatch.startdato).toLocaleDateString("en-US")}
-                      <span className="ml-2 opacity-70">
-                        ({daysSince(activeBatch.startdato)} {dayLabel(daysSince(activeBatch.startdato))})
-                      </span>
-                    </p>
-                    <p className="opacity-80">Original Gravity (OG): {activeBatch.og}</p>
-                    <p className="opacity-80">Batch volume: <Qty kind="volume" value={activeBatch.volume_l} /></p>
-                    <p className="opacity-80">Status: Primary fermentation</p>
-      
-                    {(activeBatch.type === "Beer" || activeBatch.type === "Braggot") && (
-        <>
-          {activeBatch.ibu !== null && (
-            <p className="opacity-80">
-              IBU: {Number(activeBatch.ibu).toFixed(0)}
-            </p>
-          )}
-      
-          {activeBatch.ebc !== null && (
-        <div className="flex items-center gap-2 opacity-80">
-          <p>
-            EBC {activeBatch.beer_subtype === "fresh_wort_kit" ? "(from kit)" : "(calculated)"}:{" "}
-            {Number(activeBatch.ebc).toFixed(0)}
-          </p>
-          <span
-            className="inline-block w-6 h-6 rounded border border-white/30"
-            style={{ backgroundColor: ebcToHex(Number(activeBatch.ebc)) }}
-          ></span>
-        </div>
-      )}
-        </>
-      )}
-      
-                    <BatchRecipeCard batch={activeBatch} />
-    </div>
-
-      <p className="opacity-80 mt-4">
+      <ActiveBatchOverview batch={activeBatch} />
+      <BatchRecipeCard batch={activeBatch} />
+      <p className="mt-4 text-sm text-white/50">
         Created: {new Date(activeBatch.created_at).toLocaleDateString("en-US")}
       </p>
+    </div>
     </>
   )}
 

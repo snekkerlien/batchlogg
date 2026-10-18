@@ -158,7 +158,7 @@ export default function ChangelogNotice() {
             disabled={saving}
             className="rounded-lg border border-green-400/40 bg-green-500/10 px-4 py-2 text-sm font-semibold text-green-300 transition hover:bg-green-500/20 disabled:opacity-50"
           >
-            View full changelog
+            View changelogs
           </button>
         </div>
       </section>

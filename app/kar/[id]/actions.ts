@@ -1158,7 +1158,7 @@ export async function cancelBatch(formData: FormData) {
 
   revalidatePath("/dashboard");
   revalidatePath(`/kar/${karId}`);
-  redirect(`/kar/${karId}`);
+  redirect(`/kar/${karId}?cancelled=${Date.now()}`);
 }
 
 // ---------------------------------------------------------

@@ -53,6 +53,8 @@ export function AdminContentClient() {
   const [maintenanceMessage, setMaintenanceMessage] = useState("");
   const [savingMaintenance, setSavingMaintenance] = useState(false);
   const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval | null>(null);
+  const [showSavedChangelogs, setShowSavedChangelogs] = useState(false);
+  const [showSavedAnnouncements, setShowSavedAnnouncements] = useState(false);
 
   const load = useCallback(async () => {
     const [data, statusData] = await Promise.all([
@@ -86,11 +88,11 @@ export function AdminContentClient() {
         credentials: "include",
         body: JSON.stringify({ kind: "changelog", version, date, title, body }),
       }));
-      setSaved("Changelog entry saved.");
+      setSaved("Release note saved.");
       await load();
     } catch (saveError) {
       console.error("Could not save changelog entry", saveError);
-      setError(saveError instanceof Error ? saveError.message : "Could not save changelog.");
+      setError(saveError instanceof Error ? saveError.message : "Could not save release note.");
     } finally {
       setSaving(false);
     }
@@ -178,10 +180,10 @@ export function AdminContentClient() {
         {error && <p role="alert" className="my-4 rounded border border-red-400/40 bg-red-900/30 p-3">{error}</p>}
         {saved && <p role="status" className="my-4 rounded border border-green-400/40 bg-green-900/20 p-3">{saved}</p>}
 
-        <div className="grid gap-8 lg:grid-cols-2">
-          <section className="space-y-4">
-            <h2 className="text-xl font-semibold text-green-200">Changelog</h2>
-            <form onSubmit={saveChangelog} className="space-y-3 rounded-xl border border-white/10 bg-white/5 p-4">
+        <div className="grid items-stretch gap-8 lg:grid-cols-2">
+          <section className="flex h-full flex-col space-y-4">
+            <h2 className="text-xl font-semibold text-green-200">Changelogs</h2>
+            <form onSubmit={saveChangelog} className="flex flex-1 flex-col gap-3 rounded-xl border border-white/10 bg-white/5 p-4">
               <label className="block text-sm">Version
                 <input required maxLength={32} value={version} onChange={(event) => setVersion(event.target.value)} placeholder="0.3.0" className="mt-1 w-full rounded border border-white/20 bg-black/40 p-2" />
               </label>
@@ -194,34 +196,62 @@ export function AdminContentClient() {
               <label className="block text-sm">Markdown body
                 <textarea required maxLength={10000} rows={6} value={body} onChange={(event) => setBody(event.target.value)} className="mt-1 w-full rounded border border-white/20 bg-black/40 p-2" />
               </label>
-              <button disabled={saving} className="rounded border border-green-400/40 bg-green-800/60 px-4 py-2 font-semibold disabled:opacity-50">
-                {saving ? "Saving…" : "Save changelog entry"}
-              </button>
-              <p className="text-xs text-white/50">Saving an existing version edits that entry.</p>
+              <div className="mt-auto space-y-2 pt-3">
+                <button disabled={saving} className="self-start rounded border border-green-400/40 bg-green-800/60 px-4 py-2 font-semibold disabled:opacity-50">
+                  {saving ? "Saving…" : "Save release note"}
+                </button>
+              </div>
             </form>
-            {loading ? <p className="text-white/60">Loading…</p> : (
-              <ul className="space-y-2">
-                {changelog.map((entry) => (
-                  <li key={entry.version} className="flex items-center justify-between gap-3 rounded border border-white/10 p-3">
-                    <button type="button" onClick={() => {
-                      setVersion(entry.version);
-                      setDate(entry.entry_date);
-                      setTitle(entry.title);
-                      setBody(entry.body);
-                    }} className="min-w-0 text-left hover:text-green-200">
-                      <span className="block font-medium">{entry.version} · {entry.title}</span>
-                      <span className="text-xs text-white/50">{entry.entry_date}</span>
-                    </button>
-                    <button type="button" onClick={() => setPendingRemoval({ kind: "changelog", id: entry.version })} className="text-xs text-red-300 underline">Delete</button>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <section className="rounded-xl border border-white/10 bg-white/5 p-3">
+              <button
+                type="button"
+                onClick={() => setShowSavedChangelogs((open) => !open)}
+                aria-expanded={showSavedChangelogs}
+                aria-controls="saved-changelogs-list"
+                className="flex w-full items-center justify-between gap-3 text-left"
+              >
+                <span className="flex items-center gap-2 font-medium">
+                  <span>Saved changelogs</span>
+                  <span className="text-sm text-white/50">
+                    {loading ? "Loading…" : `${changelog.length} ${changelog.length === 1 ? "entry" : "entries"}`}
+                  </span>
+                </span>
+                <span aria-hidden className="text-white/60">
+                  {showSavedChangelogs ? "▼" : "◀"}
+                </span>
+              </button>
+              <div
+                id="saved-changelogs-list"
+                hidden={!showSavedChangelogs}
+                className="mt-3 max-h-72 space-y-2 overflow-y-auto border-t border-white/10 pt-3"
+              >
+                {loading ? <p className="text-sm text-white/60">Loading…</p> : changelog.length === 0 ? (
+                  <p className="text-sm text-white/60">No saved changelogs yet.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {changelog.map((entry) => (
+                      <li key={entry.version} className="flex items-center justify-between gap-3 rounded border border-white/10 p-3">
+                        <button type="button" onClick={() => {
+                          setVersion(entry.version);
+                          setDate(entry.entry_date);
+                          setTitle(entry.title);
+                          setBody(entry.body);
+                        }} className="min-w-0 text-left hover:text-green-200">
+                          <span className="block font-medium">{entry.version} · {entry.title}</span>
+                          <span className="text-xs text-white/50">{entry.entry_date}</span>
+                        </button>
+                        <button type="button" onClick={() => setPendingRemoval({ kind: "changelog", id: entry.version })} className="text-xs text-red-300 underline">Delete</button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </section>
           </section>
 
-          <section className="space-y-4">
+          <section className="flex h-full flex-col space-y-4">
             <h2 className="text-xl font-semibold text-green-200">Announcements</h2>
-            <form onSubmit={saveAnnouncement} className="space-y-3 rounded-xl border border-white/10 bg-white/5 p-4">
+            <form onSubmit={saveAnnouncement} className="flex flex-1 flex-col gap-3 rounded-xl border border-white/10 bg-white/5 p-4">
               <label className="block text-sm">Title
                 <input required maxLength={160} value={announcementTitle} onChange={(event) => setAnnouncementTitle(event.target.value)} className="mt-1 w-full rounded border border-white/20 bg-black/40 p-2" />
               </label>
@@ -238,24 +268,53 @@ export function AdminContentClient() {
               <label className="block text-sm">Ends (optional)
                 <input type="datetime-local" value={announcementEnds} onChange={(event) => setAnnouncementEnds(event.target.value)} className="mt-1 w-full rounded border border-white/20 bg-black/40 p-2" />
               </label>
-              <button disabled={saving} className="rounded border border-green-400/40 bg-green-800/60 px-4 py-2 font-semibold disabled:opacity-50">
-                {saving ? "Saving…" : "Create announcement"}
-              </button>
+              <div className="mt-auto pt-3">
+                <button disabled={saving} className="self-start rounded border border-green-400/40 bg-green-800/60 px-4 py-2 font-semibold disabled:opacity-50">
+                  {saving ? "Saving…" : "Create announcement"}
+                </button>
+              </div>
             </form>
-            {loading ? <p className="text-white/60">Loading…</p> : (
-              <ul className="space-y-2">
-                {announcements.map((announcement) => (
-                  <li key={announcement.id} className="flex items-start justify-between gap-3 rounded border border-white/10 p-3">
-                    <div className="min-w-0">
-                      <p className="font-medium">{announcement.title}</p>
-                      <p className="line-clamp-2 text-sm text-white/60">{announcement.body}</p>
-                      <p className="mt-1 text-xs text-white/45">{announcement.is_active ? "Active" : "Inactive"}</p>
-                    </div>
-                    <button type="button" onClick={() => setPendingRemoval({ kind: "announcement", id: announcement.id })} className="shrink-0 text-xs text-red-300 underline">Delete</button>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <section className="rounded-xl border border-white/10 bg-white/5 p-3">
+              <button
+                type="button"
+                onClick={() => setShowSavedAnnouncements((open) => !open)}
+                aria-expanded={showSavedAnnouncements}
+                aria-controls="saved-announcements-list"
+                className="flex w-full items-center justify-between gap-3 text-left"
+              >
+                <span className="flex items-center gap-2 font-medium">
+                  <span>Saved announcements</span>
+                  <span className="text-sm text-white/50">
+                    {loading ? "Loading…" : `${announcements.length} ${announcements.length === 1 ? "entry" : "entries"}`}
+                  </span>
+                </span>
+                <span aria-hidden className="text-white/60">
+                  {showSavedAnnouncements ? "▼" : "◀"}
+                </span>
+              </button>
+              <div
+                id="saved-announcements-list"
+                hidden={!showSavedAnnouncements}
+                className="mt-3 max-h-72 space-y-2 overflow-y-auto border-t border-white/10 pt-3"
+              >
+                {loading ? <p className="text-sm text-white/60">Loading…</p> : announcements.length === 0 ? (
+                  <p className="text-sm text-white/60">No saved announcements yet.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {announcements.map((announcement) => (
+                      <li key={announcement.id} className="flex items-start justify-between gap-3 rounded border border-white/10 p-3">
+                        <div className="min-w-0">
+                          <p className="font-medium">{announcement.title}</p>
+                          <p className="line-clamp-2 text-sm text-white/60">{announcement.body}</p>
+                          <p className="mt-1 text-xs text-white/45">{announcement.is_active ? "Active" : "Inactive"}</p>
+                        </div>
+                        <button type="button" onClick={() => setPendingRemoval({ kind: "announcement", id: announcement.id })} className="shrink-0 text-xs text-red-300 underline">Delete</button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </section>
           </section>
         </div>
         <section className="mt-8 rounded-xl border border-amber-300/20 bg-amber-300/5 p-5">
