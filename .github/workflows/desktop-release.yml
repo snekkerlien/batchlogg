@@ -16,14 +16,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: windows
+          - platform: windows-x64
             os: windows-latest
-            bundles: msi,nsis
-            artifact_path: |
-              src-tauri/target/release/bundle/msi/*
-              src-tauri/target/release/bundle/nsis/*
+            target: x86_64-pc-windows-msvc
+            rust_targets: x86_64-pc-windows-msvc
+            bundles: nsis
+            artifact_path: src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*
+          - platform: windows-x86
+            os: windows-latest
+            target: i686-pc-windows-msvc
+            rust_targets: i686-pc-windows-msvc
+            bundles: nsis
+            artifact_path: src-tauri/target/i686-pc-windows-msvc/release/bundle/nsis/*
           - platform: macos
             os: macos-latest
+            target: universal-apple-darwin
+            rust_targets: aarch64-apple-darwin x86_64-apple-darwin
             bundles: app,dmg
             artifact_path: |
               src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
@@ -42,9 +50,8 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Add macOS universal targets
-        if: matrix.platform == 'macos'
-        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+      - name: Add Rust targets
+        run: rustup target add ${{ matrix.rust_targets }}
 
       - name: Install dependencies
         run: npm ci
@@ -60,7 +67,7 @@ jobs:
           fi
 
       - name: Build installers
-        run: npm run tauri:build -- --bundles ${{ matrix.bundles }} ${{ matrix.platform == 'macos' && '--target universal-apple-darwin' || '' }}
+        run: npm run tauri:build -- --bundles ${{ matrix.bundles }} --target ${{ matrix.target }}
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
@@ -80,8 +87,20 @@ jobs:
       - name: Download installers
         uses: actions/download-artifact@v4
         with:
-          path: release-assets
-          merge-multiple: true
+          name: windows-x64-installers
+          path: release-assets/windows-x64
+
+      - name: Download 32-bit Windows installer
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-x86-installers
+          path: release-assets/windows-x86
+
+      - name: Download macOS installers
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-installers
+          path: release-assets/macos
 
       - name: Collect installers and build update manifest
         shell: bash
@@ -89,10 +108,10 @@ jobs:
           set -euo pipefail
           mkdir release-files
 
-          msi="$(find release-assets -type f -name '*.msi' -print -quit)"
-          nsis="$(find release-assets -type f -name '*.exe' -print -quit)"
-          dmg="$(find release-assets -type f -name '*.dmg' -print -quit)"
-          mac_update="$(find release-assets -type f -name '*.app.tar.gz' -print -quit)"
+          windows_x64="$(find release-assets/windows-x64 -type f -name '*.exe' -print -quit)"
+          windows_x86="$(find release-assets/windows-x86 -type f -name '*.exe' -print -quit)"
+          dmg="$(find release-assets/macos -type f -name '*.dmg' -print -quit)"
+          mac_update="$(find release-assets/macos -type f -name '*.app.tar.gz' -print -quit)"
 
           require_file() {
             if [ -z "$1" ] || [ ! -f "$1" ]; then
@@ -100,21 +119,18 @@ jobs:
               exit 1
             fi
           }
-          require_file "$msi" "Windows MSI installer"
-          require_file "$msi.sig" "Windows MSI update signature"
-          require_file "$nsis" "Windows NSIS installer"
-          require_file "$nsis.sig" "Windows NSIS update signature"
+          require_file "$windows_x64" "Windows 64-bit NSIS installer"
+          require_file "$windows_x64.sig" "Windows 64-bit update signature"
+          require_file "$windows_x86" "Windows 32-bit NSIS installer"
+          require_file "$windows_x86.sig" "Windows 32-bit update signature"
           require_file "$dmg" "macOS DMG installer"
           require_file "$mac_update" "macOS app.tar.gz updater bundle"
           require_file "$mac_update.sig" "macOS updater signature"
 
-          cp "$msi" release-files/windows-x86_64-msi.msi
-          cp "$msi.sig" release-files/windows-x86_64-msi.msi.sig
-          cp "$nsis" release-files/windows-x86_64-nsis.exe
-          cp "$nsis.sig" release-files/windows-x86_64-nsis.exe.sig
-          cp "$dmg" release-files/Batchlogg-macos-universal.dmg
-          cp "$mac_update" release-files/darwin-universal.app.tar.gz
-          cp "$mac_update.sig" release-files/darwin-universal.app.tar.gz.sig
+          cp "$windows_x64" release-files/Batchlogg-Windows-x64.exe
+          cp "$windows_x86" release-files/Batchlogg-Windows-32-bit.exe
+          cp "$dmg" release-files/Batchlogg-macOS-universal.dmg
+          cp "$mac_update" release-files/Batchlogg-macOS-universal-updater.app.tar.gz
 
           version="${GITHUB_REF_NAME#desktop-v}"
           tag_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}"
@@ -123,19 +139,19 @@ jobs:
             --arg version "$version" \
             --arg pub_date "$pub_date" \
             --arg notes "Install this update to get the latest Batchlogg improvements." \
-            --arg nsis_url "$tag_url/windows-x86_64-nsis.exe" \
-            --arg nsis_sig "$(cat release-files/windows-x86_64-nsis.exe.sig)" \
-            --arg msi_url "$tag_url/windows-x86_64-msi.msi" \
-            --arg msi_sig "$(cat release-files/windows-x86_64-msi.msi.sig)" \
-            --arg mac_url "$tag_url/darwin-universal.app.tar.gz" \
-            --arg mac_sig "$(cat release-files/darwin-universal.app.tar.gz.sig)" \
+            --arg windows_x64_url "$tag_url/Batchlogg-Windows-x64.exe" \
+            --arg windows_x64_sig "$(cat "$windows_x64.sig")" \
+            --arg windows_x86_url "$tag_url/Batchlogg-Windows-32-bit.exe" \
+            --arg windows_x86_sig "$(cat "$windows_x86.sig")" \
+            --arg mac_url "$tag_url/Batchlogg-macOS-universal-updater.app.tar.gz" \
+            --arg mac_sig "$(cat "$mac_update.sig")" \
             '{
               version: $version,
               notes: $notes,
               pub_date: $pub_date,
               platforms: {
-                "windows-x86_64-nsis": { url: $nsis_url, signature: $nsis_sig },
-                "windows-x86_64-msi": { url: $msi_url, signature: $msi_sig },
+                "windows-x86_64-nsis": { url: $windows_x64_url, signature: $windows_x64_sig },
+                "windows-i686-nsis": { url: $windows_x86_url, signature: $windows_x86_sig },
                 "darwin-x86_64": { url: $mac_url, signature: $mac_sig },
                 "darwin-aarch64": { url: $mac_url, signature: $mac_sig }
               }
@@ -146,5 +162,14 @@ jobs:
         with:
           name: Batchlogg Desktop ${{ github.ref_name }}
           generate_release_notes: true
+          append_body: true
           make_latest: true
+          body: |
+            ## Downloads
+
+            - [Windows 64-bit](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/Batchlogg-Windows-x64.exe)
+            - [Windows 32-bit](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/Batchlogg-Windows-32-bit.exe)
+            - [macOS (Universal)](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/Batchlogg-macOS-universal.dmg)
+
+            The macOS updater archive and `latest.json` are used by the app's built-in updater; most users only need one of the three installers above.
           files: release-files/*
