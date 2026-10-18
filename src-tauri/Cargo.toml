@@ -1,6 +1,6 @@
 [package]
 name = "batchlogg-desktop"
-version = "2.0.5"
+version = "2.0.6"
 description = "Batchlogg desktop application"
 edition = "2024"
 rust-version = "1.90"
