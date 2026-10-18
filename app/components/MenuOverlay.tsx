@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -9,6 +9,14 @@ import PublicNavigationLinks from "@/app/components/PublicNavigationLinks";
 import { useAuthContext } from "@/app/providers/AuthProvider";
 
 export default function MenuOverlay({ current }: { current: string }) {
+  return (
+    <Suspense fallback={null}>
+      <MenuOverlayContent current={current} />
+    </Suspense>
+  );
+}
+
+function MenuOverlayContent({ current }: { current: string }) {
   const { user, loading } = useAuthContext();
   const [menuOpen, setMenuOpen] = useState(false);
   const [canManageKegs, setCanManageKegs] = useState(false);
