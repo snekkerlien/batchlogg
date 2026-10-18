@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
 
@@ -52,10 +53,21 @@ interface SocialNotification {
   body: string;
 }
 
+interface AchievementNotification {
+  kind: "achievement";
+  id: string;
+  achievement_name: string;
+  category: string;
+  goal: number;
+  created_at: string;
+  read_at: string | null;
+}
+
 type Notification =
   | ForumReplyNotification
   | ForumLikeNotification
   | BatchReminderNotification
+  | AchievementNotification
   | SocialNotification;
 
 export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
@@ -69,6 +81,7 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
   const [clearAllError, setClearAllError] = useState("");
   const [error, setError] = useState("");
   const rootRef = useRef<HTMLDivElement>(null);
+  const seenAchievementIds = useRef<Set<string> | null>(null);
   const router = useRouter();
 
   const loadNotifications = useCallback(async () => {
@@ -81,10 +94,11 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
     if (!session) {
       setNotifications([]);
       setUnreadCount(0);
+      seenAchievementIds.current = null;
       return;
     }
 
-    const [forumResponse, batchResponse, socialResponse] = await Promise.all([
+    const [forumResponse, batchResponse, socialResponse, achievementResponse] = await Promise.all([
       fetch("/api/community/notifications", {
         cache: "no-store",
         credentials: "include",
@@ -97,22 +111,45 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
         cache: "no-store",
         credentials: "include",
       }),
+      fetch("/api/community/achievement-notifications", {
+        cache: "no-store",
+        credentials: "include",
+      }),
     ]);
 
-    if (!forumResponse.ok || !batchResponse.ok || !socialResponse.ok) {
+    if (
+      !forumResponse.ok ||
+      !batchResponse.ok ||
+      !socialResponse.ok ||
+      !achievementResponse.ok
+    ) {
       throw new Error(
-        `Notification request failed (${forumResponse.status}, ${batchResponse.status}, ${socialResponse.status})`
+        `Notification request failed (${forumResponse.status}, ${batchResponse.status}, ${socialResponse.status}, ${achievementResponse.status})`
       );
     }
 
-    const [forumData, batchData, socialData]: [
+    const [forumData, batchData, socialData, achievementData]: [
       { notifications: (ForumReplyNotification | ForumLikeNotification)[]; unreadCount: number },
       { reminders: Omit<BatchReminderNotification, "kind">[]; unreadCount: number },
       { notifications: Omit<SocialNotification, "kind">[]; unreadCount: number },
+      { notifications: Omit<AchievementNotification, "kind">[]; unreadCount: number },
     ] = await Promise.all([
       forumResponse.json(),
       batchResponse.json(),
       socialResponse.json(),
+      achievementResponse.json(),
+    ]);
+    const knownAchievementIds = seenAchievementIds.current;
+    if (knownAchievementIds) {
+      achievementData.notifications.forEach((notification) => {
+        if (!knownAchievementIds.has(notification.id) && !notification.read_at) {
+          toast.success(`${notification.achievement_name} unlocked!`, { duration: 6000 });
+        }
+      });
+    }
+    seenAchievementIds.current = new Set([
+      ...(knownAchievementIds ?? []),
+      ...achievementData.notifications.map((notification) => notification.id),
     ]);
     const combined: Notification[] = [
       ...forumData.notifications,
@@ -124,6 +161,10 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
         ...notification,
         kind: "social" as const,
       })),
+      ...achievementData.notifications.map((notification) => ({
+        ...notification,
+        kind: "achievement" as const,
+      })),
     ].sort((a, b) => {
       const aDate =
         a.kind === "batch_reminder" ? a.remind_at : a.created_at;
@@ -134,7 +175,10 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
 
     setNotifications(combined);
     setUnreadCount(
-      forumData.unreadCount + batchData.unreadCount + socialData.unreadCount
+      forumData.unreadCount +
+        batchData.unreadCount +
+        socialData.unreadCount +
+        achievementData.unreadCount
     );
   }, []);
 
@@ -163,6 +207,68 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
       window.removeEventListener("focus", refreshWhenVisible);
       document.removeEventListener("visibilitychange", refreshWhenVisible);
       window.clearInterval(refreshInterval);
+    };
+  }, [loadNotifications]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let channel: ReturnType<typeof supabaseBrowser.channel> | null = null;
+
+    async function subscribeToAchievementUnlocks() {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabaseBrowser.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (cancelled || !session) return;
+
+      channel = supabaseBrowser
+        .channel(`achievement-notifications:${session.user.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "achievement_notifications",
+            filter: `recipient_id=eq.${session.user.id}`,
+          },
+          (payload) => {
+            const notification = payload.new as Record<string, unknown>;
+            if (
+              typeof notification.id !== "string" ||
+              typeof notification.achievement_name !== "string"
+            ) {
+              return;
+            }
+            const knownIds = seenAchievementIds.current ?? new Set<string>();
+            if (knownIds.has(notification.id)) return;
+            knownIds.add(notification.id);
+            seenAchievementIds.current = knownIds;
+            toast.success(`${notification.achievement_name} unlocked!`, { duration: 6000 });
+            void loadNotifications().catch((loadError) => {
+              console.error(
+                "Could not refresh notifications after achievement unlock",
+                loadError
+              );
+            });
+          }
+        )
+        .subscribe((status, subscribeError) => {
+          if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+            console.error(
+              "Could not subscribe to achievement notifications",
+              subscribeError
+            );
+          }
+        });
+    }
+
+    void subscribeToAchievementUnlocks().catch((subscribeError) => {
+      console.error("Could not initialize achievement notifications", subscribeError);
+    });
+    return () => {
+      cancelled = true;
+      if (channel) void supabaseBrowser.removeChannel(channel);
     };
   }, [loadNotifications]);
 
@@ -203,16 +309,22 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
       const endpoint =
         notification.kind === "forum_reply" || notification.kind === "forum_like"
           ? "/api/community/notifications"
-          : notification.kind === "batch_reminder"
-            ? "/api/batch-reminders"
-            : "/api/community/social-notifications";
+          : notification.kind === "achievement"
+            ? "/api/community/achievement-notifications"
+            : notification.kind === "batch_reminder"
+              ? "/api/batch-reminders"
+              : "/api/community/social-notifications";
       const response = await fetch(endpoint, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
           ids: [notification.id],
-          kind: notification.kind === "forum_like" ? "forum_like" : "forum_reply",
+          ...(notification.kind !== "achievement" &&
+            notification.kind !== "social" &&
+            notification.kind !== "batch_reminder" && {
+              kind: notification.kind === "forum_like" ? "forum_like" : "forum_reply",
+            }),
         }),
       });
 
@@ -241,6 +353,8 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
           ? `/kar/${notification.kar_id}`
           : "/batch-history"
       );
+    } else if (notification.kind === "achievement") {
+      router.push("/my-account");
     } else {
       router.push(
         notification.type === "friend_request"
@@ -268,6 +382,12 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
           body: JSON.stringify({ all: true }),
         }),
         fetch("/api/community/social-notifications", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ all: true }),
+        }),
+        fetch("/api/community/achievement-notifications", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -321,6 +441,10 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
           credentials: "include",
         }),
         fetch("/api/community/social-notifications", {
+          method: "DELETE",
+          credentials: "include",
+        }),
+        fetch("/api/community/achievement-notifications", {
           method: "DELETE",
           credentials: "include",
         }),
@@ -499,6 +623,24 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
                         </span>
                         <span className="mt-2 block text-xs text-white/45">
                           {new Date(notification.remind_at).toLocaleString(
+                            "en-GB",
+                            { dateStyle: "medium", timeStyle: "short" }
+                          )}
+                        </span>
+                      </>
+                    ) : notification.kind === "achievement" ? (
+                      <>
+                        <span className="block text-sm font-semibold text-green-300">
+                          Achievement unlocked
+                        </span>
+                        <span className="mt-1 block truncate text-sm font-medium">
+                          {notification.achievement_name}
+                        </span>
+                        <span className="mt-1 block text-sm text-white/70">
+                          {notification.category} · goal reached: {notification.goal}
+                        </span>
+                        <span className="mt-2 block text-xs text-white/45">
+                          {new Date(notification.created_at).toLocaleString(
                             "en-GB",
                             { dateStyle: "medium", timeStyle: "short" }
                           )}

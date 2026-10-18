@@ -609,7 +609,7 @@ const secondary = batchesRaw
   )}
 </div>
 
-{profileStats && <ProfileAchievements stats={profileStats} />}
+{profileStats && <ProfileAchievements stats={profileStats} showProgress={isOwner} />}
 
 
   </>

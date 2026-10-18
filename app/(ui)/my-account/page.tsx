@@ -30,6 +30,7 @@ export default function AccountPage() {
   const [showcaseRecipes, setShowcaseRecipes] = useState<{ id: string; name: string }[]>([]);
   const [savingShowcase, setSavingShowcase] = useState(false);
   const [showcaseMessage, setShowcaseMessage] = useState("");
+  const [showcaseOpen, setShowcaseOpen] = useState(false);
   const [profileStats, setProfileStats] = useState<any>(null);
 
 
@@ -267,49 +268,84 @@ export default function AccountPage() {
 
         {profileStats && <ProfileOverview stats={profileStats} />}
 
-        <form onSubmit={saveShowcase} className="mb-10 space-y-3 rounded-xl border border-white/10 bg-white/5 p-4">
-          <div>
-            <h2 className="font-semibold text-green-200">Profile showcase</h2>
-            <p className="mt-1 text-xs text-white/55">A short banner is free. Featuring one public recipe is a Premium feature.</p>
-          </div>
-          <label className="block text-sm">Banner message
-            <textarea
-              value={showcaseBanner}
-              onChange={(event) => setShowcaseBanner(event.target.value)}
-              maxLength={280}
-              rows={2}
-              placeholder="A little about what you are brewing…"
-              className="mt-1 w-full rounded-lg border border-white/20 bg-black/40 p-3"
-            />
-            <span className="mt-1 block text-right text-xs text-white/40">{showcaseBanner.length}/280</span>
-          </label>
-          <label className="block text-sm">Featured public recipe
-            <select
-              value={featuredRecipeId}
-              onChange={(event) => setFeaturedRecipeId(event.target.value)}
-              disabled={profile.account_tier !== "premium"}
-              className="mt-1 w-full rounded-lg border border-white/20 bg-black/40 p-3"
-            >
-              <option value="">No featured recipe</option>
-              {showcaseRecipes.map((recipe) => (
-                <option key={recipe.id} value={recipe.id}>{recipe.name}</option>
-              ))}
-            </select>
-          </label>
-          {profile.account_tier !== "premium" && (
-            <p className="text-sm text-amber-200">
-              Upgrade to Premium to feature a public recipe on your profile.{" "}
-              <a href="/premium" className="underline">See Premium</a>
-            </p>
-          )}
-          {showcaseMessage && <p role="status" className="text-sm text-white/70">{showcaseMessage}</p>}
+        <form onSubmit={saveShowcase} className="mb-10 rounded-xl border border-white/10 bg-white/5 p-4">
           <button
-            type="submit"
-            disabled={savingShowcase}
-            className="rounded-lg border border-green-500/40 bg-green-800/60 px-4 py-2 text-sm font-semibold disabled:opacity-50"
+            type="button"
+            aria-expanded={showcaseOpen}
+            aria-controls="profile-showcase-fields"
+            onClick={() => setShowcaseOpen((open) => !open)}
+            className="flex w-full items-center justify-between gap-3 text-left"
           >
-            {savingShowcase ? "Saving…" : "Save showcase"}
+            <span>
+              <span className="block font-semibold text-green-200">Profile showcase</span>
+              <span className="mt-1 block text-xs text-white/55">
+                A short banner is free. Featuring one public recipe is a Premium feature.
+              </span>
+            </span>
+            <span
+              aria-hidden="true"
+              className={`shrink-0 text-2xl text-white transition-transform duration-200 ${
+                showcaseOpen ? "rotate-90" : "rotate-180"
+              }`}
+            >
+              ▶
+            </span>
           </button>
+          <div
+            id="profile-showcase-fields"
+            aria-hidden={!showcaseOpen}
+            className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+              showcaseOpen ? "[grid-template-rows:1fr]" : "[grid-template-rows:0fr]"
+            }`}
+          >
+            <div className="mt-4 space-y-3 overflow-hidden">
+              <label className="block text-sm">Banner message
+                <textarea
+                  value={showcaseBanner}
+                  onChange={(event) => setShowcaseBanner(event.target.value)}
+                  disabled={!showcaseOpen}
+                  maxLength={280}
+                  rows={2}
+                  placeholder="A little about what you are brewing…"
+                  className="mt-1 w-full rounded-lg border border-white/20 bg-black/40 p-3"
+                />
+                <span className="mt-1 block text-right text-xs text-white/40">{showcaseBanner.length}/280</span>
+              </label>
+              <label className="block text-sm">Featured public recipe
+                <select
+                  value={featuredRecipeId}
+                  onChange={(event) => setFeaturedRecipeId(event.target.value)}
+                  disabled={!showcaseOpen || profile.account_tier !== "premium"}
+                  className="mt-1 w-full rounded-lg border border-white/20 bg-black/40 p-3"
+                >
+                  <option value="">No featured recipe</option>
+                  {showcaseRecipes.map((recipe) => (
+                    <option key={recipe.id} value={recipe.id}>{recipe.name}</option>
+                  ))}
+                </select>
+              </label>
+              {profile.account_tier !== "premium" && (
+                <p className="text-sm text-amber-200">
+                  Upgrade to Premium to feature a public recipe on your profile.{" "}
+                  <a
+                    href="/premium"
+                    tabIndex={showcaseOpen ? 0 : -1}
+                    className="underline"
+                  >
+                    See Premium
+                  </a>
+                </p>
+              )}
+              {showcaseMessage && <p role="status" className="text-sm text-white/70">{showcaseMessage}</p>}
+              <button
+                type="submit"
+                disabled={!showcaseOpen || savingShowcase}
+                className="rounded-lg border border-green-500/40 bg-green-800/60 px-4 py-2 text-sm font-semibold disabled:opacity-50"
+              >
+                {savingShowcase ? "Saving…" : "Save showcase"}
+              </button>
+            </div>
+          </div>
         </form>
 
         {profileStats && <ProfileAchievements stats={profileStats} />}
