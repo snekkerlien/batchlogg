@@ -7,6 +7,7 @@ import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 import { Qty } from "@/app/components/Units";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
+import { saveDownload } from "@/lib/desktopDownloads";
 
 type Batch = {
   id: string;
@@ -215,7 +216,7 @@ export default function BrewInsightsPage() {
     }
   }
 
-  function downloadCsv() {
+  async function downloadCsv() {
     const rows = [
       ["Batch", "Type", "Status", "Started", "Finished", "OG", "FG", "ABV", "Volume"],
       ...visibleBatches.map((batch) => [
@@ -233,12 +234,10 @@ export default function BrewInsightsPage() {
     const csv = rows
       .map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(","))
       .join("\r\n");
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "batchlogg-brewing-insights.csv";
-    anchor.click();
-    URL.revokeObjectURL(url);
+    await saveDownload(
+      new Blob([csv], { type: "text/csv;charset=utf-8" }),
+      "batchlogg-brewing-insights.csv"
+    );
   }
 
   return (

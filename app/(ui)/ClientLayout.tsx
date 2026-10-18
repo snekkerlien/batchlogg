@@ -2,6 +2,8 @@
 
 import { ReactNode, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { isTauri } from "@tauri-apps/api/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { AnimatePresence, motion } from "framer-motion";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider, useAuthContext } from "../providers/AuthProvider";
@@ -18,6 +20,7 @@ import {
   isAccentColor,
 } from "../../lib/theme/accentColor";
 import { isDesktopApp } from "../../lib/desktopApp";
+import { saveDownload } from "../../lib/desktopDownloads";
 
 function UserAccentTheme({ children }: { children: ReactNode }) {
   const { user } = useAuthContext();
@@ -75,6 +78,7 @@ function UserAccentTheme({ children }: { children: ReactNode }) {
 export default function ClientLayout({ children }: { children: ReactNode }) {
   useSupabaseSessionSync();
   const pathname = usePathname();
+  const [desktopActionError, setDesktopActionError] = useState("");
 
   useEffect(() => {
     if (!isDesktopApp()) return;
@@ -85,6 +89,63 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isTauri()) return;
+
+    async function handleDesktopLink(event: MouseEvent) {
+      if (event.defaultPrevented || event.button !== 0) return;
+      if (!(event.target instanceof Element)) return;
+
+      const anchor = event.target.closest("a");
+      if (!(anchor instanceof HTMLAnchorElement)) return;
+
+      if (anchor.hasAttribute("download")) {
+        event.preventDefault();
+        setDesktopActionError("");
+        try {
+          const response = await fetch(anchor.href, {
+            credentials: "include",
+            cache: "no-store",
+          });
+          if (!response.ok) throw new Error(`Download failed (${response.status})`);
+          await saveDownload(await response.blob(), anchor.download || "download");
+        } catch (error) {
+          console.error("Could not download file", error);
+          setDesktopActionError(
+            error instanceof Error ? error.message : "Could not download the file."
+          );
+        }
+        return;
+      }
+
+      let url: URL;
+      try {
+        url = new URL(anchor.href);
+      } catch {
+        return;
+      }
+      if (!["http:", "https:", "mailto:", "tel:"].includes(url.protocol)) return;
+      if (
+        (url.protocol === "http:" || url.protocol === "https:") &&
+        url.origin === window.location.origin
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      setDesktopActionError("");
+      try {
+        await openUrl(url.href);
+      } catch (error) {
+        console.error("Could not open external link", error);
+        setDesktopActionError("Could not open that link. Please try again.");
+      }
+    }
+
+    document.addEventListener("click", handleDesktopLink);
+    return () => document.removeEventListener("click", handleDesktopLink);
+  }, []);
+
   return (
     <AuthProvider>
       <UserAccentTheme>
@@ -93,6 +154,11 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
         <div className="relative z-[80] mx-auto -mb-8 max-w-3xl space-y-2 px-3 pt-12 empty:hidden">
           <SiteAnnouncementBanner />
           {pathname !== "/" && <SiteStatusBanner />}
+          {desktopActionError && (
+            <p role="alert" className="rounded-lg bg-red-950/80 p-3 text-center text-sm text-red-200">
+              {desktopActionError}
+            </p>
+          )}
         </div>
         <ChangelogNotice />
         <Toaster

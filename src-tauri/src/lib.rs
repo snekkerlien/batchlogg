@@ -13,8 +13,35 @@ pub fn run() {
       });
       Ok(())
     })
+    .invoke_handler(tauri::generate_handler![save_download])
     .run(tauri::generate_context!())
     .expect("error while building tauri application");
+}
+
+#[tauri::command]
+async fn save_download(
+  app: tauri::AppHandle,
+  file_name: String,
+  contents: Vec<u8>,
+) -> Result<bool, String> {
+  use tauri_plugin_dialog::DialogExt;
+
+  let safe_file_name = std::path::Path::new(&file_name)
+    .file_name()
+    .and_then(|name| name.to_str())
+    .filter(|name| !name.is_empty())
+    .ok_or_else(|| "Invalid download filename".to_string())?;
+  let Some(file_path) = app
+    .dialog()
+    .file()
+    .set_file_name(safe_file_name)
+    .blocking_save_file()
+  else {
+    return Ok(false);
+  };
+  let path = file_path.into_path().map_err(|error| error.to_string())?;
+  std::fs::write(path, contents).map_err(|error| error.to_string())?;
+  Ok(true)
 }
 
 async fn check_for_updates(

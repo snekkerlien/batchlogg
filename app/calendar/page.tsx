@@ -194,7 +194,11 @@ export default function CalendarPage() {
         />
         {!premiumRequired && !loading && (
           <div className="mb-5 text-center">
-            <a href="/api/calendar/export" className="text-sm font-semibold text-green-200 underline">
+            <a
+              href="/api/calendar/export"
+              download="batchlogg-calendar.ics"
+              className="text-sm font-semibold text-green-200 underline"
+            >
               Export calendar for external apps (.ics)
             </a>
           </div>

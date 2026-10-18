@@ -1,20 +1,13 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "remote-issue-tracker",
-  "description": "Allow the hosted Batchlogg app to open its public GitHub issue tracker.",
+  "description": "Allow the hosted Batchlogg app to open external web and contact links.",
   "remote": {
     "urls": ["https://batchlogg.vercel.app/*"]
   },
   "local": false,
   "windows": ["main"],
   "permissions": [
-    {
-      "identifier": "opener:allow-open-url",
-      "allow": [
-        {
-          "url": "https://github.com/snekkerlien/batchlogg/issues"
-        }
-      ]
-    }
+    "opener:allow-default-urls"
   ]
 }

@@ -18,6 +18,7 @@ import {
   DEFAULT_ACCENT_COLOR,
   isAccentColor,
 } from "@/lib/theme/accentColor";
+import { saveDownload } from "@/lib/desktopDownloads";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -279,15 +280,11 @@ export default function SettingsPage() {
         const result: { error?: string } = await response.json();
         throw new Error(result.error || `Backup failed (${response.status})`);
       }
-      const url = URL.createObjectURL(await response.blob());
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download =
+      const filename =
         response.headers
           .get("Content-Disposition")
           ?.match(/filename="([^"]+)"/)?.[1] ?? `${username}-batchlog-backup.zip`;
-      anchor.click();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      await saveDownload(await response.blob(), filename);
     } catch (error) {
       console.error("Failed to export account data", error);
       setDownloadError(
@@ -689,7 +686,7 @@ export default function SettingsPage() {
           </h2>
           <div className="flex flex-col items-center gap-4">
             <p className="max-w-xl text-center text-sm text-zinc-400">
-              Your archive includes batches, readings and notes, recipes, inventory, reminders, kegs, shopping-list items, saved discussions, private messages, feedback, profile settings, and personal images. Forum posts, friendships, community uploads, passwords, and sign-in credentials are not included. Restore adds missing records and restores profile settings; existing records remain unchanged. Vessel-sharing access is not recreated, so ask vessel owners to share access again. ZIPs are limited to 50 MB.
+              Your archive includes batches, readings and notes, recipes, inventory, reminders, shopping-list items, saved discussions, private messages, feedback, profile settings, and personal images. Forum posts, friendships, community uploads, passwords, sign-in credentials, and keg-tracker data are not included. Restore adds missing records and restores profile settings; existing records remain unchanged. Vessel-sharing access is not recreated, so ask vessel owners to share access again. ZIPs are limited to 50 MB.
             </p>
             <button
               type="button"
