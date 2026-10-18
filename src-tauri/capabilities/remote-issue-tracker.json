@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "remote-issue-tracker",
-  "description": "Allow the hosted Batchlogg app to open external links and save downloads.",
+  "description": "Allow the hosted Batchlogg app to open external links, save downloads, and toggle fullscreen.",
   "remote": {
     "urls": ["https://batchlogg.vercel.app/*"]
   },
@@ -9,6 +9,7 @@
   "windows": ["main"],
   "permissions": [
     "opener:allow-default-urls",
-    "allow-save-download"
+    "allow-save-download",
+    "allow-toggle-fullscreen"
   ]
 }
