@@ -18,7 +18,7 @@ import {
   DEFAULT_ACCENT_COLOR,
   isAccentColor,
 } from "@/lib/theme/accentColor";
-import { saveDownload } from "@/lib/desktopDownloads";
+import { getErrorMessage, saveDownload } from "@/lib/desktopDownloads";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -287,9 +287,7 @@ export default function SettingsPage() {
       await saveDownload(await response.blob(), filename);
     } catch (error) {
       console.error("Failed to export account data", error);
-      setDownloadError(
-        error instanceof Error ? error.message : "Could not create your backup. Please try again."
-      );
+      setDownloadError(getErrorMessage(error, "Could not create your backup. Please try again."));
     } finally {
       setShowDownloadSpinner(false);
     }

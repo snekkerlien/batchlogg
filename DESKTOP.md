@@ -17,7 +17,7 @@ npm run tauri:dev
 The shell checks that `https://batchlogg.vercel.app` is reachable, then opens
 Batchlogg. If the site is unavailable, it shows a retry message.
 External web links open in the system browser, and file downloads use a native
-save dialog.
+save dialog. Press **F11** to toggle borderless fullscreen.
 
 ## Build installers
 

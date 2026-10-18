@@ -1,5 +1,11 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
 
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string" && error) return error;
+  return fallback;
+}
+
 export async function saveDownload(blob: Blob, fileName: string) {
   if (isTauri()) {
     const contents = Array.from(new Uint8Array(await blob.arrayBuffer()));
@@ -16,3 +22,5 @@ export async function saveDownload(blob: Blob, fileName: string) {
   anchor.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+export { getErrorMessage };

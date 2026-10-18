@@ -2,7 +2,7 @@
 
 import { ReactNode, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { isTauri } from "@tauri-apps/api/core";
+import { invoke, isTauri } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { AnimatePresence, motion } from "framer-motion";
 import { Toaster } from "react-hot-toast";
@@ -20,7 +20,7 @@ import {
   isAccentColor,
 } from "../../lib/theme/accentColor";
 import { isDesktopApp } from "../../lib/desktopApp";
-import { saveDownload } from "../../lib/desktopDownloads";
+import { getErrorMessage, saveDownload } from "../../lib/desktopDownloads";
 
 function UserAccentTheme({ children }: { children: ReactNode }) {
   const { user } = useAuthContext();
@@ -92,6 +92,20 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isTauri()) return;
 
+    async function handleDesktopKeydown(event: KeyboardEvent) {
+      if (event.key !== "F11" || event.repeat || event.altKey || event.ctrlKey || event.metaKey) {
+        return;
+      }
+      event.preventDefault();
+      setDesktopActionError("");
+      try {
+        await invoke("toggle_fullscreen");
+      } catch (error) {
+        console.error("Could not toggle fullscreen", error);
+        setDesktopActionError(getErrorMessage(error, "Could not toggle fullscreen."));
+      }
+    }
+
     async function handleDesktopLink(event: MouseEvent) {
       if (event.defaultPrevented || event.button !== 0) return;
       if (!(event.target instanceof Element)) return;
@@ -111,9 +125,7 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
           await saveDownload(await response.blob(), anchor.download || "download");
         } catch (error) {
           console.error("Could not download file", error);
-          setDesktopActionError(
-            error instanceof Error ? error.message : "Could not download the file."
-          );
+          setDesktopActionError(getErrorMessage(error, "Could not download the file."));
         }
         return;
       }
@@ -138,12 +150,16 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
         await openUrl(url.href);
       } catch (error) {
         console.error("Could not open external link", error);
-        setDesktopActionError("Could not open that link. Please try again.");
+        setDesktopActionError(getErrorMessage(error, "Could not open that link. Please try again."));
       }
     }
 
     document.addEventListener("click", handleDesktopLink);
-    return () => document.removeEventListener("click", handleDesktopLink);
+    document.addEventListener("keydown", handleDesktopKeydown);
+    return () => {
+      document.removeEventListener("click", handleDesktopLink);
+      document.removeEventListener("keydown", handleDesktopKeydown);
+    };
   }, []);
 
   return (

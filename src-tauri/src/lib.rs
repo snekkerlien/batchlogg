@@ -13,7 +13,10 @@ pub fn run() {
       });
       Ok(())
     })
-    .invoke_handler(tauri::generate_handler![save_download])
+    .invoke_handler(tauri::generate_handler![
+      save_download,
+      toggle_fullscreen
+    ])
     .run(tauri::generate_context!())
     .expect("error while building tauri application");
 }
@@ -42,6 +45,19 @@ async fn save_download(
   let path = file_path.into_path().map_err(|error| error.to_string())?;
   std::fs::write(path, contents).map_err(|error| error.to_string())?;
   Ok(true)
+}
+
+#[tauri::command]
+async fn toggle_fullscreen(app: tauri::AppHandle) -> Result<(), String> {
+  use tauri::Manager;
+
+  let window = app
+    .get_webview_window("main")
+    .ok_or_else(|| "Main window not found".to_string())?;
+  let fullscreen = window.is_fullscreen().map_err(|error| error.to_string())?;
+  window
+    .set_fullscreen(!fullscreen)
+    .map_err(|error| error.to_string())
 }
 
 async fn check_for_updates(
