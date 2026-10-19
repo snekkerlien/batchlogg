@@ -176,6 +176,7 @@ export async function PATCH(
       .from("recipes")
       .update(updateData)
       .eq("id", recipeId)
+      .eq("user_id", user.id)
       .select()
       .single();
 

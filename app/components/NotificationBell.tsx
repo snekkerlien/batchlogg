@@ -80,9 +80,32 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
   const [confirmClearAll, setConfirmClearAll] = useState(false);
   const [clearAllError, setClearAllError] = useState("");
   const [error, setError] = useState("");
+  const [mobilePanelPosition, setMobilePanelPosition] = useState<{
+    left: number;
+    width: number;
+  } | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const seenAchievementIds = useRef<Set<string> | null>(null);
   const router = useRouter();
+
+  const updateMobilePanelPosition = useCallback(() => {
+    if (!window.matchMedia("(max-width: 767px)").matches) {
+      setMobilePanelPosition(null);
+      return;
+    }
+
+    const bounds = rootRef.current?.getBoundingClientRect();
+    if (!bounds) return;
+
+    const margin = 12;
+    const width = Math.min(352, window.innerWidth - margin * 2);
+    const left = Math.max(
+      margin,
+      Math.min(bounds.right - width, window.innerWidth - width - margin)
+    );
+
+    setMobilePanelPosition({ left: left - bounds.left, width });
+  }, []);
 
   const loadNotifications = useCallback(async () => {
     const {
@@ -273,6 +296,18 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
   }, [loadNotifications]);
 
   useEffect(() => {
+    if (!open) return;
+
+    updateMobilePanelPosition();
+    window.addEventListener("resize", updateMobilePanelPosition);
+    window.addEventListener("scroll", updateMobilePanelPosition, true);
+    return () => {
+      window.removeEventListener("resize", updateMobilePanelPosition);
+      window.removeEventListener("scroll", updateMobilePanelPosition, true);
+    };
+  }, [open, updateMobilePanelPosition]);
+
+  useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
         rootRef.current &&
@@ -293,6 +328,7 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
     }
 
     onOpen();
+    updateMobilePanelPosition();
     setOpen(true);
     setLoading(true);
     void loadNotifications()
@@ -519,7 +555,15 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
       {open && (
         <section
           aria-label="Notifications"
-          className="absolute right-0 top-full z-[60] mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-xl border border-white/20 bg-zinc-950/95 p-3 text-left shadow-2xl backdrop-blur-md"
+          className={`absolute top-full z-[60] mt-2 ${mobilePanelPosition ? "" : "right-0 w-[min(22rem,calc(100vw-2rem))]"} rounded-xl border border-white/20 bg-zinc-950/95 p-3 text-left shadow-2xl backdrop-blur-md`}
+          style={
+            mobilePanelPosition
+              ? {
+                  left: mobilePanelPosition.left,
+                  width: mobilePanelPosition.width,
+                }
+              : undefined
+          }
         >
           <div className="mb-2 flex items-center justify-between border-b border-white/10 px-1 pb-2">
             <h2 className="font-semibold">Notifications</h2>

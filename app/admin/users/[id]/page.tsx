@@ -7,6 +7,7 @@ import { writeAdminAuditEvent } from "@/lib/admin/auditLog";
 import { isPlanTier } from "@/lib/auth/plan";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
+import UserRestrictionControls from "@/app/components/UserRestrictionControls";
 import DeleteUserButton from "./DeleteUserButton";
 
 export const runtime = "nodejs";
@@ -55,6 +56,18 @@ export default async function UserAdminPage({
     .single();
   if (profileError) {
     throw new Error(`Failed to load user profile: ${profileError.message}`);
+  }
+
+  const now = new Date().toISOString();
+  const { data: restrictions, error: restrictionsError } = await serviceRole
+    .from("user_restrictions")
+    .select("user_id, restriction_type, starts_at, ends_at, reason")
+    .eq("user_id", userId)
+    .is("revoked_at", null)
+    .lte("starts_at", now)
+    .or(`ends_at.is.null,ends_at.gt.${now}`);
+  if (restrictionsError) {
+    throw new Error(`Failed to load user restrictions: ${restrictionsError.message}`);
   }
 
   async function updateUser(formData: FormData) {
@@ -253,6 +266,11 @@ export default async function UserAdminPage({
           <DeleteUserButton
             userId={userId}
             username={profile?.username ?? authUser.user?.email ?? userId}
+          />
+
+          <UserRestrictionControls
+            userId={userId}
+            restrictions={restrictions ?? []}
           />
         </section>
       </div>

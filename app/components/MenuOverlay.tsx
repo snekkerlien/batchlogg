@@ -219,7 +219,6 @@ function MenuOverlayContent({ current }: { current: string }) {
             text-left
             z-50
             w-56
-            max-h-[calc(100vh-5rem)] overflow-y-auto
           "
         >
           {groups.map((group, groupIndex) => (

@@ -12,6 +12,7 @@ import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
 import ChangelogNotice from "../components/ChangelogNotice";
 import FirstLoginSetup from "../components/FirstLoginSetup";
 import SiteAnnouncementBanner from "../components/SiteAnnouncementBanner";
+import MuteCountdownBanner from "../components/MuteCountdownBanner";
 import { UnitsProvider } from "../components/Units";
 import SiteStatusBanner from "../components/SiteStatusBanner";
 import SiteFooter from "../components/SiteFooter";
@@ -78,6 +79,7 @@ function UserAccentTheme({ children }: { children: ReactNode }) {
 export default function ClientLayout({ children }: { children: ReactNode }) {
   useSupabaseSessionSync();
   const pathname = usePathname();
+  const isBannedPage = pathname === "/banned";
   const [desktopActionError, setDesktopActionError] = useState("");
 
   useEffect(() => {
@@ -166,27 +168,32 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
     <AuthProvider>
       <UserAccentTheme>
         <UnitsProvider>
-        <FirstLoginSetup />
+        {!isBannedPage && <FirstLoginSetup />}
         <div className="relative z-[80] mx-auto -mb-8 max-w-3xl space-y-2 px-3 pt-12 empty:hidden">
-          <SiteAnnouncementBanner />
-          {pathname !== "/" && <SiteStatusBanner />}
+          {!isBannedPage && <SiteAnnouncementBanner />}
+          {!isBannedPage && pathname !== "/" && <SiteStatusBanner />}
+          {!isBannedPage && <MuteCountdownBanner />}
           {desktopActionError && (
             <p role="alert" className="rounded-lg bg-red-950/80 p-3 text-center text-sm text-red-200">
               {desktopActionError}
             </p>
           )}
         </div>
-        <ChangelogNotice />
-        <Toaster
-          position="top-center"
-          toastOptions={{
-            style: {
-              background: "#111",
-              color: "#fff",
-              border: "1px solid #333",
-            },
-          }}
-        />
+        {!isBannedPage && (
+          <>
+            <ChangelogNotice />
+            <Toaster
+              position="top-center"
+              toastOptions={{
+                style: {
+                  background: "#111",
+                  color: "#fff",
+                  border: "1px solid #333",
+                },
+              }}
+            />
+          </>
+        )}
 
         <AnimatePresence mode="wait">
           <motion.div
@@ -200,7 +207,7 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
             {children}
           </motion.div>
         </AnimatePresence>
-        <SiteFooter />
+        {!isBannedPage && <SiteFooter />}
         </UnitsProvider>
       </UserAccentTheme>
     </AuthProvider>

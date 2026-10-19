@@ -42,7 +42,18 @@
         }
 
         const body = await req.json();
+        if (
+            !body ||
+            typeof body !== "object" ||
+            typeof body.id !== "string" ||
+            !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.id)
+        ) {
+            return NextResponse.json({ error: "A valid recipe is required." }, { status: 400 });
+        }
         const { id, ...fields } = body;
+        if (!fields || typeof fields !== "object" || Array.isArray(fields)) {
+            return NextResponse.json({ error: "Invalid recipe details." }, { status: 400 });
+        }
         const changeNote =
             typeof fields.changeNote === "string" ? fields.changeNote.trim() : null;
         delete fields.changeNote;
@@ -59,7 +70,7 @@
             try {
             fields[key] = JSON.parse(fields[key]);
             } catch {
-            // ignore parse errors, leave as string
+            return NextResponse.json({ error: `Invalid ${key} data.` }, { status: 400 });
             }
         }
         }
@@ -115,7 +126,19 @@
         }
 
         // ⭐ Convert numbers
-        const numberFields = ["og", "fg", "abv", "volume", "boil_volume", "ibu", "ebc", "boil_time"];
+        const numberFields = [
+            "og",
+            "fg",
+            "abv",
+            "volume",
+            "boil_volume",
+            "ibu",
+            "ebc",
+            "boil_time",
+            "honey_amount",
+            "base_liquid_amount",
+            "sugar_amount",
+        ];
 
     for (const key of numberFields) {
     if (fields[key] === "") {
@@ -124,9 +147,48 @@
     }
 
     if (fields[key] !== undefined && fields[key] !== null) {
-        const num = Number(fields[key]);
-        fields[key] = isNaN(num) ? undefined : num;
+        const num = Number(String(fields[key]).replace(",", "."));
+        if (!Number.isFinite(num)) {
+            return NextResponse.json({ error: `Invalid ${key} value.` }, { status: 400 });
+        }
+        fields[key] = num;
     }
+    }
+
+    const recipeColumns = new Set([
+        "type",
+        "name",
+        "volume",
+        "og",
+        "fg",
+        "abv",
+        "ibu",
+        "ebc",
+        "honey_type",
+        "honey_amount",
+        "base_liquid",
+        "base_liquid_amount",
+        "fruits",
+        "juice_type",
+        "sugar_amount",
+        "malts",
+        "hops",
+        "dry_hops",
+        "boil_time",
+        "boil_volume",
+        "ingredients",
+        "steps",
+        "yeast",
+        "additives",
+        "full_process",
+        "notes",
+        "had_secondary",
+        "secondary_additions",
+        "secondary_notes",
+        "malt_warnings",
+    ]);
+    for (const key of Object.keys(fields)) {
+        if (!recipeColumns.has(key)) delete fields[key];
     }
 
 

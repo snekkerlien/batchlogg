@@ -4,6 +4,7 @@ export const revalidate = 0;
 
 import { supabaseServer } from "../../../../../lib/supabase/supabaseServerFinal";
 import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import PageHeading from "@/app/components/PageHeading";
 import PublicPageNavigation from "@/app/components/PublicPageNavigation";
@@ -45,6 +46,55 @@ export default async function RecipeNotesPage({
   if (recipeError) throw new Error(`Could not load recipe: ${recipeError.message}`);
   if (!recipe) notFound();
 
+  let sourceRecipe: { id: string; user_id: string; name: string } | null = null;
+  if (recipe.source_recipe_id) {
+    const { data, error } = await serviceRole
+      .from("recipes")
+      .select("id, user_id, name")
+      .eq("id", recipe.source_recipe_id)
+      .eq("is_public", true)
+      .maybeSingle();
+    if (error) throw new Error(`Could not load recipe source: ${error.message}`);
+    sourceRecipe = data;
+  }
+
+  let sourceAuthor: { username: string } | null = null;
+  if (sourceRecipe) {
+    const { data, error } = await serviceRole
+      .from("profiles")
+      .select("username")
+      .eq("id", sourceRecipe.user_id)
+      .eq("is_public", true)
+      .maybeSingle();
+    if (error) throw new Error(`Could not load recipe source author: ${error.message}`);
+    sourceAuthor = data;
+  }
+
+  const { data: forkRows, error: forksError } = await serviceRole
+    .from("recipes")
+    .select("id, user_id, name")
+    .eq("source_recipe_id", recipe.id)
+    .eq("is_public", true)
+    .order("created_at", { ascending: false })
+    .limit(100);
+  if (forksError) throw new Error(`Could not load public recipe versions: ${forksError.message}`);
+
+  const forkAuthorIds = [...new Set((forkRows ?? []).map((fork) => fork.user_id))];
+  let forkAuthorsById = new Map<string, string>();
+  if (forkAuthorIds.length > 0) {
+    const { data, error } = await serviceRole
+      .from("profiles")
+      .select("id, username")
+      .eq("is_public", true)
+      .in("id", forkAuthorIds);
+    if (error) throw new Error(`Could not load recipe version authors: ${error.message}`);
+    forkAuthorsById = new Map((data ?? []).map((author) => [author.id, author.username]));
+  }
+
+  const publicForks = (forkRows ?? []).flatMap((fork) => {
+    const author = forkAuthorsById.get(fork.user_id);
+    return author ? [{ ...fork, author }] : [];
+  });
   const notes = viewingOwnProfile ? recipe.notes_log || [] : [];
 
   return (
@@ -57,6 +107,40 @@ export default async function RecipeNotesPage({
         />
 
         <RecipePresentation recipe={recipe} />
+
+        {sourceRecipe && sourceAuthor && (
+          <p className="mt-5 text-sm text-white/65">
+            A version of{" "}
+            <Link
+              href={`/members/${encodeURIComponent(sourceAuthor.username)}/recipes/${sourceRecipe.id}`}
+              className="text-green-200 underline"
+            >
+              {sourceRecipe.name}
+            </Link>
+            {" "}by {sourceAuthor.username}
+          </p>
+        )}
+
+        {publicForks.length > 0 && (
+          <section className="mt-8 rounded-xl border border-white/10 bg-white/[0.04] p-5 sm:p-6">
+            <h2 className="mb-4 border-b border-white/10 pb-3 text-lg font-semibold text-green-300">
+              Community versions
+            </h2>
+            <ul className="space-y-2">
+              {publicForks.map((fork) => (
+                <li key={fork.id}>
+                  <Link
+                    href={`/members/${encodeURIComponent(fork.author)}/recipes/${fork.id}`}
+                    className="text-green-200 underline"
+                  >
+                    {fork.name}
+                  </Link>
+                  <span className="text-white/60"> by {fork.author}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {viewingOwnProfile && (
           <section className="mt-8 rounded-xl border border-white/10 bg-white/[0.04] p-5 sm:p-6">

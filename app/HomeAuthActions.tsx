@@ -13,6 +13,7 @@ export default function HomeAuthActions() {
   const [session, setSession] = useState<Session | null>(null);
   const [username, setUsername] = useState("");
   const [loadError, setLoadError] = useState("");
+  const [logoutError, setLogoutError] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -71,13 +72,14 @@ export default function HomeAuthActions() {
   }, [router]);
 
   async function logout() {
-    const { error } = await supabaseBrowser.auth.signOut();
+    setLogoutError("");
+    const { error } = await supabaseBrowser.auth.signOut({ scope: "local" });
     if (error) {
       console.error("Could not sign out", error);
+      setLogoutError("Could not log out. Please try again.");
       return;
     }
-    router.refresh();
-    router.replace("/");
+    window.location.reload();
   }
 
   if (loading) {
@@ -85,7 +87,23 @@ export default function HomeAuthActions() {
   }
 
   if (loadError) {
-    return <p className="mt-6 text-sm text-amber-300" role="alert">{loadError}</p>;
+    return (
+      <div className="mt-6 flex flex-col gap-4">
+        <p className="text-sm text-amber-300" role="alert">{loadError}</p>
+        {session && (
+          <button
+            type="button"
+            onClick={logout}
+            className="rounded-lg border border-white/20 bg-white/10 p-3 font-semibold hover:bg-white/20"
+          >
+            Log out
+          </button>
+        )}
+        {logoutError && (
+          <p className="text-sm text-red-300" role="alert">{logoutError}</p>
+        )}
+      </div>
+    );
   }
 
   if (!session) {

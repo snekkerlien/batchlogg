@@ -9,6 +9,7 @@ type PublicRecipe = RecipePresentationData & {
   user_id: string;
   created_at: string;
   author: string;
+  source: { id: string; name: string; author: string } | null;
 };
 
 function searchableText(value: unknown): string {
@@ -176,6 +177,19 @@ export default function PublicRecipeList({
                 }`}
               >
                 <div className="border-t border-white/10 px-4 pb-5 pt-5 sm:px-5">
+                  {recipe.source && (
+                    <p className="mb-4 text-sm text-white/65">
+                      A version of{" "}
+                      <Link
+                        href={`/members/${encodeURIComponent(recipe.source.author)}/recipes/${recipe.source.id}`}
+                        tabIndex={expandedRecipeId === recipe.id ? 0 : -1}
+                        className="text-green-200 underline"
+                      >
+                        {recipe.source.name}
+                      </Link>
+                      {" "}by {recipe.source.author}
+                    </p>
+                  )}
                   <RecipePresentation
                     recipe={recipe}
                     linkTabIndex={expandedRecipeId === recipe.id ? undefined : -1}

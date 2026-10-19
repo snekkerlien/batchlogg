@@ -35,13 +35,35 @@ export default function LoginClient() {
     const params = new URLSearchParams(window.location.search);
     const redirect = params.get("redirect");
 
-    const { error } = await supabaseBrowser.auth.signInWithPassword({
+    const { data, error } = await supabaseBrowser.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
       setErrorMsg("Incorrect email or password.");
+      return;
+    }
+    if (!data.session) {
+      setErrorMsg("Could not establish a login session. Please try again.");
+      return;
+    }
+
+    try {
+      const sessionResponse = await fetch("/api/auth/callback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ session: data.session }),
+      });
+      const result: { error?: string } = await sessionResponse.json();
+      if (!sessionResponse.ok) {
+        setErrorMsg(result.error || "Could not synchronize your login. Please try again.");
+        return;
+      }
+    } catch (syncError) {
+      console.error("Could not synchronize login session", syncError);
+      setErrorMsg("Could not synchronize your login. Please try again.");
       return;
     }
 

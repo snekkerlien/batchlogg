@@ -370,9 +370,9 @@ export default function SettingsPage() {
         </div>
         <div className="absolute top-2 sm:top-4 left-4 z-40">
           <button
-            onClick={() => router.push("/my-account")}
+            onClick={() => router.back()}
             className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg"
-            aria-label="Back to my account"
+            aria-label="Go back"
           >
             ←
           </button>

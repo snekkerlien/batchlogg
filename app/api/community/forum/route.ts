@@ -30,9 +30,28 @@ export async function GET(request: NextRequest) {
   const role = user ? await getMembershipRole(supabase, user) : "member";
   const canModerate = hasPermission(role, "delete_reported_content");
 
+  let mute: { ends_at: string | null; reason: string | null } | null = null;
+  if (user && !hasPermission(role, "manage_users")) {
+    const now = new Date().toISOString();
+    const { data: restriction, error: restrictionError } = await serviceRole
+      .from("user_restrictions")
+      .select("ends_at, reason")
+      .eq("user_id", user.id)
+      .eq("restriction_type", "mute")
+      .is("revoked_at", null)
+      .lte("starts_at", now)
+      .or(`ends_at.is.null,ends_at.gt.${now}`)
+      .maybeSingle();
+    if (restrictionError) {
+      console.error("Could not load forum mute details", restrictionError);
+      return NextResponse.json({ error: "Could not load forum restrictions" }, { status: 500 });
+    }
+    mute = restriction;
+  }
+
   let topicQuery = serviceRole
     .from("forum_topics")
-    .select("id, author_id, title, body, category, created_at, updated_at");
+    .select("id, author_id, title, body, category, is_community_recipe, created_at, updated_at");
   if (topicId) {
     topicQuery = topicQuery.eq("id", topicId);
   } else {
@@ -45,7 +64,34 @@ export async function GET(request: NextRequest) {
       );
   }
 
-  const { data: topicRows, error: topicsError } = await topicQuery;
+  let { data: topicRows, error: topicsError } = await topicQuery;
+  if (
+    topicsError &&
+    ["42703", "PGRST204"].includes(topicsError.code ?? "")
+  ) {
+    let fallbackQuery = serviceRole
+      .from("forum_topics")
+      .select("id, author_id, title, body, category, created_at, updated_at");
+    if (topicId) {
+      fallbackQuery = fallbackQuery.eq("id", topicId);
+    } else {
+      fallbackQuery = fallbackQuery
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: true })
+        .range(
+          (requestedPage - 1) * TOPICS_PER_PAGE,
+          requestedPage * TOPICS_PER_PAGE
+        );
+    }
+    const fallback = await fallbackQuery;
+    if (!fallback.error) {
+      topicRows = (fallback.data ?? []).map((topic) => ({
+        ...topic,
+        is_community_recipe: false,
+      }));
+      topicsError = null;
+    }
+  }
 
   if (topicsError) {
     console.error("Could not load forum topics", topicsError);
@@ -58,7 +104,7 @@ export async function GET(request: NextRequest) {
   const hasMoreTopics = !topicId && (topicRows ?? []).length > TOPICS_PER_PAGE;
   const topics = (topicRows ?? []).slice(0, TOPICS_PER_PAGE);
   if (topics.length === 0) {
-    return NextResponse.json({ topics: [], canModerate, hasMore: false });
+    return NextResponse.json({ topics: [], canModerate, hasMore: false, mute });
   }
 
   const { data: replyRows, error: repliesError } = await serviceRole
@@ -268,6 +314,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     canModerate,
     hasMore: hasMoreTopics,
+    mute,
     topics: decodedTopics.map(({ topic, content }) => {
       return {
         ...topic,

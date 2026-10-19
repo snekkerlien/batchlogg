@@ -10,6 +10,9 @@ import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import ReportContentButton from "@/app/components/ReportContentButton";
 import {
   encodeForumContent,
+  FORUM_CATEGORIES,
+  isForumCategory,
+  type ForumCategory,
   type ForumAttachment,
   type ForumAttachmentRef,
   FORUM_IMAGE_TYPES,
@@ -74,6 +77,7 @@ interface ForumTopic {
   title: string;
   body: string;
   category: ForumCategory;
+  is_community_recipe: boolean;
   created_at: string;
   updated_at: string;
   like_count: number;
@@ -83,6 +87,11 @@ interface ForumTopic {
   images: ForumImage[];
   attachments: ForumAttachment[];
   replies: ForumReply[];
+}
+
+interface ForumMute {
+  ends_at: string | null;
+  reason: string | null;
 }
 
 function ForumLikeButton({
@@ -149,30 +158,42 @@ interface ForumAttachmentChoice extends ForumAttachmentRef {
   label: string;
 }
 
-const FORUM_CATEGORIES = [
-  "Brewing",
-  "Equipment",
-  "Ingredients",
-  "Troubleshooting",
-  "Off-topic",
-] as const;
 const ACCEPTED_FORUM_IMAGE_TYPES = new Set<string>(FORUM_IMAGE_TYPES);
-
-type ForumCategory = (typeof FORUM_CATEGORIES)[number];
 
 type PendingDelete =
   | { type: "topic"; topic: ForumTopic }
   | { type: "reply"; reply: ForumReply };
-
-function isForumCategory(value: string): value is ForumCategory {
-  return FORUM_CATEGORIES.some((category) => category === value);
-}
 
 function formatDate(date: string) {
   return new Date(date).toLocaleString("en-GB", {
     dateStyle: "medium",
     timeStyle: "short",
   });
+}
+
+function formatCountdown(milliseconds: number) {
+  const seconds = Math.max(0, Math.floor(milliseconds / 1000));
+  const days = Math.floor(seconds / 86_400);
+  const hours = Math.floor((seconds % 86_400) / 3_600);
+  const minutes = Math.floor((seconds % 3_600) / 60);
+  const remainingSeconds = seconds % 60;
+  return `${days}d ${hours}h ${minutes}m ${remainingSeconds}s`;
+}
+
+async function submitForumMutation(
+  method: "POST" | "PATCH" | "DELETE",
+  payload: Record<string, unknown>
+) {
+  const response = await fetch("/api/community/forum/mutations", {
+    method,
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+  const result: { error?: string } = await response.json();
+  if (!response.ok) {
+    throw new Error(result.error || "Could not update forum content");
+  }
 }
 
 function ForumImages({ images }: { images: ForumImage[] }) {
@@ -203,7 +224,19 @@ function ForumImages({ images }: { images: ForumImage[] }) {
   );
 }
 
-function ForumAttachmentCards({ attachments }: { attachments: ForumAttachment[] }) {
+function ForumAttachmentCards({
+  attachments,
+  communityTopicId,
+  forkingRecipeId,
+  addedRecipeIds,
+  onMakeVersion,
+}: {
+  attachments: ForumAttachment[];
+  communityTopicId?: string;
+  forkingRecipeId?: string | null;
+  addedRecipeIds?: Set<string>;
+  onMakeVersion?: (recipeId: string, topicId: string) => void;
+}) {
   if (!attachments.length) return null;
   return (
     <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -221,16 +254,34 @@ function ForumAttachmentCards({ attachments }: { attachments: ForumAttachment[] 
             )}
           </span>
         );
-        return attachment.url ? (
-          <a
-            key={`${attachment.type}:${attachment.id}`}
-            href={attachment.url}
-            className="rounded-lg transition hover:border-green-400/30 hover:bg-white/5"
-          >
-            {card}
-          </a>
-        ) : (
-          <div key={`${attachment.type}:${attachment.id}`}>{card}</div>
+        const isCommunityRecipe =
+          attachment.type === "recipe" && communityTopicId && onMakeVersion;
+        return (
+          <div key={`${attachment.type}:${attachment.id}`} className="min-w-0">
+            {attachment.url ? (
+              <a
+                href={attachment.url}
+                className="block rounded-lg transition hover:border-green-400/30 hover:bg-white/5"
+              >
+                {card}
+              </a>
+            ) : card}
+            {isCommunityRecipe && (
+              <button
+                type="button"
+                disabled={forkingRecipeId !== null || addedRecipeIds?.has(attachment.id)}
+                onClick={() => onMakeVersion(attachment.id, communityTopicId)}
+                aria-live="polite"
+                className="mt-2 rounded-lg border border-green-400/30 bg-green-500/10 px-3 py-2 text-sm font-medium text-green-100 transition hover:bg-green-500/20 disabled:opacity-80"
+              >
+                {addedRecipeIds?.has(attachment.id)
+                  ? "Added to your recipes"
+                  : forkingRecipeId === attachment.id
+                    ? "Adding to your recipes…"
+                    : "Make my version"}
+              </button>
+            )}
+          </div>
         );
       })}
     </div>
@@ -370,10 +421,19 @@ export default function CommunityForumPage() {
   const [loadingMoreTopics, setLoadingMoreTopics] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [canModerate, setCanModerate] = useState(false);
+  const [mute, setMute] = useState<ForumMute | null>(null);
+  const [muteModalOpen, setMuteModalOpen] = useState(false);
+  const [muteRemaining, setMuteRemaining] = useState<number | null>(null);
   const [pendingLikes, setPendingLikes] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [topicModalOpen, setTopicModalOpen] = useState(false);
+  const [communityRecipeModalOpen, setCommunityRecipeModalOpen] = useState(false);
+  const [communityRecipeId, setCommunityRecipeId] = useState("");
+  const [communityRecipeTitle, setCommunityRecipeTitle] = useState("");
+  const [communityRecipeBody, setCommunityRecipeBody] = useState("");
+  const [forkingRecipeId, setForkingRecipeId] = useState<string | null>(null);
+  const [addedRecipeIds, setAddedRecipeIds] = useState<Set<string>>(new Set());
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [editingTopic, setEditingTopic] = useState<string | null>(null);
   const [editingReply, setEditingReply] = useState<string | null>(null);
@@ -423,6 +483,14 @@ export default function CommunityForumPage() {
       const direction = topicSort === "newest" ? -1 : 1;
       return direction * (new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
     });
+  const isMuted = mute !== null;
+
+  useEffect(() => {
+    if (!isMuted) return;
+    setTopicModalOpen(false);
+    setCommunityRecipeModalOpen(false);
+    setReplyingTo(null);
+  }, [isMuted]);
 
   const loadTopics = useCallback(async (linkedTopicId?: string) => {
     const query = linkedTopicId
@@ -437,11 +505,14 @@ export default function CommunityForumPage() {
       topics: ForumTopic[];
       canModerate?: boolean;
       hasMore?: boolean;
+      mute?: ForumMute | null;
     } = await response.json();
     setTopics(data.topics);
     setTopicPage(1);
     setHasMoreTopics(data.hasMore === true);
     setCanModerate(data.canModerate === true);
+    setMute(data.mute ?? null);
+    if (data.mute) setMuteModalOpen(true);
   }, []);
 
   async function loadMoreTopics() {
@@ -456,8 +527,10 @@ export default function CommunityForumPage() {
       if (!response.ok) {
         throw new Error(`Forum request failed (${response.status})`);
       }
-      const data: { topics: ForumTopic[]; hasMore?: boolean } =
+      const data: { topics: ForumTopic[]; hasMore?: boolean; mute?: ForumMute | null } =
         await response.json();
+      setMute(data.mute ?? null);
+      if (data.mute) setMuteModalOpen(true);
       setTopics((current) => {
         const existingIds = new Set(current.map((topic) => topic.id));
         return [
@@ -673,9 +746,53 @@ export default function CommunityForumPage() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [topicModalOpen, submitting]);
 
+  useEffect(() => {
+    if (!communityRecipeModalOpen || submitting) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setCommunityRecipeModalOpen(false);
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [communityRecipeModalOpen, submitting]);
+
+  useEffect(() => {
+    if (!muteModalOpen) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setMuteModalOpen(false);
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [muteModalOpen]);
+
+  useEffect(() => {
+    if (!mute?.ends_at) {
+      setMuteRemaining(null);
+      return;
+    }
+
+    const updateCountdown = () => {
+      const remaining = new Date(mute.ends_at!).getTime() - Date.now();
+      if (remaining <= 0) {
+        setMute(null);
+        setMuteModalOpen(false);
+        setMuteRemaining(null);
+        return;
+      }
+      setMuteRemaining(remaining);
+    };
+
+    updateCountdown();
+    const interval = window.setInterval(updateCountdown, 1000);
+    return () => window.clearInterval(interval);
+  }, [mute?.ends_at]);
+
   async function createTopic(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!userId || submitting) return;
+    if (!userId || submitting || isMuted) return;
     if (!body.trim() && topicImages.length === 0 && topicAttachments.length === 0) {
       setError("Write a message or attach an image, recipe, or batch.");
       return;
@@ -687,12 +804,11 @@ export default function CommunityForumPage() {
     let topicCreated = false;
     try {
       uploadedImages = await uploadForumImages(topicImages);
-      const { error: insertError } = await supabaseBrowser
-        .from("forum_topics")
-        .insert({
-          author_id: userId,
-          title: title.trim(),
-          body: encodeForumContent(
+      await submitForumMutation("POST", {
+        action: "create_topic",
+        title: title.trim(),
+        category,
+        content: encodeForumContent(
             body,
             uploadedImages.map((image) => image.path),
             topicAttachments
@@ -700,19 +816,7 @@ export default function CommunityForumPage() {
               .filter((choice): choice is ForumAttachmentChoice => !!choice)
               .map(({ type, id }) => ({ type, id }))
           ),
-          category,
-        });
-
-      if (insertError) {
-        console.error("Could not create forum topic", insertError);
-        setError("Your topic could not be posted. Please try again.");
-        try {
-          await cleanUpForumImages(uploadedImages);
-        } catch (cleanupError) {
-          console.error("Could not clean up unposted forum images", cleanupError);
-        }
-        return;
-      }
+      });
 
       topicCreated = true;
       setTitle("");
@@ -743,9 +847,76 @@ export default function CommunityForumPage() {
     }
   }
 
+  async function createCommunityRecipeTopic(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!userId || submitting || isMuted) return;
+    if (!communityRecipeId) {
+      setError("Choose one of your public recipes.");
+      return;
+    }
+
+    setSubmitting(true);
+    setError("");
+    let topicCreated = false;
+    try {
+      await submitForumMutation("POST", {
+        action: "create_topic",
+        title: communityRecipeTitle.trim(),
+        category: "Brewing",
+        content: encodeForumContent(communityRecipeBody, [], [
+          { type: "recipe", id: communityRecipeId },
+        ]),
+        isCommunityRecipe: true,
+      });
+      topicCreated = true;
+      setCommunityRecipeId("");
+      setCommunityRecipeTitle("");
+      setCommunityRecipeBody("");
+      setCommunityRecipeModalOpen(false);
+      await loadTopics();
+    } catch (submitError) {
+      console.error("Could not create community recipe forum post", submitError);
+      setError(
+        topicCreated
+          ? "Your community recipe was posted, but the forum could not refresh."
+          : submitError instanceof Error
+          ? submitError.message
+          : "Your community recipe could not be posted. Please try again."
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function makeCommunityRecipeVersion(recipeId: string, topicId: string) {
+    setForkingRecipeId(recipeId);
+    setError("");
+    try {
+      const response = await fetch("/api/recipes/fork", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ recipeId, topicId }),
+      });
+      const result: { recipeId?: string; error?: string } = await response.json();
+      if (!response.ok) throw new Error(result.error || "Could not make a recipe version.");
+      if (!result.recipeId) throw new Error("The recipe version was created without an id.");
+      setAddedRecipeIds((current) => new Set(current).add(recipeId));
+    } catch (forkError) {
+      console.error("Could not make community recipe version", forkError);
+      setError(
+        forkError instanceof Error
+          ? forkError.message
+          : "Could not make a recipe version."
+      );
+    } finally {
+      setForkingRecipeId(null);
+    }
+  }
+
   async function createReply(event: FormEvent<HTMLFormElement>, topicId: string) {
     event.preventDefault();
-    if (!userId || submitting) return;
+    if (!userId || submitting || isMuted) return;
     if (!replyBody.trim() && replyImages.length === 0 && replyAttachments.length === 0) {
       setError("Write a reply or attach an image, recipe, or batch.");
       return;
@@ -757,12 +928,10 @@ export default function CommunityForumPage() {
     let replyCreated = false;
     try {
       uploadedImages = await uploadForumImages(replyImages);
-      const { error: insertError } = await supabaseBrowser
-        .from("forum_replies")
-        .insert({
-          topic_id: topicId,
-          author_id: userId,
-          body: encodeForumContent(
+      await submitForumMutation("POST", {
+        action: "create_reply",
+        topicId,
+        content: encodeForumContent(
             replyBody,
             uploadedImages.map((image) => image.path),
             replyAttachments
@@ -770,18 +939,7 @@ export default function CommunityForumPage() {
               .filter((choice): choice is ForumAttachmentChoice => !!choice)
               .map(({ type, id }) => ({ type, id }))
           ),
-        });
-
-      if (insertError) {
-        console.error("Could not create forum reply", insertError);
-        setError("Your reply could not be posted. Please try again.");
-        try {
-          await cleanUpForumImages(uploadedImages);
-        } catch (cleanupError) {
-          console.error("Could not clean up unposted forum images", cleanupError);
-        }
-        return;
-      }
+      });
 
       replyCreated = true;
       setReplyBody("");
@@ -829,22 +987,23 @@ export default function CommunityForumPage() {
     setSubmitting(true);
     setError("");
     const topic = topics.find((item) => item.id === topicId);
-    const { data, error: updateError } = await supabaseBrowser
-      .from("forum_topics")
-      .update({
-        body: encodeForumContent(
+    try {
+      await submitForumMutation("PATCH", {
+        type: "topic",
+        id: topicId,
+        content: encodeForumContent(
           editBody,
           topic?.images.map((image) => image.path) ?? [],
           topic?.attachments.map(({ type, id }) => ({ type, id })) ?? []
         ),
-      })
-      .eq("id", topicId)
-      .eq("author_id", userId)
-      .select("id");
-
-    if (updateError || !data?.length) {
+      });
+    } catch (updateError) {
       console.error("Could not edit forum topic", updateError);
-      setError("The discussion could not be updated. Please try again.");
+      setError(
+        updateError instanceof Error
+          ? updateError.message
+          : "The discussion could not be updated. Please try again."
+      );
       setSubmitting(false);
       return;
     }
@@ -866,22 +1025,23 @@ export default function CommunityForumPage() {
 
     setSubmitting(true);
     setError("");
-    const { data, error: updateError } = await supabaseBrowser
-      .from("forum_replies")
-      .update({
-        body: encodeForumContent(
+    try {
+      await submitForumMutation("PATCH", {
+        type: "reply",
+        id: reply.id,
+        content: encodeForumContent(
           editBody,
           reply.images.map((image) => image.path),
           reply.attachments.map(({ type, id }) => ({ type, id }))
         ),
-      })
-      .eq("id", reply.id)
-      .eq("author_id", userId)
-      .select("id");
-
-    if (updateError || !data?.length) {
+      });
+    } catch (updateError) {
       console.error("Could not edit forum reply", updateError);
-      setError("The reply could not be updated. Please try again.");
+      setError(
+        updateError instanceof Error
+          ? updateError.message
+          : "The reply could not be updated. Please try again."
+      );
       setSubmitting(false);
       return;
     }
@@ -921,22 +1081,10 @@ export default function CommunityForumPage() {
           throw new Error(result.error || "Could not remove forum content");
         }
       } else {
-        const result = isTopic
-          ? await supabaseBrowser
-              .from("forum_topics")
-              .delete()
-              .eq("id", targetId)
-              .eq("author_id", userId)
-              .select("id")
-          : await supabaseBrowser
-              .from("forum_replies")
-              .delete()
-              .eq("id", targetId)
-              .eq("author_id", userId)
-              .select("id");
-        if (result.error || !result.data?.length) {
-          throw result.error ?? new Error("No matching forum content was deleted");
-        }
+        await submitForumMutation("DELETE", {
+          type: isTopic ? "topic" : "reply",
+          id: targetId,
+        });
       }
 
       try {
@@ -995,27 +1143,39 @@ export default function CommunityForumPage() {
           </div>
         </section>
 
-        {userId ? (
-          <div className="mb-8 flex justify-center">
+        {userId && !isMuted ? (
+          <div className="mb-8 flex flex-col items-center gap-3">
             <button
               type="button"
               onClick={() => {
                 setError("");
                 setTopicModalOpen(true);
               }}
-              className="rounded-lg border border-green-500 bg-green-700 px-5 py-3 font-semibold hover:bg-green-600"
+              disabled={loading}
+              className="rounded-lg border border-green-500 bg-green-700 px-5 py-3 font-semibold hover:bg-green-600 disabled:cursor-wait disabled:opacity-50"
             >
               Start a discussion
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                setError("");
+                setCommunityRecipeModalOpen(true);
+              }}
+              disabled={loading}
+              className="rounded-lg border border-green-400/40 bg-green-500/10 px-5 py-3 font-semibold text-green-100 hover:bg-green-500/20 disabled:cursor-wait disabled:opacity-50"
+            >
+              Start a community recipe
+            </button>
           </div>
-        ) : (
+        ) : !userId ? (
           <p className="mb-8 rounded-lg border border-white/10 bg-white/5 p-4 text-center text-white/70">
             <Link href="/auth/login" className="text-green-300 underline">
               Sign in
             </Link>{" "}
             to start a discussion or reply.
           </p>
-        )}
+        ) : null}
 
         {error && !topicModalOpen && (
           <p role="alert" className="mb-6 text-center text-amber-300">
@@ -1129,8 +1289,8 @@ export default function CommunityForumPage() {
                       <div className="flex gap-3">
                         <button
                           type="submit"
-                          disabled={submitting}
-                          className="rounded-lg border border-green-500 bg-green-700 px-4 py-2 text-sm font-semibold hover:bg-green-600 disabled:opacity-60"
+                          disabled={submitting || isMuted}
+                          className="rounded-lg border border-green-500 bg-green-700 px-4 py-2 text-sm font-semibold hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {submitting ? "Saving…" : "Save changes"}
                         </button>
@@ -1150,6 +1310,11 @@ export default function CommunityForumPage() {
                         <span className="inline-block rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-xs text-white/70">
                           {topic.category}
                         </span>
+                        {topic.is_community_recipe && (
+                          <span className="ml-2 inline-block rounded-full border border-green-300/30 bg-green-300/10 px-2.5 py-1 text-xs font-semibold text-green-100">
+                            Community recipe
+                          </span>
+                        )}
                         {userId ? (
                           <button
                             type="button"
@@ -1200,7 +1365,17 @@ export default function CommunityForumPage() {
                   <div className="mt-3">
                     {topic.body && <p className="whitespace-pre-wrap">{topic.body}</p>}
                     <ForumImages images={topic.images} />
-                    <ForumAttachmentCards attachments={topic.attachments} />
+                    <ForumAttachmentCards
+                      attachments={topic.attachments}
+                      communityTopicId={
+                        userId && topic.is_community_recipe && !isMuted
+                          ? topic.id
+                          : undefined
+                      }
+                      forkingRecipeId={forkingRecipeId}
+                      addedRecipeIds={addedRecipeIds}
+                      onMakeVersion={makeCommunityRecipeVersion}
+                    />
                   </div>
                 )}
                 <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -1329,7 +1504,7 @@ export default function CommunityForumPage() {
                   </div>
                 )}
 
-                {userId && (
+                {userId && !isMuted && (
                   <div className="mt-4">
                     {replyingTo === topic.id ? (
                       <form
@@ -1361,7 +1536,7 @@ export default function CommunityForumPage() {
                           <button
                             type="submit"
                             disabled={submitting}
-                            className="rounded-lg border border-green-500 bg-green-700 px-4 py-2 text-sm font-semibold hover:bg-green-600 disabled:opacity-60"
+                            className="rounded-lg border border-green-500 bg-green-700 px-4 py-2 text-sm font-semibold hover:bg-green-600 disabled:cursor-wait disabled:opacity-60"
                           >
                             {submitting ? "Posting…" : "Post reply"}
                           </button>
@@ -1382,11 +1557,12 @@ export default function CommunityForumPage() {
                     ) : (
                       <button
                         type="button"
+                        disabled={loading}
                         onClick={() => {
                           setReplyingTo(topic.id);
                           setReplyBody("");
                         }}
-                        className="text-sm font-semibold text-green-300 hover:text-green-200"
+                        className="text-sm font-semibold text-green-300 hover:text-green-200 disabled:cursor-wait disabled:opacity-50"
                       >
                         Reply
                       </button>
@@ -1410,7 +1586,75 @@ export default function CommunityForumPage() {
           )}
         </section>
       </div>
-      {topicModalOpen && (
+      {mute && muteModalOpen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto p-4"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setMuteModalOpen(false);
+          }}
+        >
+          <div
+            aria-hidden="true"
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm"
+          />
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="forum-mute-title"
+            className="relative z-10 w-full max-w-lg rounded-2xl border border-amber-400/30 bg-zinc-900 p-6 text-white shadow-2xl"
+          >
+            <button
+              type="button"
+              onClick={() => setMuteModalOpen(false)}
+              aria-label="Close mute notice"
+              className="absolute right-4 top-4 rounded-lg p-2 text-white/60 hover:bg-white/10 hover:text-white"
+            >
+              ×
+            </button>
+            <h2 id="forum-mute-title" className="text-2xl font-bold text-amber-300">
+              You are muted
+            </h2>
+            <p className="mt-3 text-white/80">
+              You cannot start discussions or reply while this mute is active.
+            </p>
+            {mute.reason && (
+              <div className="mt-4 rounded-lg border border-white/10 bg-white/5 p-4 text-center text-white/75">
+                <p className="font-semibold text-white">Reason:</p>
+                <p className="mt-1 whitespace-pre-wrap">{mute.reason}</p>
+              </div>
+            )}
+            <div className="mt-4 rounded-lg border border-white/10 bg-white/5 p-4 text-center">
+              {mute.ends_at ? (
+                <>
+                  <p>
+                    Mute lifts:{" "}
+                    <time dateTime={mute.ends_at}>
+                      {new Date(mute.ends_at).toLocaleString("en-GB")}
+                    </time>
+                  </p>
+                  {muteRemaining !== null && (
+                    <p className="mt-2 font-semibold" aria-live="off">
+                      Time remaining: {formatCountdown(muteRemaining)}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p>Duration: Indefinite</p>
+              )}
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setMuteModalOpen(false)}
+                className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold hover:bg-white/20"
+              >
+                Close
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+      {topicModalOpen && !isMuted && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/70 px-4 py-8 backdrop-blur-sm"
           onMouseDown={(event) => {
@@ -1514,6 +1758,140 @@ export default function CommunityForumPage() {
                   className="rounded-lg border border-green-500 bg-green-700 px-4 py-2 font-semibold hover:bg-green-600 disabled:cursor-wait disabled:opacity-60"
                 >
                   {submitting ? "Posting…" : "Post discussion"}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
+      {communityRecipeModalOpen && !isMuted && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/70 px-4 py-8 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !submitting) {
+              setCommunityRecipeModalOpen(false);
+            }
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="community-recipe-dialog-title"
+            className="relative w-full max-w-xl rounded-xl border border-white/15 bg-zinc-900 p-6 shadow-2xl"
+          >
+            <button
+              type="button"
+              onClick={() => setCommunityRecipeModalOpen(false)}
+              disabled={submitting}
+              aria-label="Close"
+              className="absolute right-4 top-4 rounded-lg p-2 text-white/60 hover:bg-white/10 hover:text-white disabled:opacity-50"
+            >
+              ✕
+            </button>
+            <h2
+              id="community-recipe-dialog-title"
+              className="mb-2 text-2xl font-semibold text-green-300"
+            >
+              Start a community recipe
+            </h2>
+            <p className="mb-5 text-sm leading-relaxed text-white/65">
+              Share one of your public recipes as a forum post. Other brewers can
+              make their own private, independent version from that post.
+              Your profile must also be public.
+            </p>
+            {error && (
+              <p role="alert" className="mb-4 text-sm text-amber-300">
+                {error}
+              </p>
+            )}
+            <form onSubmit={createCommunityRecipeTopic} className="space-y-3">
+              <label className="block text-sm font-medium" htmlFor="community-recipe-select">
+                Public recipe
+              </label>
+              <select
+                id="community-recipe-select"
+                value={communityRecipeId}
+                onChange={(event) => {
+                  const selectedId = event.target.value;
+                  setCommunityRecipeId(selectedId);
+                  const recipe = attachmentChoices.find(
+                    (choice) => choice.type === "recipe" && choice.id === selectedId
+                  );
+                  if (recipe) {
+                    setCommunityRecipeTitle(
+                      `Community recipe: ${recipe.label.replace(/^Recipe · /, "")}`
+                    );
+                  }
+                }}
+                required
+                disabled={submitting || !attachmentChoices.some((choice) => choice.type === "recipe")}
+                className="w-full rounded-lg border border-white/20 bg-black/40 p-3"
+              >
+                <option value="">
+                  {attachmentChoices.some((choice) => choice.type === "recipe")
+                    ? "Choose a public recipe"
+                    : "No public recipes available"}
+                </option>
+                {attachmentChoices
+                  .filter((choice) => choice.type === "recipe")
+                  .map((choice) => (
+                    <option key={choice.id} value={choice.id}>
+                      {choice.label.replace(/^Recipe · /, "")}
+                    </option>
+                  ))}
+              </select>
+              {!attachmentChoices.some((choice) => choice.type === "recipe") && (
+                <p className="text-sm text-white/60">
+                  Make a recipe public in{" "}
+                  <Link href="/my-recipes" className="text-green-300 underline">
+                    My recipes
+                  </Link>{" "}
+                  first.
+                </p>
+              )}
+              <label className="block text-sm font-medium" htmlFor="community-recipe-title">
+                Forum post title
+              </label>
+              <input
+                id="community-recipe-title"
+                value={communityRecipeTitle}
+                onChange={(event) => setCommunityRecipeTitle(event.target.value)}
+                minLength={3}
+                maxLength={150}
+                required
+                placeholder="Name your community recipe"
+                className="w-full rounded-lg border border-white/20 bg-black/40 p-3"
+              />
+              <label className="block text-sm font-medium" htmlFor="community-recipe-message">
+                Message (optional)
+              </label>
+              <textarea
+                id="community-recipe-message"
+                value={communityRecipeBody}
+                onChange={(event) => setCommunityRecipeBody(event.target.value)}
+                maxLength={5000}
+                rows={4}
+                placeholder="Tell the community what makes this recipe special…"
+                className="w-full rounded-lg border border-white/20 bg-black/40 p-3"
+              />
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setCommunityRecipeModalOpen(false)}
+                  disabled={submitting}
+                  className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold hover:bg-white/20 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={
+                    submitting ||
+                    !attachmentChoices.some((choice) => choice.type === "recipe")
+                  }
+                  className="rounded-lg border border-green-500 bg-green-700 px-4 py-2 font-semibold hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {submitting ? "Posting…" : "Post community recipe"}
                 </button>
               </div>
             </form>

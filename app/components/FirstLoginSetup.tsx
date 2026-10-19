@@ -70,7 +70,7 @@ export default function FirstLoginSetup() {
         if (profile.onboarding_completed === false) setStage("welcome");
       } catch (loadError) {
         console.error("Could not load first-login setup", loadError);
-        if (active) setError("Your welcome setup could not be loaded. Please reload to try again.");
+        if (active) setError("");
       } finally {
         if (active) setLoading(false);
       }

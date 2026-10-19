@@ -13,6 +13,20 @@ export interface ForumAttachment extends ForumAttachmentRef {
   url: string | null;
 }
 
+export const FORUM_CATEGORIES = [
+  "Brewing",
+  "Equipment",
+  "Ingredients",
+  "Troubleshooting",
+  "Off-topic",
+] as const;
+
+export type ForumCategory = (typeof FORUM_CATEGORIES)[number];
+
+export function isForumCategory(value: unknown): value is ForumCategory {
+  return typeof value === "string" && FORUM_CATEGORIES.some((category) => category === value);
+}
+
 export const MAX_FORUM_IMAGES = 4;
 export const MAX_FORUM_IMAGE_SIZE = 5 * 1024 * 1024;
 export const FORUM_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
@@ -57,4 +71,9 @@ export function decodeForumContent(body: string) {
     })
     .trimEnd();
   return { body: text, imagePaths, attachments };
+}
+
+export function hasForumContent(body: string) {
+  const content = decodeForumContent(body);
+  return !!content.body.trim() || content.imagePaths.length > 0 || content.attachments.length > 0;
 }

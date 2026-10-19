@@ -18,6 +18,7 @@ type PublicRecipe = RecipePresentationData & {
   id: string;
   user_id: string;
   created_at: string;
+  source_recipe_id: string | null;
 };
 
 export default async function PublicRecipesPage() {
@@ -42,7 +43,7 @@ export default async function PublicRecipesPage() {
     const { data: recipeRows, error: recipesError } = await serviceRole
       .from("recipes")
       .select(
-        "id, user_id, name, type, og, fg, abv, volume, ibu, ebc, ingredients, malts, hops, dry_hops, boil_volume, boil_time, yeast, honey_type, honey_amount, base_liquid, base_liquid_amount, fruits, juice_type, sugar_amount, steps, additives, full_process, notes, had_secondary, secondary_additions, secondary_notes, created_at"
+        "id, user_id, source_recipe_id, name, type, og, fg, abv, volume, ibu, ebc, ingredients, malts, hops, dry_hops, boil_volume, boil_time, yeast, honey_type, honey_amount, base_liquid, base_liquid_amount, fruits, juice_type, sugar_amount, steps, additives, full_process, notes, had_secondary, secondary_additions, secondary_notes, created_at"
       )
       .eq("is_public", true)
       .in("user_id", authorIds)
@@ -53,6 +54,30 @@ export default async function PublicRecipesPage() {
       throw new Error(`Could not load public recipes: ${recipesError.message}`);
     }
     publicRecipes = (recipeRows ?? []) as PublicRecipe[];
+  }
+
+  const sourceIds = [...new Set(
+    publicRecipes
+      .map((recipe) => recipe.source_recipe_id)
+      .filter((id): id is string => Boolean(id))
+  )];
+  const sourceRecipesById = new Map<string, { id: string; name: string; author: string }>();
+  if (sourceIds.length > 0) {
+    const { data: sourceRows, error: sourceError } = await serviceRole
+      .from("recipes")
+      .select("id, user_id, name")
+      .in("id", sourceIds)
+      .eq("is_public", true)
+      .in("user_id", authorIds);
+
+    if (sourceError) {
+      throw new Error(`Could not load shared recipe sources: ${sourceError.message}`);
+    }
+
+    for (const source of sourceRows ?? []) {
+      const author = authorsById.get(source.user_id);
+      if (author) sourceRecipesById.set(source.id, { ...source, author });
+    }
   }
 
   return (
@@ -76,7 +101,15 @@ export default async function PublicRecipesPage() {
         <PublicRecipeList
           recipes={publicRecipes.flatMap((recipe) => {
             const author = authorsById.get(recipe.user_id);
-            return author ? [{ ...recipe, author }] : [];
+            return author
+              ? [{
+                  ...recipe,
+                  author,
+                  source: recipe.source_recipe_id
+                    ? sourceRecipesById.get(recipe.source_recipe_id) ?? null
+                    : null,
+                }]
+              : [];
           })}
         />
       </div>

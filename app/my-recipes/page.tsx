@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
@@ -67,6 +67,7 @@ export default function RecipesPage() {
   const router = useRouter();
   const { label } = useUnits();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [recipes, setRecipes] = useState<any[]>([]);
   const [emptyVessels, setEmptyVessels] = useState<{ id: string; nummer: number }[]>([]);
   const [vesselsLoaded, setVesselsLoaded] = useState(false);
@@ -89,11 +90,13 @@ export default function RecipesPage() {
   const [editRecipe, setEditRecipe] = useState<any>(null);
   const [editBeerSubtype, setEditBeerSubtype] = useState("all_grain");
   const [editError, setEditError] = useState<string | null>(null);
+  const [recipeActionError, setRecipeActionError] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
   const [editFruits, setEditFruits] = useState<Fruit[]>([]);
   const [editMalts, setEditMalts] = useState<Malt[]>([]);
   const [editHops, setEditHops] = useState<Hop[]>([]);
   const [editDryHops, setEditDryHops] = useState<DryHop[]>([]);
+  const editDialogRef = useRef<HTMLDivElement>(null);
 
 
 
@@ -101,32 +104,33 @@ export default function RecipesPage() {
 
   useEffect(() => {
   async function load() {
-    const {
-      data: { session },
-    } = await supabaseBrowser.auth.getSession();
+    try {
+      const {
+        data: { session },
+      } = await supabaseBrowser.auth.getSession();
 
-    if (!session) {
-      router.replace("/auth/login");
-      return;
-    }
+      if (!session) {
+        router.replace("/auth/login");
+        return;
+      }
 
-    // ⭐ HENT BATCH NOTES
-    const { data: notesRaw } = await supabaseBrowser
-      .from("batch_notes")
-      .select("batch_id")
-      .eq("user_id", session.user.id);
+      // ⭐ HENT BATCH NOTES
+      const { data: notesRaw } = await supabaseBrowser
+        .from("batch_notes")
+        .select("batch_id")
+        .eq("user_id", session.user.id);
 
-    // ⭐ TYPE: Map batch_id → boolean
-    const notesMap: Record<string, boolean> =
-      notesRaw?.reduce((acc, n) => {
-        acc[n.batch_id] = true;
-        return acc;
-      }, {} as Record<string, boolean>) || {};
+      // ⭐ TYPE: Map batch_id → boolean
+      const notesMap: Record<string, boolean> =
+        notesRaw?.reduce((acc, n) => {
+          acc[n.batch_id] = true;
+          return acc;
+        }, {} as Record<string, boolean>) || {};
 
-    // ⭐ HENT RECIPES
-    const { data: recipesRaw } = await supabaseBrowser
-      .from("recipes")
-      .select(`
+      // ⭐ HENT RECIPES
+      const { data: recipesRaw, error: recipesError } = await supabaseBrowser
+        .from("recipes")
+        .select(`
         id,
         user_id,
         batch_id,
@@ -162,48 +166,89 @@ export default function RecipesPage() {
         malt_warnings,
         dry_hops
       `)
-      .eq("user_id", session.user.id)
-      .order("created_at", { ascending: false });
+        .eq("user_id", session.user.id)
+        .order("created_at", { ascending: false });
+      if (recipesError) throw recipesError;
 
-    // ⭐ LEGG has_notes INN I RECIPES
-    const recipesWithNotes = (recipesRaw ?? []).map((r) => ({
-      ...r,
-      has_notes: notesMap[r.batch_id] || false,
-    }));
+      let sourceRecipeIds = new Map<string, string>();
+      const recipeIds = (recipesRaw ?? []).map((recipe) => recipe.id);
+      if (recipeIds.length > 0) {
+        const { data: sourceRows, error: sourceError } = await supabaseBrowser
+          .from("recipes")
+          .select("id, source_recipe_id")
+          .in("id", recipeIds);
+        if (sourceError && !["42703", "PGRST204"].includes(sourceError.code ?? "")) {
+          throw sourceError;
+        }
+        if (sourceError) {
+          console.warn("Recipe lineage is unavailable until the recipe source migration is applied.");
+        } else {
+          sourceRecipeIds = new Map(
+            (sourceRows ?? [])
+              .filter((recipe) => recipe.source_recipe_id)
+              .map((recipe) => [recipe.id, recipe.source_recipe_id as string])
+          );
+        }
+      }
 
-    const { data: vessels } = await supabaseBrowser
-      .from("kar")
-      .select("id, nummer")
-      .eq("user_id", session.user.id)
-      .order("created_at", { ascending: true });
+      // ⭐ LEGG has_notes INN I RECIPES
+      const recipesWithNotes = (recipesRaw ?? []).map((r) => ({
+        ...r,
+        source_recipe_id: sourceRecipeIds.get(r.id) ?? null,
+        has_notes: notesMap[r.batch_id] || false,
+      }));
 
-    const vesselIds = (vessels ?? []).map((vessel) => vessel.id);
-    let occupiedVesselIds = new Set<string>();
-    if (vesselIds.length > 0) {
-      const { data: activeBatches } = await supabaseBrowser
-        .from("batches")
-        .select("aktivt_kar")
-        .in("aktivt_kar", vesselIds)
-        .in("status", ["Aktiv", "Sekundær", "secondary"]);
-      occupiedVesselIds = new Set(
-        (activeBatches ?? []).map((batch) => batch.aktivt_kar).filter(Boolean)
+      const { data: vessels } = await supabaseBrowser
+        .from("kar")
+        .select("id, nummer")
+        .eq("user_id", session.user.id)
+        .order("created_at", { ascending: true });
+
+      const vesselIds = (vessels ?? []).map((vessel) => vessel.id);
+      let occupiedVesselIds = new Set<string>();
+      if (vesselIds.length > 0) {
+        const { data: activeBatches } = await supabaseBrowser
+          .from("batches")
+          .select("aktivt_kar")
+          .in("aktivt_kar", vesselIds)
+          .in("status", ["Aktiv", "Sekundær", "secondary"]);
+        occupiedVesselIds = new Set(
+          (activeBatches ?? []).map((batch) => batch.aktivt_kar).filter(Boolean)
+        );
+      }
+
+      const numberedVessels = (vessels ?? []).map((vessel, index) => ({
+        ...vessel,
+        nummer: index + 1,
+      }));
+      setEmptyVessels(
+        numberedVessels.filter((vessel) => !occupiedVesselIds.has(vessel.id))
       );
+      setVesselsLoaded(true);
+      setRecipes(recipesWithNotes);
+    } catch (error) {
+      console.error("Could not load recipes", error);
+      setLoadError("Your recipes could not be loaded. Please try again.");
+    } finally {
+      setLoading(false);
     }
-
-    const numberedVessels = (vessels ?? []).map((vessel, index) => ({
-      ...vessel,
-      nummer: index + 1,
-    }));
-    setEmptyVessels(
-      numberedVessels.filter((vessel) => !occupiedVesselIds.has(vessel.id))
-    );
-    setVesselsLoaded(true);
-    setRecipes(recipesWithNotes);
-    setLoading(false);
   }
 
   load();
 }, []);
+
+  useEffect(() => {
+    if (openEdit) {
+      const frame = window.requestAnimationFrame(() => {
+        const dialog = editDialogRef.current;
+        if (!dialog) return;
+
+        const top = dialog.getBoundingClientRect().top + window.scrollY - 16;
+        window.scrollTo({ top, behavior: "smooth" });
+      });
+      return () => window.cancelAnimationFrame(frame);
+    }
+  }, [openEdit]);
 
   function openRecipeBatch(
     recipe: Record<string, unknown>,
@@ -290,11 +335,28 @@ export default function RecipesPage() {
 
 
   async function togglePublic(id: string, current: boolean) {
-    await supabaseBrowser.from("recipes").update({ is_public: !current }).eq("id", id);
+    setRecipeActionError("");
+    try {
+      const response = await fetch(`/api/recipes/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ is_public: !current }),
+      });
+      const result: { error?: string } = await response.json();
+      if (!response.ok) throw new Error(result.error || "Could not update recipe visibility.");
 
-    setRecipes((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, is_public: !current } : r))
-    );
+      setRecipes((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, is_public: !current } : r))
+      );
+    } catch (updateError) {
+      console.error("Could not update recipe visibility", updateError);
+      setRecipeActionError(
+        updateError instanceof Error
+          ? updateError.message
+          : "Could not update recipe visibility."
+      );
+    }
   }
 
   
@@ -310,6 +372,58 @@ export default function RecipesPage() {
     if (res.ok) {
       setRecipes((prev) => prev.filter((r) => r.id !== id));
     }
+  }
+
+  function openRecipeEditor(recipe: any) {
+    setEditRecipe(recipe);
+    setEditError(null);
+    setEditBeerSubtype(
+      recipe.type === "Beer"
+        ? recipe.ingredients?.beer_subtype ?? "all_grain"
+        : "all_grain"
+    );
+    setEditFruits(recipe.fruits || []);
+    setOpenEdit(recipe.id);
+    setEditMalts(
+      (recipe.malts || []).map((malt: Partial<Malt>) => ({
+        name: malt.name ?? "",
+        amount: malt.amount ?? "",
+        unit: malt.unit ?? "kg",
+        ebc: malt.ebc == null ? "" : String(malt.ebc),
+      }))
+    );
+    setEditHops(
+      (recipe.hops || []).map((hop: Partial<Hop>) => ({
+        name: hop.name ?? "",
+        alpha: hop.alpha ?? "",
+        year: hop.year ?? "",
+        amount: hop.amount ?? "",
+        time: hop.time ?? "",
+        addition_type: hop.addition_type === "whirlpool" ? "whirlpool" : "boil",
+        temperature: hop.temperature ?? "",
+      }))
+    );
+    setEditDryHops(
+      recipe.dry_hops?.length
+        ? recipe.dry_hops.map((hop: Partial<DryHop>) => ({
+            name: hop.name ?? "",
+            amount: hop.amount ?? "",
+            contact: hop.contact ?? "",
+            alpha: hop.alpha == null ? "" : String(hop.alpha),
+            year: hop.year == null ? "" : String(hop.year),
+          }))
+        : recipe.type === "Beer" &&
+            (recipe.ingredients?.beer_subtype === "fresh_wort_kit" ||
+              recipe.ingredients?.beer_subtype === "malt_extract_kit")
+          ? (recipe.hops || []).map((hop: Hop) => ({
+              name: hop.name,
+              amount: hop.amount,
+              contact: "",
+              alpha: hop.alpha ?? "",
+              year: hop.year ?? "",
+            }))
+          : []
+    );
   }
 
   function toggle(id: string) {
@@ -446,6 +560,11 @@ function removeDryHop(index: number) {
           title="My recipes"
           subtitle="All your recipes in one place."
         />
+        {recipeActionError && (
+          <p role="alert" className="mb-4 rounded border border-red-400/40 bg-red-950/50 p-3 text-red-200">
+            {recipeActionError}
+          </p>
+        )}
 
         {/* NEW RECIPE BUTTON */}
         <div className="flex justify-center mb-6">
@@ -468,8 +587,10 @@ function removeDryHop(index: number) {
         />
 
         {/* RECIPE LIST */}
-        <div className="space-y-4">
-          {filteredRecipes.length > 0 ? (
+        <div className={openEdit ? "hidden" : "space-y-4"}>
+          {loadError ? (
+            <p role="alert" className="text-center text-red-300">{loadError}</p>
+          ) : filteredRecipes.length > 0 ? (
             filteredRecipes.map((r) => {
               const og = r.og ? Number(r.og).toFixed(3) : "—";
               const fg = r.fg ? Number(r.fg).toFixed(3) : "—";
@@ -540,54 +661,7 @@ function removeDryHop(index: number) {
   <button
     onClick={(e) => {
       e.stopPropagation();
-      setEditRecipe(r);
-      setEditError(null);
-      setEditBeerSubtype(r.type === "Beer" ? r.ingredients?.beer_subtype ?? "all_grain" : "all_grain");
-      setEditFruits(r.fruits || []);
-      setOpenEdit(r.id); 
-      setEditMalts(
-        (r.malts || []).map((malt: Partial<Malt>) => ({
-          name: malt.name ?? "",
-          amount: malt.amount ?? "",
-          unit: malt.unit ?? "kg",
-          ebc: malt.ebc == null ? "" : String(malt.ebc),
-        }))
-      );
-      setEditHops(
-        (r.hops || []).map((hop: Partial<Hop>) => ({
-          name: hop.name ?? "",
-          alpha: hop.alpha ?? "",
-          year: hop.year ?? "",
-          amount: hop.amount ?? "",
-          time: hop.time ?? "",
-          addition_type: hop.addition_type === "whirlpool" ? "whirlpool" : "boil",
-          temperature: hop.temperature ?? "",
-        }))
-      );
-      setEditDryHops(
-        r.dry_hops?.length
-            ? r.dry_hops.map((hop: Partial<DryHop>) => ({
-                name: hop.name ?? "",
-                amount: hop.amount ?? "",
-                contact: hop.contact ?? "",
-                alpha: hop.alpha == null ? "" : String(hop.alpha),
-                year: hop.year == null ? "" : String(hop.year),
-              }))
-            : r.type === "Beer" &&
-                (r.ingredients?.beer_subtype === "fresh_wort_kit" ||
-                  r.ingredients?.beer_subtype === "malt_extract_kit")
-              ? (r.hops || []).map((hop: Hop) => ({
-                  name: hop.name,
-                  amount: hop.amount,
-                  contact: "",
-                  alpha: hop.alpha ?? "",
-                  year: hop.year ?? "",
-                }))
-            : []
-      );
-
-
-        // åpner edit-modal for denne oppskriften
+      openRecipeEditor(r);
     }}
     className="px-4 py-2 rounded-lg font-semibold border bg-green-700 hover:bg-green-600 border-green-500"
   >
@@ -681,6 +755,11 @@ function removeDryHop(index: number) {
                     }`}
                   >
                     <div className="space-y-3 opacity-90">
+                      {r.source_recipe_id && (
+                        <p className="text-sm text-white/65">
+                          This is your version of a shared community recipe.
+                        </p>
+                      )}
                       <RecipePresentation recipe={r} />
                       {r.notes_log?.length > 0 && (
                         <div className="rounded-xl border border-white/10 bg-white/[0.04] p-5">
@@ -777,14 +856,17 @@ function removeDryHop(index: number) {
         </div>
 
           {openEdit && editRecipe && (
-  <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
-
+  <>
+    <div aria-hidden="true" className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm" />
     <div
-      className="bg-zinc-900 border border-white/20 p-6 rounded-xl w-full max-w-2xl text-white overflow-y-auto max-h-[90vh]"
-      onClick={(e) => e.stopPropagation()}
+      ref={editDialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="edit-recipe-title"
+      className="relative z-50 mx-auto mt-0 mb-8 w-full max-w-2xl rounded-xl border border-white/20 bg-zinc-900 p-6 text-white"
     >
 
-      <h2 className="text-2xl font-bold mb-4">Edit recipe</h2>
+      <h2 id="edit-recipe-title" className="text-2xl font-bold mb-4">Edit recipe</h2>
 
       <form
         className="flex flex-col gap-4"
@@ -800,11 +882,16 @@ function removeDryHop(index: number) {
             const response = await fetch("/api/recipes/update", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
+              credentials: "include",
               body: JSON.stringify({ id: openEdit, ...payload }),
             });
-            const result = await response.json();
+            const result: { error?: string; details?: string } = await response.json();
             if (!response.ok) {
-              setEditError(result.error || "Could not save the recipe.");
+              setEditError(
+                result.details
+                  ? `${result.error || "Could not save the recipe."}: ${result.details}`
+                  : result.error || "Could not save the recipe."
+              );
               return;
             }
             setOpenEdit(null);
@@ -948,6 +1035,21 @@ function removeDryHop(index: number) {
       defaultValue={String(editRecipe.honey_amount ?? "")}
       className="p-3 rounded bg-black/40 border border-white/20"
     />
+    <label className="font-semibold">Base liquid</label>
+    <input
+      name="base_liquid"
+      defaultValue={editRecipe.base_liquid ?? ""}
+      className="p-3 rounded bg-black/40 border border-white/20"
+    />
+    <label className="font-semibold">
+      Base liquid amount (<UnitSymbol kind="volume" />)
+    </label>
+    <UnitInput
+      kind="volume"
+      name="base_liquid_amount"
+      defaultValue={String(editRecipe.base_liquid_amount ?? "")}
+      className="p-3 rounded bg-black/40 border border-white/20"
+    />
 
     {/* ⭐ Fruits — identisk med batch creation */}
     <div className="space-y-2">
@@ -997,6 +1099,7 @@ function removeDryHop(index: number) {
         + Add fruit
       </button>
     </div>
+    <input type="hidden" name="fruits" value={JSON.stringify(editFruits)} />
   </>
 )}
 
@@ -1345,13 +1448,32 @@ function removeDryHop(index: number) {
 
         {editRecipe.type === "Other" && (
           <>
-            <label className="font-semibold">Ingredients (JSON)</label>
-            <input
-  name="other_boil_time"
-  type="number"
-  defaultValue={editRecipe.boil_time}
-  className="w-full p-3 rounded bg-black/40 border border-white/20"
-/>
+            <label className="font-semibold">
+              Ingredients (JSON)
+              <textarea
+                name="ingredients"
+                defaultValue={
+                  typeof editRecipe.ingredients === "string"
+                    ? editRecipe.ingredients
+                    : JSON.stringify(editRecipe.ingredients ?? [], null, 2)
+                }
+                rows={5}
+                className="mt-2 w-full rounded border border-white/20 bg-black/40 p-3 font-mono text-sm"
+              />
+            </label>
+            <label className="font-semibold">
+              Steps (JSON)
+              <textarea
+                name="steps"
+                defaultValue={
+                  typeof editRecipe.steps === "string"
+                    ? editRecipe.steps
+                    : JSON.stringify(editRecipe.steps ?? [], null, 2)
+                }
+                rows={5}
+                className="mt-2 w-full rounded border border-white/20 bg-black/40 p-3 font-mono text-sm"
+              />
+            </label>
           </>
         )}
 
@@ -1403,7 +1525,7 @@ function removeDryHop(index: number) {
         Cancel
       </button>
     </div>
-  </div>
+  </>
 )}
 
 {batchInventoryDialog && (

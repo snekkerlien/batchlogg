@@ -3,11 +3,13 @@ import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
+import BanAppealActions from "./BanAppealActions";
 
 const CATEGORY_LABELS: Record<string, string> = {
   suggestion: "Suggestion",
   feedback: "Feedback",
   bug: "Bug report",
+  ban_appeal: "Ban appeal",
 };
 
 export default async function AdminFeedbackPage({
@@ -68,7 +70,7 @@ console.log("SSR SUPABASE URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
 
         <PageHeading
           title="Feedback"
-          subtitle="Suggestions and feedback sent in by members."
+          subtitle="Suggestions, feedback, bug reports, and ban appeals sent in by members."
         />
 
         {searchParams?.error && (
@@ -126,32 +128,30 @@ console.log("SSR SUPABASE URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
                   {item.email && item.username ? ` (${item.email})` : ""}
                 </p>
 
-                {/* ADMIN ACTIONS */}
-                <div className="mt-5 flex items-center gap-3 text-sm">
-
-                  {/* Add to roadmap */}
-                  <form action="/api/admin/feedback/add-to-roadmap" method="POST">
-                    <input type="hidden" name="feedbackId" value={item.id} />
-                    <button
-                      className="px-3 py-2 rounded-lg border border-green-400/40 bg-green-500/10 text-green-300 font-semibold hover:bg-green-500/20"
-                      title="Add this feedback to the roadmap"
-                    >
-                      Add to roadmap
-                    </button>
-                  </form>
-
-                  {/* Delete */}
-                  <form action="/api/admin/feedback/delete" method="POST">
-                    <input type="hidden" name="feedbackId" value={item.id} />
-                    <button
-                      className="px-3 py-2 rounded-lg border border-red-400/40 bg-red-500/10 text-red-300 font-semibold hover:bg-red-500/20"
-                      title="Delete this feedback"
-                    >
-                      Delete
-                    </button>
-                  </form>
-
-                </div>
+                {item.category === "ban_appeal" ? (
+                  <BanAppealActions feedbackId={item.id} />
+                ) : (
+                  <div className="mt-5 flex items-center gap-3 text-sm">
+                    <form action="/api/admin/feedback/add-to-roadmap" method="POST">
+                      <input type="hidden" name="feedbackId" value={item.id} />
+                      <button
+                        className="rounded-lg border border-green-400/40 bg-green-500/10 px-3 py-2 font-semibold text-green-300 hover:bg-green-500/20"
+                        title="Add this feedback to the roadmap"
+                      >
+                        Add to roadmap
+                      </button>
+                    </form>
+                    <form action="/api/admin/feedback/delete" method="POST">
+                      <input type="hidden" name="feedbackId" value={item.id} />
+                      <button
+                        className="rounded-lg border border-red-400/40 bg-red-500/10 px-3 py-2 font-semibold text-red-300 hover:bg-red-500/20"
+                        title="Delete this feedback"
+                      >
+                        Delete
+                      </button>
+                    </form>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
