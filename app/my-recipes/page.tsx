@@ -614,7 +614,7 @@ function removeDryHop(index: number) {
 
 {/* HEADER */}
 <div
-  className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+  className="w-full flex items-center justify-between gap-2"
   onClick={(e) => {
     // PC: hele headeren lukker kortet
     if (expanded === r.id && window.innerWidth >= 640) {
@@ -637,11 +637,21 @@ function removeDryHop(index: number) {
         e.stopPropagation();
       }
     }}
-    className="text-left flex items-center gap-3"
+    className="min-w-0 flex-1 text-left flex items-center gap-3"
   >
     <span className="text-xl font-bold text-green-300 flex items-center gap-3">
       {r.name ? r.name.charAt(0).toUpperCase() + r.name.slice(1) : "Unnamed recipe"}
     </span>
+  </button>
+
+  <button
+    onClick={(e) => {
+      e.stopPropagation();
+      openRecipeEditor(r);
+    }}
+    className="sm:hidden shrink-0 px-3 py-2 rounded-lg font-semibold border bg-green-700 hover:bg-green-600 border-green-500"
+  >
+    Edit
   </button>
 
   {/* Knapper + pil (PC) */}
