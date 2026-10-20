@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
@@ -10,10 +11,18 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import VisibilitySwitch from "../components/VisibilitySwitch";
 import RecipeFilters, { type RecipeSort } from "./RecipeFilters";
+import RecipeImport from "./RecipeImport";
 import RecipeAdditiveFields from "./new/RecipeAdditiveFields";
 import RecipeSecondaryFields from "./new/RecipeSecondaryFields";
 import RecipePresentation from "@/app/components/RecipePresentation";
 import BeerColorGlass from "@/app/components/BeerColorGlass";
+import BeerStyleSelect from "@/app/components/BeerStyleSelect";
+import ExpandArrowButton from "@/app/components/ExpandArrowButton";
+import ConfirmDialog from "@/app/components/ConfirmDialog";
+import {
+  getOtherRecipeIngredients,
+  getOtherRecipeStyle,
+} from "@/lib/recipes/otherRecipe";
 import {
   getSavedRecipeInventoryIssues,
   type InventoryItem,
@@ -83,12 +92,17 @@ export default function RecipesPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [openStyleSelect, setOpenStyleSelect] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [savingCopyrightRecipeId, setSavingCopyrightRecipeId] = useState<
+    string | null
+  >(null);
   const [filterType, setFilterType] = useState<string>("All");
   const [recipeSearch, setRecipeSearch] = useState("");
   const [recipeSort, setRecipeSort] = useState<RecipeSort>("newest");
   const [openEdit, setOpenEdit] = useState<string | null>(null);
   const [editRecipe, setEditRecipe] = useState<any>(null);
   const [editBeerSubtype, setEditBeerSubtype] = useState("all_grain");
+  const [editBeerStyle, setEditBeerStyle] = useState("");
+  const [editOtherStyle, setEditOtherStyle] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
   const [recipeActionError, setRecipeActionError] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
@@ -141,6 +155,7 @@ export default function RecipesPage() {
         volume,
         notes,
         is_public,
+        copyright_free,
         created_at,
         notes_log,
         had_secondary,
@@ -226,6 +241,16 @@ export default function RecipesPage() {
       );
       setVesselsLoaded(true);
       setRecipes(recipesWithNotes);
+      const requestedStartRecipe = new URLSearchParams(
+        window.location.search
+      ).get("start");
+      if (
+        requestedStartRecipe &&
+        recipesWithNotes.some((recipe) => String(recipe.id) === requestedStartRecipe)
+      ) {
+        setExpanded(requestedStartRecipe);
+        setStartRecipeId(requestedStartRecipe);
+      }
     } catch (error) {
       console.error("Could not load recipes", error);
       setLoadError("Your recipes could not be loaded. Please try again.");
@@ -359,6 +384,45 @@ export default function RecipesPage() {
     }
   }
 
+  async function updateRecipeCopyright(id: string, copyrightFree: boolean) {
+    if (savingCopyrightRecipeId) return;
+    setSavingCopyrightRecipeId(id);
+    setRecipeActionError("");
+    try {
+      const response = await fetch(`/api/recipes/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ copyright_free: copyrightFree }),
+      });
+      const result: {
+        error?: string;
+        updated?: { copyright_free?: boolean };
+      } = await response.json();
+      if (!response.ok) {
+        throw new Error(
+          result.error || "Could not update the recipe's copyright setting."
+        );
+      }
+      setRecipes((previous) =>
+        previous.map((recipe) =>
+          recipe.id === id
+            ? { ...recipe, copyright_free: result.updated?.copyright_free === true }
+            : recipe
+        )
+      );
+    } catch (updateError) {
+      console.error("Could not update recipe copyright setting", updateError);
+      setRecipeActionError(
+        updateError instanceof Error
+          ? updateError.message
+          : "Could not update the recipe's copyright setting."
+      );
+    } finally {
+      setSavingCopyrightRecipeId(null);
+    }
+  }
+
   
 
 
@@ -382,6 +446,10 @@ export default function RecipesPage() {
         ? recipe.ingredients?.beer_subtype ?? "all_grain"
         : "all_grain"
     );
+    setEditBeerStyle(
+      recipe.type === "Beer" ? recipe.ingredients?.beer_style ?? "" : ""
+    );
+    setEditOtherStyle(recipe.type === "Other" ? getOtherRecipeStyle(recipe.ingredients) : "");
     setEditFruits(recipe.fruits || []);
     setOpenEdit(recipe.id);
     setEditMalts(
@@ -522,6 +590,20 @@ function removeDryHop(index: number) {
       String(recipe.name ?? "").toLowerCase().includes(recipeSearch.trim().toLowerCase())
     )
     .sort((a, b) => {
+      if (recipeSort === "style") {
+        const styleA =
+          a.type === "Beer" && typeof a.ingredients?.beer_style === "string"
+            ? a.ingredients.beer_style
+            : "";
+        const styleB =
+          b.type === "Beer" && typeof b.ingredients?.beer_style === "string"
+            ? b.ingredients.beer_style
+            : "";
+        return styleA.localeCompare(styleB, undefined, { sensitivity: "base" }) ||
+          String(a.name ?? "").localeCompare(String(b.name ?? ""), undefined, {
+            sensitivity: "base",
+          });
+      }
       if (recipeSort === "name") {
         return String(a.name ?? "").localeCompare(String(b.name ?? ""), undefined, {
           sensitivity: "base",
@@ -544,8 +626,8 @@ function removeDryHop(index: number) {
   }
 
   return (
-    <main className="min-h-screen px-6 py-12 text-white flex justify-center">
-      <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10 relative pt-16 sm:pt-16">
+    <main className="min-h-screen px-3 py-6 text-white flex justify-center sm:px-6 sm:py-12">
+      <div className="bg-black/60 backdrop-blur-md p-4 sm:p-8 rounded-xl w-full max-w-3xl border border-white/10 relative pt-16 sm:pt-16">
 
         {/* TOP BAR */}
         <div className="absolute top-2 sm:top-4 right-4 z-40">
@@ -576,10 +658,28 @@ function removeDryHop(index: number) {
           </button>
         </div>
 
+        <RecipeImport
+          onImported={(importedRecipes) => {
+            setRecipes((current) => [
+              ...importedRecipes.map((recipe) => ({
+                ...recipe,
+                source_recipe_id: null,
+                has_notes: false,
+              })),
+              ...current,
+            ]);
+          }}
+        />
+
         {/* FILTER BAR */}
         <RecipeFilters
           type={filterType}
-          onTypeChange={setFilterType}
+          onTypeChange={(nextType) => {
+            setFilterType(nextType);
+            if (nextType !== "Beer" && recipeSort === "style") {
+              setRecipeSort("newest");
+            }
+          }}
           search={recipeSearch}
           onSearchChange={setRecipeSearch}
           sort={recipeSort}
@@ -598,61 +698,46 @@ function removeDryHop(index: number) {
               const ibu = r.ibu ? Number(r.ibu).toFixed(0) : "—";
               const ebc = Number(r.ebc);
               const volume = r.volume ?? "—";
+              const recipeCategory =
+                r.type === "Beer" && typeof r.ingredients?.beer_style === "string" &&
+                r.ingredients.beer_style.trim()
+                  ? `Beer - ${r.ingredients.beer_style.trim()}`
+                  : r.type === "Other" && getOtherRecipeStyle(r.ingredients)
+                    ? getOtherRecipeStyle(r.ingredients)
+                    : r.type;
 
               return (
-                <div
-  key={r.id}
-  className={`bg-white/10 border border-white/20 rounded-xl p-4 sm:p-6 ${
-    expanded === r.id ? "cursor-default" : "cursor-pointer"
-  }`}
-  onClick={() => {
-    if (expanded !== r.id) toggle(r.id); // åpne kortet
-  }}
->
+                              <div
+                key={r.id}
+                className="bg-white/10 border border-white/20 rounded-xl p-4 sm:p-6"
+              >
 
 
 
 {/* HEADER */}
 <div
-  className="w-full flex items-center justify-between gap-2"
-  onClick={(e) => {
-    // PC: hele headeren lukker kortet
-    if (expanded === r.id && window.innerWidth >= 640) {
-      e.stopPropagation();
-      toggle(r.id);
-    }
-  }}
+  className="flex w-full items-start justify-between gap-3 sm:items-center"
 >
   {/* Tittel */}
-  <button
-    onClick={(e) => {
-      // Mobil: kun tittelen lukker kortet
-      if (expanded === r.id && window.innerWidth < 640) {
-        e.stopPropagation();
-        toggle(r.id);
-      }
-
-      // PC: tittelen skal ikke åpne kortet alene
-      if (window.innerWidth >= 640) {
-        e.stopPropagation();
-      }
-    }}
-    className="min-w-0 flex-1 text-left flex items-center gap-3"
+  <div
+    className="min-w-0 flex-1 text-left flex flex-col items-start gap-1"
   >
-    <span className="text-xl font-bold text-green-300 flex items-center gap-3">
+    <span className="flex items-center gap-3 text-lg font-bold leading-tight text-green-300 sm:text-xl">
       {r.name ? r.name.charAt(0).toUpperCase() + r.name.slice(1) : "Unnamed recipe"}
     </span>
-  </button>
+    {expanded !== r.id && (
+      <span className="text-xs leading-tight text-white/65">{recipeCategory}</span>
+    )}
+  </div>
 
-  <button
-    onClick={(e) => {
-      e.stopPropagation();
-      openRecipeEditor(r);
-    }}
-    className="sm:hidden shrink-0 px-3 py-2 rounded-lg font-semibold border bg-green-700 hover:bg-green-600 border-green-500"
-  >
-    Edit
-  </button>
+  <span className="sm:hidden">
+    <ExpandArrowButton
+      expanded={expanded === r.id}
+      label={r.name || "recipe"}
+      controls={`recipe-details-${r.id}`}
+      onClick={() => toggle(r.id)}
+    />
+  </span>
 
   {/* Knapper + pil (PC) */}
 <div className="hidden sm:flex flex-row items-center justify-end gap-2 sm:mt-[6px]">
@@ -688,71 +773,91 @@ function removeDryHop(index: number) {
     Delete
   </button>
 
-  <span
-    onClick={(e) => {
-      e.stopPropagation();
-    }}
-    className={`text-white text-2xl transition-transform duration-200 ${
-      expanded === r.id ? "rotate-90" : "rotate-180"
-    }`}
-  >
-    ▶
-  </span>
+  <ExpandArrowButton
+    expanded={expanded === r.id}
+    label={r.name || "recipe"}
+    controls={`recipe-details-${r.id}`}
+    onClick={() => toggle(r.id)}
+  />
 </div>
 
 </div>
                   {/* Stats line */}
-<p className="text-sm mt-3 grid grid-cols-3 gap-y-1 gap-x-4 sm:flex sm:flex-wrap sm:items-center">
-  <span><strong>OG:</strong> {og}</span>
-  <span><strong>FG:</strong> {fg}</span>
-  <span><strong>ABV:</strong> {abv}%</span>
-
+{expanded !== r.id && (
+<div
+  aria-label={`${r.name} recipe summary`}
+  className="mt-3 grid grid-cols-3 gap-x-2 gap-y-1.5 text-sm sm:flex sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-1"
+>
+  <span className="inline-flex min-w-0 items-center gap-1 whitespace-nowrap rounded-md border border-white/10 bg-black/20 px-2 py-1 sm:gap-1.5 sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
+    <strong className="text-[10px] text-white/55 sm:text-sm sm:text-white">OG:</strong>
+    <span className="text-xs sm:text-sm">{og}</span>
+  </span>
+  <span className="inline-flex min-w-0 items-center gap-1 whitespace-nowrap rounded-md border border-white/10 bg-black/20 px-2 py-1 sm:gap-1.5 sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
+    <strong className="text-[10px] text-white/55 sm:text-sm sm:text-white">FG:</strong>
+    <span className="text-xs sm:text-sm">{fg}</span>
+  </span>
+  <span className="inline-flex min-w-0 items-center gap-1 whitespace-nowrap rounded-md border border-white/10 bg-black/20 px-2 py-1 sm:gap-1.5 sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
+    <strong className="text-[10px] text-white/55 sm:text-sm sm:text-white">ABV:</strong>
+    <span className="text-xs sm:text-sm">{abv}%</span>
+  </span>
   {(r.type === "Beer" || r.type === "Braggot") && (
     <>
-      <span><strong>IBU:</strong> {ibu}</span>
-      <span className="inline-flex items-center gap-1.5">
-        <strong>EBC:</strong> {Number.isFinite(ebc) ? ebc.toFixed(0) : "—"}
-        {Number.isFinite(ebc) && <BeerColorGlass ebc={ebc} compact />}
+      <span className="inline-flex min-w-0 items-center gap-1 whitespace-nowrap rounded-md border border-white/10 bg-black/20 px-2 py-1 sm:gap-1.5 sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
+        <strong className="text-[10px] text-white/55 sm:text-sm sm:text-white">IBU:</strong>
+        <span className="text-xs sm:text-sm">{ibu}</span>
+      </span>
+      <span className="inline-flex min-w-0 items-center gap-1 whitespace-nowrap rounded-md border border-white/10 bg-black/20 px-2 py-1 sm:gap-1.5 sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
+        <strong className="text-[10px] text-white/55 sm:text-sm sm:text-white">EBC:</strong>
+        <span className="inline-flex items-center gap-1 text-xs sm:gap-1.5 sm:text-sm">
+          {Number.isFinite(ebc) ? ebc.toFixed(0) : "—"}
+          {Number.isFinite(ebc) && <BeerColorGlass ebc={ebc} compact />}
+        </span>
       </span>
 
-    
     </>
   )}
-
-  
-</p>
+</div>
+)}
 
 {/* Mobil-knapper + pil */}
-<div className="flex sm:hidden justify-between items-center mt-3">
-  <div className="flex gap-2">
-    <span onClick={(e) => e.stopPropagation()}>
+<div className="mt-3 flex flex-wrap items-center gap-2 sm:hidden">
+  <span
+    onClick={(e) => e.stopPropagation()}
+    className="inline-flex h-10 items-center rounded-lg border border-white/10 bg-black/20 px-2"
+  >
       <VisibilitySwitch
         checked={r.is_public}
         onChange={() => togglePublic(r.id, r.is_public)}
         publicText="Public"
         privateText="Private"
         ariaLabel={`Recipe ${r.name} visibility`}
+        compact
+        className="gap-1.5"
       />
-    </span>
+  </span>
+
+  <div className="flex shrink-0 items-center gap-2">
+  <button
+    onClick={(e) => {
+      e.stopPropagation();
+      openRecipeEditor(r);
+    }}
+    className="h-10 rounded-lg border border-green-500 bg-green-700 px-3 text-sm font-semibold hover:bg-green-600"
+  >
+    Edit
+  </button>
 
     <button
       onClick={(e) => {
         e.stopPropagation();
         setConfirmDeleteId(r.id);
       }}
-      className="px-4 py-2 rounded-lg font-semibold border bg-white/10 hover:bg-white/20 border-white/20"
+      className="h-10 rounded-lg border border-white/15 bg-white/5 px-3 text-sm font-medium text-white/80 hover:bg-white/10"
     >
       Delete
     </button>
-  </div>
 
-  <span
-    className={`text-white text-2xl transition-transform duration-200 ${
-      expanded === r.id ? "rotate-90" : "rotate-180"
-    }`}
-  >
-    ▶
-  </span>
+  </div>
 </div>
 
 
@@ -760,8 +865,9 @@ function removeDryHop(index: number) {
 
                   {/* SLIDER CONTENT */}
                   <div
+                    id={`recipe-details-${r.id}`}
                     className={`transition-all duration-300 ease-in-out overflow-hidden ${
-                      expanded === r.id ? "max-h-[6000px] mt-4" : "max-h-0"
+                    expanded === r.id ? "max-h-[6000px] mt-2" : "max-h-0"
                     }`}
                   >
                     <div className="space-y-3 opacity-90">
@@ -770,7 +876,39 @@ function removeDryHop(index: number) {
                           This is your version of a shared community recipe.
                         </p>
                       )}
-                      <RecipePresentation recipe={r} />
+                      <RecipePresentation recipe={r} compact />
+                      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+                        <p className="text-sm text-white/70">
+                          Copyright belongs to you as the recipe uploader by
+                          default.
+                        </p>
+                        <label className="mt-3 flex items-start gap-3 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={r.copyright_free === true}
+                            disabled={savingCopyrightRecipeId !== null}
+                            onChange={(event) =>
+                              void updateRecipeCopyright(
+                                r.id,
+                                event.target.checked
+                              )
+                            }
+                            className="mt-1"
+                          />
+                          <span>
+                            Mark this recipe as copyright-free
+                            <span className="mt-1 block text-xs text-white/55">
+                              Leave unchecked to keep it marked as copyrighted
+                              by you.
+                            </span>
+                          </span>
+                        </label>
+                        {savingCopyrightRecipeId === r.id && (
+                          <p role="status" className="mt-2 text-xs text-white/55">
+                            Saving copyright setting…
+                          </p>
+                        )}
+                      </section>
                       {r.notes_log?.length > 0 && (
                         <div className="rounded-xl border border-white/10 bg-white/[0.04] p-5">
                           <h3 className="mb-3 text-lg font-semibold text-green-300">Recipe note log</h3>
@@ -784,21 +922,12 @@ function removeDryHop(index: number) {
                         </div>
                       )}
 
-                    <div className="flex justify-end pt-4">
-                      <Link
-                        href={`/my-recipes/${encodeURIComponent(r.id)}`}
-                        onClick={(event) => event.stopPropagation()}
-                        className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm font-semibold w-full sm:w-auto text-center"
-                      >
-                        View recipe details and history →
-                      </Link>
-                    </div>
                     <div
-                      className="pt-4 border-t border-white/10"
+                      className="flex flex-wrap items-center gap-3 border-t border-white/10 pt-4"
                       onClick={(e) => e.stopPropagation()}
                     >
                       {startRecipeId === r.id ? (
-                        <div className="flex flex-col sm:flex-row gap-3">
+                        <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row">
                           <select
                             aria-label={`Select an empty vessel for ${r.name}`}
                             value={selectedVesselId}
@@ -854,8 +983,25 @@ function removeDryHop(index: number) {
                           Start batch from recipe
                         </button>
                       )}
+                      <Link
+                        href={`/my-recipes/${encodeURIComponent(r.id)}`}
+                        onClick={(event) => event.stopPropagation()}
+                        className="ml-auto rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-center text-sm font-semibold hover:bg-white/20"
+                      >
+                        View recipe details and history →
+                      </Link>
                     </div>
                     </div>
+                    <p className="mt-4 border-t border-white/10 pt-3 text-center text-xs text-white/55">
+                      Created{" "}
+                      {r.created_at
+                        ? new Date(r.created_at).toLocaleDateString("en-GB")
+                        : "date unavailable"}
+                      {" · "}
+                      {r.copyright_free === true
+                        ? "Marked copyright-free by you"
+                        : `Copyright © ${r.created_at ? new Date(r.created_at).getFullYear() : new Date().getFullYear()} you. All rights reserved.`}
+                    </p>
                   </div>
                 </div>
               );
@@ -1005,7 +1151,6 @@ function removeDryHop(index: number) {
             </label>
           </div>
         )}
-
         {!(editRecipe.type === "Beer" && editBeerSubtype !== "all_grain") && (
           <>
             <label className="font-semibold">FG</label>
@@ -1155,7 +1300,7 @@ function removeDryHop(index: number) {
   <>
     {editRecipe.type === "Beer" && (
       <label className="block">
-        <span className="font-semibold">Beer recipe style</span>
+        <span className="font-semibold">Brewing method</span>
         <select
           name="beer_subtype"
           value={editBeerSubtype}
@@ -1167,6 +1312,13 @@ function removeDryHop(index: number) {
           <option value="malt_extract_kit">Malt extract kit</option>
         </select>
       </label>
+    )}
+    {editRecipe.type === "Beer" && (
+      <BeerStyleSelect
+        id="edit-beer-style"
+        value={editBeerStyle}
+        onChange={setEditBeerStyle}
+      />
     )}
 
     {/* Boil Volume */}
@@ -1459,13 +1611,22 @@ function removeDryHop(index: number) {
         {editRecipe.type === "Other" && (
           <>
             <label className="font-semibold">
+              Style or type (optional)
+              <input
+                name="other_style"
+                value={editOtherStyle}
+                maxLength={80}
+                onChange={(event) => setEditOtherStyle(event.target.value)}
+                placeholder="Example: Kombucha"
+                className="mt-2 w-full rounded border border-white/20 bg-black/40 p-3"
+              />
+            </label>
+            <label className="font-semibold">
               Ingredients (JSON)
               <textarea
                 name="ingredients"
                 defaultValue={
-                  typeof editRecipe.ingredients === "string"
-                    ? editRecipe.ingredients
-                    : JSON.stringify(editRecipe.ingredients ?? [], null, 2)
+                  JSON.stringify(getOtherRecipeIngredients(editRecipe.ingredients), null, 2)
                 }
                 rows={5}
                 className="mt-2 w-full rounded border border-white/20 bg-black/40 p-3 font-mono text-sm"
@@ -1538,7 +1699,7 @@ function removeDryHop(index: number) {
   </>
 )}
 
-{batchInventoryDialog && (
+{batchInventoryDialog && typeof document !== "undefined" && createPortal(
   <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-4">
     <section
       role="alertdialog"
@@ -1598,48 +1759,31 @@ function removeDryHop(index: number) {
         )}
       </div>
     </section>
-  </div>
+  </div>,
+  document.body
 )}
 
-{/* DELETE CONFIRMATION */}
-{confirmDeleteId && (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-zinc-900 border border-white/20 p-6 rounded-xl w-full max-w-sm text-white">
-              <h2 className="text-xl font-bold mb-4">Delete recipe?</h2>
-              <p className="opacity-80 mb-6">
-                Are you sure you want to delete this recipe? This action cannot be undone.
-              </p>
-
-              <div className="flex justify-end gap-4">
-                <button
-                  onClick={() => setConfirmDeleteId(null)}
-                  className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 border border-zinc-500 rounded-lg font-semibold"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  onClick={async () => {
-                    await deleteRecipe(confirmDeleteId);
-                    setConfirmDeleteId(null);
-                  }}
-                  className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+<ConfirmDialog
+  open={confirmDeleteId !== null}
+  title="Delete recipe?"
+  message="Are you sure you want to delete this recipe? This action cannot be undone."
+  confirmLabel="Delete"
+  onConfirm={async () => {
+    if (!confirmDeleteId) return false;
+    await deleteRecipe(confirmDeleteId);
+    return true;
+  }}
+  onCancel={() => setConfirmDeleteId(null)}
+/>
 
         {/* STYLE SELECT MODAL */}
-        {openStyleSelect && (
+        {openStyleSelect && typeof document !== "undefined" && createPortal(
           <div
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50"
+            className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 px-4 py-8 backdrop-blur-sm sm:items-center"
             onClick={() => setOpenStyleSelect(false)}
           >
             <div
-              className="bg-black/60 p-6 rounded-xl border border-white/10 w-full max-w-md"
+              className="max-h-[calc(100dvh-4rem)] w-full max-w-md overflow-y-auto rounded-xl border border-white/10 bg-black/60 p-6"
               onClick={(e) => e.stopPropagation()}
             >
               <h2 className="text-2xl font-bold text-center mb-6">Choose recipe type</h2>
@@ -1665,7 +1809,8 @@ function removeDryHop(index: number) {
                 Cancel
               </button>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
       </div>

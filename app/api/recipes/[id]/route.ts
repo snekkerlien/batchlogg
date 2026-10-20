@@ -22,7 +22,7 @@ export async function GET(
   const { data: recipe, error } = await supabase
     .from("recipes")
     .select(
-      "id, type, name, volume, og, honey_type, honey_amount, base_liquid, base_liquid_amount, fruits, juice_type, sugar_amount, malts, hops, dry_hops, boil_time, boil_volume, yeast, additives, full_process, notes, ingredients, steps, had_secondary, secondary_additions, secondary_notes"
+      "id, type, name, volume, og, honey_type, honey_amount, base_liquid, base_liquid_amount, fruits, juice_type, sugar_amount, malts, hops, dry_hops, boil_time, boil_volume, yeast, additives, full_process, notes, ingredients, steps, had_secondary, secondary_additions, secondary_notes, copyright_free, created_at"
     )
     .eq("id", params.id)
     .eq("user_id", user.id)
@@ -151,6 +151,16 @@ export async function PATCH(
       return NextResponse.json({ error: "Ikke innlogget" }, { status: 401 });
     }
 
+    if (
+      body.copyright_free !== undefined &&
+      typeof body.copyright_free !== "boolean"
+    ) {
+      return NextResponse.json(
+        { error: "Copyright-free status must be true or false." },
+        { status: 400 }
+      );
+    }
+
     // Body kan inneholde alle eller noen av disse:
     // name, ingredients, method, notes, og, fg, abv, volume, batch_id, is_public
     const updateData: any = {};
@@ -166,6 +176,7 @@ export async function PATCH(
       "volume",
       "batch_id",
       "is_public",
+      "copyright_free",
     ]) {
       if (body[key] !== undefined) {
         updateData[key] = body[key];
@@ -182,6 +193,18 @@ export async function PATCH(
 
     if (error) {
       console.error("UPDATE recipe error:", error);
+      if (
+        updateData.copyright_free !== undefined &&
+        ["42703", "PGRST204"].includes(error.code ?? "")
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Apply the recipe copyright migration before changing this setting.",
+          },
+          { status: 503 }
+        );
+      }
       return NextResponse.json(
         { error: "Kunne ikke oppdatere oppskriften", details: error.message },
         { status: 500 }

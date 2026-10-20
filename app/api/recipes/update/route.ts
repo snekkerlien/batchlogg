@@ -4,6 +4,8 @@
     import { calcIBU, calcDryHopIBU, calcEBC } from "@/lib/brewing/beerCalculators";
     import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
     import { hasPremiumAccess } from "@/lib/auth/plan";
+    import { isBeerStyle } from "@/lib/brewing/beerStyles";
+    import { withOtherRecipeStyle } from "@/lib/recipes/otherRecipe";
 
 
     export const runtime = "nodejs";
@@ -58,9 +60,13 @@
             typeof fields.changeNote === "string" ? fields.changeNote.trim() : null;
         delete fields.changeNote;
         const beerSubtype = fields.beer_subtype;
+        const beerStyle = fields.beer_style;
         const kitUrl = fields.kit_url;
+        const otherStyle = fields.other_style;
         delete fields.beer_subtype;
+        delete fields.beer_style;
         delete fields.kit_url;
+        delete fields.other_style;
 
         // ⭐ Parse JSON fields if needed
         const jsonFields = ["malts", "hops", "dry_hops", "fruits", "ingredients", "steps"];
@@ -75,9 +81,12 @@
         }
         }
 
-        if (fields.type === "Beer" && beerSubtype !== undefined) {
+        if (fields.type === "Beer") {
         if (!["all_grain", "fresh_wort_kit", "malt_extract_kit"].includes(beerSubtype)) {
-            return NextResponse.json({ error: "Invalid beer recipe style" }, { status: 400 });
+            return NextResponse.json({ error: "Choose a valid brewing method." }, { status: 400 });
+        }
+        if (!isBeerStyle(beerStyle)) {
+            return NextResponse.json({ error: "Choose a valid beer style." }, { status: 400 });
         }
         if (
             beerSubtype !== "all_grain" &&
@@ -113,6 +122,7 @@
         }
         fields.ingredients = {
             beer_subtype: beerSubtype,
+            beer_style: beerStyle,
             kit_url: normalizedKitUrl,
         };
         if (beerSubtype !== "all_grain") {
@@ -123,6 +133,9 @@
             fields.abv = null;
             fields.hops = [];
         }
+        }
+        if (fields.type === "Other") {
+            fields.ingredients = withOtherRecipeStyle(otherStyle, fields.ingredients);
         }
 
         // ⭐ Convert numbers

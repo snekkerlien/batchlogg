@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { premiumGateResponse } from "@/lib/auth/plan";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
+import {
+  recipeToBeerJson,
+  recipeToBeerXml,
+} from "@/lib/recipes/beerFileFormats";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,8 +36,11 @@ export async function GET(
   if (denied) return denied;
 
   const format = request.nextUrl.searchParams.get("format") ?? "json";
-  if (format !== "json" && format !== "csv") {
-    return NextResponse.json({ error: "Choose JSON or CSV format" }, { status: 400 });
+  if (!["json", "csv", "beerxml", "beerjson"].includes(format)) {
+    return NextResponse.json(
+      { error: "Choose JSON, CSV, BeerXML, or BeerJSON format" },
+      { status: 400 }
+    );
   }
   const { data: recipe, error } = await serviceRole
     .from("recipes")
@@ -48,6 +55,30 @@ export async function GET(
   if (!recipe) return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
 
   const safeName = String(recipe.name || "recipe").replace(/[^a-z0-9_-]+/gi, "-") || "recipe";
+  if (format === "beerxml") {
+    if (!["Beer", "Braggot"].includes(recipe.type)) {
+      return NextResponse.json(
+        { error: "BeerXML export is only available for beer recipes." },
+        { status: 400 }
+      );
+    }
+    return new NextResponse(recipeToBeerXml(recipe), {
+      headers: {
+        "Content-Type": "application/xml; charset=utf-8",
+        "Content-Disposition": `attachment; filename="${safeName}.xml"`,
+        "Cache-Control": "private, no-store",
+      },
+    });
+  }
+  if (format === "beerjson") {
+    return new NextResponse(JSON.stringify(recipeToBeerJson(recipe), null, 2), {
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Content-Disposition": `attachment; filename="${safeName}.beerjson"`,
+        "Cache-Control": "private, no-store",
+      },
+    });
+  }
   if (format === "json") {
     return new NextResponse(JSON.stringify(recipe, null, 2), {
       headers: {

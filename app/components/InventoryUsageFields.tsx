@@ -4,10 +4,12 @@ import {
   createContext,
   useContext,
   useEffect,
+  useCallback,
   useRef,
   useState,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { addInventoryItem } from "@/app/actions/inventoryActions";
 import {
   getInventorySubcategoryOptions,
@@ -139,14 +141,14 @@ export function BatchInventoryProvider({
     };
   }, []);
 
-  function setSelection(key: string, itemId: string) {
+  const setSelection = useCallback((key: string, itemId: string) => {
     setSelections((current) => {
       const next = { ...current };
       if (itemId) next[key] = itemId;
       else delete next[key];
       return next;
     });
-  }
+  }, []);
 
   async function addItem(formData: FormData) {
     const item = await addInventoryItem(formData, false);
@@ -170,7 +172,7 @@ export function BatchInventoryProvider({
     setRecipeInventoryWarnings(getSavedRecipeInventoryIssues(recipe, items));
   }, [enabled, error, items, loaded, recipe, recipeId]);
 
-  function checkRecipeInventory(event: SubmitEvent) {
+  const checkRecipeInventory = useCallback((event: SubmitEvent) => {
     if (!recipeId) return;
     if (!loaded) {
       event.preventDefault();
@@ -209,14 +211,14 @@ export function BatchInventoryProvider({
       event.stopImmediatePropagation();
       setInventoryIssues(issues);
     }
-  }
+  }, [enabled, error, items, loaded, recipeId, selections]);
 
   useEffect(() => {
     const form = inventoryFormContent.current?.closest("form");
     if (!form) return;
     form.addEventListener("submit", checkRecipeInventory, true);
     return () => form.removeEventListener("submit", checkRecipeInventory, true);
-  }, [enabled, error, items, loaded, recipeId, selections]);
+  }, [checkRecipeInventory]);
 
   return (
     <BatchInventoryContext.Provider
@@ -249,6 +251,13 @@ export function BatchInventoryProvider({
           name="secondary_notes"
           value={typeof recipe?.secondary_notes === "string" ? recipe.secondary_notes : ""}
         />
+        {enabled && (
+          <p className="mb-4 rounded-lg border border-green-400/20 bg-green-500/[0.06] p-3 text-sm text-white/70">
+            Matched ingredient amounts are deducted when you create this batch.
+            Enter the amounts you actually use; if they differ, update the
+            remaining stock in Inventory afterward.
+          </p>
+        )}
         {error && (
           <p role="alert" className="rounded-lg border border-amber-400/40 bg-amber-950/40 p-3 text-sm text-amber-200">
             {error}
@@ -304,7 +313,7 @@ export function BatchInventoryProvider({
             )}
           </div>
         )}
-        {inventoryIssues && (
+        {inventoryIssues && typeof document !== "undefined" && createPortal(
           <div
             className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-4"
             onMouseDown={(event) => {
@@ -340,7 +349,8 @@ export function BatchInventoryProvider({
                 </button>
               </div>
             </section>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </BatchInventoryContext.Provider>
@@ -384,16 +394,24 @@ export function InventoryIngredientSelect({
   defaultAmount?: string;
   defaultAmountUnit?: string;
 }) {
-  const context = useContext(BatchInventoryContext);
-  if (!context) {
+  const contextValue = useContext(BatchInventoryContext);
+  if (!contextValue) {
     throw new Error("Inventory ingredient selector must be inside BatchInventoryProvider");
   }
+  const {
+    enabled,
+    loaded,
+    items,
+    selections,
+    setSelection,
+    error,
+  } = contextValue;
   const [localValue, setLocalValue] = useState(defaultValue ?? "");
   const [amount, setAmount] = useState("");
   const amountEdited = useRef(false);
   const currentValue = value ?? localValue;
   const normalizedValue = currentValue.trim().toLocaleLowerCase();
-  const matchesInventoryFilter = (item: InventoryItem) =>
+  const matchesInventoryFilter = useCallback((item: InventoryItem) =>
     inventoryFilters
       ? inventoryFilters.some(
           (filter) =>
@@ -405,49 +423,51 @@ export function InventoryIngredientSelect({
       : (!category || item.category === category) &&
         (!subcategories ||
           subcategories.some((s) => item.subcategory?.toLowerCase() === s.toLowerCase())) &&
-        (!subcategory || item.subcategory?.toLowerCase() === subcategory.toLowerCase());
+        (!subcategory || item.subcategory?.toLowerCase() === subcategory.toLowerCase()),
+  [category, inventoryFilters, subcategories, subcategory]);
 
   useEffect(() => {
     if (value === undefined) setLocalValue(defaultValue ?? "");
   }, [defaultValue, value]);
 
   useEffect(() => {
-    if (!context.enabled || context.selections[selectionKey] || !normalizedValue || !context.loaded) return;
-    const candidates = context.items.filter(
+    if (!enabled || selections[selectionKey] || !normalizedValue || !loaded) return;
+    const candidates = items.filter(
       (item) =>
         item.name.trim().toLocaleLowerCase() === normalizedValue &&
         matchesInventoryFilter(item)
     );
-    if (candidates.length === 1) context.setSelection(selectionKey, candidates[0].id);
+    if (candidates.length === 1) setSelection(selectionKey, candidates[0].id);
   }, [
-    context.enabled,
-    context.items,
-    context.loaded,
-    context.selections,
+    enabled,
+    items,
+    loaded,
+    selections,
+    setSelection,
     selectionKey,
-    category,
-    subcategory,
-    inventoryFilters,
+    matchesInventoryFilter,
     normalizedValue,
   ]);
 
-  const options = context.items.filter(matchesInventoryFilter);
-  const selected = context.items.find(
-    (item) => item.id === context.selections[selectionKey]
+  const options = items.filter(matchesInventoryFilter);
+  const selected = items.find(
+    (item) => item.id === selections[selectionKey]
   );
+  const selectedId = selected?.id;
+  const selectedUnit = selected?.unit;
   useEffect(() => {
     if (amountEdited.current || defaultAmount == null || !defaultAmount.trim()) return;
     const defaultValue = Number(defaultAmount.replace(",", "."));
     if (!Number.isFinite(defaultValue)) return;
-    const converted = selected && defaultAmountUnit
-      ? convertIngredientAmount(defaultValue, defaultAmountUnit, selected.unit)
+    const converted = selectedId && defaultAmountUnit && selectedUnit
+      ? convertIngredientAmount(defaultValue, defaultAmountUnit, selectedUnit)
       : defaultValue;
     if (converted !== null) setAmount(String(converted));
-  }, [defaultAmount, defaultAmountUnit, selected?.id, selected?.unit]);
+  }, [defaultAmount, defaultAmountUnit, selectedId, selectedUnit]);
 
-  if (!context.enabled && enabledOnly) return null;
+  if (!enabled && enabledOnly) return null;
 
-  if (!context.enabled) {
+  if (!enabled) {
     return (
       <input
         placeholder={placeholder}
@@ -455,7 +475,7 @@ export function InventoryIngredientSelect({
         name={name}
         value={currentValue}
         onChange={(event) => {
-          context.setSelection(selectionKey, "");
+          setSelection(selectionKey, "");
           if (value === undefined) setLocalValue(event.target.value);
           onChange?.(event.target.value);
         }}
@@ -476,11 +496,11 @@ export function InventoryIngredientSelect({
           <select
             aria-label={placeholder}
             value={selected?.id ?? ""}
-            disabled={!context.loaded || !!context.error || options.length === 0}
+            disabled={!loaded || !!error || options.length === 0}
             onChange={(event) => {
               const item = options.find((option) => option.id === event.target.value);
               if (trackAmount && item?.id !== selected?.id) setAmount("");
-              context.setSelection(selectionKey, item?.id ?? "");
+              setSelection(selectionKey, item?.id ?? "");
               if (value === undefined) setLocalValue(item?.name ?? "");
               onChange?.(item?.name ?? "");
               onItemSelect?.(item ?? null);
@@ -488,9 +508,9 @@ export function InventoryIngredientSelect({
             className={`${inputClassName} min-h-[3.125rem] w-full disabled:opacity-60`}
           >
             <option value="">
-              {context.error
+              {error
                 ? "Inventory unavailable"
-                : !context.loaded
+                : !loaded
                   ? "Loading inventory…"
                   : options.length
                     ? `Select ${placeholder.toLowerCase()}`

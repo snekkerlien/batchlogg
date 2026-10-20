@@ -95,6 +95,65 @@ export default async function RecipeNotesPage({
     const author = forkAuthorsById.get(fork.user_id);
     return author ? [{ ...fork, author }] : [];
   });
+
+  let communityOutcomes: Array<{
+    id: string;
+    brewerUsername: string;
+    type: string | null;
+    og: number | string | null;
+    fg: number | string | null;
+    abv: number | string | null;
+    packaged_volume_l: number | string | null;
+    packaging_method: string | null;
+    carbonation_method: string | null;
+    target_carbonation_volumes: number | string | null;
+    tasting_notes: string | null;
+    share_tasting_notes_publicly: boolean;
+    finished_date: string | null;
+    recipe_snapshot: { og?: number | string | null; abv?: number | string | null } | null;
+  }> = [];
+  let outcomesMigrationRequired = false;
+
+  if (recipe.is_public) {
+    const { data: outcomeRows, error: outcomesError } = await serviceRole
+      .from("batches")
+      .select(
+        "id, user_id, type, og, fg, abv, packaged_volume_l, packaging_method, carbonation_method, target_carbonation_volumes, tasting_notes, share_tasting_notes_publicly, finished_date, recipe_snapshot"
+      )
+      .eq("recipe_id", recipe.id)
+      .eq("share_outcome_publicly", true)
+      .order("finished_date", { ascending: false })
+      .limit(50);
+    if (outcomesError) {
+      if (["42703", "PGRST204"].includes(outcomesError.code ?? "")) {
+        console.warn("Batch lifecycle migration is required for community brew outcomes.");
+        outcomesMigrationRequired = true;
+      } else {
+        throw new Error(`Could not load shared brew outcomes: ${outcomesError.message}`);
+      }
+    }
+
+    const brewerIds = [...new Set((outcomeRows ?? []).map((outcome) => outcome.user_id))];
+    const { data: brewerProfiles, error: brewerProfilesError } = brewerIds.length
+      ? await serviceRole
+          .from("profiles")
+          .select("id, username")
+          .eq("is_public", true)
+          .in("id", brewerIds)
+      : { data: [], error: null };
+    if (brewerProfilesError) {
+      throw new Error(`Could not load public brewer profiles: ${brewerProfilesError.message}`);
+    }
+
+    const brewerNames = new Map(
+      (brewerProfiles ?? []).map((brewer) => [brewer.id, brewer.username])
+    );
+    communityOutcomes = (outcomeRows ?? []).flatMap((outcome) => {
+      const brewerUsername = brewerNames.get(outcome.user_id);
+      if (!brewerUsername) return [];
+      return [{ ...outcome, brewerUsername }];
+    });
+  }
   const notes = viewingOwnProfile ? recipe.notes_log || [] : [];
 
   return (
@@ -103,10 +162,125 @@ export default async function RecipeNotesPage({
         <PublicPageNavigation current="profiles" />
         <PageHeading
           title={recipe.name.charAt(0).toUpperCase() + recipe.name.slice(1)}
-          subtitle={`Shared by ${profile.username}. Recipe details${viewingOwnProfile ? " and note log" : ""}.`}
+          subtitle={`Created by ${profile.username} · ${
+            recipe.created_at
+              ? new Date(recipe.created_at).toLocaleDateString("en-GB")
+              : "date unavailable"
+          }. Recipe details${viewingOwnProfile ? " and note log" : ""}.`}
         />
 
+        <p className="mb-6 text-center text-sm text-white/60">
+          {recipe.copyright_free === true
+            ? `Marked copyright-free by ${profile.username}.`
+            : `Copyright © ${recipe.created_at ? new Date(recipe.created_at).getFullYear() : new Date().getFullYear()} ${profile.username}. All rights reserved.`}
+        </p>
+
         <RecipePresentation recipe={recipe} />
+
+        {recipe.is_public && (
+          <section className="mt-8 rounded-xl border border-white/10 bg-white/[0.04] p-5 sm:p-6">
+            <h2 className="mb-2 border-b border-white/10 pb-3 text-lg font-semibold text-green-300">
+              Community brew results
+            </h2>
+            <p className="mb-4 text-sm text-white/60">
+              Results shared by brewers who made this recipe. Tasting notes appear
+              only when the brewer has opted to share them.
+            </p>
+            {communityOutcomes.length === 0 ? (
+              <p className="text-sm text-white/60">
+                {outcomesMigrationRequired
+                  ? "Community results will be available after the batch lifecycle database migration is applied."
+                  : "No community results have been shared for this recipe yet."}
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {communityOutcomes.map((outcome) => {
+                  const plannedOg =
+                    outcome.recipe_snapshot?.og == null
+                      ? null
+                      : Number(outcome.recipe_snapshot.og);
+                  const plannedAbv =
+                    outcome.recipe_snapshot?.abv == null
+                      ? null
+                      : Number(outcome.recipe_snapshot.abv);
+                  return (
+                    <article
+                      key={outcome.id}
+                      className="rounded-lg border border-white/10 bg-black/20 p-4"
+                    >
+                      <p className="text-sm text-white/65">
+                        Brewed by{" "}
+                        <Link
+                          href={`/members/${encodeURIComponent(outcome.brewerUsername)}`}
+                          className="font-semibold text-green-200 underline"
+                        >
+                          {outcome.brewerUsername}
+                        </Link>
+                        {outcome.type ? ` · ${outcome.type}` : ""}
+                        {outcome.finished_date
+                          ? ` · ${new Date(outcome.finished_date).toLocaleDateString("en-GB")}`
+                          : ""}
+                      </p>
+                      <dl className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+                        {outcome.og != null && (
+                          <div>
+                            <dt className="text-white/50">OG</dt>
+                            <dd className="font-medium">
+                              {plannedOg !== null && Number.isFinite(plannedOg)
+                                ? `${plannedOg.toFixed(3)} target · `
+                                : ""}
+                              {Number(outcome.og).toFixed(3)} actual
+                            </dd>
+                          </div>
+                        )}
+                        {outcome.fg != null && (
+                          <div>
+                            <dt className="text-white/50">FG</dt>
+                            <dd className="font-medium">{Number(outcome.fg).toFixed(3)}</dd>
+                          </div>
+                        )}
+                        {outcome.abv != null && (
+                          <div>
+                            <dt className="text-white/50">ABV</dt>
+                            <dd className="font-medium">
+                              {plannedAbv !== null && Number.isFinite(plannedAbv)
+                                ? `${plannedAbv.toFixed(1)}% target · `
+                                : ""}
+                              {Number(outcome.abv).toFixed(1)}% actual
+                            </dd>
+                          </div>
+                        )}
+                        {outcome.packaged_volume_l != null && (
+                          <div>
+                            <dt className="text-white/50">Packaged</dt>
+                            <dd className="font-medium">
+                              {Number(outcome.packaged_volume_l).toFixed(1)} L
+                            </dd>
+                          </div>
+                        )}
+                      </dl>
+                      {(outcome.packaging_method || outcome.carbonation_method) && (
+                        <p className="mt-3 text-sm text-white/70">
+                          {[outcome.packaging_method, outcome.carbonation_method]
+                            .filter(Boolean)
+                            .join(" · ")}
+                          {outcome.target_carbonation_volumes != null
+                            ? ` · ${Number(outcome.target_carbonation_volumes).toFixed(1)} volumes CO₂`
+                            : ""}
+                        </p>
+                      )}
+                      {outcome.share_tasting_notes_publicly && outcome.tasting_notes && (
+                        <blockquote className="mt-3 border-l-2 border-green-500/50 pl-3 text-sm italic text-white/75">
+                          {outcome.tasting_notes}
+                        </blockquote>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
 
         {sourceRecipe && sourceAuthor && (
           <p className="mt-5 text-sm text-white/65">

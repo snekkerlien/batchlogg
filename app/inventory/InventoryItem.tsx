@@ -234,14 +234,20 @@ export default function InventoryItem({
             </label>
           )}
           <label className="flex items-center justify-between gap-2 text-sm">
-            Amount
+            Current stock
             <input
               type="number"
+              min="0"
+              step="any"
               className="w-24 rounded border border-white/20 bg-black/40 p-2 text-base"
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
             />
           </label>
+          <p className="text-xs text-white/55">
+            Set this to the amount you physically have. Stock changes appear in
+            Recent stock history.
+          </p>
           <label className="flex items-center justify-between gap-2 text-sm">
             Minimum amount
             <input

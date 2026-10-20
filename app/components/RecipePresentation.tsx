@@ -4,6 +4,10 @@ import { Qty } from "@/app/components/Units";
 import BeerColorGlass from "@/app/components/BeerColorGlass";
 import BitternessMeter from "@/app/components/BitternessMeter";
 import { formatSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
+import {
+  getOtherRecipeIngredients,
+  getOtherRecipeStyle,
+} from "@/lib/recipes/otherRecipe";
 
 export type RecipePresentationData = {
   name?: string | null;
@@ -16,6 +20,7 @@ export type RecipePresentationData = {
   ebc?: number | string | null;
   ingredients?: Ingredient[] | {
     beer_subtype?: string | null;
+    beer_style?: string | null;
     kit_url?: string | null;
   } | null;
   malts?: Malt[] | null;
@@ -66,11 +71,16 @@ function hasEntries<T>(items: T[] | null | undefined): items is T[] {
 
 function isBeerIngredients(
   ingredients: RecipePresentationData["ingredients"]
-): ingredients is { beer_subtype?: string | null; kit_url?: string | null } {
+): ingredients is {
+  beer_subtype?: string | null;
+  beer_style?: string | null;
+  kit_url?: string | null;
+} {
   return Boolean(
     ingredients &&
     !Array.isArray(ingredients) &&
     (Object.prototype.hasOwnProperty.call(ingredients, "beer_subtype") ||
+      Object.prototype.hasOwnProperty.call(ingredients, "beer_style") ||
       Object.prototype.hasOwnProperty.call(ingredients, "kit_url"))
   );
 }
@@ -78,18 +88,26 @@ function isBeerIngredients(
 export default function RecipePresentation({
   recipe,
   linkTabIndex,
+  compact = false,
 }: {
   recipe: RecipePresentationData;
   linkTabIndex?: number;
+  compact?: boolean;
 }) {
   const beerIngredients = recipe.type === "Beer" && isBeerIngredients(recipe.ingredients)
     ? recipe.ingredients
     : null;
-  const beerStyle = beerIngredients?.beer_subtype === "fresh_wort_kit"
+  const beerMethod = beerIngredients?.beer_subtype === "fresh_wort_kit"
     ? "Fresh wort kit"
     : beerIngredients?.beer_subtype === "malt_extract_kit"
       ? "Malt extract kit"
       : "All-grain";
+  const otherRecipeStyle = recipe.type === "Other"
+    ? getOtherRecipeStyle(recipe.ingredients)
+    : "";
+  const otherRecipeIngredients = recipe.type === "Other"
+    ? getOtherRecipeIngredients(recipe.ingredients)
+    : [];
   const hasSecondaryDetails = Boolean(
     recipe.had_secondary || recipe.secondary_additions?.trim() || recipe.secondary_notes?.trim()
   );
@@ -122,18 +140,25 @@ export default function RecipePresentation({
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap justify-center gap-2">
+      <div
+        className={`${compact ? "mb-2" : "mb-6"} flex flex-wrap justify-center gap-2`}
+      >
         <span className="rounded-full border border-green-300/30 bg-green-300/10 px-3 py-1 text-sm font-medium text-green-200">
-          {recipe.type}
+          {otherRecipeStyle || recipe.type}
         </span>
         {recipe.type === "Beer" && (
           <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-white/70">
-            {beerStyle}
+            {beerMethod}
+          </span>
+        )}
+        {recipe.type === "Beer" && beerIngredients?.beer_style && (
+          <span className="rounded-full border border-green-300/30 bg-green-300/10 px-3 py-1 text-sm text-green-100">
+            {beerIngredients.beer_style}
           </span>
         )}
       </div>
 
-      <section className="mb-6 rounded-xl border border-white/10 bg-white/[0.04] p-5 sm:p-6">
+      <section className={`mb-6 rounded-xl border border-white/10 bg-white/[0.04] ${compact ? "p-3 sm:p-4" : "p-5 sm:p-6"}`}>
         <h2 className="mb-4 text-lg font-semibold text-green-300">Recipe at a glance</h2>
         <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {recipe.og != null && <RecipeMetric label="Original gravity">{Number(recipe.og).toFixed(3)}</RecipeMetric>}
@@ -272,9 +297,12 @@ export default function RecipePresentation({
 
         {recipe.type === "Other" && (
           <RecipeSection title="Ingredients & fermentation">
-            {Array.isArray(recipe.ingredients) && hasEntries(recipe.ingredients) && (
+            {otherRecipeStyle && (
+              <p><strong>Style / type:</strong> {otherRecipeStyle}</p>
+            )}
+            {hasEntries(otherRecipeIngredients) && (
               <ul className="divide-y divide-white/10 rounded-lg border border-white/10">
-                {recipe.ingredients.map((ingredient, i) => (
+                {otherRecipeIngredients.map((ingredient, i) => (
                   <li key={i} className="flex justify-between gap-4 px-3 py-2">
                     <span>{ingredient.name}</span><span className="shrink-0 font-medium">{ingredient.amount} {ingredient.unit}</span>
                   </li>

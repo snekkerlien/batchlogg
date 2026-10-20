@@ -2,7 +2,7 @@
 
 const RECIPE_TYPES = ["All", "Mead", "Beer", "Cider", "Wine", "Seltzer", "Braggot", "Other"];
 
-export type RecipeSort = "newest" | "oldest" | "name";
+export type RecipeSort = "newest" | "oldest" | "name" | "style";
 
 export default function RecipeFilters({
   type,
@@ -42,17 +42,18 @@ export default function RecipeFilters({
             <option value="newest">Newest first</option>
             <option value="oldest">Oldest first</option>
             <option value="name">Name A–Z</option>
+            {type === "Beer" && <option value="style">Style A–Z</option>}
           </select>
         </label>
       </div>
-      <div className="flex gap-2 overflow-x-auto pb-2 sm:flex-wrap sm:justify-center sm:overflow-visible">
+      <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:justify-center">
         {RECIPE_TYPES.map((recipeType) => (
           <button
             key={recipeType}
             type="button"
             onClick={() => onTypeChange(recipeType)}
             aria-pressed={type === recipeType}
-            className={`shrink-0 rounded-lg border px-3 py-2 text-sm ${
+            className={`rounded-lg border px-2 py-2 text-center text-sm sm:px-3 ${
               type === recipeType
                 ? "border-green-500 bg-green-700"
                 : "border-white/20 bg-white/10 hover:bg-white/20"

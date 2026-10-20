@@ -386,8 +386,8 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
     } else if (notification.kind === "batch_reminder") {
       router.push(
         notification.kar_id
-          ? `/kar/${notification.kar_id}`
-          : "/batch-history"
+          ? `/kar/${notification.kar_id}#batch-reminders-content`
+          : `/batch-history?batchId=${encodeURIComponent(notification.batch_id)}`
       );
     } else if (notification.kind === "achievement") {
       router.push("/my-account");

@@ -16,6 +16,7 @@ import {
 } from "@/lib/inventory/categories";
 import { parseSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
 import { hasPremiumAccess } from "@/lib/auth/plan";
+import { isBeerStyle } from "@/lib/brewing/beerStyles";
 
 
 
@@ -67,11 +68,75 @@ export async function createBatch(formData: FormData) {
   if (profileError || !profile) {
     throw new Error("Could not load the inventory preference for this account.");
   }
+  const { error: lifecycleSchemaError } = await supabase
+    .from("batches")
+    .select("recipe_id, recipe_snapshot")
+    .limit(1);
+  let lifecycleSchemaAvailable = true;
+  if (lifecycleSchemaError) {
+    if (["42703", "PGRST204"].includes(lifecycleSchemaError.code ?? "")) {
+      console.warn("Batch lifecycle migration is required to link recipes to batches.");
+      lifecycleSchemaAvailable = false;
+    } else {
+      throw new Error(
+        `Could not verify batch lifecycle storage: ${lifecycleSchemaError.message}`
+      );
+    }
+  }
   const recipeId = formData.get("recipe_id");
+  const sourceRecipeId =
+    typeof recipeId === "string" && recipeId.trim() ? recipeId.trim() : null;
+  let recipeSnapshot: Record<string, unknown> | null = null;
+  if (sourceRecipeId) {
+    const { data: sourceRecipe, error: sourceRecipeError } = await supabase
+      .from("recipes")
+      .select("*")
+      .eq("id", sourceRecipeId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (sourceRecipeError) {
+      throw new Error(`Could not verify the source recipe: ${sourceRecipeError.message}`);
+    }
+    if (!sourceRecipe) {
+      throw new Error("The selected source recipe was not found.");
+    }
+    const snapshotFields = [
+      "name",
+      "type",
+      "og",
+      "fg",
+      "abv",
+      "volume",
+      "malts",
+      "hops",
+      "dry_hops",
+      "fruits",
+      "ingredients",
+      "steps",
+      "yeast",
+      "additives",
+      "full_process",
+      "notes",
+      "secondary_additions",
+      "secondary_notes",
+      "juice_type",
+      "sugar_amount",
+      "honey_type",
+      "honey_amount",
+      "base_liquid",
+      "base_liquid_amount",
+      "boil_time",
+      "boil_volume",
+    ];
+    recipeSnapshot = Object.fromEntries(
+      snapshotFields
+        .filter((field) => field in sourceRecipe)
+        .map((field) => [field, sourceRecipe[field]])
+    );
+  }
   const inventoryBypassed =
     formData.get("inventory_bypass") === "true" &&
-    typeof recipeId === "string" &&
-    recipeId.trim() !== "";
+    sourceRecipeId !== null;
   const useInventory = profile.use_inventory_for_batches === true && !inventoryBypassed;
   let inventoryUsage: unknown[] = [];
   let inventorySelections: Record<string, string> = {};
@@ -175,6 +240,9 @@ export async function createBatch(formData: FormData) {
     type === "Beer" && typeof beerSubtypeRaw === "string"
       ? beerSubtypeRaw
       : null;
+  const beerStyleRaw = formData.get("beer_style");
+  const beerStyle =
+    type === "Beer" && isBeerStyle(beerStyleRaw) ? beerStyleRaw : null;
   const kitUrlRaw = formData.get("kit_url");
   let kitUrl: string | null = null;
 
@@ -184,7 +252,10 @@ export async function createBatch(formData: FormData) {
       beerSubtype ?? ""
     )
   ) {
-    throw new Error("Choose a beer recipe style.");
+    throw new Error("Choose a valid brewing method.");
+  }
+  if (type === "Beer" && !beerStyle) {
+    throw new Error("Choose a valid beer style.");
   }
   if (
     type === "Beer" &&
@@ -962,12 +1033,16 @@ ${notes}
       batchnummer: formattedBatchnummer,
       aktivt_kar: karId,
       user_id: userId,
+      ...(lifecycleSchemaAvailable
+        ? { recipe_id: sourceRecipeId, recipe_snapshot: recipeSnapshot }
+        : {}),
       name,
       volume_l,
       startdato,
       og,
       type,
       beer_subtype: beerSubtype,
+      beer_style: beerStyle,
       kit_url: kitUrl,
 
       // Mead
@@ -1007,7 +1082,7 @@ ${notes}
     };
 
   let batch: any;
-  if (useInventory) {
+  if (useInventory && lifecycleSchemaAvailable) {
     const { data, error } = await supabase.rpc("create_batch_with_inventory", {
       p_batch: batchPayload,
       p_inventory_usage: inventoryUsage,
@@ -1032,6 +1107,7 @@ ${notes}
         .from("batches")
         .update({
           beer_subtype: beerSubtype,
+          beer_style: beerStyle,
           kit_url: kitUrl,
         })
         .eq("id", batch.id)
@@ -1039,10 +1115,10 @@ ${notes}
         .select("id")
         .maybeSingle();
       if (styleSaveError) {
-        throw new Error(`Could not save the beer recipe style: ${styleSaveError.message}`);
+        throw new Error(`Could not save the beer brewing method: ${styleSaveError.message}`);
       }
       if (!savedStyle) {
-        throw new Error("Could not verify the saved beer recipe style.");
+        throw new Error("Could not verify the saved beer brewing method.");
       }
     }
   } else {
@@ -1053,6 +1129,22 @@ ${notes}
       .single();
     if (error) throw new Error("Insert failed: " + error.message);
     batch = data;
+  }
+
+  if (useInventory) {
+    const { data: linkedBatch, error: linkError } = await supabase
+      .from("batches")
+      .update({ recipe_id: sourceRecipeId })
+      .eq("id", batch.id)
+      .eq("user_id", userId)
+      .select("id")
+      .maybeSingle();
+    if (linkError) {
+      throw new Error(`Batch was created, but its source recipe could not be linked: ${linkError.message}`);
+    }
+    if (!linkedBatch) {
+      throw new Error("Batch was created, but its source recipe link could not be verified.");
+    }
   }
 
   if (!useInventory && profile.account_tier === "premium") {
@@ -1314,7 +1406,16 @@ export async function finishBatch(formData: FormData) {
 
   const fgRaw = formData.get("fg") as string;
   const finished_notes = (formData.get("finished_notes") as string) || "";
+  const tasting_notes = (formData.get("tasting_notes") as string) || "";
   const saveRecipe = formData.get("save_as_recipe") === "on";
+  const packagedVolumeRaw = formData.get("packaged_volume_l");
+  const packagingMethod = String(formData.get("packaging_method") ?? "").trim();
+  const bottleVolumeRaw = formData.get("bottle_volume_l");
+  const kegVolumeRaw = formData.get("keg_volume_l");
+  const packageCountRaw = formData.get("package_count");
+  const carbonationMethod = String(formData.get("carbonation_method") ?? "").trim();
+  const carbonationVolumesRaw = formData.get("target_carbonation_volumes");
+  const primingSugarRaw = formData.get("priming_sugar_g");
 
   if (!batchId || !karId) {
     throw new Error("Batch ID and vessel ID are required");
@@ -1330,6 +1431,75 @@ export async function finishBatch(formData: FormData) {
     throw new Error("Enter a valid final gravity before finishing the batch");
   }
 
+  const packagedVolume = Number(packagedVolumeRaw);
+  if (!Number.isFinite(packagedVolume) || packagedVolume <= 0) {
+    throw new Error("Enter a valid packaged volume before finishing the batch");
+  }
+  const allowedPackagingMethods = new Set([
+    "Bottles",
+    "Keg",
+    "Cans",
+    "Mixed packaging",
+    "Still / not carbonated",
+    "Other",
+  ]);
+  if (!allowedPackagingMethods.has(packagingMethod)) {
+    throw new Error("Select a valid packaging method before finishing the batch");
+  }
+
+  function optionalNumber(value: FormDataEntryValue | null, label: string) {
+    if (typeof value !== "string" || value.trim() === "") return null;
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      throw new Error(`Enter a valid ${label}`);
+    }
+    return parsed;
+  }
+
+  const bottleVolume = optionalNumber(bottleVolumeRaw, "bottled volume");
+  const kegVolume = optionalNumber(kegVolumeRaw, "kegged volume");
+  if (
+    bottleVolume !== null &&
+    kegVolume !== null &&
+    bottleVolume + kegVolume > packagedVolume + 0.01
+  ) {
+    throw new Error("Bottled and kegged volumes cannot exceed the packaged volume");
+  }
+
+  const packageCount =
+    typeof packageCountRaw === "string" && packageCountRaw.trim() !== ""
+      ? Number(packageCountRaw)
+      : null;
+  if (
+    packageCount !== null &&
+    (!Number.isInteger(packageCount) || packageCount < 1)
+  ) {
+    throw new Error("Enter a valid package count");
+  }
+
+  const targetCarbonationVolumes = optionalNumber(
+    carbonationVolumesRaw,
+    "target carbonation"
+  );
+  if (
+    targetCarbonationVolumes !== null &&
+    (targetCarbonationVolumes < 0.1 || targetCarbonationVolumes > 6)
+  ) {
+    throw new Error("Target carbonation must be between 0.1 and 6 volumes of CO₂");
+  }
+  const primingSugarG = optionalNumber(primingSugarRaw, "priming sugar amount");
+  const allowedCarbonationMethods = new Set([
+    "",
+    "Bottle conditioned",
+    "Force carbonated",
+    "Naturally carbonated",
+    "Still",
+    "Other",
+  ]);
+  if (!allowedCarbonationMethods.has(carbonationMethod)) {
+    throw new Error("Select a valid carbonation method");
+  }
+
   // Fetch batch
   const { data: batch, error: batchError } = await supabase
     .from("batches")
@@ -1343,6 +1513,24 @@ export async function finishBatch(formData: FormData) {
     throw new Error(`Could not load batch to finish: ${batchError.message}`);
   }
   if (!batch) throw new Error("Batch not found");
+
+  const { error: lifecycleSchemaError } = await supabase
+    .from("batches")
+    .select(
+      "packaged_volume_l, packaging_method, bottle_volume_l, keg_volume_l, package_count, carbonation_method, target_carbonation_volumes, priming_sugar_g, tasting_notes, packaged_at"
+    )
+    .eq("id", batchId)
+    .maybeSingle();
+  if (lifecycleSchemaError) {
+    if (["42703", "PGRST204"].includes(lifecycleSchemaError.code ?? "")) {
+      throw new Error(
+        "Batch packaging is unavailable until the batch lifecycle database migration is applied."
+      );
+    }
+    throw new Error(
+      `Could not verify batch packaging storage: ${lifecycleSchemaError.message}`
+    );
+  }
 
   // Calculate ABV
   const abv = (batch.og - fg) * 131.25;
@@ -1362,6 +1550,16 @@ export async function finishBatch(formData: FormData) {
       fg,
       abv,
       finished_notes,
+      packaged_volume_l: packagedVolume,
+      packaging_method: packagingMethod,
+      bottle_volume_l: bottleVolume,
+      keg_volume_l: kegVolume,
+      package_count: packageCount,
+      carbonation_method: carbonationMethod || null,
+      target_carbonation_volumes: targetCarbonationVolumes,
+      priming_sugar_g: primingSugarG,
+      tasting_notes: tasting_notes.trim() || null,
+      packaged_at: new Date().toISOString(),
       finished_date: new Date().toISOString(),
       save_as_recipe: saveRecipe,
     })
@@ -1403,7 +1601,9 @@ export async function finishBatch(formData: FormData) {
 
   // SAVE AS RECIPE
   if (saveRecipe) {
-    const { error: recipeError } = await supabase.from("recipes").insert({
+    const { data: savedRecipe, error: recipeError } = await supabase
+      .from("recipes")
+      .insert({
       user_id: user.id,
       batch_id: batch.id,
 
@@ -1434,7 +1634,14 @@ export async function finishBatch(formData: FormData) {
       ebc: batch.ebc,
 
       // Other
-      ingredients: batch.ingredients,
+      ingredients:
+        batch.type === "Beer"
+          ? {
+              beer_subtype: batch.beer_subtype,
+              beer_style: batch.beer_style,
+              kit_url: batch.kit_url,
+            }
+          : batch.ingredients,
       steps: batch.steps,
 
       // Shared
@@ -1452,13 +1659,32 @@ export async function finishBatch(formData: FormData) {
       notes_log: batchNotes ?? [],
 
       is_public: false,
-    });
+      })
+      .select("id")
+      .single();
     if (recipeError) {
       throw new Error(`Batch was finished, but its recipe could not be saved: ${recipeError.message}`);
     }
+    if (!savedRecipe) {
+      throw new Error("Batch was finished, but the saved recipe could not be verified.");
+    }
+
+    const { data: linkedBatch, error: linkError } = await supabase
+      .from("batches")
+      .update({ recipe_id: savedRecipe.id })
+      .eq("id", batch.id)
+      .eq("user_id", user.id)
+      .select("id")
+      .maybeSingle();
+    if (linkError) {
+      throw new Error(`Recipe was saved, but could not be linked to its batch: ${linkError.message}`);
+    }
+    if (!linkedBatch) {
+      throw new Error("Recipe was saved, but its batch link could not be verified.");
+    }
   }
 
-  redirect(`/kar/${karId}`);
+  redirect(`/brew-insights/${encodeURIComponent(batchId)}`);
 }
 
 
@@ -1705,14 +1931,19 @@ export async function updateBatch(formData: FormData) {
     let boilVolume = volume_l;
     if (batch.type === "Beer") {
       const beerSubtype = formData.get("beer_subtype");
+      const beerStyle = formData.get("beer_style");
       if (
         beerSubtype !== "all_grain" &&
         beerSubtype !== "fresh_wort_kit" &&
         beerSubtype !== "malt_extract_kit"
       ) {
-        throw new Error("Choose a valid beer recipe style.");
+        throw new Error("Choose a valid brewing method.");
+      }
+      if (!isBeerStyle(beerStyle)) {
+        throw new Error("Choose a valid beer style.");
       }
       typeUpdates.beer_subtype = beerSubtype;
+      typeUpdates.beer_style = beerStyle;
       typeUpdates.kit_url =
         beerSubtype !== "all_grain" && typeof formData.get("kit_url") === "string"
           ? (formData.get("kit_url") as string).trim() || null

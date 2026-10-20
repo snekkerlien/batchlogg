@@ -12,6 +12,7 @@ import ConfirmDialog from "../../components/ConfirmDialog";
 import PageHeading from "../../components/PageHeading";
 import MembershipStatus from "@/app/components/MembershipStatus";
 import ProfileOverview, { ProfileAchievements } from "@/app/components/ProfileOverview";
+import ExpandArrowButton from "@/app/components/ExpandArrowButton";
 
 export default function AccountPage() {
   const router = useRouter();
@@ -269,28 +270,20 @@ export default function AccountPage() {
         {profileStats && <ProfileOverview stats={profileStats} />}
 
         <form onSubmit={saveShowcase} className="mb-10 rounded-xl border border-white/10 bg-white/5 p-4">
-          <button
-            type="button"
-            aria-expanded={showcaseOpen}
-            aria-controls="profile-showcase-fields"
-            onClick={() => setShowcaseOpen((open) => !open)}
-            className="flex w-full items-center justify-between gap-3 text-left"
-          >
+          <div className="flex w-full items-center justify-between gap-3 text-left">
             <span>
               <span className="block font-semibold text-green-200">Profile showcase</span>
               <span className="mt-1 block text-xs text-white/55">
                 A short banner is free. Featuring one public recipe is a Premium feature.
               </span>
             </span>
-            <span
-              aria-hidden="true"
-              className={`shrink-0 text-2xl text-white transition-transform duration-200 ${
-                showcaseOpen ? "rotate-90" : "rotate-180"
-              }`}
-            >
-              ▶
-            </span>
-          </button>
+            <ExpandArrowButton
+              expanded={showcaseOpen}
+              label="profile showcase"
+              controls="profile-showcase-fields"
+              onClick={() => setShowcaseOpen((open) => !open)}
+            />
+          </div>
           <div
             id="profile-showcase-fields"
             aria-hidden={!showcaseOpen}

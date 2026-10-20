@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
+import { buildGravityReminders } from "@/lib/brewing/gravityReminders";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const SG_REMINDER_AFTER_DAYS = 7;
-const DAY_MS = 24 * 60 * 60 * 1000;
-
 export async function GET(request: NextRequest) {
   const { supabase, serviceRole } = supabaseServer();
   const {
@@ -40,7 +38,7 @@ export async function GET(request: NextRequest) {
 
   const { data: activeBatches, error: batchesError } = await serviceRole
     .from("batches")
-    .select("id, name, startdato, created_at")
+    .select("id, name, startdato, created_at, status")
     .eq("user_id", user.id)
     .in("status", ["Aktiv", "Sekundær", "secondary"]);
 
@@ -53,7 +51,7 @@ export async function GET(request: NextRequest) {
   if (activeBatchIds.length > 0) {
     const { data: readings, error: readingsError } = await serviceRole
       .from("sg_readings")
-      .select("id, batch_id, created_at")
+      .select("id, batch_id, created_at, sg")
       .in("batch_id", activeBatchIds)
       .order("created_at", { ascending: false });
 
@@ -62,39 +60,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Could not load SG reminders" }, { status: 500 });
     }
 
-    const latestReadingByBatch = new Map<string, (typeof readings)[number]>();
-    for (const reading of readings ?? []) {
-      if (reading.batch_id && !latestReadingByBatch.has(reading.batch_id)) {
-        latestReadingByBatch.set(reading.batch_id, reading);
-      }
-    }
-
-    const now = Date.now();
-    const staleReadingReminders = (activeBatches ?? []).flatMap((batch) => {
-      const latestReading = latestReadingByBatch.get(batch.id);
-      const anchorDate = latestReading?.created_at || batch.startdato || batch.created_at;
-      const anchorTime = new Date(anchorDate).getTime();
-      if (!Number.isFinite(anchorTime) || now - anchorTime < SG_REMINDER_AFTER_DAYS * DAY_MS) {
-        return [];
-      }
-
-      return [{
-        user_id: user.id,
-        batch_id: batch.id,
-        source_reading_id: latestReading?.id ?? null,
-        stale_key: latestReading ? `reading:${latestReading.id}` : "initial",
-        type: "sg_check",
-        message: `No SG reading has been logged for "${batch.name || "this batch"}" in 7 days. Consider checking its progress.`,
-        remind_at: new Date(anchorTime + SG_REMINDER_AFTER_DAYS * DAY_MS).toISOString(),
-      }];
-    });
+    const { staleReadingReminders, stableGravityReminders } =
+      buildGravityReminders(
+        user.id,
+        activeBatches ?? [],
+        readings ?? [],
+        Date.now()
+      );
 
     const remindersWithReading = staleReadingReminders.filter(
       (reminder) => reminder.source_reading_id !== null
     );
-    const remindersWithoutReading = staleReadingReminders.filter(
+    const remindersWithoutReading = [
+      ...staleReadingReminders.filter(
       (reminder) => reminder.source_reading_id === null
-    );
+      ),
+      ...stableGravityReminders,
+    ];
 
     const readingReminderInsert = remindersWithReading.length
       ? await serviceRole
@@ -133,7 +115,7 @@ export async function GET(request: NextRequest) {
   if (requestedBatchId) {
     remindersQuery = remindersQuery
       .eq("batch_id", requestedBatchId)
-      .eq("type", "manual");
+      .or("type.eq.manual,and(type.eq.sg_check,read_at.is.null)");
   } else {
     remindersQuery = remindersQuery
       .lte("remind_at", new Date().toISOString())

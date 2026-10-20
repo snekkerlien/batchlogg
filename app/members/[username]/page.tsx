@@ -15,6 +15,7 @@ import ProfileOverview, { ProfileAchievements } from "@/app/components/ProfileOv
 import RecipePresentation from "@/app/components/RecipePresentation";
 import MemberAdminActions, { type MemberAdminDetails } from "./MemberAdminActions";
 import FermentationBubbles from "@/app/components/FermentationBubbles";
+import ExpandArrowButton from "@/app/components/ExpandArrowButton";
 
 
 export default function ProfileDetailPage({ params }: { params: { username: string } }) {
@@ -555,25 +556,21 @@ const secondary = batchesRaw
         className="bg-white/10 border border-white/20 rounded-xl p-4"
       >
         {/* Header */}
-        <button
-          onClick={() => toggle(r.id)}
-          className="w-full flex justify-between items-center text-left"
-        >
-          <span className="text-xl font-bold text-green-300">
+        <div className="flex w-full items-center justify-between gap-3 text-left">
+          <span className="min-w-0 text-xl font-bold text-green-300">
             {r.name.charAt(0).toUpperCase() + r.name.slice(1)}
           </span>
-
-          <span
-            className={`text-white text-2xl transition-transform duration-200 ${
-              expanded === r.id ? "rotate-90" : "rotate-180"
-            }`}
-          >
-            ▶
-          </span>
-        </button>
+          <ExpandArrowButton
+            expanded={expanded === r.id}
+            label={r.name || "recipe"}
+            controls={`member-recipe-${r.id}`}
+            onClick={() => toggle(r.id)}
+          />
+        </div>
 
         {/* Slide-down content */}
         <div
+          id={`member-recipe-${r.id}`}
           className={`transition-all duration-300 ease-in-out overflow-hidden ${
             expanded === r.id ? "max-h-[6000px] mt-4" : "max-h-0"
           }`}
@@ -602,6 +599,16 @@ const secondary = batchesRaw
 
           </div>
         </div>
+        <p className="mt-4 border-t border-white/10 pt-3 text-xs text-white/55">
+          Created{" "}
+          {r.created_at
+            ? new Date(r.created_at).toLocaleDateString("en-GB")
+            : "date unavailable"}
+          {" · "}
+          {r.copyright_free === true
+            ? `Marked copyright-free by ${profile.username}`
+            : `Copyright © ${r.created_at ? new Date(r.created_at).getFullYear() : new Date().getFullYear()} ${profile.username}. All rights reserved.`}
+        </p>
       </div>
     ))
   ) : (

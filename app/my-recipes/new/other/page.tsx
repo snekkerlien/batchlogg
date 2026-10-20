@@ -79,7 +79,7 @@ export default function NewOtherRecipePage() {
         {/* HEADER */}
         <h1 className="text-4xl font-bold mb-2 text-center">New Other Recipe</h1>
         <p className="text-center opacity-80 mb-10">
-          Use this page for experimental recipes or anything that doesn't fit other categories.
+          Use this page for experimental recipes or anything that doesn&apos;t fit other categories.
         </p>
 
         {/* WARNINGS */}
@@ -108,6 +108,19 @@ export default function NewOtherRecipePage() {
               placeholder="Example: Experimental Blend #1"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="other-style" className="mb-1 block font-semibold">
+              Style or type (optional)
+            </label>
+            <input
+              id="other-style"
+              name="other_style"
+              maxLength={80}
+              placeholder="Example: Kombucha"
+              className="w-full rounded border border-white/20 bg-black/40 p-3"
             />
           </div>
 

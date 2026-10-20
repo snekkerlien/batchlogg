@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
 
@@ -51,8 +52,8 @@ export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
         Delete batch
       </button>
 
-      {open && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center">
+      {open && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] bg-black/70 flex items-center justify-center p-4">
           <div className="bg-zinc-900 border border-white/10 p-6 rounded-xl w-80">
             <h3 className="text-xl font-semibold mb-4 text-center">
               Confirm deletion
@@ -101,7 +102,8 @@ export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
               </button>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

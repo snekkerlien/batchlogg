@@ -7,6 +7,8 @@ import {
   calcEBC,
   calcIBU,
 } from "@/lib/brewing/beerCalculators";
+import { isBeerStyle } from "@/lib/brewing/beerStyles";
+import { withOtherRecipeStyle } from "@/lib/recipes/otherRecipe";
 
 // -----------------------------
 // MAIN FUNCTION
@@ -29,13 +31,17 @@ export async function createRecipe(formData: FormData) {
   const type = formData.get("type") as string;
   const name = formData.get("name") as string;
   const beerSubtype = formData.get("beer_subtype") as string | null;
+  const beerStyle = formData.get("beer_style");
   const kitUrl = formData.get("kit_url") as string | null;
 
+  if (type === "Beer" && !isBeerStyle(beerStyle)) {
+    return { success: false, error: "Choose a valid beer style." };
+  }
   if (
     type === "Beer" &&
     !["all_grain", "fresh_wort_kit", "malt_extract_kit"].includes(beerSubtype ?? "")
   ) {
-    return { success: false, error: "Choose a beer recipe style." };
+    return { success: false, error: "Choose a valid brewing method." };
   }
   if (type === "Beer" && beerSubtype !== "all_grain" && kitUrl?.trim()) {
     try {
@@ -227,12 +233,15 @@ export async function createRecipe(formData: FormData) {
     type === "Beer"
       ? {
           beer_subtype: beerSubtype,
+          beer_style: beerStyle,
           kit_url:
             beerSubtype === "all_grain" || !kitUrl?.trim()
               ? null
               : new URL(kitUrl.trim()).toString(),
         }
-      : otherIngredients;
+      : type === "Other"
+        ? withOtherRecipeStyle(formData.get("other_style"), otherIngredients)
+        : otherIngredients;
 
   const steps_json = formData.get("steps_json") as string;
   const steps = steps_json ? JSON.parse(steps_json) : null;

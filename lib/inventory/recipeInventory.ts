@@ -4,6 +4,7 @@ import {
   isFruitInventoryCategory,
 } from "@/lib/inventory/categories";
 import { parseSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
+import { getOtherRecipeIngredients } from "@/lib/recipes/otherRecipe";
 
 export type InventoryItem = {
   id: string;
@@ -29,9 +30,32 @@ export type RecipeInventoryRequirement = {
   requireAmount?: boolean;
 };
 
-function matchesRequirementInventoryCategory(
+export type ScaledRecipeInventoryRequirement = {
+  name: string;
+  amount: number | null;
+  unit: string;
+  inventoryAmount: number | null;
+  inventoryUnit: string | null;
+  shortage: number | null;
+  category?: string;
+  subcategory?: string;
+  inventoryFilters?: { category: string; subcategory?: string }[];
+  status:
+    | "available"
+    | "shortage"
+    | "untracked"
+    | "ambiguous"
+    | "incompatible"
+    | "amount-needed"
+    | "manual-review";
+};
+
+export function matchesRequirementInventoryCategory(
   item: InventoryItem,
-  requirement: RecipeInventoryRequirement
+  requirement: Pick<
+    RecipeInventoryRequirement,
+    "category" | "subcategory" | "inventoryFilters"
+  >
 ) {
   if (requirement.inventoryFilters) {
     return requirement.inventoryFilters.some(
@@ -304,7 +328,7 @@ export function recipeRequirementsFromSavedRecipe(
   appendJson("hops_json", recipe.hops);
   appendJson("dry_hops_json", recipe.dry_hops);
   appendJson("fruits_json", recipe.fruits);
-  appendJson("ingredients_json", recipe.ingredients);
+  appendJson("ingredients_json", getOtherRecipeIngredients(recipe.ingredients));
 
   for (const field of ["honey_type", "juice_type", "yeast"]) {
     formData.set(field, typeof recipe[field] === "string" ? recipe[field] : "");
@@ -397,6 +421,181 @@ export function getSavedRecipeShoppingRequirements(
       unit: item.unit,
     };
   });
+}
+
+export function getScaledRecipeInventoryRequirements(
+  recipe: Record<string, unknown>,
+  items: InventoryItem[],
+  targetVolume: number
+): ScaledRecipeInventoryRequirement[] {
+  const baseVolume = Number(recipe.volume);
+  if (
+    !Number.isFinite(baseVolume) ||
+    baseVolume <= 0 ||
+    !Number.isFinite(targetVolume) ||
+    targetVolume <= 0
+  ) {
+    throw new Error("Recipe and target volumes must be greater than zero.");
+  }
+
+  const requirements = recipeRequirementsFromSavedRecipe(recipe);
+  if (!requirements) {
+    throw new Error("Could not read recipe ingredients.");
+  }
+
+  const factor = targetVolume / baseVolume;
+  const scaledRequirements = requirements.map((requirement) => ({
+    ...requirement,
+    amount:
+      requirement.amount === null
+        ? null
+        : isLinearlyScalableRequirement(requirement)
+          ? requirement.amount * factor
+          : requirement.amount,
+  }));
+  const normalize = (value: string) =>
+    value.trim().toLocaleLowerCase().replace(/\s+/g, " ");
+  const aggregated: RecipeInventoryRequirement[] = [];
+
+  for (const requirement of scaledRequirements) {
+    const existing = aggregated.find(
+      (candidate) =>
+        normalize(candidate.name) === normalize(requirement.name) &&
+        candidate.category === requirement.category &&
+        candidate.subcategory === requirement.subcategory &&
+        convertIngredientAmount(0, requirement.unit, candidate.unit) !== null &&
+        (candidate.amount === null) === (requirement.amount === null)
+    );
+    if (!existing) {
+      aggregated.push({ ...requirement });
+      continue;
+    }
+    if (existing.amount !== null && requirement.amount !== null) {
+      const converted = convertIngredientAmount(
+        requirement.amount,
+        requirement.unit,
+        existing.unit
+      );
+      if (converted !== null) existing.amount += converted;
+    }
+  }
+
+  const remainingInventory = new Map<string, number>();
+  return aggregated.map((requirement) => {
+    if (requirement.amount === null) {
+      return {
+        name: requirement.name,
+        amount: null,
+        unit: requirement.unit,
+        inventoryAmount: null,
+        inventoryUnit: null,
+        shortage: null,
+        category: requirement.category,
+        subcategory: requirement.subcategory,
+        inventoryFilters: requirement.inventoryFilters,
+        status: "amount-needed",
+      };
+    }
+
+    const exactMatches = items.filter(
+      (item) =>
+        normalize(item.name) === normalize(requirement.name) &&
+        matchesRequirementInventoryCategory(item, requirement)
+    );
+    if (!isLinearlyScalableRequirement(requirement)) {
+      return {
+        name: requirement.name,
+        amount: requirement.amount,
+        unit: requirement.unit,
+        inventoryAmount:
+          exactMatches.length === 1 ? exactMatches[0].amount : null,
+        inventoryUnit:
+          exactMatches.length === 1 ? exactMatches[0].unit : null,
+        shortage: null,
+        category: requirement.category,
+        subcategory: requirement.subcategory,
+        inventoryFilters: requirement.inventoryFilters,
+        status: "manual-review",
+      };
+    }
+
+    if (exactMatches.length > 1) {
+      return {
+        name: requirement.name,
+        amount: requirement.amount,
+        unit: requirement.unit,
+        inventoryAmount: null,
+        inventoryUnit: null,
+        shortage: null,
+        category: requirement.category,
+        subcategory: requirement.subcategory,
+        inventoryFilters: requirement.inventoryFilters,
+        status: "ambiguous",
+      };
+    }
+
+    const item = exactMatches[0];
+    if (!item) {
+      return {
+        name: requirement.name,
+        amount: requirement.amount,
+        unit: requirement.unit,
+        inventoryAmount: null,
+        inventoryUnit: null,
+        shortage: requirement.amount,
+        category: requirement.category,
+        subcategory: requirement.subcategory,
+        inventoryFilters: requirement.inventoryFilters,
+        status: "untracked",
+      };
+    }
+
+    const requiredInInventoryUnit = requirement.unit
+      ? convertIngredientAmount(requirement.amount, requirement.unit, item.unit)
+      : requirement.amount;
+    if (requiredInInventoryUnit === null) {
+      return {
+        name: requirement.name,
+        amount: requirement.amount,
+        unit: requirement.unit,
+        inventoryAmount: item.amount,
+        inventoryUnit: item.unit,
+        shortage: null,
+        category: requirement.category,
+        subcategory: requirement.subcategory,
+        inventoryFilters: requirement.inventoryFilters,
+        status: "incompatible",
+      };
+    }
+
+    const available = remainingInventory.get(item.id) ?? item.amount;
+    const shortage = Math.max(0, requiredInInventoryUnit - available);
+    remainingInventory.set(
+      item.id,
+      Math.max(0, available - requiredInInventoryUnit)
+    );
+    return {
+      name: requirement.name,
+      amount: requirement.amount,
+      unit: requirement.unit,
+      inventoryAmount: available,
+      inventoryUnit: item.unit,
+      shortage,
+      category: requirement.category,
+      subcategory: requirement.subcategory,
+      inventoryFilters: requirement.inventoryFilters,
+      status: shortage > 0 ? "shortage" : "available",
+    };
+  });
+}
+
+function isLinearlyScalableRequirement(
+  requirement: RecipeInventoryRequirement
+): boolean {
+  if (requirement.inventoryFilters) return true;
+  return ["fermentables", "fruit", "malts", "hops"].includes(
+    requirement.category ?? ""
+  );
 }
 
 export function getInventoryRequirementIssues(

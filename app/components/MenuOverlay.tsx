@@ -23,6 +23,7 @@ function MenuOverlayContent({ current }: { current: string }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isModerator, setIsModerator] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const menuDropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -94,6 +95,48 @@ function MenuOverlayContent({ current }: { current: string }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!menuOpen || !menuDropdownRef.current) return;
+
+    const footer = document.querySelector<HTMLElement>("footer");
+    const dropdown = menuDropdownRef.current;
+    if (!footer) return;
+
+    const originalInlineMarginTop = footer.style.marginTop;
+    const baseMarginTop =
+      Number.parseFloat(window.getComputedStyle(footer).marginTop) || 0;
+    let addedMargin = 0;
+    let frame = 0;
+
+    function updateFooterSpace() {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        if (!footer) return;
+        const dropdownBottom = dropdown.getBoundingClientRect().bottom;
+        const footerTop = footer.getBoundingClientRect().top - addedMargin;
+        const nextAddedMargin = Math.max(0, dropdownBottom + 16 - footerTop);
+        if (Math.abs(nextAddedMargin - addedMargin) < 1) return;
+        addedMargin = nextAddedMargin;
+        footer.style.marginTop = `${baseMarginTop + addedMargin}px`;
+      });
+    }
+
+    const observer = new ResizeObserver(updateFooterSpace);
+    observer.observe(dropdown);
+    observer.observe(footer);
+    window.addEventListener("resize", updateFooterSpace);
+    window.addEventListener("scroll", updateFooterSpace, true);
+    updateFooterSpace();
+
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener("resize", updateFooterSpace);
+      window.removeEventListener("scroll", updateFooterSpace, true);
+      footer.style.marginTop = originalInlineMarginTop;
+    };
+  }, [menuOpen]);
+
   async function logout() {
     await supabaseBrowser.auth.signOut();
     router.refresh();
@@ -139,13 +182,14 @@ function MenuOverlayContent({ current }: { current: string }) {
         { href: "/calendar", label: "Brew calendar", key: "calendar" },
         { href: "/shopping-list", label: "Shopping list", key: "shopping-list" },
         { href: "/brew-insights", label: "Brewing insights", key: "brew-insights" },
-        { href: "/abv-tools", label: "ABV Tools", key: "abvtools" },
+        { href: "/abv-tools", label: "Brewing calculators", key: "abvtools" },
       ],
     },
     {
       label: "Community",
       items: [
         { href: "/members", label: "Members", key: "profiles" },
+        { href: "/recipes", label: "Public recipes", key: "recipes" },
         { href: "/community/friends", label: "Friends", key: "friends" },
         { href: "/community/messages", label: "Messages", key: "messages" },
         { href: "/community/forum", label: "Forum", key: "forum" },
@@ -210,6 +254,7 @@ function MenuOverlayContent({ current }: { current: string }) {
 
       {menuOpen && (
         <div
+          ref={menuDropdownRef}
           className="
             absolute right-0 top-full mt-2
             bg-black/90 backdrop-blur-md

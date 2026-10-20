@@ -5,6 +5,7 @@ import Link from "next/link";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
+import ExpandArrowButton from "@/app/components/ExpandArrowButton";
 
 interface ChangelogEntry {
   version: string;
@@ -203,23 +204,20 @@ export function AdminContentClient() {
               </div>
             </form>
             <section className="rounded-xl border border-white/10 bg-white/5 p-3">
-              <button
-                type="button"
-                onClick={() => setShowSavedChangelogs((open) => !open)}
-                aria-expanded={showSavedChangelogs}
-                aria-controls="saved-changelogs-list"
-                className="flex w-full items-center justify-between gap-3 text-left"
-              >
+              <div className="flex w-full items-center justify-between gap-3 text-left">
                 <span className="flex items-center gap-2 font-medium">
                   <span>Saved changelogs</span>
                   <span className="text-sm text-white/50">
                     {loading ? "Loading…" : `${changelog.length} ${changelog.length === 1 ? "entry" : "entries"}`}
                   </span>
                 </span>
-                <span aria-hidden className="text-white/60">
-                  {showSavedChangelogs ? "▼" : "◀"}
-                </span>
-              </button>
+                <ExpandArrowButton
+                  expanded={showSavedChangelogs}
+                  label="saved changelogs"
+                  controls="saved-changelogs-list"
+                  onClick={() => setShowSavedChangelogs((open) => !open)}
+                />
+              </div>
               <div
                 id="saved-changelogs-list"
                 hidden={!showSavedChangelogs}
@@ -275,23 +273,20 @@ export function AdminContentClient() {
               </div>
             </form>
             <section className="rounded-xl border border-white/10 bg-white/5 p-3">
-              <button
-                type="button"
-                onClick={() => setShowSavedAnnouncements((open) => !open)}
-                aria-expanded={showSavedAnnouncements}
-                aria-controls="saved-announcements-list"
-                className="flex w-full items-center justify-between gap-3 text-left"
-              >
+              <div className="flex w-full items-center justify-between gap-3 text-left">
                 <span className="flex items-center gap-2 font-medium">
                   <span>Saved announcements</span>
                   <span className="text-sm text-white/50">
                     {loading ? "Loading…" : `${announcements.length} ${announcements.length === 1 ? "entry" : "entries"}`}
                   </span>
                 </span>
-                <span aria-hidden className="text-white/60">
-                  {showSavedAnnouncements ? "▼" : "◀"}
-                </span>
-              </button>
+                <ExpandArrowButton
+                  expanded={showSavedAnnouncements}
+                  label="saved announcements"
+                  controls="saved-announcements-list"
+                  onClick={() => setShowSavedAnnouncements((open) => !open)}
+                />
+              </div>
               <div
                 id="saved-announcements-list"
                 hidden={!showSavedAnnouncements}

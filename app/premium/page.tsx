@@ -107,22 +107,78 @@ export default function PremiumPage() {
           </p>
         )}
 
-        <ul className="mb-8 grid gap-3 sm:grid-cols-2">
-          {[
-            "Track up to 20 vessels (Free includes up to 6)",
-            "Shopping list and brew calendar",
-            "Brewing insights and advanced batch analytics",
-            "SG history and development charts",
-            "Recipe version history and comparison",
-            "Shared vessels with richer collaboration",
-            "Turn below-threshold inventory into shopping-list restock plans",
-            "Featured public recipe and profile customization",
-          ].map((feature) => (
-            <li key={feature} className="rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-white/80">
-              {feature}
-            </li>
-          ))}
-        </ul>
+        <section aria-labelledby="premium-features-heading" className="mb-8">
+          <h2
+            id="premium-features-heading"
+            className="mb-4 text-lg font-semibold text-green-200"
+          >
+            What Premium unlocks
+          </h2>
+          <div className="space-y-4">
+            <section className="rounded-xl border border-white/10 bg-white/5 p-4">
+              <h3 className="font-semibold text-white">More brewing capacity</h3>
+              <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-white/75">
+                <li>Track up to 20 vessels instead of the Free plan’s 6.</li>
+              </ul>
+            </section>
+
+            <section className="rounded-xl border border-white/10 bg-white/5 p-4">
+              <h3 className="font-semibold text-white">Plan and track your brewing</h3>
+              <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-white/75">
+                <li>
+                  Use the brew calendar to see batch dates and scheduled
+                  reminders, and export them to calendar apps with iCalendar.
+                </li>
+                <li>
+                  Create and manage a shopping list, and plan restocks from
+                  low-stock inventory.
+                </li>
+                <li>
+                  Record specific-gravity readings and view a batch’s gravity
+                  development history and chart.
+                </li>
+                <li>
+                  Invite collaborators to shared vessels and review their
+                  activity history.
+                </li>
+              </ul>
+            </section>
+
+            <section className="rounded-xl border border-white/10 bg-white/5 p-4">
+              <h3 className="font-semibold text-white">Learn from your batches</h3>
+              <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-white/75">
+                <li>
+                  Review brewing insights and analytics from your batch
+                  history.
+                </li>
+              </ul>
+            </section>
+
+            <section className="rounded-xl border border-white/10 bg-white/5 p-4">
+              <h3 className="font-semibold text-white">Keep and export recipe history</h3>
+              <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-white/75">
+                <li>
+                  Save recipe snapshots as you edit recipes, then view and
+                  compare earlier versions.
+                </li>
+                <li>
+                  Export recipes as JSON or CSV; export BeerXML for beer and
+                  braggot recipes, or BeerJSON.
+                </li>
+              </ul>
+            </section>
+
+            <section className="rounded-xl border border-white/10 bg-white/5 p-4">
+              <h3 className="font-semibold text-white">Showcase a recipe</h3>
+              <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-white/75">
+                <li>
+                  Feature one of your public recipes on your profile. The
+                  profile banner is available on Free too.
+                </li>
+              </ul>
+            </section>
+          </div>
+        </section>
 
         {!loading && profile?.account_tier !== "premium" && (
           <div className="flex flex-col items-center gap-3">

@@ -6,6 +6,7 @@ import * as Actions from "../../actions/createRecipe";
 import MenuOverlay from "../../MenuOverlay";
 import BackButton from "../../BackButton";
 import { UnitInput, UnitSymbol, useUnits } from "../../../components/Units";
+import BeerStyleSelect from "@/app/components/BeerStyleSelect";
 import RecipeAdditiveFields from "../RecipeAdditiveFields";
 import RecipeSecondaryFields from "../RecipeSecondaryFields";
 
@@ -14,6 +15,7 @@ export default function NewBeerRecipePage() {
   const [loading, setLoading] = useState(false);
   const { label } = useUnits();
   const [beerSubtype, setBeerSubtype] = useState("");
+  const [beerStyle, setBeerStyle] = useState("");
 
   // ⭐ warnings fra server action
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -149,7 +151,7 @@ function removeDryHop(index: number) {
 
           <div>
             <label htmlFor="beer-subtype" className="mb-1 block font-semibold">
-              Beer recipe style
+              Brewing method
             </label>
             <select
               id="beer-subtype"
@@ -159,12 +161,20 @@ function removeDryHop(index: number) {
               required
               className="w-full rounded border border-white/20 bg-zinc-900 p-3"
             >
-              <option value="">Choose a beer recipe style</option>
+              <option value="">Choose a brewing method</option>
               <option value="all_grain">All-grain</option>
               <option value="fresh_wort_kit">Fresh wort kit</option>
               <option value="malt_extract_kit">Malt extract kit</option>
             </select>
           </div>
+
+          {beerSubtype && (
+            <BeerStyleSelect
+              id="beer-style"
+              value={beerStyle}
+              onChange={setBeerStyle}
+            />
+          )}
 
           {error && (
             <p role="alert" className="rounded border border-red-400/40 bg-red-950/50 p-3 text-red-200">

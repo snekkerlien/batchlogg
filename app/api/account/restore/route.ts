@@ -84,7 +84,7 @@ async function readArchive(bytes: ArrayBuffer): Promise<ArchiveData> {
     throw new Error("Backup metadata and profile must be JSON objects");
   }
   const version = metadataValue.format_version;
-  if (version !== 1 && version !== 2) {
+  if (version !== 1 && version !== 2 && version !== 3 && version !== 4) {
     throw new Error("Unsupported backup format. Please upload a Batchlog backup.");
   }
 
@@ -107,10 +107,31 @@ async function readArchive(bytes: ArrayBuffer): Promise<ArchiveData> {
       feedback: "feedback.json",
     });
   }
+  if (version === 3 || version === 4) {
+    Object.assign(files, {
+      batch_notes: "batch_notes.json",
+      sg_readings: "sg_readings.json",
+      batch_reminders: "batch_reminders.json",
+      kegs: "kegs.json",
+      kar_contributors: "kar_contributors.json",
+      shopping_list_items: "shopping_list.json",
+      forum_bookmarks: "forum_bookmarks.json",
+      community_messages: "private_messages.json",
+      feedback: "feedback.json",
+      equipment_profiles: "equipment_profiles.json",
+    });
+  }
+  if (version === 4) {
+    files.water_chemistry_profiles = "water_chemistry_profiles.json";
+  }
 
   const rows: Record<string, JsonRecord[]> = {};
   for (const [table, filename] of Object.entries(files)) {
-    if (version === 1 && table === "inventory_items" && !zip.file(filename)) {
+    if (
+      (version === 1 && table === "inventory_items" && !zip.file(filename)) ||
+      (version < 3 && table === "equipment_profiles") ||
+      (version < 4 && table === "water_chemistry_profiles")
+    ) {
       rows[table] = [];
       continue;
     }
@@ -379,6 +400,20 @@ export async function POST(request: Request) {
     await insertRows(serviceRole, "kar", rows.kar, user.id, processed);
     await insertRows(serviceRole, "batches", rows.batches, user.id, processed);
     await insertRows(serviceRole, "recipes", rows.recipes, user.id, processed);
+    await insertRows(
+      serviceRole,
+      "equipment_profiles",
+      rows.equipment_profiles ?? [],
+      user.id,
+      processed
+    );
+    await insertRows(
+      serviceRole,
+      "water_chemistry_profiles",
+      rows.water_chemistry_profiles ?? [],
+      user.id,
+      processed
+    );
     await insertRows(serviceRole, "inventory_items", rows.inventory_items, user.id, processed);
 
     const notes = (rows.batch_notes ?? []).map((note) => {

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 import MenuOverlay from "../../components/MenuOverlay";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import PageHeading from "../../components/PageHeading";
@@ -12,18 +13,22 @@ import {
   deleteAccount,
   saveThemeAccentColor,
 } from "../my-account/actions";
-import { saveUserPreferences } from "@/app/actions/userPreferences";
-import { useUnits } from "@/app/components/Units";
+import { saveBrewingPreferences } from "@/app/actions/userPreferences";
 import {
   DEFAULT_ACCENT_COLOR,
   isAccentColor,
 } from "@/lib/theme/accentColor";
 import { getErrorMessage, saveDownload } from "@/lib/desktopDownloads";
+import {
+  getReducedMotionPreference,
+  setReducedMotionPreference,
+} from "@/lib/accessibility/reducedMotion";
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { system } = useUnits();
   const restoreInputRef = useRef<HTMLInputElement | null>(null);
+  const preferencesSaveQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const pendingPreferencesSavesRef = useRef(0);
   const [user, setUser] = useState<any>(null);
   const [username, setUsername] = useState("account");
   const [savingUsername, setSavingUsername] = useState(false);
@@ -39,6 +44,8 @@ export default function SettingsPage() {
   const [remindersEnabled, setRemindersEnabled] = useState(true);
   const [savingPreferences, setSavingPreferences] = useState(false);
   const [preferencesMessage, setPreferencesMessage] = useState("");
+  const [reducedMotion, setReducedMotion] = useState(false);
+  const [motionPreferenceMessage, setMotionPreferenceMessage] = useState("");
   const [showEmailChange, setShowEmailChange] = useState(false);
   const [showPasswordChange, setShowPasswordChange] = useState(false);
   const [newEmail, setNewEmail] = useState("");
@@ -94,6 +101,7 @@ export default function SettingsPage() {
       setUseInventory(profile.use_inventory_for_batches === true);
       setPublicProfile(profile.is_public !== false);
       setRemindersEnabled(profile.batch_reminders_enabled !== false);
+      setReducedMotion(getReducedMotionPreference());
       setLoading(false);
     }
 
@@ -125,26 +133,33 @@ export default function SettingsPage() {
     }
   }
 
-  async function savePreferences() {
+  function saveBrewingPreference(
+    preference: Partial<{
+      use_inventory_for_batches: boolean;
+      batch_reminders_enabled: boolean;
+      is_public: boolean;
+    }>
+  ) {
+    pendingPreferencesSavesRef.current += 1;
     setSavingPreferences(true);
-    setPreferencesMessage("");
-    try {
-      await saveUserPreferences({
-        theme_accent_color: themeAccentColor,
-        preferred_unit_system: system,
-        use_inventory_for_batches: useInventory,
-        batch_reminders_enabled: remindersEnabled,
-        is_public: publicProfile,
-      });
-      document.documentElement.style.setProperty("--user-accent", themeAccentColor);
-      window.dispatchEvent(new Event("batchlogg-preferences-saved"));
-      setPreferencesMessage("Preferences saved.");
-    } catch (error) {
-      console.error("Could not save account preferences", error);
-      setPreferencesMessage("Could not save preferences. Please try again.");
-    } finally {
-      setSavingPreferences(false);
-    }
+    setPreferencesMessage("Saving…");
+
+    preferencesSaveQueueRef.current = preferencesSaveQueueRef.current.then(
+      async () => {
+        try {
+          await saveBrewingPreferences(preference);
+          setPreferencesMessage("Preferences saved.");
+        } catch (error) {
+          console.error("Could not save brewing preferences", error);
+          setPreferencesMessage("Could not save preferences. Please try again.");
+        } finally {
+          pendingPreferencesSavesRef.current -= 1;
+          if (pendingPreferencesSavesRef.current === 0) {
+            setSavingPreferences(false);
+          }
+        }
+      }
+    );
   }
 
   async function changeUsername(event: React.FormEvent<HTMLFormElement>) {
@@ -433,6 +448,48 @@ export default function SettingsPage() {
         </section>
         <section className="mb-8 border-b border-white/10 pb-6">
           <h2 className="text-lg font-semibold text-center mb-1 text-green-300">
+            Accessibility
+          </h2>
+          <p className="text-sm text-zinc-400 text-center mb-5">
+            Reduce motion hides carbonation bubbles in beer glasses, vessel cards,
+            and the background. By default, this follows your device preference.
+          </p>
+          <div className="mx-auto max-w-xl">
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                checked={reducedMotion}
+                onChange={(event) => {
+                  const nextValue = event.target.checked;
+                  setMotionPreferenceMessage("");
+                  try {
+                    setReducedMotionPreference(nextValue);
+                    setReducedMotion(nextValue);
+                  } catch (error) {
+                    console.error("Could not save reduced-motion preference", error);
+                    setMotionPreferenceMessage(
+                      "Could not save this preference. Check your browser storage settings and try again."
+                    );
+                  }
+                }}
+                className="mt-1 h-4 w-4 accent-green-500"
+              />
+              <span>
+                <span className="block font-medium">Reduce motion</span>
+                <span className="text-sm text-white/60">
+                  Hide carbonation bubbles throughout the site.
+                </span>
+              </span>
+            </label>
+            {motionPreferenceMessage && (
+              <p role="alert" className="mt-3 text-sm text-red-300">
+                {motionPreferenceMessage}
+              </p>
+            )}
+          </div>
+        </section>
+        <section className="mb-8 border-b border-white/10 pb-6">
+          <h2 className="text-lg font-semibold text-center mb-1 text-green-300">
             Brewing preferences
           </h2>
           <p className="text-sm text-zinc-400 text-center mb-5">
@@ -443,7 +500,11 @@ export default function SettingsPage() {
               <input
                 type="checkbox"
                 checked={useInventory}
-                onChange={(event) => setUseInventory(event.target.checked)}
+                onChange={(event) => {
+                  const value = event.target.checked;
+                  setUseInventory(value);
+                  saveBrewingPreference({ use_inventory_for_batches: value });
+                }}
                 className="mt-1 h-4 w-4 accent-green-500"
               />
               <span>
@@ -457,7 +518,11 @@ export default function SettingsPage() {
               <input
                 type="checkbox"
                 checked={remindersEnabled}
-                onChange={(event) => setRemindersEnabled(event.target.checked)}
+                onChange={(event) => {
+                  const value = event.target.checked;
+                  setRemindersEnabled(value);
+                  saveBrewingPreference({ batch_reminders_enabled: value });
+                }}
                 className="mt-1 h-4 w-4 accent-green-500"
               />
               <span>
@@ -471,7 +536,11 @@ export default function SettingsPage() {
               <input
                 type="checkbox"
                 checked={publicProfile}
-                onChange={(event) => setPublicProfile(event.target.checked)}
+                onChange={(event) => {
+                  const value = event.target.checked;
+                  setPublicProfile(value);
+                  saveBrewingPreference({ is_public: value });
+                }}
                 className="mt-1 h-4 w-4 accent-green-500"
               />
               <span>
@@ -483,17 +552,9 @@ export default function SettingsPage() {
             </label>
           </div>
           <div className="mt-5 flex flex-col items-center gap-2">
-            <button
-              type="button"
-              onClick={() => void savePreferences()}
-              disabled={savingPreferences}
-              className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20 disabled:cursor-wait disabled:opacity-60"
-            >
-              {savingPreferences ? "Saving…" : "Save brewing preferences"}
-            </button>
             {preferencesMessage && (
               <p role="status" className="text-center text-sm text-zinc-300">
-                {preferencesMessage}
+                {savingPreferences ? "Saving…" : preferencesMessage}
               </p>
             )}
           </div>
@@ -766,8 +827,8 @@ export default function SettingsPage() {
 
       </div>
 
-      {showDeleteConfirmation && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
+      {showDeleteConfirmation && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center px-4">
           <div className="bg-zinc-900 p-6 rounded-xl w-full max-w-md border border-white/10">
             <h2 className="text-xl font-bold mb-4">Delete account</h2>
             <p className="text-sm text-zinc-300 mb-4">
@@ -806,7 +867,8 @@ export default function SettingsPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
       <ConfirmDialog
         open={pendingRestoreFile !== null}

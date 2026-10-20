@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import PublicPageNavigation from "@/app/components/PublicPageNavigation";
+import packageJson from "../../package.json";
 
 export const metadata: Metadata = {
   title: "About Batchlogg",
@@ -16,6 +17,9 @@ export default function AboutPage() {
         <PublicPageNavigation current="about" />
         <header className="mx-auto mb-10 max-w-2xl">
           <h1 className="text-3xl font-bold text-green-300">About Batchlogg</h1>
+          <p className="mt-2 text-sm text-white/60">
+            Current version: {packageJson.version}
+          </p>
           <p className="mt-4 text-lg leading-8 text-white/80">
             Brewing gets better when you can learn from what you did last time.
             Batchlogg is being built to make that history easier to keep and

@@ -52,6 +52,8 @@ export interface Batch {
   startdato: string;
   secondary_startdate?: string;
   created_at: string;
+  recipe_id?: string | null;
+  recipe_snapshot?: Record<string, unknown> | null;
 
   // Gravity
   og: number;
@@ -73,6 +75,7 @@ export interface Batch {
 
   // Beer fields
   beer_subtype?: string | null;
+  beer_style?: string | null;
   kit_url?: string | null;
   malts?: Malt[];
   hops?: Hop[];
@@ -100,6 +103,20 @@ export interface Batch {
   // Calculated values
   ibu?: number | null;
   ebc?: number | null;
+
+  // Packaging and tasting
+  packaged_volume_l?: number | null;
+  packaging_method?: string | null;
+  bottle_volume_l?: number | null;
+  keg_volume_l?: number | null;
+  package_count?: number | null;
+  carbonation_method?: string | null;
+  target_carbonation_volumes?: number | null;
+  priming_sugar_g?: number | null;
+  tasting_notes?: string | null;
+  packaged_at?: string | null;
+  share_outcome_publicly?: boolean;
+  share_tasting_notes_publicly?: boolean;
 }
 
 export interface Recipe {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
 import { writeAdminAuditEvent } from "@/lib/admin/auditLog";
+import { compareVersionsDescending } from "@/lib/versioning/compareVersions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,9 +31,7 @@ export async function GET() {
   ] = await Promise.all([
     context.serviceRole
       .from("site_changelog")
-      .select("version, entry_date, title, body, created_at, updated_at")
-      .order("entry_date", { ascending: false })
-      .limit(100),
+      .select("version, entry_date, title, body, created_at, updated_at"),
     context.serviceRole
       .from("site_announcements")
       .select("id, title, body, is_active, starts_at, ends_at, created_at, updated_at")
@@ -43,7 +42,12 @@ export async function GET() {
     console.error("Could not load admin content", changelogError || announcementsError);
     return NextResponse.json({ error: "Could not load admin content" }, { status: 500 });
   }
-  return NextResponse.json({ changelog: changelog ?? [], announcements: announcements ?? [] });
+  return NextResponse.json({
+    changelog: (changelog ?? []).sort((left, right) =>
+      compareVersionsDescending(left.version, right.version)
+    ),
+    announcements: announcements ?? [],
+  });
 }
 
 export async function POST(request: NextRequest) {

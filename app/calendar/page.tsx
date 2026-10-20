@@ -155,7 +155,9 @@ export default function CalendarPage() {
       date: reminderDateKey(reminder.remind_at),
       title: reminder.message,
       kind: "reminder" as const,
-      href: reminder.kar_id ? `/kar/${reminder.kar_id}` : "/batch-history",
+      href: reminder.kar_id
+        ? `/kar/${reminder.kar_id}#batch-reminders-content`
+        : `/batch-history?batchId=${encodeURIComponent(reminder.batch_id)}`,
       detail: `${reminder.batch_name} · ${new Date(reminder.remind_at).toLocaleTimeString([], {
         hour: "numeric",
         minute: "2-digit",

@@ -6,6 +6,7 @@ import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import { useRecipePrefill } from "../../../../../lib/recipes/useRecipePrefill";
 import { UnitInput, UnitSymbol, useUnits } from "../../../../components/Units";
+import BeerStyleSelect from "@/app/components/BeerStyleSelect";
 import {
   BatchInventoryProvider,
   InventoryAdditiveFields,
@@ -71,6 +72,7 @@ function removeDryHop(index: number) {
 const [boilVolume, setBoilVolume] = useState("");
 const [volume, setVolume] = useState("");
 const [beerSubtype, setBeerSubtype] = useState("");
+const [beerStyle, setBeerStyle] = useState("");
 
 useEffect(() => {
 if (!recipe) return;
@@ -79,6 +81,11 @@ const recipeIngredients =
     ? (recipe.ingredients as Record<string, unknown>)
     : null;
 const storedSubtype = recipeIngredients?.beer_subtype;
+setBeerStyle(
+  typeof recipeIngredients?.beer_style === "string"
+    ? recipeIngredients.beer_style
+    : ""
+);
 const isKitSubtype =
   storedSubtype === "fresh_wort_kit" || storedSubtype === "malt_extract_kit";
 setBeerSubtype(
@@ -173,7 +180,7 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
 
           <div>
             <label htmlFor="beer-subtype" className="mb-2 block font-semibold">
-              Beer recipe style
+              Brewing method
             </label>
             <select
               id="beer-subtype"
@@ -183,12 +190,20 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
               required
               className="w-full rounded-lg border border-white/20 bg-zinc-900 p-3"
             >
-              <option value="">Choose a beer recipe style</option>
+              <option value="">Choose a brewing method</option>
               <option value="all_grain">All-grain</option>
               <option value="fresh_wort_kit">Fresh wort kit</option>
               <option value="malt_extract_kit">Malt extract kit</option>
             </select>
           </div>
+
+          {beerSubtype && (
+            <BeerStyleSelect
+              id="beer-style"
+              value={beerStyle}
+              onChange={setBeerStyle}
+            />
+          )}
 
           {beerSubtype && (
             <>

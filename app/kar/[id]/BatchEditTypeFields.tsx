@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import BaseLiquidField from "@/app/components/BaseLiquidField";
+import BeerStyleSelect from "@/app/components/BeerStyleSelect";
 import { UnitInput, UnitSymbol, useUnits } from "@/app/components/Units";
 import {
   BatchEditAdditiveFields,
@@ -43,6 +44,7 @@ type IngredientRow = {
 type BatchEditRecord = {
   type: string;
   beer_subtype?: string | null;
+  beer_style?: string | null;
   kit_url?: string | null;
   ibu?: number | string | null;
   ebc?: number | string | null;
@@ -127,6 +129,7 @@ export default function BatchEditTypeFields({
   const [beerSubtype, setBeerSubtype] = useState(
     batch.beer_subtype ?? "all_grain"
   );
+  const [beerStyle, setBeerStyle] = useState(batch.beer_style ?? "");
 
   function updateMalt(index: number, changes: Partial<MaltRow>) {
     setMalts((current) =>
@@ -169,7 +172,7 @@ export default function BatchEditTypeFields({
       {isBeer && (
         <>
           <div>
-            <label className="mb-1 block font-semibold">Recipe style</label>
+            <label className="mb-1 block font-semibold">Brewing method</label>
             <select
               name="beer_subtype"
               value={beerSubtype}
@@ -181,6 +184,11 @@ export default function BatchEditTypeFields({
               <option value="malt_extract_kit">Malt extract kit</option>
             </select>
           </div>
+          <BeerStyleSelect
+            id="edit-beer-style"
+            value={beerStyle}
+            onChange={setBeerStyle}
+          />
           {beerSubtype !== "all_grain" && (
             <div>
               <label className="mb-1 block font-semibold">Kit link</label>

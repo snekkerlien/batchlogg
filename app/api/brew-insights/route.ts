@@ -20,14 +20,35 @@ export async function GET() {
 
   const { data, error } = await serviceRole
     .from("batches")
-    .select("id, name, type, status, startdato, finished_date, og, fg, abv, volume_l")
+    .select("id, name, type, status, startdato, finished_date, og, fg, abv, volume_l, packaged_volume_l, recipe_snapshot")
     .eq("user_id", user.id)
     .order("startdato", { ascending: false })
     .limit(5000);
+
+  if (error && ["42703", "PGRST204"].includes(error.code ?? "")) {
+    console.warn("Batch lifecycle migration is required for packaging insights.");
+    const fallback = await serviceRole
+      .from("batches")
+      .select("id, name, type, status, startdato, finished_date, og, fg, abv, volume_l")
+      .eq("user_id", user.id)
+      .order("startdato", { ascending: false })
+      .limit(5000);
+    if (fallback.error) {
+      console.error("Could not load brewing insights batches", fallback.error);
+      return NextResponse.json({ error: "Could not load brewing insights" }, { status: 500 });
+    }
+    return NextResponse.json({
+      batches: fallback.data ?? [],
+      lifecycleMigrationRequired: true,
+    });
+  }
   if (error) {
     console.error("Could not load brewing insights batches", error);
     return NextResponse.json({ error: "Could not load brewing insights" }, { status: 500 });
   }
 
-  return NextResponse.json({ batches: data ?? [] });
+  return NextResponse.json({
+    batches: data ?? [],
+    lifecycleMigrationRequired: false,
+  });
 }

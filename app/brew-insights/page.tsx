@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
@@ -20,12 +21,11 @@ type Batch = {
   fg: number | string | null;
   abv: number | string | null;
   volume_l: number | string | null;
-};
-
-type SavedAnalyticsView = {
-  id: string;
-  name: string;
-  filters: { type?: string };
+  packaged_volume_l?: number | string | null;
+  recipe_snapshot?: {
+    og?: number | string | null;
+    abv?: number | string | null;
+  } | null;
 };
 
 function finiteNumber(value: number | string | null) {
@@ -54,10 +54,7 @@ export default function BrewInsightsPage() {
   const [error, setError] = useState("");
   const [premiumRequired, setPremiumRequired] = useState(false);
   const [selectedType, setSelectedType] = useState("All");
-  const [savedViews, setSavedViews] = useState<SavedAnalyticsView[]>([]);
-  const [viewName, setViewName] = useState("");
-  const [viewMessage, setViewMessage] = useState("");
-  const [savingView, setSavingView] = useState(false);
+  const [lifecycleMigrationRequired, setLifecycleMigrationRequired] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -76,22 +73,21 @@ export default function BrewInsightsPage() {
         cache: "no-store",
         credentials: "include",
       });
-      const result: { batches?: Batch[]; error?: string } = await response.json();
+      const result: {
+        batches?: Batch[];
+        lifecycleMigrationRequired?: boolean;
+        error?: string;
+      } = await response.json();
       if (response.status === 403) {
         if (active) setPremiumRequired(true);
         return;
       }
       if (!response.ok) throw new Error(result.error || "Could not load brewing insights");
-      if (active) setBatches(result.batches ?? []);
+      if (active) {
+        setBatches(result.batches ?? []);
+        setLifecycleMigrationRequired(result.lifecycleMigrationRequired === true);
+      }
 
-      const viewsResponse = await fetch("/api/saved-analytics-views", {
-        credentials: "include",
-        cache: "no-store",
-      });
-      const viewsResult: { views?: SavedAnalyticsView[]; error?: string } =
-        await viewsResponse.json();
-      if (!viewsResponse.ok) throw new Error(viewsResult.error || "Could not load saved views");
-      if (active) setSavedViews(viewsResult.views ?? []);
     }
 
     load()
@@ -176,45 +172,41 @@ export default function BrewInsightsPage() {
   const averageAttenuation = attenuationValues.length
     ? attenuationValues.reduce((sum, value) => sum + value, 0) / attenuationValues.length
     : null;
-
-  async function saveAnalyticsView(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setSavingView(true);
-    setViewMessage("");
-    try {
-      const response = await fetch("/api/saved-analytics-views", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: viewName, type: selectedType }),
-      });
-      const result: { view?: SavedAnalyticsView; error?: string } = await response.json();
-      if (!response.ok) throw new Error(result.error || "Could not save analytics view");
-      if (result.view) setSavedViews((current) => [result.view!, ...current]);
-      setViewName("");
-      setViewMessage("Analytics view saved.");
-    } catch (saveError) {
-      console.error("Could not save analytics view", saveError);
-      setViewMessage(saveError instanceof Error ? saveError.message : "Could not save view.");
-    } finally {
-      setSavingView(false);
+  const packagedYieldValues = completed.flatMap((batch) => {
+    const plannedVolume = finiteNumber(batch.volume_l);
+    const packagedVolume = finiteNumber(batch.packaged_volume_l ?? null);
+    if (
+      plannedVolume === null ||
+      packagedVolume === null ||
+      plannedVolume <= 0 ||
+      packagedVolume < 0
+    ) {
+      return [];
     }
-  }
-
-  async function deleteAnalyticsView(id: string) {
-    try {
-      const response = await fetch(`/api/saved-analytics-views?id=${encodeURIComponent(id)}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      const result: { error?: string } = await response.json();
-      if (!response.ok) throw new Error(result.error || "Could not delete saved view");
-      setSavedViews((current) => current.filter((view) => view.id !== id));
-    } catch (deleteError) {
-      console.error("Could not delete analytics view", deleteError);
-      setViewMessage(deleteError instanceof Error ? deleteError.message : "Could not delete view.");
-    }
-  }
+    return [(packagedVolume / plannedVolume) * 100];
+  });
+  const averagePackagedYield = packagedYieldValues.length
+    ? packagedYieldValues.reduce((sum, value) => sum + value, 0) /
+      packagedYieldValues.length
+    : null;
+  const ogVarianceValues = completed.flatMap((batch) => {
+    const actual = finiteNumber(batch.og);
+    const planned = finiteNumber(batch.recipe_snapshot?.og ?? null);
+    return actual !== null && planned !== null ? [actual - planned] : [];
+  });
+  const averageOgVariance = ogVarianceValues.length
+    ? ogVarianceValues.reduce((sum, value) => sum + value, 0) /
+      ogVarianceValues.length
+    : null;
+  const abvVarianceValues = completed.flatMap((batch) => {
+    const actual = finiteNumber(batch.abv);
+    const planned = finiteNumber(batch.recipe_snapshot?.abv ?? null);
+    return actual !== null && planned !== null ? [actual - planned] : [];
+  });
+  const averageAbvVariance = abvVarianceValues.length
+    ? abvVarianceValues.reduce((sum, value) => sum + value, 0) /
+      abvVarianceValues.length
+    : null;
 
   async function downloadCsv() {
     const rows = [
@@ -260,6 +252,12 @@ export default function BrewInsightsPage() {
             <a href="/premium" className="mt-4 inline-block rounded-lg bg-green-700 px-5 py-3 font-semibold hover:bg-green-600">Explore Premium</a>
           </div>
         ) : error && <p role="alert" className="mb-5 rounded-lg bg-red-950/50 p-3 text-center text-red-200">{error}</p>}
+        {!premiumRequired && lifecycleMigrationRequired && (
+          <p role="status" className="mb-5 rounded-lg border border-amber-400/30 bg-amber-950/30 p-3 text-sm text-amber-100">
+            Packaging and recipe-result comparisons will appear after the batch
+            lifecycle database migration is applied. Existing insights remain available.
+          </p>
+        )}
         {!premiumRequired && loading ? (
           <p className="py-12 text-center text-white/60">Loading your brewing history…</p>
         ) : !premiumRequired && batches.length === 0 ? (
@@ -276,70 +274,37 @@ export default function BrewInsightsPage() {
         ) : !premiumRequired ? (
           <>
             <section className="mt-8 rounded-xl border border-white/10 bg-white/5 p-4">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="text-sm text-white/70">
-                  Analyze batch type
-                  <select
-                    value={selectedType}
-                    onChange={(event) => setSelectedType(event.target.value)}
-                    className="mt-1 w-full rounded-lg border border-white/20 bg-black/40 p-3 text-white"
+              <div className="flex w-full flex-wrap items-center justify-center gap-2 sm:justify-start" role="group" aria-label="Analyze batch type">
+                {["All", ...new Set(batches.map((batch) => batch.type).filter((type): type is string => Boolean(type))).values()].map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setSelectedType(type)}
+                    aria-pressed={selectedType === type}
+                    className={`rounded-lg border px-3 py-2 text-center text-sm ${
+                      selectedType === type
+                        ? "border-green-500 bg-green-700"
+                        : "border-white/20 bg-white/10 hover:bg-white/20"
+                    }`}
                   >
-                    <option value="All">All batch types</option>
-                    {[...new Set(batches.map((batch) => batch.type).filter((type): type is string => Boolean(type)))].sort().map((type) => (
-                      <option key={type} value={type}>{type}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="text-sm text-white/70">
-                  Saved analytics view
-                  <select
-                    value=""
-                    onChange={(event) => {
-                      const view = savedViews.find((item) => item.id === event.target.value);
-                      if (view) setSelectedType(view.filters.type || "All");
-                    }}
-                    className="mt-1 w-full rounded-lg border border-white/20 bg-black/40 p-3 text-white"
-                  >
-                    <option value="">Choose a saved view</option>
-                    {savedViews.map((view) => <option key={view.id} value={view.id}>{view.name}</option>)}
-                  </select>
-                </label>
-              </div>
-              <form onSubmit={saveAnalyticsView} className="mt-3 flex flex-wrap gap-2">
-                <input
-                  required
-                  maxLength={80}
-                  value={viewName}
-                  onChange={(event) => setViewName(event.target.value)}
-                  placeholder="Name this view"
-                  className="min-w-0 flex-1 rounded-lg border border-white/20 bg-black/40 p-3 text-white"
-                />
-                <button disabled={savingView} className="rounded-lg bg-green-800 px-4 py-2 font-semibold disabled:opacity-50">
-                  {savingView ? "Saving…" : "Save view"}
-                </button>
-                <button type="button" onClick={downloadCsv} className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold hover:bg-white/20">
+                    {type === "All" ? "All types" : type}
+                  </button>
+                ))}
+                <button type="button" onClick={downloadCsv} className="mx-auto shrink-0 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/20 sm:ml-auto sm:mr-0">
                   Export CSV
                 </button>
-              </form>
-              {savedViews.length > 0 && (
-                <ul className="mt-3 flex flex-wrap gap-2">
-                  {savedViews.map((view) => (
-                    <li key={view.id} className="flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-xs text-white/70">
-                      {view.name}
-                      <button type="button" onClick={() => void deleteAnalyticsView(view.id)} aria-label={`Delete ${view.name}`} className="text-red-300">×</button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {viewMessage && <p role="status" className="mt-2 text-sm text-white/70">{viewMessage}</p>}
+              </div>
             </section>
 
-            <section aria-label="Brewing summary" className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <section aria-label="Brewing summary" className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">
               <Metric label="Batches logged" value={visibleBatches.length.toString()} />
               <Metric label="Finished batches" value={completed.length.toString()} />
               <Metric label="Average final ABV" value={avgAbv === null ? "—" : `${avgAbv.toFixed(1)}%`} />
               <Metric label="Average time to finish" value={avgDuration === null ? "—" : `${avgDuration.toFixed(0)} days`} />
               <Metric label="Average attenuation" value={averageAttenuation === null ? "—" : `${averageAttenuation.toFixed(1)}%`} />
+              <Metric label="Average packaged yield" value={averagePackagedYield === null ? "—" : `${averagePackagedYield.toFixed(1)}%`} />
+              <Metric label="Average OG vs recipe" value={averageOgVariance === null ? "—" : `${averageOgVariance >= 0 ? "+" : ""}${averageOgVariance.toFixed(3)}`} />
+              <Metric label="Average ABV vs recipe" value={averageAbvVariance === null ? "—" : `${averageAbvVariance >= 0 ? "+" : ""}${averageAbvVariance.toFixed(1)} pp`} />
             </section>
 
             <section className="mt-8 rounded-xl border border-white/10 bg-white/5 p-4 sm:p-6">
@@ -410,13 +375,21 @@ export default function BrewInsightsPage() {
                       return og !== null && fg !== null && og >= fg ? (og - fg) * 131.25 : null;
                     })();
                   return (
-                    <li key={batch.id} className="flex flex-wrap justify-between gap-2 rounded-lg border border-white/10 bg-white/5 p-3">
-                      <span className="font-medium">{batch.name || "Unnamed batch"}</span>
-                      <span className="text-sm text-white/60">
-                        {[batch.type, batch.finished_date ? new Date(batch.finished_date).toLocaleDateString() : null, abv === null ? null : `${abv.toFixed(1)}% ABV`]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </span>
+                    <li key={batch.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/5 p-3">
+                      <div className="min-w-0">
+                        <span className="font-medium">{batch.name || "Unnamed batch"}</span>
+                        <span className="mt-1 block text-sm text-white/60">
+                          {[batch.type, batch.finished_date ? new Date(batch.finished_date).toLocaleDateString() : null, abv === null ? null : `${abv.toFixed(1)}% ABV`]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                      </div>
+                      <Link
+                        href={`/brew-insights/${encodeURIComponent(batch.id)}`}
+                        className="shrink-0 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm font-semibold text-white/80 hover:bg-white/10 hover:text-white"
+                      >
+                        View batch insights
+                      </Link>
                     </li>
                   );
                 })}

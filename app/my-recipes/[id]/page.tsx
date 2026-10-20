@@ -8,6 +8,7 @@ import BackButton from "../BackButton";
 import { useRouter } from "next/navigation";
 import PageHeading from "@/app/components/PageHeading";
 import RecipeDetailsContent from "../RecipeDetailsContent";
+import RecipeBatchResults from "./RecipeBatchResults";
 
 export default function RecipeNotesPage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(true);
@@ -66,6 +67,15 @@ export default function RecipeNotesPage({ params }: { params: { id: string } }) 
           subtitle="Full recipe details and brewer’s notes."
         />
 
+        <nav aria-label="Recipe sections" className="mb-6 flex justify-center">
+          <a
+            href="#recipe-batch-results"
+            className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-green-200 hover:bg-white/10"
+          >
+            Results from this recipe
+          </a>
+        </nav>
+
         <div className="mb-6 flex flex-wrap justify-center gap-4 text-sm">
           <Link
             href={`/my-recipes/${encodeURIComponent(recipe.id)}/versions`}
@@ -85,9 +95,37 @@ export default function RecipeNotesPage({ params }: { params: { id: string } }) 
           >
             Export CSV
           </a>
+          {["Beer", "Braggot"].includes(recipe.type) ? (
+            <a
+              href={`/api/recipes/${encodeURIComponent(recipe.id)}/export?format=beerxml`}
+              className="text-amber-200 underline"
+            >
+              Export BeerXML
+            </a>
+          ) : null}
+          <a
+            href={`/api/recipes/${encodeURIComponent(recipe.id)}/export?format=beerjson`}
+            className="text-amber-200 underline"
+          >
+            Export BeerJSON
+          </a>
         </div>
 
         <RecipeDetailsContent recipe={recipe} />
+        <div id="recipe-batch-results" className="mt-8 scroll-mt-6">
+          <RecipeBatchResults recipeId={recipe.id} />
+        </div>
+
+        <p className="mt-6 text-center text-xs text-white/45">
+          Created{" "}
+          {recipe.created_at
+            ? new Date(recipe.created_at).toLocaleDateString("en-GB")
+            : "date unavailable"}{" "}
+          ·{" "}
+          {recipe.copyright_free === true
+            ? "Marked copyright-free by you."
+            : "Copyright belongs to you as the recipe uploader."}
+        </p>
       </div>
     </main>
   );

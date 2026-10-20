@@ -56,9 +56,16 @@ export default function BatchRecipeCard({ batch }: { batch: Batch }) {
     <div className="mt-5 rounded-xl border border-white/10 bg-white/[0.04] p-4 sm:p-5">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="text-lg font-semibold text-green-300">Recipe</h3>
-        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-white/70">
-          {brewTypeLabel(batch)}
-        </span>
+        <div className="flex flex-wrap gap-2">
+          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-white/70">
+            {brewTypeLabel(batch)}
+          </span>
+          {batch.type === "Beer" && batch.beer_style && (
+            <span className="rounded-full border border-green-300/30 bg-green-300/10 px-3 py-1 text-sm text-green-100">
+              {batch.beer_style}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="space-y-4">

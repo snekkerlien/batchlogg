@@ -82,7 +82,7 @@ export default function DashboardClient() {
   const [fadeMessage, setFadeMessage] = useState("");
   const [maxVessels, setMaxVessels] = useState(6);
   const [creatingKar, setCreatingKar] = useState(false);
-  const [showDashboardInfo, setShowDashboardInfo] = useState(true);
+  const [showDashboardInfo, setShowDashboardInfo] = useState(false);
   const [infoPreferenceLoaded, setInfoPreferenceLoaded] = useState(false);
   const dashboardLoadInProgress = useRef(false);
   const lastSilentDashboardLoad = useRef(0);
@@ -90,7 +90,7 @@ export default function DashboardClient() {
 useEffect(() => {
   try {
     setShowDashboardInfo(
-      window.localStorage.getItem("dashboard-info-hidden") !== "true"
+      window.localStorage.getItem("dashboard-info-visible") === "true"
     );
   } catch (error) {
     console.error("Could not load dashboard info preference", error);
@@ -104,8 +104,8 @@ useEffect(() => {
 
   try {
     window.localStorage.setItem(
-      "dashboard-info-hidden",
-      String(!showDashboardInfo)
+      "dashboard-info-visible",
+      String(showDashboardInfo)
     );
   } catch (error) {
     console.error("Could not save dashboard info preference", error);
@@ -385,6 +385,27 @@ useEffect(() => {
         {motd}
       </p>
 
+      <nav aria-label="Brewing workflow shortcuts" className="mb-8 flex flex-wrap justify-center gap-3">
+        <a
+          href="/my-recipes"
+          className="rounded-lg border border-green-500/50 bg-green-800/60 px-4 py-2 text-sm font-semibold hover:bg-green-700"
+        >
+          Plan a recipe
+        </a>
+        <a
+          href="/batch-history"
+          className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20"
+        >
+          Review batches
+        </a>
+        <a
+          href="/brew-insights"
+          className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20"
+        >
+          Learn from results
+        </a>
+      </nav>
+
       {loadError && (
         <div
           role="alert"
@@ -615,7 +636,7 @@ useEffect(() => {
             id="dashboard-info"
             className="text-center text-zinc-300 mt-4 mb-10 italic"
           >
-            The dashboard gives you a simple overview of all your vessels and their current status. Tap a vessel to open its details, check activity, or make adjustments. Use the + button to add new vessels up to your personal limit, and switch to selection mode when you want to manage several at once.
+            Check each vessel’s current stage in Vessel Overview, then open one to review or update its batch. Use Plan a recipe to start with a saved recipe, Review batches to revisit your brewing history, or Learn from results to explore your brewing insights. Create vessels with +, or choose Select vessels to manage several at once.
           </p>
         )}
       </div>

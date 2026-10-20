@@ -2,12 +2,14 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
+import ExpandArrowButton from "@/app/components/ExpandArrowButton";
 
 interface BatchReminder {
   id: string;
   type: "manual" | "sg_check";
   message: string;
   remind_at: string;
+  read_at: string | null;
 }
 
 function localDateTimeValue(date: Date) {
@@ -17,8 +19,10 @@ function localDateTimeValue(date: Date) {
 
 export default function BatchReminders({
   batchId,
+  stage,
 }: {
   batchId: string;
+  stage: "primary" | "secondary";
 }) {
   const [reminders, setReminders] = useState<BatchReminder[]>([]);
   const [remindAt, setRemindAt] = useState(() =>
@@ -31,6 +35,24 @@ export default function BatchReminders({
   const [error, setError] = useState("");
   const [deleteError, setDeleteError] = useState("");
   const [reminderToDelete, setReminderToDelete] = useState<BatchReminder | null>(null);
+  const stageLabel =
+    stage === "secondary" ? "Secondary fermentation" : "Primary fermentation";
+  const suggestedReminders =
+    stage === "secondary"
+      ? [
+          "Check gravity before packaging",
+          "Check for clearing",
+          "Schedule rack or transfer",
+          "Prepare packaging",
+          "Check carbonation",
+        ]
+      : [
+          "Take a gravity reading",
+          "Check fermentation temperature",
+          "Check fermentation activity",
+          "Schedule nutrient addition",
+          "Schedule rack or transfer",
+        ];
 
   const loadReminders = useCallback(async () => {
     const response = await fetch(
@@ -60,6 +82,17 @@ export default function BatchReminders({
       active = false;
     };
   }, [loadReminders]);
+
+  useEffect(() => {
+    if (window.location.hash !== "#batch-reminders-content") return;
+    setOpen(true);
+    const timeout = window.setTimeout(() => {
+      document
+        .getElementById("batch-reminders-content")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 350);
+    return () => window.clearTimeout(timeout);
+  }, [batchId]);
 
   async function createReminder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -128,23 +161,15 @@ export default function BatchReminders({
 
   return (
     <section className="mt-6 mb-6 rounded-xl border border-white/10 bg-white/5 p-4">
-      <button
-        type="button"
-        onClick={() => setOpen((current) => !current)}
-        aria-expanded={open}
-        aria-controls="batch-reminders-content"
-        className="flex w-full items-center justify-between text-left text-xl font-semibold text-green-300"
-      >
-        Batch reminders
-        <span
-          aria-hidden="true"
-          className={`text-xl text-white transition-transform duration-300 ${
-            open ? "rotate-90" : "rotate-180"
-          }`}
-        >
-          ▶
-        </span>
-      </button>
+      <div className="flex w-full items-center justify-between gap-3 text-left text-xl font-semibold text-green-300">
+        <span>{stageLabel} reminders</span>
+        <ExpandArrowButton
+          expanded={open}
+          label="batch reminders"
+          controls="batch-reminders-content"
+          onClick={() => setOpen((current) => !current)}
+        />
+      </div>
       <div
         id="batch-reminders-content"
         className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
@@ -153,8 +178,8 @@ export default function BatchReminders({
       >
         <div className="overflow-hidden">
           <p className="mt-1 text-sm text-white/70">
-            Set a reminder for this batch. You’ll also be gently reminded if it goes
-            7 days without a gravity reading.
+            Set a reminder for this stage of the batch. We’ll also remind you if
+            7 days pass without a gravity reading.
           </p>
 
           <form onSubmit={createReminder} className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -181,6 +206,18 @@ export default function BatchReminders({
                 className="rounded-lg border border-white/20 bg-black/40 p-3 text-white"
               />
             </label>
+            <div className="flex flex-wrap gap-2 sm:col-span-2">
+              {suggestedReminders.map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  onClick={() => setMessage(suggestion)}
+                  className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white/75 hover:bg-white/10"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
             <button
               type="submit"
               disabled={saving}
@@ -210,9 +247,21 @@ export default function BatchReminders({
                     className="flex flex-col gap-2 rounded-lg bg-black/20 p-3 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div>
-                      <p className="text-sm">{reminder.message}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm">{reminder.message}</p>
+                        {new Date(reminder.remind_at).getTime() <= Date.now() && (
+                          <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[11px] font-semibold text-amber-100">
+                            Due
+                          </span>
+                        )}
+                      </div>
                       <p className="mt-1 text-xs text-white/50">
-                        {reminder.type === "manual" ? "Scheduled" : "Gravity check"} ·{" "}
+                        {reminder.type === "manual"
+                          ? "Scheduled task"
+                          : reminder.message.includes("stayed within 0.001")
+                            ? "Stable gravity trend"
+                            : "Gravity check"}{" "}
+                        ·{" "}
                         {new Date(reminder.remind_at).toLocaleString("en-GB", {
                           dateStyle: "medium",
                           timeStyle: "short",

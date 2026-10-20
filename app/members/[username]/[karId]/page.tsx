@@ -217,6 +217,7 @@ batch = translateOldRecipe(batch);
     {/* ⭐ BEER */}
     {batch.type === "Beer" && (
       <>
+        {batch.beer_style && <p><strong>Beer style:</strong> {batch.beer_style}</p>}
         {batch.malts?.length > 0 && (
           <div>
             <strong>Malt additions:</strong>

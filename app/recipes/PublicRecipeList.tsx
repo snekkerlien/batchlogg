@@ -3,11 +3,13 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import RecipePresentation, { type RecipePresentationData } from "@/app/components/RecipePresentation";
+import ExpandArrowButton from "@/app/components/ExpandArrowButton";
 
 type PublicRecipe = RecipePresentationData & {
   id: string;
   user_id: string;
   created_at: string;
+  copyright_free: boolean;
   author: string;
   source: { id: string; name: string; author: string } | null;
 };
@@ -144,15 +146,7 @@ export default function PublicRecipeList({
               key={recipe.id}
               className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.04] transition-colors hover:border-white/20"
             >
-              <button
-                type="button"
-                aria-expanded={expandedRecipeId === recipe.id}
-                aria-controls={`public-recipe-${recipe.id}`}
-                onClick={() => setExpandedRecipeId(
-                  expandedRecipeId === recipe.id ? null : recipe.id
-                )}
-                className="flex w-full items-center justify-between gap-4 p-4 text-left sm:p-5"
-              >
+              <div className="flex w-full items-center justify-between gap-4 p-4 sm:p-5">
                 <span className="min-w-0">
                   <span className="block truncate text-lg font-semibold text-white">{recipe.name}</span>
                   <span className="mt-1 block text-sm text-white/60">
@@ -160,15 +154,15 @@ export default function PublicRecipeList({
                     {recipe.abv != null && <> <span aria-hidden="true">·</span> {Number(recipe.abv).toFixed(1)}% ABV</>}
                   </span>
                 </span>
-                <span
-                  aria-hidden="true"
-                  className={`shrink-0 text-2xl text-white transition-transform duration-200 ${
-                    expandedRecipeId === recipe.id ? "rotate-90" : "rotate-180"
-                  }`}
-                >
-                  ▶
-                </span>
-              </button>
+                <ExpandArrowButton
+                  expanded={expandedRecipeId === recipe.id}
+                  label={recipe.name || "recipe"}
+                  controls={`public-recipe-${recipe.id}`}
+                  onClick={() => setExpandedRecipeId(
+                    expandedRecipeId === recipe.id ? null : recipe.id
+                  )}
+                />
+              </div>
               <div
                 id={`public-recipe-${recipe.id}`}
                 aria-hidden={expandedRecipeId !== recipe.id}
@@ -203,6 +197,16 @@ export default function PublicRecipeList({
                       Open standalone recipe
                     </Link>
                   </div>
+                  <p className="mt-4 border-t border-white/10 pt-3 text-xs text-white/55">
+                    Created{" "}
+                    {recipe.created_at
+                      ? new Date(recipe.created_at).toLocaleDateString("en-GB")
+                      : "date unavailable"}
+                    {" · "}
+                    {recipe.copyright_free
+                      ? `Marked copyright-free by ${recipe.author}`
+                      : `Copyright © ${recipe.created_at ? new Date(recipe.created_at).getFullYear() : new Date().getFullYear()} ${recipe.author}. All rights reserved.`}
+                  </p>
                 </div>
               </div>
             </li>

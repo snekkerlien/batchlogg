@@ -12,6 +12,7 @@ import {
 import UserRestrictionControls, {
   type UserRestriction,
 } from "@/app/components/UserRestrictionControls";
+import ExpandArrowButton from "@/app/components/ExpandArrowButton";
 
 export interface MemberAdminDetails {
   email: string;
@@ -87,19 +88,24 @@ export default function MemberAdminActions({
 
   return (
     <section className="mb-8 rounded-xl border border-white/10 bg-white/5 p-5">
-      <button
-        type="button"
-        onClick={() => setOpen((current) => !current)}
-        aria-expanded={open}
-        aria-controls="member-admin-actions-content"
-        className={`flex w-full items-center justify-between gap-3 text-left ${open ? "mb-4" : ""}`}
-      >
+      <div className="flex w-full items-center justify-between gap-3 text-left">
         <h2 className="text-lg font-semibold text-green-200">Admin actions</h2>
-        <span aria-hidden className="text-white/60">
-          {open ? "▼" : "◀"}
-        </span>
-      </button>
-      {open && <div id="member-admin-actions-content">
+        <ExpandArrowButton
+          expanded={open}
+          label="member admin actions"
+          controls="member-admin-actions-content"
+          onClick={() => setOpen((current) => !current)}
+        />
+      </div>
+      <div
+        id="member-admin-actions-content"
+        aria-hidden={!open}
+        className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+          open ? "[grid-template-rows:1fr]" : "[grid-template-rows:0fr]"
+        }`}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <fieldset disabled={!open} className="mt-4 min-w-0 space-y-4 border-0 p-0">
       <form onSubmit={saveChanges} className="space-y-4">
         <label className="block text-sm font-medium text-white/80">
           Email
@@ -186,7 +192,9 @@ export default function MemberAdminActions({
         userId={userId}
         restrictions={details.restrictions}
       />
-      </div>}
+          </fieldset>
+        </div>
+      </div>
     </section>
   );
 }

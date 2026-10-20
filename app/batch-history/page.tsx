@@ -1,14 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import PageHeading from "../components/PageHeading";
+import ExpandArrowButton from "@/app/components/ExpandArrowButton";
+import BatchOutcomeSharing from "@/app/components/BatchOutcomeSharing";
 import { Qty } from "@/app/components/Units";
+import ConfirmDialog from "@/app/components/ConfirmDialog";
 import { formatSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
 
 const BatchSGChart = dynamic(
@@ -44,13 +48,20 @@ function getCurrentAbv(og: unknown, readings: Array<{ sg: unknown }>) {
   return ((originalGravity - currentGravity) * 131.25).toFixed(2);
 }
 
-export default function BatchHistoryPage() {
+function BatchHistoryContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedBatchId = searchParams.get("batchId");
 
   const [loading, setLoading] = useState(true);
   const [batches, setBatches] = useState<any[]>([]);
   const [kars, setKars] = useState<any[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [batchTypeFilter, setBatchTypeFilter] = useState("All");
+  const [batchSearch, setBatchSearch] = useState("");
+  const [batchSort, setBatchSort] = useState<"newest" | "oldest" | "name">(
+    "newest"
+  );
   const [sgReadingsError, setSgReadingsError] = useState("");
   const [sgPremiumRequired, setSgPremiumRequired] = useState(false);
   const [batchLoadError, setBatchLoadError] = useState("");
@@ -157,11 +168,57 @@ export default function BatchHistoryPage() {
     }
 
     load();
-  }, []);
+  }, [router]);
+
+  useEffect(() => {
+    if (!requestedBatchId || batches.length === 0) return;
+    const requestedBatch = batches.find(
+      (batch) => String(batch.id) === requestedBatchId
+    );
+    if (requestedBatch) setExpanded(String(requestedBatch.id));
+  }, [batches, requestedBatchId]);
+
+  useEffect(() => {
+    if (!requestedBatchId || expanded !== requestedBatchId) return;
+    const frame = window.requestAnimationFrame(() => {
+      document
+        .getElementById(`batch-record-${requestedBatchId}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [expanded, requestedBatchId]);
 
   function toggle(id: string) {
     setExpanded(expanded === id ? null : id);
   }
+
+  const filteredBatches = batches
+    .filter(
+      (batch) =>
+        batchTypeFilter === "All" ||
+        String(batch.type ?? "").toLowerCase() === batchTypeFilter.toLowerCase()
+    )
+    .filter((batch) => {
+      const query = batchSearch.trim().toLowerCase();
+      return (
+        !query ||
+        String(batch.name ?? "").toLowerCase().includes(query) ||
+        String(batch.type ?? "").toLowerCase().includes(query)
+      );
+    });
+
+  const sortedBatches = [...filteredBatches].sort((a, b) => {
+    if (batchSort === "name") {
+      return String(a.name ?? "").localeCompare(String(b.name ?? ""), undefined, {
+        sensitivity: "base",
+      });
+    }
+    const direction = batchSort === "newest" ? -1 : 1;
+    return (
+      direction *
+      (new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    );
+  });
 
   async function deleteBatch(id: string) {
     const res = await fetch("/api/batches/delete", {
@@ -214,90 +271,311 @@ export default function BatchHistoryPage() {
           </p>
         )}
 
+        {!batchLoadError && batches.length > 0 && (
+          <section aria-label="Filter batches" className="mx-auto mb-6 max-w-full space-y-3 sm:w-fit">
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <label className="min-w-0 flex-1">
+                <span className="sr-only">Search batches</span>
+                <input
+                  type="search"
+                  value={batchSearch}
+                  onChange={(event) => setBatchSearch(event.target.value)}
+                  placeholder="Search batches"
+                  className="w-full rounded-lg border border-white/20 bg-black/40 p-3 text-sm"
+                />
+              </label>
+              <label>
+                <span className="sr-only">Sort batches</span>
+                <select
+                  value={batchSort}
+                  onChange={(event) =>
+                    setBatchSort(event.target.value as typeof batchSort)
+                  }
+                  className="w-full rounded-lg border border-white/20 bg-black/40 p-3 text-sm sm:w-auto"
+                >
+                  <option value="newest">Newest first</option>
+                  <option value="oldest">Oldest first</option>
+                  <option value="name">Name A–Z</option>
+                </select>
+              </label>
+            </div>
+            <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:justify-center">
+              {["All", "Mead", "Beer", "Cider", "Wine", "Seltzer", "Braggot", "Other"].map(
+                (batchType) => (
+                  <button
+                    key={batchType}
+                    type="button"
+                    onClick={() => setBatchTypeFilter(batchType)}
+                    aria-pressed={batchTypeFilter === batchType}
+                    className={`rounded-lg border px-2 py-2 text-center text-sm sm:px-3 ${
+                      batchTypeFilter === batchType
+                        ? "border-green-500 bg-green-700"
+                        : "border-white/20 bg-white/10 hover:bg-white/20"
+                    }`}
+                  >
+                    {batchType}
+                  </button>
+                )
+              )}
+            </div>
+          </section>
+        )}
+
         {!batchLoadError && batches.length === 0 ? (
-          <p className="text-center opacity-70">No batches found.</p>
+          <section className="rounded-xl border border-white/10 bg-white/5 p-6 text-center">
+            <h2 className="font-semibold">Your brewing history starts with a batch.</h2>
+            <p className="mt-2 text-sm text-white/60">
+              Create a batch to track fermentation, readings, packaging, and results in one place.
+            </p>
+            <Link
+              href="/dashboard"
+              className="mt-4 inline-flex min-h-10 items-center rounded-lg border border-green-400/50 bg-green-700 px-4 py-2 text-sm font-semibold text-white hover:bg-green-600"
+            >
+              Start a batch
+            </Link>
+          </section>
+        ) : !batchLoadError && sortedBatches.length === 0 ? (
+          <section className="rounded-xl border border-white/10 bg-white/5 p-6 text-center">
+            <p className="text-white/70">No batches match these search and type filters.</p>
+            <button
+              type="button"
+              onClick={() => {
+                setBatchSearch("");
+                setBatchTypeFilter("All");
+              }}
+              className="mt-4 rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20"
+            >
+              Clear filters
+            </button>
+          </section>
         ) : !batchLoadError ? (
           <div className="space-y-4">
-            {batches.map((batch) => {
+            {sortedBatches.map((batch) => {
               const isFinished =
                 Boolean(batch.finished_date) ||
-                ["finished", "avsluttet"].includes(
+                ["finished", "avsluttet", "ferdig"].includes(
                   String(batch.status ?? "").toLowerCase()
                 );
               const currentAbv = isFinished
                 ? null
                 : getCurrentAbv(batch.og, batch.sgReadings);
               const status = String(batch.status ?? "");
+              const normalizedStatus = status.toLowerCase();
+              const isSecondary = ["sekundær", "secondary"].includes(normalizedStatus);
+              const statusLabel = isFinished
+                ? "Finished"
+                : isSecondary
+                  ? "Secondary"
+                  : ["aktiv", "active"].includes(normalizedStatus)
+                    ? "Primary"
+                    : status;
+              const originalGravity = Number(batch.og);
+              const finalGravity =
+                batch.fg === null || batch.fg === undefined
+                  ? null
+                  : Number(batch.fg);
+              const currentGravity =
+                !isFinished && batch.sgReadings.length > 0
+                  ? Number(batch.sgReadings[batch.sgReadings.length - 1].sg)
+                  : null;
+              const abvValue = isFinished
+                ? batch.abv === null || batch.abv === undefined
+                  ? null
+                  : Number(batch.abv)
+                : currentAbv === null
+                  ? null
+                  : Number(currentAbv);
+              const batchMetrics = [
+                {
+                  label: "OG",
+                  value: Number.isFinite(originalGravity)
+                    ? originalGravity.toFixed(3)
+                    : "—",
+                },
+                {
+                  label: isFinished ? "FG" : "Current SG",
+                  value: Number.isFinite(isFinished ? finalGravity : currentGravity)
+                    ? Number(isFinished ? finalGravity : currentGravity).toFixed(3)
+                    : "—",
+                },
+                {
+                  label: isFinished ? "Final ABV" : "Current ABV",
+                  value: abvValue !== null && Number.isFinite(abvValue)
+                    ? `${abvValue.toFixed(1)}%`
+                    : "—",
+                },
+              ];
+              const recipeSnapshot =
+                batch.recipe_snapshot &&
+                typeof batch.recipe_snapshot === "object" &&
+                !Array.isArray(batch.recipe_snapshot)
+                  ? (batch.recipe_snapshot as Record<string, unknown>)
+                  : null;
 
               return (
                 <div
                   key={batch.id}
-                  className="bg-white/10 border border-white/20 rounded-xl p-4"
+                  id={`batch-record-${batch.id}`}
+                className="rounded-2xl border border-white/15 bg-gradient-to-br from-white/[0.09] via-white/[0.05] to-black/40 p-4 shadow-lg shadow-black/15 sm:p-5"
                 >
-                {/* HEADER — ONLY THIS AREA EXPANDS */}
-                <div
-                  className="w-full flex justify-between items-center mb-2 cursor-pointer"
-                  onClick={() => toggle(batch.id)}
-                >
-                  <div className="flex flex-col">
-                    <span className="text-xl font-bold text-green-300">
-                      {batch.name}
-                    </span>
-
-                    <span className="text-sm opacity-70">
-                      {new Date(batch.startdato).toLocaleDateString("en-GB")}
-                    </span>
+                <div className="flex w-full items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="truncate text-lg font-bold text-green-200 sm:text-xl">
+                        {batch.name || "Unnamed batch"}
+                      </h2>
+                      <span
+                        className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
+                          isFinished
+                            ? "border-green-300/20 bg-green-300/10 text-green-100"
+                            : isSecondary
+                              ? "border-amber-200/20 bg-amber-200/10 text-amber-100"
+                              : "border-white/15 bg-white/5 text-white/75"
+                        }`}
+                      >
+                        {statusLabel}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-white/55 sm:text-sm">
+                      {batch.type || "Batch"}
+                      {batch.batchnummer ? ` · Batch ${batch.batchnummer}` : ""}
+                      {batch.startdato
+                        ? ` · Started ${new Date(batch.startdato).toLocaleDateString("en-GB")}`
+                        : ""}
+                      {isFinished && batch.finished_date
+                        ? ` · Finished ${new Date(batch.finished_date).toLocaleDateString("en-GB")}`
+                        : ""}
+                    </p>
                   </div>
 
-                  <div className="flex items-center gap-3">
-
-                    {/* ALWAYS VISIBLE DELETE BUTTON — NOW OPENS CONFIRMATION */}
+                  <div className="flex shrink-0 items-center gap-2">
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation(); // prevent expand
-                        setConfirmDeleteId(batch.id); // open modal
-                      }}
-                      className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
+                      type="button"
+                      onClick={() => setConfirmDeleteId(batch.id)}
+                      className="rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-xs font-medium text-white/55 transition hover:border-white/20 hover:bg-white/10 hover:text-white/80 sm:px-3 sm:text-sm"
                     >
                       Delete
                     </button>
-
-                    <span
-                      className={`text-white text-2xl transition-transform duration-200 ${
-                        expanded === batch.id ? "rotate-90" : "rotate-180"
-                      }`}
-                    >
-                      ▶
-                    </span>
+                    <ExpandArrowButton
+                      expanded={expanded === batch.id}
+                      label={batch.name || "batch"}
+                      controls={`batch-details-${batch.id}`}
+                      onClick={() => toggle(batch.id)}
+                    />
                   </div>
                 </div>
-                {/* COLLAPSIBLE CONTENT */}
+
+                {expanded !== batch.id && (
+                  <div
+                    aria-label={`${batch.name || "Batch"} summary`}
+                    className="mt-4 grid grid-cols-3 gap-2"
+                  >
+                    {batchMetrics.map((metric) => (
+                      <div
+                        key={metric.label}
+                        className="min-w-0 rounded-xl border border-white/10 bg-black/20 px-2.5 py-2 sm:px-3"
+                      >
+                        <p className="truncate text-[10px] font-medium uppercase tracking-wide text-white/45 sm:text-xs">
+                          {metric.label}
+                        </p>
+                        <p className="mt-1 truncate text-sm font-semibold text-white/90 sm:text-base">
+                          {metric.value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <div
+                  id={`batch-details-${batch.id}`}
                   className={`transition-all duration-300 ease-in-out overflow-hidden ${
-                    expanded === batch.id ? "max-h-[5000px] mt-4" : "max-h-0"
+                    expanded === batch.id
+                      ? "max-h-[6000px] mt-4 border-t border-white/10 pt-4"
+                      : "max-h-0"
                   }`}
                 >
-                  <div className="space-y-4 opacity-90">
+                <div className="space-y-4 opacity-90">
+                    {batch.recipe_id && (
+                      <div className="flex flex-wrap gap-x-4 gap-y-2">
+                        <Link
+                          href={`/my-recipes/${encodeURIComponent(batch.recipe_id)}`}
+                          className="inline-block text-sm font-semibold text-amber-200 underline underline-offset-4"
+                        >
+                          View source recipe
+                        </Link>
+                        <Link
+                          href={`/my-recipes/${encodeURIComponent(batch.recipe_id)}/versions`}
+                          className="inline-block text-sm font-semibold text-amber-200 underline underline-offset-4"
+                        >
+                          Compare recipe versions
+                        </Link>
+                        <Link
+                          href={`/my-recipes?start=${encodeURIComponent(batch.recipe_id)}`}
+                          className="inline-block text-sm font-semibold text-green-200 underline underline-offset-4"
+                        >
+                          Brew this recipe again
+                        </Link>
+                      </div>
+                    )}
+                    {isFinished && (
+                      <Link
+                        href={`/brew-insights/${encodeURIComponent(batch.id)}`}
+                        className="inline-block text-sm font-semibold text-green-200 underline underline-offset-4"
+                      >
+                        Review this batch’s results
+                      </Link>
+                    )}
+                    {recipeSnapshot && (
+                      <section className="space-y-2 rounded-lg border border-white/10 bg-black/20 p-4">
+                        <h3 className="font-semibold text-green-300">
+                          Recipe targets when this batch started
+                        </h3>
+                        <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-white/75">
+                          {recipeSnapshot.og != null &&
+                            Number.isFinite(Number(recipeSnapshot.og)) && (
+                              <span>
+                                OG {Number(recipeSnapshot.og).toFixed(3)}
+                                {Number.isFinite(Number(batch.og))
+                                  ? ` · actual ${Number(batch.og).toFixed(3)}`
+                                  : ""}
+                              </span>
+                            )}
+                          {recipeSnapshot.fg != null &&
+                            Number.isFinite(Number(recipeSnapshot.fg)) && (
+                              <span>
+                                FG target {Number(recipeSnapshot.fg).toFixed(3)}
+                                {batch.fg != null
+                                  ? ` · actual ${Number(batch.fg).toFixed(3)}`
+                                  : ""}
+                              </span>
+                            )}
+                          {recipeSnapshot.abv != null &&
+                            Number.isFinite(Number(recipeSnapshot.abv)) && (
+                              <span>
+                                ABV target {Number(recipeSnapshot.abv).toFixed(1)}%
+                                {batch.abv != null
+                                  ? ` · actual ${Number(batch.abv).toFixed(1)}%`
+                                  : ""}
+                              </span>
+                            )}
+                          {recipeSnapshot.volume != null && (
+                            <span>
+                              Volume target{" "}
+                              <Qty kind="volume" value={String(recipeSnapshot.volume)} />
+                            </span>
+                          )}
+                        </div>
+                      </section>
+                    )}
+                    {batch.type === "Beer" && batch.beer_style && (
+                      <p className="text-sm">
+                        <strong>Beer style:</strong> {batch.beer_style}
+                      </p>
+                    )}
 
                     <p className="text-sm">
-                      <strong>Batch number:</strong> {batch.batchnummer}
-                    </p>
-
-                    <p className="text-sm">
-                      <strong>Status:</strong>{" "}
-                      {status.toLowerCase() === "avsluttet"
-                        ? "Finished"
-                        : ["sekundær", "secondary"].includes(status.toLowerCase())
-                          ? "Secondary"
-                          : status}
-                    </p>
-
-                    <p className="text-sm">
-                      <strong>Type:</strong> {batch.type}
-                    </p>
-
-                    <p className="text-sm">
-                      <strong>Volume:</strong> <Qty kind="volume" value={batch.volume_l} />
+                      <strong>Planned volume:</strong>{" "}
+                      <Qty kind="volume" value={batch.volume_l} />
                     </p>
 
                     <p className="text-sm">
@@ -373,6 +651,70 @@ export default function BatchHistoryPage() {
                         <strong>Finished notes:</strong>{"\n"}
                         {batch.finished_notes}
                       </p>
+                    )}
+
+                    {batch.packaged_volume_l != null && (
+                      <section className="space-y-2 rounded-lg border border-white/10 bg-black/20 p-4">
+                        <h3 className="font-semibold text-green-300">Packaging</h3>
+                        <p className="text-sm">
+                          <strong>Packaged volume:</strong>{" "}
+                          <Qty kind="volume" value={batch.packaged_volume_l} />
+                        </p>
+                        {batch.packaging_method && (
+                          <p className="text-sm">
+                            <strong>Method:</strong> {batch.packaging_method}
+                          </p>
+                        )}
+                        {batch.package_count != null && (
+                          <p className="text-sm">
+                            <strong>Packages:</strong> {batch.package_count}
+                          </p>
+                        )}
+                        {batch.bottle_volume_l != null && (
+                          <p className="text-sm">
+                            <strong>Bottled:</strong>{" "}
+                            <Qty kind="volume" value={batch.bottle_volume_l} />
+                          </p>
+                        )}
+                        {batch.keg_volume_l != null && (
+                          <p className="text-sm">
+                            <strong>Kegged:</strong>{" "}
+                            <Qty kind="volume" value={batch.keg_volume_l} />
+                          </p>
+                        )}
+                        {batch.carbonation_method && (
+                          <p className="text-sm">
+                            <strong>Carbonation:</strong> {batch.carbonation_method}
+                            {batch.target_carbonation_volumes != null
+                              ? ` · ${Number(batch.target_carbonation_volumes).toFixed(1)} volumes CO₂`
+                              : ""}
+                          </p>
+                        )}
+                        {batch.priming_sugar_g != null && (
+                          <p className="text-sm">
+                            <strong>Priming sugar:</strong>{" "}
+                            {Number(batch.priming_sugar_g).toFixed(1)} g
+                          </p>
+                        )}
+                        {batch.tasting_notes && (
+                          <p className="whitespace-pre-line text-sm">
+                            <strong>Tasting notes:</strong>{" "}
+                            {batch.tasting_notes}
+                          </p>
+                        )}
+                      </section>
+                    )}
+
+                    {isFinished && (
+                      <BatchOutcomeSharing
+                        batchId={batch.id}
+                        batchType={batch.type}
+                        hasSourceRecipe={Boolean(batch.recipe_id)}
+                        initiallyShared={batch.share_outcome_publicly === true}
+                        initiallySharingTastingNotes={
+                          batch.share_tasting_notes_publicly === true
+                        }
+                      />
                     )}
 
                     {(batch.secondary_startdate ||
@@ -572,39 +914,34 @@ export default function BatchHistoryPage() {
           </div>
         ) : null}
 
-        {/* ⭐ CONFIRM DELETE MODAL */}
-        {confirmDeleteId && (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-zinc-900 border border-white/20 p-6 rounded-xl w-full max-w-sm text-white">
-              <h2 className="text-xl font-bold mb-4">Delete batch?</h2>
-
-              <p className="opacity-80 mb-6">
-                Are you sure you want to delete this batch? This action cannot be undone.
-              </p>
-
-              <div className="flex justify-end gap-4">
-                <button
-                  onClick={() => setConfirmDeleteId(null)}
-                  className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 border border-zinc-500 rounded-lg font-semibold"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  onClick={async () => {
-                    await deleteBatch(confirmDeleteId);
-                    setConfirmDeleteId(null);
-                  }}
-                  className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <ConfirmDialog
+          open={confirmDeleteId !== null}
+          title="Delete batch?"
+          message="Are you sure you want to delete this batch? This action cannot be undone."
+          confirmLabel="Delete"
+          onConfirm={async () => {
+            if (!confirmDeleteId) return false;
+            await deleteBatch(confirmDeleteId);
+            return true;
+          }}
+          onCancel={() => setConfirmDeleteId(null)}
+        />
 
       </div>
     </main>
+  );
+}
+
+export default function BatchHistoryPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center text-white">
+          Loading batch history…
+        </main>
+      }
+    >
+      <BatchHistoryContent />
+    </Suspense>
   );
 }

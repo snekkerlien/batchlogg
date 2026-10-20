@@ -13,6 +13,48 @@ export type UserPreferences = {
   onboarding_completed?: boolean;
 };
 
+type BrewingPreferences = Pick<
+  UserPreferences,
+  "use_inventory_for_batches" | "batch_reminders_enabled" | "is_public"
+>;
+
+export async function saveBrewingPreferences(
+  preferences: Partial<BrewingPreferences>
+) {
+  const entries = Object.entries(preferences);
+  const allowedPreferences = [
+    "use_inventory_for_batches",
+    "batch_reminders_enabled",
+    "is_public",
+  ];
+  if (
+    entries.length === 0 ||
+    entries.some(
+      ([key, value]) =>
+        !allowedPreferences.includes(key) || typeof value !== "boolean"
+    )
+  ) {
+    throw new Error("Invalid brewing preferences");
+  }
+
+  const { supabase } = await supabaseServer();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+  if (userError || !user) throw new Error("Authentication required");
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .update(preferences)
+    .eq("id", user.id)
+    .select("id")
+    .maybeSingle();
+
+  if (error) throw new Error(`Could not save brewing preferences: ${error.message}`);
+  if (!data) throw new Error("Could not find the profile to save brewing preferences");
+}
+
 export async function saveUserPreferences(preferences: UserPreferences) {
   if (
     !isAccentColor(preferences.theme_accent_color) ||

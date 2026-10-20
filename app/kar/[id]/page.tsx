@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import dynamic from "next/dynamic";
@@ -14,6 +15,7 @@ import PageHeading from "@/app/components/PageHeading";
 import BatchReminders from "./BatchReminders";
 import BatchRecipeCard from "./BatchRecipeCard";
 import ActiveBatchOverview from "./ActiveBatchOverview";
+import BrewDayChecklist from "./BrewDayChecklist";
 import QRCode from "qrcode";
 
 
@@ -23,6 +25,7 @@ import BatchEditTypeFields from "./BatchEditTypeFields";
 import { formatSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
 import RecipeSecondaryFields from "@/app/my-recipes/new/RecipeSecondaryFields";
 import VesselActivity from "./VesselActivity";
+import ExpandArrowButton from "@/app/components/ExpandArrowButton";
 
 const BatchSGChart = dynamic(
   () => import("@/app/components/BatchSGChart"),
@@ -44,6 +47,8 @@ export default function KarPage({ params }: { params: { id: string } }) {
   const [openFinish, setOpenFinish] = useState(false);
   const [openMove, setOpenMove] = useState(false);
   const [openSharing, setOpenSharing] = useState(false);
+  const [openSharedNotes, setOpenSharedNotes] = useState(false);
+  const [openBatchNotes, setOpenBatchNotes] = useState(false);
   const [confirmCancelBatch, setConfirmCancelBatch] = useState(false);
   const cancelBatchFormRef = useRef<HTMLFormElement>(null);
   const cancelBatchConfirmedRef = useRef(false);
@@ -68,6 +73,10 @@ export default function KarPage({ params }: { params: { id: string } }) {
   const [showQR, setShowQR] = useState(false);
   const [qrPng, setQrPng] = useState<string | null>(null);
   const [karLoading, setKarLoading] = useState(true);
+  const [lifecycleSchemaStatus, setLifecycleSchemaStatus] = useState<
+    "checking" | "ready" | "unavailable"
+  >("checking");
+  const [lifecycleSchemaMessage, setLifecycleSchemaMessage] = useState("");
 
   const [openStyleSelect, setOpenStyleSelect] = useState(false);
   const [freeVessels, setFreeVessels] = useState<any[]>([]);
@@ -75,6 +84,48 @@ export default function KarPage({ params }: { params: { id: string } }) {
   const latestSG = sgReadings.length > 0
     ? Number(sgReadings[sgReadings.length - 1].sg)
     : null;
+
+  useEffect(() => {
+    if (!activeBatch?.id) return;
+
+    let active = true;
+    setLifecycleSchemaStatus("checking");
+    setLifecycleSchemaMessage("");
+    void (async () => {
+      try {
+        const { error } = await supabase
+          .from("batches")
+          .select(
+            "packaged_volume_l, packaging_method, bottle_volume_l, keg_volume_l, package_count, carbonation_method, target_carbonation_volumes, priming_sugar_g, tasting_notes, packaged_at, share_outcome_publicly, share_tasting_notes_publicly, recipe_id, recipe_snapshot"
+          )
+          .eq("id", activeBatch.id)
+          .maybeSingle();
+        if (!active) return;
+        if (error) {
+          console.error("Could not verify batch lifecycle database fields", error);
+          setLifecycleSchemaStatus("unavailable");
+          setLifecycleSchemaMessage(
+            ["42703", "PGRST204"].includes(error.code ?? "")
+              ? "Batch packaging is unavailable until the batch lifecycle database migration is applied."
+              : "Could not verify batch packaging storage. Please try again later."
+          );
+          return;
+        }
+        setLifecycleSchemaStatus("ready");
+      } catch (error) {
+        console.error("Could not verify batch lifecycle database fields", error);
+        if (!active) return;
+        setLifecycleSchemaStatus("unavailable");
+        setLifecycleSchemaMessage(
+          "Could not verify batch packaging storage. Please try again later."
+        );
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [activeBatch?.id]);
 
   const currentAbv =
     activeBatch?.og && latestSG
@@ -392,23 +443,17 @@ async function toggleVisibility() {
 
 const sharingSection = isOwner ? (
   <div className="mb-6 rounded-lg border border-white/10 bg-white/5 p-4">
-    <button
-      type="button"
-      onClick={() => setOpenSharing((open) => !open)}
-      aria-expanded={openSharing}
-      className="w-full flex items-center justify-between font-semibold text-green-300"
-    >
-      Share vessel with friends
-      <span
-        className={`text-white text-xl transition-transform duration-300 ${
-          openSharing ? "rotate-90" : "rotate-180"
-        }`}
-      >
-        ▶
-      </span>
-    </button>
+    <div className="flex w-full items-center justify-between gap-3 font-semibold text-green-300">
+      <span>Share vessel with friends</span>
+      <ExpandArrowButton
+        expanded={openSharing}
+        label="vessel sharing"
+        controls="vessel-sharing-content"
+        onClick={() => setOpenSharing((open) => !open)}
+      />
+    </div>
     {openSharing && (
-      <div className="mt-4">
+      <div id="vessel-sharing-content" className="mt-4">
         <VesselContributors
           karId={kar.id}
           onSharingChange={setHasSharedContributors}
@@ -558,12 +603,8 @@ const sharingSection = isOwner ? (
   </p>
 )}
 
-
-
-
-
         {/* EMPTY VESSEL */}
-{!activeBatch && (
+        {!activeBatch && (
   <>
     <p className="text-center opacity-70 mb-6">
       This vessel is currently empty.
@@ -699,7 +740,10 @@ const sharingSection = isOwner ? (
       
 
       <ActiveBatchOverview batch={activeBatch} secondary />
-      <section className="mb-5 rounded-xl border border-white/10 bg-white/[0.04] p-5">
+      <div id="batch-recipe" className="scroll-mt-6">
+        <BatchRecipeCard batch={activeBatch} />
+      </div>
+      <section className="mb-5 mt-5 rounded-xl border border-white/10 bg-white/[0.04] p-5">
         <h3 className="mb-3 text-lg font-semibold text-green-300">Secondary fermentation</h3>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-lg border border-white/10 bg-black/20 p-4">
@@ -724,7 +768,30 @@ const sharingSection = isOwner ? (
           </div>
         </div>
       </section>
-      <BatchRecipeCard batch={activeBatch} />
+      <BrewDayChecklist
+        batchId={String(activeBatch.id)}
+        batchType={activeBatch.type}
+        beerSubtype={activeBatch.beer_subtype}
+        batchName={activeBatch.name}
+        boilMinutes={activeBatch.boil_time}
+        isSecondary
+      />
+      {activeBatch.recipe_id && (
+        <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
+          <Link
+            href={`/my-recipes/${encodeURIComponent(activeBatch.recipe_id)}`}
+            className="text-sm font-semibold text-amber-200 underline underline-offset-4"
+          >
+            View source recipe
+          </Link>
+          <Link
+            href={`/my-recipes?start=${encodeURIComponent(activeBatch.recipe_id)}`}
+            className="text-sm font-semibold text-amber-200 underline underline-offset-4"
+          >
+            Brew this recipe again
+          </Link>
+        </div>
+      )}
       <p className="mt-4 text-sm text-white/50">
         Created: {new Date(activeBatch.created_at).toLocaleDateString("en-US")}
       </p>
@@ -815,7 +882,32 @@ const sharingSection = isOwner ? (
       )}
       
       <ActiveBatchOverview batch={activeBatch} />
-      <BatchRecipeCard batch={activeBatch} />
+      <div id="batch-recipe" className="scroll-mt-6">
+        <BatchRecipeCard batch={activeBatch} />
+      </div>
+      <BrewDayChecklist
+        batchId={String(activeBatch.id)}
+        batchType={activeBatch.type}
+        beerSubtype={activeBatch.beer_subtype}
+        batchName={activeBatch.name}
+        boilMinutes={activeBatch.boil_time}
+      />
+      {activeBatch.recipe_id && (
+        <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
+          <Link
+            href={`/my-recipes/${encodeURIComponent(activeBatch.recipe_id)}`}
+            className="text-sm font-semibold text-amber-200 underline underline-offset-4"
+          >
+            View source recipe
+          </Link>
+          <Link
+            href={`/my-recipes?start=${encodeURIComponent(activeBatch.recipe_id)}`}
+            className="text-sm font-semibold text-amber-200 underline underline-offset-4"
+          >
+            Brew this recipe again
+          </Link>
+        </div>
+      )}
       <p className="mt-4 text-sm text-white/50">
         Created: {new Date(activeBatch.created_at).toLocaleDateString("en-US")}
       </p>
@@ -828,22 +920,18 @@ const sharingSection = isOwner ? (
     {/* ⭐ Rack to secondary */}
 {hasActive && canContribute && activeBatch.status === "Aktiv" && (
   <div className="mt-6 bg-white/5 border border-white/10 rounded-lg p-4">
-    <button
-      type="button"
-      onClick={() => setOpenSecondaryActive(!openSecondaryActive)}
-      className="w-full flex items-center justify-between font-semibold text-green-300 cursor-pointer"
-    >
-      Rack to secondary
-      <span
-        className={`text-white text-xl transition-transform duration-300 ${
-          openSecondaryActive ? "rotate-90" : "rotate-180"
-        }`}
-      >
-        ▶
-      </span>
-    </button>
+    <div className="flex w-full items-center justify-between gap-3 font-semibold text-green-300">
+      <span>Rack to secondary</span>
+      <ExpandArrowButton
+        expanded={openSecondaryActive}
+        label="rack to secondary"
+        controls="rack-to-secondary-content"
+        onClick={() => setOpenSecondaryActive((open) => !open)}
+      />
+    </div>
 
     <div
+      id="rack-to-secondary-content"
       className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
         openSecondaryActive ? "[grid-template-rows:1fr]" : "[grid-template-rows:0fr]"
       }`}
@@ -883,22 +971,18 @@ const sharingSection = isOwner ? (
                  </div>
                ) : (
                  <>
-               <button
-      type="button"
-      onClick={() => setOpenSG(!openSG)}
-      className="w-full flex items-center justify-between font-semibold text-green-300 cursor-pointer"
-    >
-      Specific Gravity Development (SG)
-      <span
-        className={`text-white text-xl transition-transform duration-300 ${
-          openSG ? "rotate-90" : "rotate-180"
-        }`}
-      >
-        ▶
-      </span>
-    </button>
+               <div className="flex w-full items-center justify-between gap-3 font-semibold text-green-300">
+      <span>Specific Gravity Development (SG)</span>
+      <ExpandArrowButton
+        expanded={openSG}
+        label="specific gravity development"
+        controls="specific-gravity-content"
+        onClick={() => setOpenSG((open) => !open)}
+      />
+    </div>
 
     <div
+      id="specific-gravity-content"
       className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
         openSG ? "[grid-template-rows:1fr]" : "[grid-template-rows:0fr]"
       }`}
@@ -969,25 +1053,21 @@ const sharingSection = isOwner ? (
   </div>
 )}
 
-{/* Finish batch under Rack to secondary */}
+{/* Package and finish the batch */}
 {canContribute && hasActive && (
-  <div className="bg-white/5 border border-white/10 rounded-lg p-4 mt-6">
-    <button
-      type="button"
-      onClick={() => setOpenFinish(!openFinish)}
-      className="w-full flex items-center justify-between font-semibold text-green-300 cursor-pointer"
-    >
-      Finish batch
-      <span
-        className={`text-white text-xl transition-transform duration-300 ${
-          openFinish ? "rotate-90" : "rotate-180"
-        }`}
-      >
-        ▶
-      </span>
-    </button>
+  <div id="finish-batch" className="scroll-mt-6 bg-white/5 border border-white/10 rounded-lg p-4 mt-6">
+    <div className="flex w-full items-center justify-between gap-3 font-semibold text-green-300">
+      <span>Package &amp; finish</span>
+      <ExpandArrowButton
+        expanded={openFinish}
+        label="package and finish batch"
+        controls="finish-batch-content"
+        onClick={() => setOpenFinish((open) => !open)}
+      />
+    </div>
 
     <div
+      id="finish-batch-content"
       className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
         openFinish ? "[grid-template-rows:1fr]" : "[grid-template-rows:0fr]"
       }`}
@@ -1000,14 +1080,131 @@ const sharingSection = isOwner ? (
           <input type="hidden" name="batch_id" value={activeBatch.id} />
           <input type="hidden" name="kar_id" value={kar.id} />
 
+          <p className="text-sm text-white/70">
+            Record what you packaged and how it turned out. These details will
+            be saved with this finished batch.
+          </p>
+          {lifecycleSchemaMessage && (
+            <p role="alert" className="text-sm text-amber-300">
+              {lifecycleSchemaMessage}
+            </p>
+          )}
+
           <input
             type="number"
             step="0.001"
             name="fg"
+            aria-label="Final Gravity (FG)"
             placeholder="Final Gravity (FG)"
             className="p-3 rounded bg-black/40 border border-white/20"
             required
           />
+
+          <label className="flex flex-col gap-2 text-sm font-medium">
+            Packaged volume (<UnitSymbol kind="volume" />)
+            <UnitInput
+              kind="volume"
+              name="packaged_volume_l"
+              min="0.01"
+              step="0.01"
+              required
+              className="p-3 rounded bg-black/40 border border-white/20"
+            />
+          </label>
+
+          <label className="flex flex-col gap-2 text-sm font-medium">
+            Packaging method
+            <select
+              name="packaging_method"
+              defaultValue=""
+              required
+              className="p-3 rounded bg-black/40 border border-white/20"
+            >
+              <option value="" disabled>Select how it was packaged</option>
+              <option value="Bottles">Bottles</option>
+              <option value="Keg">Keg</option>
+              <option value="Cans">Cans</option>
+              <option value="Mixed packaging">Mixed packaging</option>
+              <option value="Still / not carbonated">Still / not carbonated</option>
+              <option value="Other">Other</option>
+            </select>
+          </label>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="flex flex-col gap-2 text-sm font-medium">
+              Volume bottled, if applicable (<UnitSymbol kind="volume" />)
+              <UnitInput
+                kind="volume"
+                name="bottle_volume_l"
+                min="0"
+                step="0.01"
+                className="p-3 rounded bg-black/40 border border-white/20"
+              />
+            </label>
+            <label className="flex flex-col gap-2 text-sm font-medium">
+              Volume kegged, if applicable (<UnitSymbol kind="volume" />)
+              <UnitInput
+                kind="volume"
+                name="keg_volume_l"
+                min="0"
+                step="0.01"
+                className="p-3 rounded bg-black/40 border border-white/20"
+              />
+            </label>
+          </div>
+
+          <label className="flex flex-col gap-2 text-sm font-medium">
+            Number of bottles, cans, or other packages (optional)
+            <input
+              name="package_count"
+              type="number"
+              min="1"
+              step="1"
+              className="p-3 rounded bg-black/40 border border-white/20"
+            />
+          </label>
+
+          <fieldset className="flex flex-col gap-4 rounded-lg border border-white/10 p-4">
+            <legend className="px-2 font-semibold">Carbonation (optional)</legend>
+            <label className="flex flex-col gap-2 text-sm font-medium">
+              Method
+              <select
+                name="carbonation_method"
+                defaultValue=""
+                className="p-3 rounded bg-black/40 border border-white/20"
+              >
+                <option value="">Not recorded</option>
+                <option value="Bottle conditioned">Bottle conditioned</option>
+                <option value="Force carbonated">Force carbonated</option>
+                <option value="Naturally carbonated">Naturally carbonated</option>
+                <option value="Still">Still</option>
+                <option value="Other">Other</option>
+              </select>
+            </label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="flex flex-col gap-2 text-sm font-medium">
+                Target carbonation (volumes of CO₂)
+                <input
+                  name="target_carbonation_volumes"
+                  type="number"
+                  min="0.1"
+                  max="6"
+                  step="0.1"
+                  className="p-3 rounded bg-black/40 border border-white/20"
+                />
+              </label>
+              <label className="flex flex-col gap-2 text-sm font-medium">
+                Priming sugar (g)
+                <input
+                  name="priming_sugar_g"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  className="p-3 rounded bg-black/40 border border-white/20"
+                />
+              </label>
+            </div>
+          </fieldset>
 
           <textarea
             name="finished_notes"
@@ -1015,13 +1212,27 @@ const sharingSection = isOwner ? (
             className="p-3 rounded bg-black/40 border border-white/20"
           />
 
+          <label className="flex flex-col gap-2 text-sm font-medium">
+            Tasting notes (optional; you can add these later)
+            <textarea
+              name="tasting_notes"
+              rows={3}
+              className="p-3 rounded bg-black/40 border border-white/20"
+            />
+          </label>
+
           <label className="flex items-center gap-2 text-sm opacity-80">
             <input type="checkbox" name="save_as_recipe" />
             Save as recipe
           </label>
 
-          <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
-            Finish batch
+          <button
+            disabled={lifecycleSchemaStatus !== "ready"}
+            className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {lifecycleSchemaStatus === "checking"
+              ? "Checking batch storage…"
+              : "Package & finish batch"}
           </button>
         </form>
       </div>
@@ -1048,7 +1259,7 @@ const sharingSection = isOwner ? (
 
       <button
         type="submit"
-        className="w-full px-2 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-md text-sm"
+        className="w-full rounded-lg border border-white/20 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-white/75 transition-colors hover:border-white/30 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
       >
         Cancel batch
       </button>
@@ -1075,22 +1286,18 @@ const sharingSection = isOwner ? (
     {/* Move batch to another vessel */}
 {hasActive && isOwner && freeVessels.length > 0 && (
   <div className="mt-6 bg-white/5 border border-white/10 rounded-lg p-4">
-    <button
-      type="button"
-      onClick={() => setOpenMove(!openMove)}
-      className="w-full flex items-center justify-between font-semibold text-green-300 cursor-pointer"
-    >
-      Move to another vessel
-      <span
-        className={`text-white text-xl transition-transform duration-300 ${
-          openMove ? "rotate-90" : "rotate-180"
-        }`}
-      >
-        ▶
-      </span>
-    </button>
+    <div className="flex w-full items-center justify-between gap-3 font-semibold text-green-300">
+      <span>Move to another vessel</span>
+      <ExpandArrowButton
+        expanded={openMove}
+        label="move to another vessel"
+        controls="move-batch-content"
+        onClick={() => setOpenMove((open) => !open)}
+      />
+    </div>
 
     <div
+      id="move-batch-content"
       className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
         openMove ? "[grid-template-rows:1fr]" : "[grid-template-rows:0fr]"
       }`}
@@ -1125,20 +1332,62 @@ const sharingSection = isOwner ? (
 )}
 
 {hasActive && isOwner && (
-  <BatchReminders key={activeBatch.id} batchId={activeBatch.id} />
+  <BatchReminders
+    key={activeBatch.id}
+    batchId={activeBatch.id}
+    stage={
+      ["Sekundær", "secondary"].includes(activeBatch.status)
+        ? "secondary"
+        : "primary"
+    }
+  />
 )}
 
 {hasActive && (
   <>
     {(isContributor || hasSharedContributors) && (
-      <VesselActivity karId={kar.id} />
+      <section className="mb-6 rounded-xl border border-white/10 bg-white/5 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-green-200">
+            Vessel activity
+          </h2>
+          <ExpandArrowButton
+            expanded={openSharedNotes}
+            label="vessel activity"
+            controls="vessel-activity-content"
+            onClick={() => setOpenSharedNotes((open) => !open)}
+          />
+        </div>
+        {openSharedNotes && (
+          <div id="vessel-activity-content" className="mt-4">
+            <VesselActivity karId={kar.id} />
+          </div>
+        )}
+      </section>
     )}
-    <KarNotesClient
-      batchId={activeBatch.id}
-      karId={kar.id}
-      userId={user.id}
-      notes={notes}
-    />
+    <section className="mb-6 rounded-xl border border-white/10 bg-white/5 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold text-green-200">
+          Batch notes &amp; pictures
+        </h2>
+        <ExpandArrowButton
+          expanded={openBatchNotes}
+          label="batch notes and pictures"
+          controls="batch-notes-content"
+          onClick={() => setOpenBatchNotes((open) => !open)}
+        />
+      </div>
+      {openBatchNotes && (
+        <div id="batch-notes-content" className="mt-4">
+          <KarNotesClient
+            batchId={activeBatch.id}
+            karId={kar.id}
+            userId={user.id}
+            notes={notes}
+          />
+        </div>
+      )}
+    </section>
   </>
 )}
   </div>

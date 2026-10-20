@@ -11,6 +11,7 @@ import {
   InventoryAdditiveFields,
   InventoryIngredientSelect,
 } from "@/app/components/InventoryUsageFields";
+import { getOtherRecipeIngredients } from "@/lib/recipes/otherRecipe";
 
 
 export default function NewOtherPage({
@@ -41,7 +42,13 @@ export default function NewOtherPage({
 
   useEffect(() => {
     if (!recipe) return;
-    setIngredients(Array.isArray(recipe.ingredients) ? recipe.ingredients : []);
+    setIngredients(
+      getOtherRecipeIngredients(recipe.ingredients).map((ingredient) => ({
+        name: ingredient.name,
+        amount: String(ingredient.amount ?? ""),
+        unit: ingredient.unit ?? "",
+      }))
+    );
   }, [recipe]);
 
   return (
@@ -61,7 +68,7 @@ export default function NewOtherPage({
         {/* HEADER */}
         <h1 className="text-4xl font-bold mb-2 text-center">New Other Batch</h1>
         <p className="text-center opacity-80 mb-10">
-          Use this page for experimental batches or anything that doesn't fit other categories.
+          Use this page for experimental batches or anything that doesn&apos;t fit other categories.
         </p>
 
         {recipeError && <p role="alert" className="text-red-300 mb-4">{recipeError}</p>}

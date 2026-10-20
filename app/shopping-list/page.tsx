@@ -288,7 +288,7 @@ export default function ShoppingListPage() {
         {error && <p role="alert" className="mb-4 rounded-lg bg-red-950/50 p-3 text-center text-red-200">{error}</p>}
         {message && <p role="status" className="mb-4 rounded-lg bg-green-950/40 p-3 text-center text-green-200">{message}</p>}
 
-        <section className="mb-8 rounded-xl border border-white/10 bg-white/5 p-4">
+        <section id="add-recipe-ingredients" className="mb-8 rounded-xl border border-white/10 bg-white/5 p-4">
           <h2 className="mb-3 text-lg font-semibold text-green-300">Add ingredients from a recipe</h2>
           <p className="mb-3 text-sm text-white/60">
             Repeated ingredients are combined, and quantities are compared with matching inventory items. Ingredients with no recorded amount are added with an empty quantity for you to fill in.
@@ -371,9 +371,18 @@ export default function ShoppingListPage() {
         {loading ? (
           <p className="py-8 text-center text-white/60">Loading your list…</p>
         ) : items.length === 0 ? (
-          <p className="rounded-xl border border-white/10 bg-white/5 p-6 text-center text-white/60">
-            Your shopping list is empty.
-          </p>
+          <section className="rounded-xl border border-white/10 bg-white/5 p-6 text-center">
+            <h2 className="font-semibold text-white">Your shopping list is empty.</h2>
+            <p className="mt-2 text-sm text-white/60">
+              Add missing ingredients from a recipe or create a list item manually.
+            </p>
+            <Link
+              href="#add-recipe-ingredients"
+              className="mt-4 inline-flex min-h-10 items-center rounded-lg border border-green-400/50 bg-green-700 px-4 py-2 text-sm font-semibold text-white hover:bg-green-600"
+            >
+              Add ingredients from a recipe
+            </Link>
+          </section>
         ) : (
           <div className="space-y-6">
             <div className="flex justify-end">

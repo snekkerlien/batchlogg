@@ -3,6 +3,9 @@
 import { useState, useEffect } from "react";
 import PageHeading from "@/app/components/PageHeading";
 import PublicPageNavigation from "@/app/components/PublicPageNavigation";
+import BrewDayWaterCalculator from "./BrewDayWaterCalculator";
+import RefractometerCorrectionCalculator from "./RefractometerCorrectionCalculator";
+import WaterChemistryCalculator from "./WaterChemistryCalculator";
 import { Qty, UnitInput, UnitSymbol } from "@/app/components/Units";
 import {
   calculateAbvFromGravity,
@@ -11,12 +14,19 @@ import {
   calculateFermentableForAbv,
   calculateOgForAbv,
   calculateVolumeForTargetAbv,
+  convertGravityToSpecificGravity,
+  type GravityScale,
 } from "@/lib/brewing/calculators";
 
 export default function ABVToolsClient() {
   const [og, setOg] = useState("");
   const [fg, setFg] = useState("");
+  const [gravityScale, setGravityScale] = useState<GravityScale>("sg");
   const [abv, setAbv] = useState<number | null>(null);
+  const [specificGravityReadings, setSpecificGravityReadings] = useState<{
+    original: number;
+    final: number;
+  } | null>(null);
 
   // ⭐ Blend/Fortify states
   const [dilutionAbv, setDilutionAbv] = useState("");
@@ -43,6 +53,13 @@ const [targetAbvPercent, setTargetAbvPercent] = useState("");
 const [sugarNeeded, setSugarNeeded] = useState<number | null>(null);
 const [honeyNeeded, setHoneyNeeded] = useState<number | null>(null);
 const [abvMode, setAbvMode] = useState<"sugar" | "honey">("sugar");
+const gravityScales: { value: GravityScale; label: string }[] = [
+  { value: "sg", label: "Specific Gravity" },
+  { value: "oechsle", label: "Oechsle" },
+  { value: "plato", label: "Plato" },
+  { value: "brix", label: "Brix" },
+  { value: "balling", label: "Balling" },
+];
 
 useEffect(() => {
   const volume = Number.parseFloat(targetAbvVol);
@@ -56,11 +73,25 @@ useEffect(() => {
 
   // ⭐ Live ABV calculation
   useEffect(() => {
-    const ogNum = parseFloat(og);
-    const fgNum = parseFloat(fg);
+    const ogValue = Number(og.replace(",", "."));
+    const fgValue = Number(fg.replace(",", "."));
+    const ogNum =
+      og.trim() === ""
+        ? null
+        : convertGravityToSpecificGravity(ogValue, gravityScale);
+    const fgNum =
+      fg.trim() === ""
+        ? null
+        : convertGravityToSpecificGravity(fgValue, gravityScale);
 
+    if (ogNum === null || fgNum === null) {
+      setAbv(null);
+      setSpecificGravityReadings(null);
+      return;
+    }
     setAbv(calculateAbvFromGravity(ogNum, fgNum));
-  }, [og, fg]);
+    setSpecificGravityReadings({ original: ogNum, final: fgNum });
+  }, [og, fg, gravityScale]);
 
   // ⭐ Live Blend/Fortify calculation
   useEffect(() => {
@@ -98,45 +129,106 @@ useEffect(() => {
         <PublicPageNavigation current="abvtools" />
 
         <PageHeading
-          title="ABV Tools"
-          subtitle="Calculate alcohol strength and plan your brew."
+          title="Brewing calculators"
+          subtitle="Calculate alcohol strength, plan water, and prepare your brew."
         />
 
         {/* ⭐ ABV CALCULATOR — MATCHER DE ANDRE SEKSJONENE */}
         <div className="p-6 bg-white/5 border border-white/10 rounded-xl">
           <h2 className="text-2xl font-bold mb-2 text-green-300 text-center">
-  ABV Calculator
-</h2>
-<p className="text-center opacity-70 mb-6">
-  Calculate ABV from Original Gravity (OG) and Final Gravity (FG).
-</p>
+            ABV Calculator
+          </h2>
+          <p className="text-center opacity-70 mb-6">
+            Calculate ABV from Original Gravity (OG) and Final Gravity (FG).
+            Choose the gravity scale shown by your hydrometer or brewing tool.
+          </p>
 
           <div className="space-y-6">
-
-            <div>
-              <label className="block mb-1 opacity-80">Original Gravity (OG)</label>
-              <input
-                value={og}
-                onChange={(e) => setOg(e.target.value)}
-                placeholder="e.g. 1.100"
-                className="w-full p-3 rounded bg-black/40 border border-white/20"
-              />
+            <div
+              role="group"
+              aria-label="Gravity scale"
+              className="flex flex-wrap justify-center gap-2"
+            >
+              {gravityScales.map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setGravityScale(value)}
+                  aria-pressed={gravityScale === value}
+                  className={`rounded-lg border px-3 py-2 text-center text-sm ${
+                    gravityScale === value
+                      ? "border-green-500 bg-green-700"
+                      : "border-white/20 bg-white/10 hover:bg-white/20"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
-
-            <div>
-              <label className="block mb-1 opacity-80">Final Gravity (FG)</label>
-              <input
-                value={fg}
-                onChange={(e) => setFg(e.target.value)}
-                placeholder="e.g. 1.000"
-                className="w-full p-3 rounded bg-black/40 border border-white/20"
-              />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block opacity-80">
+                Original Gravity (OG)
+                <input
+                  type="number"
+                  value={og}
+                  onChange={(event) => setOg(event.target.value)}
+                  placeholder={
+                    gravityScale === "sg"
+                      ? "e.g. 1.050"
+                      : gravityScale === "oechsle"
+                        ? "e.g. 50"
+                        : "e.g. 12.4"
+                  }
+                  step="any"
+                  className="mt-1 w-full rounded border border-white/20 bg-black/40 p-3"
+                />
+              </label>
+              <label className="block opacity-80">
+                Final Gravity (FG)
+                <input
+                  type="number"
+                  value={fg}
+                  onChange={(event) => setFg(event.target.value)}
+                  placeholder={
+                    gravityScale === "sg"
+                      ? "e.g. 1.010"
+                      : gravityScale === "oechsle"
+                        ? "e.g. 10"
+                        : "e.g. 2.6"
+                  }
+                  step="any"
+                  className="mt-1 w-full rounded border border-white/20 bg-black/40 p-3"
+                />
+              </label>
             </div>
+            <p className="text-xs leading-5 text-white/55">
+              Brix, Plato, and Balling are very close for typical brewing
+              readings, so this calculator uses the same approximate
+              conversion for those scales; identical readings may give the same
+              result. A post-fermentation refractometer Brix reading needs
+              alcohol correction before using it as FG; enter a corrected
+              reading here.
+            </p>
+            <p className="text-center text-sm">
+              <a
+                href="#refractometer-correction"
+                className="font-semibold text-green-300 underline underline-offset-4 hover:text-green-200"
+              >
+                Correct a post-fermentation refractometer reading
+              </a>
+            </p>
 
             {abv !== null && (
-              <p className="text-center text-xl font-bold mt-4">
-                ABV: {abv.toFixed(2)}%
-              </p>
+              <div className="mt-4 text-center">
+                <p className="text-xl font-bold">ABV: {abv.toFixed(2)}%</p>
+                {specificGravityReadings && (
+                  <p className="mt-1 text-sm text-white/55">
+                    Converted to SG: OG{" "}
+                    {specificGravityReadings.original.toFixed(3)}, FG{" "}
+                    {specificGravityReadings.final.toFixed(3)}
+                  </p>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -369,16 +461,27 @@ useEffect(() => {
   </div>
 </div>
 
+        <BrewDayWaterCalculator />
+        <WaterChemistryCalculator />
+        <RefractometerCorrectionCalculator />
         <section className="mt-12 rounded-xl border border-white/10 bg-white/5 p-6">
           <h2 className="text-xl font-semibold text-green-300">
             Using the brewing calculators
           </h2>
           <div className="mt-4 space-y-4 text-sm leading-6 text-white/75">
             <p>
-              Enter gravity as a specific-gravity value (for example, 1.050),
-              alcohol strength as a percentage, and volume in the unit shown
-              beside each field. The volume unit follows your saved preference
-              when signed in or your local setting when signed out.
+              The ABV calculator accepts specific gravity, Oechsle, Plato,
+              Brix, or Balling for OG and FG, and converts those readings to
+              specific gravity before estimating alcohol. For typical
+              brewing readings Brix, Plato, and Balling are close enough that
+              the calculator uses the same approximation for them, and ABV is
+              displayed to two decimal places. For a post-fermentation
+              refractometer reading, use the refractometer alcohol-correction
+              calculator above before entering FG. Other gravity tools use specific-gravity
+              values (for example, 1.050). Enter alcohol strength as a
+              percentage and volume in the unit shown beside each field; the
+              volume unit follows your saved preference when signed in or your
+              local setting when signed out.
             </p>
             <p>
               The gravity ABV estimate uses (OG − FG) × 131.25. Dilution tools
@@ -394,6 +497,28 @@ useEffect(() => {
               fermentables. Ingredient composition and fermentation conditions
               can change actual results, so treat outputs as planning estimates
               and confirm with measurements.
+            </p>
+            <p>
+              The all-grain water planner estimates mash, sparge, total, and
+              pre-boil water from your target fermenter volume and measured
+              equipment settings. Its saved equipment profiles store boil-off,
+              kettle loss, grain absorption, mash ratio, and tun dead space.
+              Measure these on your own setup and refine them over several
+              brews; the estimate assumes a single-infusion mash and does not
+              include top-up water or decoction.
+            </p>
+            <p>
+              The water chemistry planner uses a water report and a starting
+              target ion profile to estimate mineral additions for the entered
+              water volume. You can save named profiles containing both your
+              source-water report and target ions for reuse. Check your
+              supplier&apos;s latest report or use a certified lab for well
+              water. Salt combinations affect multiple ions, so review the
+              predicted values rather than expecting every target to match
+              exactly. The acid estimate only approximates alkalinity
+              neutralization; it does not predict mash pH. Treat additions as
+              a starting point, follow product instructions, and verify with
+              measurements.
             </p>
           </div>
         </section>

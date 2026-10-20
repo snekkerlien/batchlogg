@@ -44,6 +44,9 @@ export default function ActiveBatchOverview({
         </Metric>
         <Metric label="Batch volume"><Qty kind="volume" value={batch.volume_l} /></Metric>
         <Metric label="Original gravity">{Number(batch.og).toFixed(3)}</Metric>
+        {batch.type === "Beer" && batch.beer_style && (
+          <Metric label="Beer style">{batch.beer_style}</Metric>
+        )}
         <Metric label="Fermentation stage">
           {secondary ? "Secondary fermentation" : "Primary fermentation"}
         </Metric>

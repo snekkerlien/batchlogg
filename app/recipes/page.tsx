@@ -18,6 +18,7 @@ type PublicRecipe = RecipePresentationData & {
   id: string;
   user_id: string;
   created_at: string;
+  copyright_free: boolean;
   source_recipe_id: string | null;
 };
 
@@ -43,7 +44,7 @@ export default async function PublicRecipesPage() {
     const { data: recipeRows, error: recipesError } = await serviceRole
       .from("recipes")
       .select(
-        "id, user_id, source_recipe_id, name, type, og, fg, abv, volume, ibu, ebc, ingredients, malts, hops, dry_hops, boil_volume, boil_time, yeast, honey_type, honey_amount, base_liquid, base_liquid_amount, fruits, juice_type, sugar_amount, steps, additives, full_process, notes, had_secondary, secondary_additions, secondary_notes, created_at"
+        "id, user_id, source_recipe_id, name, type, og, fg, abv, volume, ibu, ebc, ingredients, malts, hops, dry_hops, boil_volume, boil_time, yeast, honey_type, honey_amount, base_liquid, base_liquid_amount, fruits, juice_type, sugar_amount, steps, additives, full_process, notes, had_secondary, secondary_additions, secondary_notes, created_at, copyright_free"
       )
       .eq("is_public", true)
       .in("user_id", authorIds)
