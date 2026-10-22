@@ -20,8 +20,9 @@ async function debug(tag: string, data: any) {
 
 import { supabaseServer } from "../../lib/supabase/supabaseServerFinal";
 import { revalidatePath } from "next/cache";
+import { isBatchGuideDismissed } from "@/lib/brewing/batchGuide";
 export async function createBatch(formData: FormData) {
-  const { supabase } = supabaseServer();
+  const { supabase, serviceRole } = supabaseServer();
 
   console.log("🟦 createBatch_start");
 
@@ -36,15 +37,6 @@ export async function createBatch(formData: FormData) {
   }
 
   const userId = user.id;
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("account_tier")
-    .eq("id", userId)
-    .maybeSingle();
-  if (profileError || !profile) {
-    throw new Error("Could not verify plan access for SG history.");
-  }
-
   // Fetch vessel ID (UUID)
   const karId = formData.get("kar") as string;
 
@@ -80,10 +72,14 @@ export async function createBatch(formData: FormData) {
   }
 
   // Find next batch number, counted from 1 per user
-  const { data: userBatches } = await supabase
+  const { data: userBatches, error: userBatchesError } = await supabase
     .from("batches")
     .select("batchnummer")
     .eq("user_id", userId);
+  if (userBatchesError) {
+    throw new Error(`Could not check existing batches: ${userBatchesError.message}`);
+  }
+  const isFirstBatch = (userBatches ?? []).length === 0;
 
   const nextInt =
     Math.max(0, ...(userBatches ?? []).map((b) => Number(b.batchnummer) || 0)) + 1;
@@ -130,15 +126,13 @@ export async function createBatch(formData: FormData) {
     throw new Error("Insert failed: " + error.message);
   }
 
-  if (profile.account_tier === "premium") {
-    const sgInsert = await supabase.from("sg_readings").insert({
-      batch_id: batch.id,
-      sg: og,
-      created_at: startdato,
-    });
-    if (sgInsert.error) {
-      throw new Error(`Could not save the initial SG reading: ${sgInsert.error.message}`);
-    }
+  const sgInsert = await serviceRole.from("sg_readings").insert({
+    batch_id: batch.id,
+    sg: og,
+    created_at: startdato,
+  });
+  if (sgInsert.error) {
+    throw new Error(`Could not save the initial SG reading: ${sgInsert.error.message}`);
   }
 
   // Update vessel status
@@ -147,12 +141,19 @@ export async function createBatch(formData: FormData) {
     .update({ status: "Aktiv" })
     .eq("id", karId);
 
+  if (vesselUpdate.error) {
+    throw new Error(`Could not update vessel status: ${vesselUpdate.error.message}`);
+  }
+
   console.log("🟦 Vessel update:", vesselUpdate);
 
   // Revalidate correct path
   revalidatePath(`/kar/${karId}`);
   revalidatePath("/dashboard");
 
-
   console.log("🟩 createBatch_complete:", batch.id);
+  return {
+    showFirstBatchGuide:
+      isFirstBatch && !isBatchGuideDismissed(user, "first-batch"),
+  };
 }

@@ -12,7 +12,7 @@ export function getReducedMotionPreference(): boolean {
     console.error("Could not load reduced-motion preference", error);
   }
 
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  return false;
 }
 
 export function setReducedMotionPreference(reducedMotion: boolean): void {

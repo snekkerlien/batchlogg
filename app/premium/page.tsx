@@ -134,8 +134,8 @@ export default function PremiumPage() {
                   low-stock inventory.
                 </li>
                 <li>
-                  Record specific-gravity readings and view a batch’s gravity
-                  development history and chart.
+                  View a batch’s specific-gravity development graph and current
+                  ABV. All plans can save and review gravity readings.
                 </li>
                 <li>
                   Invite collaborators to shared vessels and review their

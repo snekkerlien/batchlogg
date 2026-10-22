@@ -63,7 +63,7 @@ function BatchHistoryContent() {
     "newest"
   );
   const [sgReadingsError, setSgReadingsError] = useState("");
-  const [sgPremiumRequired, setSgPremiumRequired] = useState(false);
+  const [canViewSGGraph, setCanViewSGGraph] = useState(false);
   const [batchLoadError, setBatchLoadError] = useState("");
 
   // ⭐ NEW: delete confirmation modal state
@@ -124,14 +124,14 @@ function BatchHistoryContent() {
         });
         const readingsResult: {
           readings?: any[];
+          canViewGraph?: boolean;
           error?: string;
         } = await readingsResponse.json();
-        if (readingsResponse.status === 403) {
-          setSgPremiumRequired(true);
-        } else if (!readingsResponse.ok) {
+        if (!readingsResponse.ok) {
           console.error("Could not load SG readings for batch timelines", readingsResult.error);
           setSgReadingsError("SG readings could not be loaded.");
         } else {
+          setCanViewSGGraph(readingsResult.canViewGraph === true);
           readingsByBatch = new Map();
           for (const reading of readingsResult.readings ?? []) {
             if (!reading.batch_id) continue;
@@ -325,7 +325,7 @@ function BatchHistoryContent() {
           <section className="rounded-xl border border-white/10 bg-white/5 p-6 text-center">
             <h2 className="font-semibold">Your brewing history starts with a batch.</h2>
             <p className="mt-2 text-sm text-white/60">
-              Create a batch to track fermentation, readings, packaging, and results in one place.
+              Create a batch to track fermentation, readings, bottling, and results in one place.
             </p>
             <Link
               href="/dashboard"
@@ -398,12 +398,14 @@ function BatchHistoryContent() {
                     ? Number(isFinished ? finalGravity : currentGravity).toFixed(3)
                     : "—",
                 },
-                {
-                  label: isFinished ? "Final ABV" : "Current ABV",
-                  value: abvValue !== null && Number.isFinite(abvValue)
-                    ? `${abvValue.toFixed(1)}%`
-                    : "—",
-                },
+                ...(isFinished || canViewSGGraph
+                  ? [{
+                      label: isFinished ? "Final ABV" : "Current ABV",
+                      value: abvValue !== null && Number.isFinite(abvValue)
+                        ? `${abvValue.toFixed(1)}%`
+                        : "—",
+                    }]
+                  : []),
               ];
               const recipeSnapshot =
                 batch.recipe_snapshot &&
@@ -468,7 +470,9 @@ function BatchHistoryContent() {
                 {expanded !== batch.id && (
                   <div
                     aria-label={`${batch.name || "Batch"} summary`}
-                    className="mt-4 grid grid-cols-3 gap-2"
+                    className={`mt-4 grid gap-2 ${
+                      batchMetrics.length === 3 ? "grid-cols-3" : "grid-cols-2"
+                    }`}
                   >
                     {batchMetrics.map((metric) => (
                       <div
@@ -603,21 +607,21 @@ function BatchHistoryContent() {
                       <h3 className="text-xl font-bold mb-3 text-green-300">
                         SG development
                       </h3>
-                      {sgPremiumRequired ? (
-                        <p className="text-sm text-white/70">
-                          SG history is part of Premium.{" "}
-                          <a href="/premium" className="text-green-200 underline">Explore Premium</a>
-                        </p>
-                      ) : batch.sgReadings.length > 0 ? (
-                        <div className="bg-black/40 p-4 rounded-lg border border-white/10">
-                          <BatchSGChart readings={batch.sgReadings} />
-                        </div>
+                      {batch.sgReadings.length === 0 ? (
+                       <p className="text-sm text-zinc-400">
+                         No SG readings recorded.
+                       </p>
+                      ) : canViewSGGraph ? (
+                       <div className="bg-black/40 p-4 rounded-lg border border-white/10">
+                         <BatchSGChart readings={batch.sgReadings} />
+                       </div>
                       ) : (
-                        <p className="text-sm text-zinc-400">
-                          No SG readings recorded.
+                       <p className="text-sm text-white/70">
+                         Your SG readings are saved. The development graph is part of Premium.{" "}
+                         <a href="/premium" className="text-green-200 underline">Explore Premium</a>
                         </p>
                       )}
-                      {currentAbv !== null && (
+                      {canViewSGGraph && currentAbv !== null && (
                         <p className="mt-4 text-center text-lg font-semibold text-green-300">
                           Current ABV: {currentAbv}%
                         </p>
@@ -655,19 +659,22 @@ function BatchHistoryContent() {
 
                     {batch.packaged_volume_l != null && (
                       <section className="space-y-2 rounded-lg border border-white/10 bg-black/20 p-4">
-                        <h3 className="font-semibold text-green-300">Packaging</h3>
+                        <h3 className="font-semibold text-green-300">Bottling &amp; storage</h3>
                         <p className="text-sm">
-                          <strong>Packaged volume:</strong>{" "}
+                          <strong>Total finished volume:</strong>{" "}
                           <Qty kind="volume" value={batch.packaged_volume_l} />
                         </p>
                         {batch.packaging_method && (
                           <p className="text-sm">
-                            <strong>Method:</strong> {batch.packaging_method}
+                            <strong>Method:</strong>{" "}
+                            {batch.packaging_method === "Mixed packaging"
+                              ? "Mixed bottles / cans"
+                              : batch.packaging_method}
                           </p>
                         )}
                         {batch.package_count != null && (
                           <p className="text-sm">
-                            <strong>Packages:</strong> {batch.package_count}
+                            <strong>Containers:</strong> {batch.package_count}
                           </p>
                         )}
                         {batch.bottle_volume_l != null && (

@@ -41,14 +41,16 @@ export default function KarPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const inventoryError = searchParams.get("inventory_error");
-  const batchRefreshKey = searchParams.get("cancelled");
+  const batchRefreshKey =
+    searchParams.get("cancelled") ??
+    searchParams.get("racked") ??
+    searchParams.get("guide");
   const [openSecondary, setOpenSecondary] = useState(false);
   const [openSecondaryActive, setOpenSecondaryActive] = useState(false);
   const [openFinish, setOpenFinish] = useState(false);
   const [openMove, setOpenMove] = useState(false);
   const [openSharing, setOpenSharing] = useState(false);
   const [openSharedNotes, setOpenSharedNotes] = useState(false);
-  const [openBatchNotes, setOpenBatchNotes] = useState(false);
   const [confirmCancelBatch, setConfirmCancelBatch] = useState(false);
   const cancelBatchFormRef = useRef<HTMLFormElement>(null);
   const cancelBatchConfirmedRef = useRef(false);
@@ -65,7 +67,7 @@ export default function KarPage({ params }: { params: { id: string } }) {
   const [savingBatch, setSavingBatch] = useState(false);
   const [editBatchError, setEditBatchError] = useState("");
   const [sgReadings, setSgReadings] = useState<any[]>([]);
-  const [sgPremiumRequired, setSgPremiumRequired] = useState(false);
+  const [canViewSGGraph, setCanViewSGGraph] = useState(false);
   const [openSG, setOpenSG] = useState(false);
   const [sgValue, setSgValue] = useState("");
   const [sgError, setSgError] = useState("");
@@ -106,8 +108,8 @@ export default function KarPage({ params }: { params: { id: string } }) {
           setLifecycleSchemaStatus("unavailable");
           setLifecycleSchemaMessage(
             ["42703", "PGRST204"].includes(error.code ?? "")
-              ? "Batch packaging is unavailable until the batch lifecycle database migration is applied."
-              : "Could not verify batch packaging storage. Please try again later."
+              ? "Finish & Bottle is unavailable until the batch lifecycle database migration is applied."
+              : "Could not verify Finish & Bottle storage. Please try again later."
           );
           return;
         }
@@ -117,7 +119,7 @@ export default function KarPage({ params }: { params: { id: string } }) {
         if (!active) return;
         setLifecycleSchemaStatus("unavailable");
         setLifecycleSchemaMessage(
-          "Could not verify batch packaging storage. Please try again later."
+          "Could not verify Finish & Bottle storage. Please try again later."
         );
       }
     })();
@@ -292,17 +294,11 @@ export default function KarPage({ params }: { params: { id: string } }) {
       cache: "no-store",
     })
       .then(async (response) => {
-        const result: { readings?: any[]; error?: string } = await response.json();
-        if (response.status === 403) {
-          if (active) {
-            setSgPremiumRequired(true);
-            setSgReadings([]);
-          }
-          return;
-        }
+        const result: { readings?: any[]; canViewGraph?: boolean; error?: string } =
+          await response.json();
         if (!response.ok) throw new Error(result.error || "Could not load SG readings");
         if (active) {
-          setSgPremiumRequired(false);
+          setCanViewSGGraph(result.canViewGraph === true);
           setSgReadings(result.readings ?? []);
         }
       })
@@ -313,6 +309,18 @@ export default function KarPage({ params }: { params: { id: string } }) {
     return () => {
       active = false;
     };
+  }, [activeBatch]);
+
+  useEffect(() => {
+    if (!activeBatch) return;
+    function openGravityFromGuide() {
+      if (window.location.hash !== "#sg-log") return;
+      setOpenSG(true);
+      document.getElementById("sg-log")?.scrollIntoView({ block: "start" });
+    }
+    openGravityFromGuide();
+    window.addEventListener("hashchange", openGravityFromGuide);
+    return () => window.removeEventListener("hashchange", openGravityFromGuide);
   }, [activeBatch]);
 
 
@@ -401,20 +409,24 @@ async function saveSG() {
       body: JSON.stringify({ batchId: activeBatch.id, sg: value }),
     });
     const result: { error?: string } = await response.json();
-    if (response.status === 403) setSgPremiumRequired(true);
     if (!response.ok) throw new Error(result.error || "Could not save SG reading");
 
     const readingsResponse = await fetch(
       `/api/sg?batchId=${encodeURIComponent(activeBatch.id)}`,
       { credentials: "include", cache: "no-store" }
     );
-    const readingsResult: { readings?: any[]; error?: string } =
+    const readingsResult: {
+      readings?: any[];
+      canViewGraph?: boolean;
+      error?: string;
+    } =
       await readingsResponse.json();
     if (!readingsResponse.ok) {
       throw new Error(readingsResult.error || "Could not load SG readings");
     }
 
     setSgValue("");
+    setCanViewSGGraph(readingsResult.canViewGraph === true);
     setSgReadings(readingsResult.readings ?? []);
   } catch (error) {
     console.error("Could not save specific gravity reading", error);
@@ -444,7 +456,7 @@ async function toggleVisibility() {
 const sharingSection = isOwner ? (
   <div className="mb-6 rounded-lg border border-white/10 bg-white/5 p-4">
     <div className="flex w-full items-center justify-between gap-3 font-semibold text-green-300">
-      <span>Share vessel with friends</span>
+      <span className="text-lg">Share vessel with friends</span>
       <ExpandArrowButton
         expanded={openSharing}
         label="vessel sharing"
@@ -921,7 +933,7 @@ const sharingSection = isOwner ? (
 {hasActive && canContribute && activeBatch.status === "Aktiv" && (
   <div className="mt-6 bg-white/5 border border-white/10 rounded-lg p-4">
     <div className="flex w-full items-center justify-between gap-3 font-semibold text-green-300">
-      <span>Rack to secondary</span>
+      <span className="text-lg">Rack to secondary</span>
       <ExpandArrowButton
         expanded={openSecondaryActive}
         label="rack to secondary"
@@ -964,18 +976,11 @@ const sharingSection = isOwner ? (
 
            {hasActive && canContribute && (
   <div id="sg-log" className="scroll-mt-6 bg-white/5 border border-white/10 rounded-lg p-4 mt-6 mb-6">
-               {sgPremiumRequired ? (
-                 <div className="text-center">
-                   <p className="text-white/80">SG readings and development history are part of Premium.</p>
-                   <a href="/premium" className="mt-3 inline-block text-green-200 underline">Explore Premium</a>
-                 </div>
-               ) : (
-                 <>
                <div className="flex w-full items-center justify-between gap-3 font-semibold text-green-300">
-      <span>Specific Gravity Development (SG)</span>
+      <span className="text-lg">Specific gravity readings</span>
       <ExpandArrowButton
         expanded={openSG}
-        label="specific gravity development"
+        label="specific gravity readings"
         controls="specific-gravity-content"
         onClick={() => setOpenSG((open) => !open)}
       />
@@ -1015,52 +1020,68 @@ const sharingSection = isOwner ? (
           {sgError && <p role="alert" className="text-sm text-red-300">{sgError}</p>}
         </div>
 
-        {/* SG graph */}
         {sgReadings.length > 0 && (
-          <div className="mt-6">
-            <h3 className="text-xl font-bold mb-3 text-green-300">
-              Development graph
-            </h3>
+          <>
+            <section
+              aria-label="Saved specific gravity readings"
+              className="mt-6 rounded-lg border border-white/10 bg-black/30 p-4"
+            >
+              <h3 className="mb-3 font-semibold text-green-300">Recorded readings</h3>
+              <ul className="space-y-2 text-sm text-white/75">
+                {[...sgReadings].reverse().map((reading, index) => (
+                  <li
+                    key={reading.id ?? `${reading.created_at}-${index}`}
+                    className="flex justify-between gap-4"
+                  >
+                    <time dateTime={reading.created_at}>
+                      {new Date(reading.created_at).toLocaleString()}
+                    </time>
+                    <span className="font-mono">{Number(reading.sg).toFixed(3)}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
 
-            <div className="bg-black/40 p-4 rounded-lg border border-white/10">
-              <BatchSGChart readings={sgReadings} />
-            </div>
-
-            {/* Current ABV using latest SG */}
-            {(() => {
-              const latestSG =
-                sgReadings.length > 0
-                  ? Number(sgReadings[sgReadings.length - 1].sg)
-                  : null;
-
-              const currentAbv =
-                activeBatch?.og && latestSG && !isNaN(latestSG)
-                  ? ((Number(activeBatch.og) - latestSG) * 131.25).toFixed(2)
-                  : null;
-
-              return currentAbv ? (
-                <p className="text-center text-lg font-semibold mt-4 text-green-300">
-                  Current ABV: {currentAbv}%
-                </p>
-              ) : null;
-            })()}
-          </div>
+            <section className="mt-6" aria-label="SG development graph">
+              <h3 className="mb-3 text-xl font-bold text-green-300">
+                Development graph
+              </h3>
+              {canViewSGGraph ? (
+                <div className="rounded-lg border border-white/10 bg-black/40 p-4">
+                  <BatchSGChart readings={sgReadings} />
+                  {currentAbv && (
+                    <p className="mt-4 text-center text-lg font-semibold text-green-300">
+                      Current ABV: {currentAbv}%
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-white/10 bg-black/30 p-4 text-center">
+                  <p className="text-sm text-white/75">
+                    SG readings are saved on every plan. The development graph
+                    and current ABV are part of Premium.
+                  </p>
+                  <a href="/premium" className="mt-2 inline-block text-green-200 underline">
+                    Explore Premium
+                  </a>
+                </div>
+              )}
+            </section>
+          </>
         )}
         </div>
     </div>
-      </>
-    )}
   </div>
 )}
 
-{/* Package and finish the batch */}
+{/* Finish and bottle the batch */}
 {canContribute && hasActive && (
   <div id="finish-batch" className="scroll-mt-6 bg-white/5 border border-white/10 rounded-lg p-4 mt-6">
     <div className="flex w-full items-center justify-between gap-3 font-semibold text-green-300">
-      <span>Package &amp; finish</span>
+      <span className="text-lg">Finish &amp; Bottle</span>
       <ExpandArrowButton
         expanded={openFinish}
-        label="package and finish batch"
+        label="finish and bottle batch"
         controls="finish-batch-content"
         onClick={() => setOpenFinish((open) => !open)}
       />
@@ -1081,8 +1102,8 @@ const sharingSection = isOwner ? (
           <input type="hidden" name="kar_id" value={kar.id} />
 
           <p className="text-sm text-white/70">
-            Record what you packaged and how it turned out. These details will
-            be saved with this finished batch.
+            Record how you bottled or stored this batch and how it turned out.
+            These details will be saved with the finished batch.
           </p>
           {lifecycleSchemaMessage && (
             <p role="alert" className="text-sm text-amber-300">
@@ -1101,7 +1122,7 @@ const sharingSection = isOwner ? (
           />
 
           <label className="flex flex-col gap-2 text-sm font-medium">
-            Packaged volume (<UnitSymbol kind="volume" />)
+            Total finished volume (<UnitSymbol kind="volume" />)
             <UnitInput
               kind="volume"
               name="packaged_volume_l"
@@ -1113,18 +1134,18 @@ const sharingSection = isOwner ? (
           </label>
 
           <label className="flex flex-col gap-2 text-sm font-medium">
-            Packaging method
+            Bottling or storage method
             <select
               name="packaging_method"
               defaultValue=""
               required
               className="p-3 rounded bg-black/40 border border-white/20"
             >
-              <option value="" disabled>Select how it was packaged</option>
+              <option value="" disabled>Select how it was bottled or stored</option>
               <option value="Bottles">Bottles</option>
               <option value="Keg">Keg</option>
               <option value="Cans">Cans</option>
-              <option value="Mixed packaging">Mixed packaging</option>
+              <option value="Mixed packaging">Mixed bottles / cans</option>
               <option value="Still / not carbonated">Still / not carbonated</option>
               <option value="Other">Other</option>
             </select>
@@ -1154,7 +1175,7 @@ const sharingSection = isOwner ? (
           </div>
 
           <label className="flex flex-col gap-2 text-sm font-medium">
-            Number of bottles, cans, or other packages (optional)
+            Number of bottles, cans, or other containers (optional)
             <input
               name="package_count"
               type="number"
@@ -1232,7 +1253,7 @@ const sharingSection = isOwner ? (
           >
             {lifecycleSchemaStatus === "checking"
               ? "Checking batch storage…"
-              : "Package & finish batch"}
+              : "Finish & Bottle"}
           </button>
         </form>
       </div>
@@ -1287,7 +1308,7 @@ const sharingSection = isOwner ? (
 {hasActive && isOwner && freeVessels.length > 0 && (
   <div className="mt-6 bg-white/5 border border-white/10 rounded-lg p-4">
     <div className="flex w-full items-center justify-between gap-3 font-semibold text-green-300">
-      <span>Move to another vessel</span>
+      <span className="text-lg">Move to another vessel</span>
       <ExpandArrowButton
         expanded={openMove}
         label="move to another vessel"
@@ -1348,7 +1369,7 @@ const sharingSection = isOwner ? (
     {(isContributor || hasSharedContributors) && (
       <section className="mb-6 rounded-xl border border-white/10 bg-white/5 p-4">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-green-200">
+          <h2 className="text-lg font-semibold text-green-300">
             Vessel activity
           </h2>
           <ExpandArrowButton
@@ -1366,27 +1387,17 @@ const sharingSection = isOwner ? (
       </section>
     )}
     <section className="mb-6 rounded-xl border border-white/10 bg-white/5 p-4">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-green-200">
-          Batch notes &amp; pictures
-        </h2>
-        <ExpandArrowButton
-          expanded={openBatchNotes}
-          label="batch notes and pictures"
-          controls="batch-notes-content"
-          onClick={() => setOpenBatchNotes((open) => !open)}
+      <h2 className="text-lg font-semibold text-green-300">
+        Batch notes &amp; pictures
+      </h2>
+      <div id="batch-notes-content" className="mt-4">
+        <KarNotesClient
+          batchId={activeBatch.id}
+          karId={kar.id}
+          userId={user.id}
+          notes={notes}
         />
       </div>
-      {openBatchNotes && (
-        <div id="batch-notes-content" className="mt-4">
-          <KarNotesClient
-            batchId={activeBatch.id}
-            karId={kar.id}
-            userId={user.id}
-            notes={notes}
-          />
-        </div>
-      )}
     </section>
   </>
 )}

@@ -84,14 +84,16 @@ export default function BatchReminders({
   }, [loadReminders]);
 
   useEffect(() => {
-    if (window.location.hash !== "#batch-reminders-content") return;
-    setOpen(true);
-    const timeout = window.setTimeout(() => {
+    function openFromGuide() {
+      if (window.location.hash !== "#batch-reminders-content") return;
+      setOpen(true);
       document
-        .getElementById("batch-reminders-content")
-        ?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 350);
-    return () => window.clearTimeout(timeout);
+        .getElementById("batch-reminders")
+        ?.scrollIntoView({ block: "start" });
+    }
+    openFromGuide();
+    window.addEventListener("hashchange", openFromGuide);
+    return () => window.removeEventListener("hashchange", openFromGuide);
   }, [batchId]);
 
   async function createReminder(event: FormEvent<HTMLFormElement>) {
@@ -160,8 +162,8 @@ export default function BatchReminders({
   }
 
   return (
-    <section className="mt-6 mb-6 rounded-xl border border-white/10 bg-white/5 p-4">
-      <div className="flex w-full items-center justify-between gap-3 text-left text-xl font-semibold text-green-300">
+    <section id="batch-reminders" className="mt-6 mb-6 scroll-mt-6 rounded-xl border border-white/10 bg-white/5 p-4">
+      <div className="flex w-full items-center justify-between gap-3 text-left text-lg font-semibold text-green-300">
         <span>{stageLabel} reminders</span>
         <ExpandArrowButton
           expanded={open}

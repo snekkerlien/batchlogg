@@ -15,8 +15,8 @@ import {
   isFruitInventoryCategory,
 } from "@/lib/inventory/categories";
 import { parseSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
-import { hasPremiumAccess } from "@/lib/auth/plan";
 import { isBeerStyle } from "@/lib/brewing/beerStyles";
+import { isBatchGuideDismissed } from "@/lib/brewing/batchGuide";
 
 
 
@@ -47,7 +47,7 @@ function normalizeInventoryName(value: string) {
 
 
 export async function createBatch(formData: FormData) {
-  const { supabase } = supabaseServer();
+  const { supabase, serviceRole } = supabaseServer();
 
   const {
     data: { user },
@@ -62,7 +62,7 @@ export async function createBatch(formData: FormData) {
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("use_inventory_for_batches, account_tier")
+    .select("use_inventory_for_batches")
     .eq("id", userId)
     .maybeSingle();
   if (profileError || !profile) {
@@ -220,10 +220,14 @@ export async function createBatch(formData: FormData) {
   }
 
   // Neste batchnummer, telt fra 1 per bruker
-  const { data: userBatches } = await supabase
+  const { data: userBatches, error: userBatchesError } = await supabase
     .from("batches")
     .select("batchnummer")
     .eq("user_id", userId);
+  if (userBatchesError) {
+    throw new Error(`Could not check existing batches: ${userBatchesError.message}`);
+  }
+  const isFirstBatch = (userBatches ?? []).length === 0;
 
   const nextNumber =
     Math.max(0, ...(userBatches ?? []).map((b) => Number(b.batchnummer) || 0)) + 1;
@@ -1147,14 +1151,16 @@ ${notes}
     }
   }
 
-  if (!useInventory && profile.account_tier === "premium") {
-    // SG reading
-    await supabase.from("sg_readings").insert({
-      batch_id: batch.id,
-      sg: og,
-      created_at: startdato,
-    });
+  const { error: sgError } = await serviceRole.from("sg_readings").insert({
+    batch_id: batch.id,
+    sg: og,
+    created_at: startdato,
+  });
+  if (sgError) {
+    throw new Error(`Could not save the initial SG reading: ${sgError.message}`);
+  }
 
+  if (!useInventory) {
     if (vessel.user_id === userId) {
       const { error: vesselUpdateError } = await supabase
         .from("kar")
@@ -1167,7 +1173,11 @@ ${notes}
   }
 
   revalidatePath(`/kar/${karId}`);
-  redirect(`/kar/${karId}`);
+  const guideQuery =
+    isFirstBatch && !isBatchGuideDismissed(user, "first-batch")
+      ? "?guide=first-batch"
+      : "";
+  redirect(`/kar/${karId}${guideQuery}`);
 }
 
 
@@ -1309,7 +1319,12 @@ export async function moveToSecondary(formData: FormData) {
     }
   }
 
-  redirect(`/kar/${karId}`);
+  revalidatePath(`/kar/${karId}`);
+  revalidatePath("/dashboard");
+  const guideQuery = isBatchGuideDismissed(user, "secondary")
+    ? `?racked=${Date.now()}`
+    : "?guide=secondary";
+  redirect(`/kar/${karId}${guideQuery}`);
 }
 
 // ---------------------------------------------------------
@@ -1433,7 +1448,7 @@ export async function finishBatch(formData: FormData) {
 
   const packagedVolume = Number(packagedVolumeRaw);
   if (!Number.isFinite(packagedVolume) || packagedVolume <= 0) {
-    throw new Error("Enter a valid packaged volume before finishing the batch");
+    throw new Error("Enter a valid finished volume before finishing the batch");
   }
   const allowedPackagingMethods = new Set([
     "Bottles",
@@ -1444,7 +1459,7 @@ export async function finishBatch(formData: FormData) {
     "Other",
   ]);
   if (!allowedPackagingMethods.has(packagingMethod)) {
-    throw new Error("Select a valid packaging method before finishing the batch");
+    throw new Error("Select a valid bottling or storage method before finishing the batch");
   }
 
   function optionalNumber(value: FormDataEntryValue | null, label: string) {
@@ -1463,7 +1478,7 @@ export async function finishBatch(formData: FormData) {
     kegVolume !== null &&
     bottleVolume + kegVolume > packagedVolume + 0.01
   ) {
-    throw new Error("Bottled and kegged volumes cannot exceed the packaged volume");
+    throw new Error("Bottled and kegged volumes cannot exceed the finished volume");
   }
 
   const packageCount =
@@ -1474,7 +1489,7 @@ export async function finishBatch(formData: FormData) {
     packageCount !== null &&
     (!Number.isInteger(packageCount) || packageCount < 1)
   ) {
-    throw new Error("Enter a valid package count");
+    throw new Error("Enter a valid container count");
   }
 
   const targetCarbonationVolumes = optionalNumber(
@@ -1524,11 +1539,11 @@ export async function finishBatch(formData: FormData) {
   if (lifecycleSchemaError) {
     if (["42703", "PGRST204"].includes(lifecycleSchemaError.code ?? "")) {
       throw new Error(
-        "Batch packaging is unavailable until the batch lifecycle database migration is applied."
+        "Finish & Bottle is unavailable until the batch lifecycle database migration is applied."
       );
     }
     throw new Error(
-      `Could not verify batch packaging storage: ${lifecycleSchemaError.message}`
+      `Could not verify Finish & Bottle storage: ${lifecycleSchemaError.message}`
     );
   }
 
@@ -1684,7 +1699,10 @@ export async function finishBatch(formData: FormData) {
     }
   }
 
-  redirect(`/brew-insights/${encodeURIComponent(batchId)}`);
+  const guideQuery = isBatchGuideDismissed(user, "bottling")
+    ? ""
+    : "?guide=bottling";
+  redirect(`/brew-insights/${encodeURIComponent(batchId)}${guideQuery}`);
 }
 
 
@@ -2067,7 +2085,7 @@ export async function updateBatch(formData: FormData) {
       id: firstReading.id,
       previousSg: Number(firstReading.sg),
     };
-  } else if (await hasPremiumAccess(serviceRole, batch.user_id)) {
+  } else {
     const { data: insertedReading, error: readingInsertError } = await serviceRole
       .from("sg_readings")
       .insert({ batch_id: batchId, sg: og, created_at: startdato })

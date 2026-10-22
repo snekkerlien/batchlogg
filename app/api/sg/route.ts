@@ -5,7 +5,7 @@ import { hasPremiumAccess } from "@/lib/auth/plan";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-async function getAuthorizedBatches(
+async function getAccessibleBatches(
   serviceRole: ReturnType<typeof supabaseServer>["serviceRole"],
   userId: string,
   requestedIds: string[]
@@ -55,13 +55,6 @@ async function getAuthorizedBatches(
     return { error: "One or more batches were not found", status: 404 as const };
   }
 
-  const ownerIds = [...new Set((batches ?? []).map((batch) => batch.user_id))];
-  for (const ownerId of ownerIds) {
-    if (!(await hasPremiumAccess(serviceRole, ownerId))) {
-      return { error: "This feature requires Premium.", status: 403 as const };
-    }
-  }
-
   return { batches: batches ?? [] };
 }
 
@@ -73,6 +66,7 @@ export async function GET(request: Request) {
   if (!user) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
+  const canViewGraph = await hasPremiumAccess(serviceRole, user.id);
 
   const url = new URL(request.url);
   const batchId = url.searchParams.get("batchId");
@@ -89,11 +83,11 @@ export async function GET(request: Request) {
   }
 
   const batchIds = [...new Set((ownedBatches ?? []).map((batch) => batch.id))];
-  if (batchIds.length === 0) return NextResponse.json({ readings: [] });
-  const access = await getAuthorizedBatches(serviceRole, user.id, batchIds);
+  if (batchIds.length === 0) return NextResponse.json({ readings: [], canViewGraph });
+  const access = await getAccessibleBatches(serviceRole, user.id, batchIds);
   if ("error" in access) {
     return NextResponse.json(
-      { error: access.error, upgradeUrl: access.status === 403 ? "/premium" : undefined },
+      { error: access.error },
       { status: access.status }
     );
   }
@@ -108,7 +102,7 @@ export async function GET(request: Request) {
     console.error("Could not load SG readings", error);
     return NextResponse.json({ error: "Could not load SG readings" }, { status: 500 });
   }
-  return NextResponse.json({ readings: data ?? [] });
+  return NextResponse.json({ readings: data ?? [], canViewGraph });
 }
 
 export async function POST(req: Request) {
@@ -155,10 +149,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Batch not found" }, { status: 404 });
   }
 
-  const access = await getAuthorizedBatches(serviceRole, user.id, [batch.id]);
+  const access = await getAccessibleBatches(serviceRole, user.id, [batch.id]);
   if ("error" in access) {
     return NextResponse.json(
-      { error: access.error, upgradeUrl: access.status === 403 ? "/premium" : undefined },
+      { error: access.error },
       { status: access.status }
     );
   }

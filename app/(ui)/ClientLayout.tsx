@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, Suspense, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -11,6 +11,8 @@ import { useSupabaseSessionSync } from "../../lib/supabase/syncSession";
 import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
 import ChangelogNotice from "../components/ChangelogNotice";
 import FirstLoginSetup from "../components/FirstLoginSetup";
+import PremiumWelcome from "../components/PremiumWelcome";
+import BatchGuide from "../components/BatchGuide";
 import SiteAnnouncementBanner from "../components/SiteAnnouncementBanner";
 import MuteCountdownBanner from "../components/MuteCountdownBanner";
 import { UnitsProvider } from "../components/Units";
@@ -169,6 +171,12 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
       <UserAccentTheme>
         <UnitsProvider>
         {!isBannedPage && <FirstLoginSetup />}
+        {!isBannedPage && <PremiumWelcome />}
+        {!isBannedPage && (
+          <Suspense fallback={null}>
+            <BatchGuide />
+          </Suspense>
+        )}
         <div className="relative z-[80] mx-auto -mb-8 max-w-3xl space-y-2 px-3 pt-12 empty:hidden">
           {!isBannedPage && <SiteAnnouncementBanner />}
           {!isBannedPage && pathname !== "/" && <SiteStatusBanner />}

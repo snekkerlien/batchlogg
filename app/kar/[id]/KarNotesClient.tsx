@@ -91,10 +91,6 @@ export function KarNotesClient({
   return (
     <div className="p-4 bg-white/5 border border-white/10 rounded-xl mb-10">
 
-      <h3 className="mb-4 text-xl font-semibold text-green-300">
-        Notes & pictures
-      </h3>
-
       {/* ADD NEW NOTE */}
       <h3 className="text-xl font-semibold mb-4">Add note</h3>
 

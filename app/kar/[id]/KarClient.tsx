@@ -23,9 +23,12 @@ export default function KarClient({ kar }: KarClientProps) {
         // Send UUID to server action
         formData.set("kar", kar.id);
 
-        await createBatch(formData);
-
-        router.refresh();
+        const result = await createBatch(formData);
+        if (result.showFirstBatchGuide) {
+          router.push(`/kar/${kar.id}?guide=first-batch`);
+        } else {
+          router.refresh();
+        }
       }}
       className="space-y-4 text-white"
     >

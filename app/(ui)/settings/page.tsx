@@ -30,6 +30,7 @@ export default function SettingsPage() {
   const preferencesSaveQueueRef = useRef<Promise<void>>(Promise.resolve());
   const pendingPreferencesSavesRef = useRef(0);
   const [user, setUser] = useState<any>(null);
+  const [accountTier, setAccountTier] = useState<"free" | "premium">("free");
   const [username, setUsername] = useState("account");
   const [savingUsername, setSavingUsername] = useState(false);
   const [usernameError, setUsernameError] = useState("");
@@ -93,6 +94,7 @@ export default function SettingsPage() {
       const profile = await response.json();
       if (!active) return;
       setUsername(profile.username || "account");
+      setAccountTier(profile.account_tier === "premium" ? "premium" : "free");
       setThemeAccentColor(
         isAccentColor(profile.theme_accent_color)
           ? profile.theme_accent_color
@@ -397,6 +399,24 @@ export default function SettingsPage() {
           title="Settings"
           subtitle="Manage your preferences, security, and account data."
         />
+        <section className="mb-8 flex flex-wrap justify-center gap-3 border-b border-white/10 pb-6">
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event("batchlogg-open-welcome-tour"))}
+            className="rounded-lg border border-white/20 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white/80 transition hover:bg-white/10 hover:text-white"
+          >
+            Revisit the Batchlogg tour
+          </button>
+          {accountTier === "premium" && (
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event("batchlogg-open-premium-welcome"))}
+              className="rounded-lg border border-green-300/20 bg-green-300/5 px-4 py-2.5 text-sm font-semibold text-green-200 transition hover:bg-green-300/10"
+            >
+              Revisit the Premium tour
+            </button>
+          )}
+        </section>
         {loadError && (
           <p role="alert" className="text-center text-sm text-red-400 mb-6">
             {loadError}
@@ -452,7 +472,7 @@ export default function SettingsPage() {
           </h2>
           <p className="text-sm text-zinc-400 text-center mb-5">
             Reduce motion hides carbonation bubbles in beer glasses, vessel cards,
-            and the background. By default, this follows your device preference.
+            and the background. It is off by default; you can turn it on here.
           </p>
           <div className="mx-auto max-w-xl">
             <label className="flex items-start gap-3">

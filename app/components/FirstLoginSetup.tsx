@@ -1,10 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuthContext } from "@/app/providers/AuthProvider";
 import { useUnits } from "@/app/components/Units";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import { saveUserPreferences } from "@/app/actions/userPreferences";
+import {
+  getReducedMotionPreference,
+  setReducedMotionPreference,
+} from "@/lib/accessibility/reducedMotion";
 import {
   DEFAULT_ACCENT_COLOR,
   isAccentColor,
@@ -14,6 +20,7 @@ import { isUnitSystem, type UnitSystem } from "@/lib/units";
 type SetupStage = "welcome" | "preferences" | null;
 
 export default function FirstLoginSetup() {
+  const router = useRouter();
   const { user } = useAuthContext();
   const { setSystem } = useUnits();
   const [stage, setStage] = useState<SetupStage>(null);
@@ -26,12 +33,21 @@ export default function FirstLoginSetup() {
   const [useInventory, setUseInventory] = useState(false);
   const [publicProfile, setPublicProfile] = useState(true);
   const [remindersEnabled, setRemindersEnabled] = useState(true);
+  const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
+    function reopenWelcomeTour() {
+      setError("");
+      setStage("welcome");
+    }
+    window.addEventListener("batchlogg-open-welcome-tour", reopenWelcomeTour);
+
     let active = true;
     if (!user) {
       setStage(null);
-      return;
+      return () => {
+        window.removeEventListener("batchlogg-open-welcome-tour", reopenWelcomeTour);
+      };
     }
 
     async function loadProfile() {
@@ -67,6 +83,7 @@ export default function FirstLoginSetup() {
         setUseInventory(profile.use_inventory_for_batches === true);
         setPublicProfile(profile.is_public !== false);
         setRemindersEnabled(profile.batch_reminders_enabled !== false);
+        setReducedMotion(getReducedMotionPreference());
         if (profile.onboarding_completed === false) setStage("welcome");
       } catch (loadError) {
         console.error("Could not load first-login setup", loadError);
@@ -85,6 +102,7 @@ export default function FirstLoginSetup() {
     return () => {
       active = false;
       window.removeEventListener("batchlogg-profile-created", onProfileCreated);
+      window.removeEventListener("batchlogg-open-welcome-tour", reopenWelcomeTour);
     };
   }, [user?.id]);
 
@@ -92,6 +110,7 @@ export default function FirstLoginSetup() {
     setSaving(true);
     setError("");
     try {
+      setReducedMotionPreference(reducedMotion);
       await saveUserPreferences({
         theme_accent_color: accentColor,
         preferred_unit_system: unitSystem,
@@ -104,12 +123,19 @@ export default function FirstLoginSetup() {
       window.dispatchEvent(new Event("batchlogg-preferences-saved"));
       setSystem(unitSystem);
       setStage(null);
+      window.dispatchEvent(new Event("batchlogg-onboarding-completed"));
+      return true;
     } catch (saveError) {
       console.error("Could not save first-login setup", saveError);
       setError("Your preferences could not be saved. Please try again.");
+      return false;
     } finally {
       setSaving(false);
     }
+  }
+
+  async function openFeature(href: string) {
+    if (await finishSetup()) router.push(href);
   }
 
   if (loading || !stage) {
@@ -123,41 +149,122 @@ export default function FirstLoginSetup() {
   const checkboxClass = "h-4 w-4 accent-green-500";
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-[110] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
+      onClick={(event) => {
+        if (event.target === event.currentTarget && !saving && stage === "welcome") {
+          void finishSetup();
+        }
+      }}
+    >
       <section
         role="dialog"
         aria-modal="true"
         aria-labelledby="first-login-title"
-        className="max-h-[min(90vh,52rem)] w-full max-w-xl overflow-y-auto rounded-2xl border border-white/15 bg-zinc-950 p-6 text-white shadow-2xl sm:p-8"
+        className={`max-h-[min(90vh,52rem)] w-full overflow-y-auto rounded-2xl border border-white/15 bg-zinc-950 p-6 text-white shadow-2xl sm:p-8 ${
+          stage === "welcome" ? "max-w-3xl" : "max-w-xl"
+        }`}
       >
         {stage === "welcome" ? (
-          <div className="py-5 text-center">
+          <div className="py-1">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-green-300">
               Welcome to Batchlogg
             </p>
             <h1 id="first-login-title" className="mt-3 text-3xl font-bold">
               Welcome, {username}!
             </h1>
-            <p className="mx-auto mt-4 max-w-md leading-7 text-white/75">
-              Your brewing workspace is ready. Track batches from brew day onward,
-              keep recipes and inventory together, and choose how Batchlogg works for you.
+            <p className="mt-3 max-w-2xl leading-7 text-white/70">
+              Your brewing workspace brings the whole hobby together. Here are a few
+              places to start—explore in any order, and come back to the rest whenever
+              you like.
             </p>
-            <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
-              <button
-                type="button"
-                onClick={() => setStage("preferences")}
-                className="rounded-lg bg-green-700 px-5 py-3 font-semibold hover:bg-green-600"
-              >
-                Set up my preferences
-              </button>
-              <button
-                type="button"
-                disabled={saving}
-                onClick={() => void finishSetup()}
-                className="rounded-lg border border-white/20 bg-white/10 px-5 py-3 font-semibold hover:bg-white/20 disabled:opacity-50"
-              >
-                Skip for now
-              </button>
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              {[
+                {
+                  href: "/my-recipes",
+                  label: "My Recipes",
+                  description: "Create, organize, and refine the recipes you brew.",
+                  number: "01",
+                },
+                {
+                  href: "/dashboard",
+                  label: "Batches & fermentation",
+                  description: "Follow active batches with gravity readings, notes, and reminders.",
+                  number: "02",
+                },
+                {
+                  href: "/inventory",
+                  label: "Inventory",
+                  description: "Keep track of ingredients and brewing supplies.",
+                  number: "03",
+                },
+                {
+                  href: "/abv-tools",
+                  label: "Brewing calculators",
+                  description: "Use practical tools for common brewing calculations.",
+                  number: "04",
+                },
+                {
+                  href: "/batch-history",
+                  label: "Batch history",
+                  description: "Look back at finished batches and the details you recorded.",
+                  number: "05",
+                },
+                {
+                  href: "/community/forum",
+                  label: "Community forum",
+                  description: "Share ideas and learn from other brewers.",
+                  number: "06",
+                },
+              ].map((feature) => (
+                <Link
+                  key={feature.href}
+                  href={feature.href}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    if (!saving) void openFeature(feature.href);
+                  }}
+                  className="group rounded-xl border border-white/10 bg-white/[0.04] p-4 text-left transition hover:border-green-300/30 hover:bg-white/[0.08] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-300"
+                >
+                  <span className="flex items-center justify-between gap-3">
+                    <span className="font-semibold text-white/90">{feature.label}</span>
+                    <span className="text-xs font-semibold tracking-widest text-green-300/70">
+                      {feature.number}
+                    </span>
+                  </span>
+                  <span className="mt-2 block text-sm leading-6 text-white/55">
+                    {feature.description}
+                  </span>
+                  <span className="mt-3 block text-xs font-semibold text-green-200 opacity-80 group-hover:opacity-100">
+                    Explore <span aria-hidden="true">→</span>
+                  </span>
+                </Link>
+              ))}
+            </div>
+
+            <div className="mt-6 flex flex-col-reverse justify-between gap-3 border-t border-white/10 pt-5 sm:flex-row sm:items-center">
+              <p className="text-xs text-white/45">
+                Your plan includes the features shown here. You can explore at your own pace.
+              </p>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => setStage("preferences")}
+                  className="rounded-lg border border-white/20 bg-white/10 px-5 py-3 font-semibold hover:bg-white/20 disabled:opacity-50"
+                >
+                  Choose your preferences
+                </button>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => void finishSetup()}
+                  className="rounded-lg bg-green-700 px-5 py-3 font-semibold hover:bg-green-600 disabled:opacity-50"
+                >
+                  Start brewing
+                </button>
+              </div>
             </div>
             {error && <p role="alert" className="mt-4 text-sm text-red-300">{error}</p>}
           </div>
@@ -209,6 +316,21 @@ export default function FirstLoginSetup() {
                   ))}
                 </div>
               </fieldset>
+
+              <label className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={reducedMotion}
+                  onChange={(event) => setReducedMotion(event.target.checked)}
+                  className={`${checkboxClass} mt-1`}
+                />
+                <span>
+                  <span className="block font-medium">Reduce motion</span>
+                  <span className="text-sm text-white/60">
+                    Hide carbonation bubbles throughout the site.
+                  </span>
+                </span>
+              </label>
 
               <label className="flex items-start gap-3">
                 <input
@@ -271,9 +393,17 @@ export default function FirstLoginSetup() {
                   type="button"
                   disabled={saving}
                   onClick={() => void finishSetup()}
+                  className="rounded-lg border border-white/20 bg-white/10 px-5 py-3 font-semibold hover:bg-white/20 disabled:opacity-50"
+                >
+                  Skip preferences
+                </button>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => void finishSetup()}
                   className="rounded-lg bg-green-700 px-5 py-3 font-semibold hover:bg-green-600 disabled:opacity-50"
                 >
-                  {saving ? "Saving…" : "Save and continue"}
+                  {saving ? "Saving…" : "Save preferences"}
                 </button>
               </div>
             </div>
