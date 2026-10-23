@@ -159,7 +159,7 @@ useEffect(() => {
     try {
       const token = await getToken();
       if (!token) {
-        router.replace("/");
+        router.replace("/auth/login?redirect=/dashboard");
         return;
       }
 
@@ -170,7 +170,7 @@ useEffect(() => {
       });
 
       if (response.status === 401) {
-        router.replace("/");
+        router.replace("/auth/login?redirect=/dashboard");
         return;
       }
 
@@ -269,7 +269,7 @@ useEffect(() => {
     try {
       const token = await getToken();
       if (!token) {
-        router.replace("/");
+        router.replace("/auth/login?redirect=/dashboard");
         return;
       }
 
@@ -280,7 +280,7 @@ useEffect(() => {
       });
 
       if (res.status === 401) {
-        router.replace("/");
+        router.replace("/auth/login?redirect=/dashboard");
         return;
       }
 
