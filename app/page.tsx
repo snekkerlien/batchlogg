@@ -98,6 +98,21 @@ export default function Home() {
           </li>
           <li>
             <Link
+              href="/premium"
+              className="block h-full rounded-lg border border-green-300/30 bg-green-500/10 p-5 transition hover:border-green-300/50 hover:bg-green-500/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-300"
+            >
+              <h3 className="text-lg font-semibold">Batchlogg Premium</h3>
+              <p className="mt-2 text-sm text-white/70">
+                Unlock more vessels, brew calendar, shopping lists, analytics,
+                and recipe history for $4.99/mo.
+              </p>
+              <span className="mt-4 inline-block text-sm font-semibold text-green-300">
+                See Premium →
+              </span>
+            </Link>
+          </li>
+          <li>
+            <Link
               href="/contact"
               className="block h-full rounded-lg border border-white/10 bg-white/5 p-5 transition hover:border-green-300/40 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-300"
             >

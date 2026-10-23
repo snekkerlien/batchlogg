@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useAuthContext } from "../providers/AuthProvider";
 
 interface MuteDetails {
   ends_at: string | null;
@@ -17,9 +18,9 @@ function formatCountdown(milliseconds: number) {
 }
 
 export default function MuteCountdownBanner() {
+  const { user, loading: authLoading } = useAuthContext();
   const [mute, setMute] = useState<MuteDetails | null>(null);
   const [remaining, setRemaining] = useState<number | null>(null);
-  const [error, setError] = useState("");
 
   const loadMute = useCallback(async () => {
     try {
@@ -30,17 +31,28 @@ export default function MuteCountdownBanner() {
       const result: { mute?: MuteDetails | null; error?: string } =
         await response.json();
       if (!response.ok) {
-        throw new Error(result.error || "Could not check account restrictions.");
+        // Fail soft: never show a site-wide error banner for mute checks.
+        console.error(
+          "Could not load mute countdown banner",
+          result.error || response.status
+        );
+        setMute(null);
+        return;
       }
       setMute(result.mute ?? null);
-      setError("");
     } catch (loadError) {
       console.error("Could not load mute countdown banner", loadError);
-      setError("Your mute status could not be checked.");
+      setMute(null);
     }
   }, []);
 
   useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      setMute(null);
+      return;
+    }
+
     void loadMute();
     const interval = window.setInterval(loadMute, 60_000);
     const refreshWhenVisible = () => {
@@ -51,7 +63,7 @@ export default function MuteCountdownBanner() {
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
-  }, [loadMute]);
+  }, [authLoading, loadMute, user]);
 
   useEffect(() => {
     if (!mute?.ends_at) {
@@ -74,16 +86,6 @@ export default function MuteCountdownBanner() {
     return () => window.clearInterval(interval);
   }, [loadMute, mute?.ends_at]);
 
-  if (error) {
-    return (
-      <aside
-        role="status"
-        className="rounded-xl border border-amber-300/20 bg-black/60 px-4 py-2 text-center text-sm text-amber-100 backdrop-blur-md"
-      >
-        {error}
-      </aside>
-    );
-  }
   if (!mute) return null;
 
   return (

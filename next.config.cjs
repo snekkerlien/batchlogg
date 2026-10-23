@@ -9,6 +9,11 @@ const nextConfig = {
         destination: "/business/:path*",
         permanent: true,
       },
+      {
+        source: "/community",
+        destination: "/community/forum",
+        permanent: true,
+      },
     ];
   },
 

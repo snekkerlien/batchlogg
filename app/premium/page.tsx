@@ -76,6 +76,9 @@ export default function PremiumPage() {
     }
   }
 
+  const isPremium = profile?.account_tier === "premium";
+  const showUpgradeOffer = !isPremium;
+
   return (
     <main className="min-h-screen px-2 py-12 text-white sm:px-6">
       <div className="relative mx-auto mt-12 max-w-3xl rounded-xl border border-white/10 bg-black/60 p-3 pt-16 backdrop-blur-md sm:p-10">
@@ -89,13 +92,16 @@ export default function PremiumPage() {
           title="Batchlogg Premium"
           subtitle="More insight, planning, and control for your brewing."
         />
+
         {loading ? (
-          <p className="text-center text-white/65">Loading your plan…</p>
+          <p className="mb-6 text-center text-sm text-white/50" aria-live="polite">
+            Checking your plan…
+          </p>
         ) : profile ? (
           <div className="mb-6 rounded-xl border border-green-400/20 bg-green-500/10 p-4 text-center">
             <p className="text-sm text-white/60">Your current tier</p>
             <p className="mt-1 text-xl font-semibold text-green-200">
-              {profile.account_tier === "premium" ? "Premium" : "Free"}
+              {isPremium ? "Premium" : "Free"}
             </p>
           </div>
         ) : (
@@ -107,8 +113,11 @@ export default function PremiumPage() {
           </p>
         )}
 
-        {!loading && profile?.account_tier !== "premium" && (
+        {showUpgradeOffer && (
           <div className="mb-8 flex flex-col items-center gap-3">
+            <p className="text-center text-2xl font-semibold text-green-200">
+              $4.99<span className="text-base font-normal text-white/70">/mo</span>
+            </p>
             <p className="text-center text-white/80">
               Premium is $4.99 USD per month, before VAT.
             </p>
@@ -121,7 +130,7 @@ export default function PremiumPage() {
             <p className="max-w-md text-center text-sm text-white/60">
               Applicable VAT will be calculated and added during checkout based on your billing address. The final total will be shown before payment.
             </p>
-            {profile?.account_tier === "free" && (
+            {profile?.account_tier === "free" ? (
               <button
                 type="button"
                 disabled={busy}
@@ -130,7 +139,18 @@ export default function PremiumPage() {
               >
                 {busy ? "Opening checkout…" : "Upgrade to Premium"}
               </button>
-            )}
+            ) : !loading && !profile ? (
+              <p className="text-center text-sm text-white/70">
+                <Link className="font-semibold text-green-200 underline" href="/auth/signup">
+                  Create an account
+                </Link>
+                {" "}or{" "}
+                <Link className="font-semibold text-green-200 underline" href="/auth/login">
+                  log in
+                </Link>
+                {" "}to upgrade.
+              </p>
+            ) : null}
           </div>
         )}
 
