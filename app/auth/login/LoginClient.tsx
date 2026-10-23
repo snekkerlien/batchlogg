@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
@@ -8,18 +8,8 @@ import FormField from "@/app/components/FormField";
 
 export default function LoginClient() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-
-  useEffect(() => {
-    async function checkSession() {
-      await supabaseBrowser.auth.getSession();
-      setLoading(false);
-    }
-
-    checkSession();
-  }, []);
 
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -73,8 +63,6 @@ export default function LoginClient() {
     }
   }
 
-
-  if (loading) return null;
 
   return (
     <main className="min-h-screen flex items-center justify-center px-6">

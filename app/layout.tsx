@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="no">
+    <html lang="en">
       <head>
         {/* BLOCK MICROSOFT COPILOT */}
         <meta name="copilot" content="no-assist" />
