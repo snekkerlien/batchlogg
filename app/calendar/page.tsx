@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
+import PremiumFeaturePrompt from "@/app/components/PremiumFeaturePrompt";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 
 type CalendarBatch = {
@@ -34,6 +35,7 @@ type CalendarEvent = {
   kind: "start" | "finish" | "reminder";
   href: string;
   detail?: string;
+  timestamp?: string;
 };
 
 function dateKey(date: Date) {
@@ -44,6 +46,10 @@ function shiftDays(date: Date, days: number) {
   const result = new Date(date);
   result.setDate(result.getDate() + days);
   return result;
+}
+
+function mondayOfWeek(date: Date) {
+  return shiftDays(date, -((date.getDay() + 6) % 7));
 }
 
 function monthGridRange(month: Date) {
@@ -67,55 +73,80 @@ export default function CalendarPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [premiumRequired, setPremiumRequired] = useState(false);
+  const [isNarrow, setIsNarrow] = useState(false);
+  const [viewOverride, setViewOverride] = useState<"agenda" | "month" | null>(null);
+  const [agendaStart, setAgendaStart] = useState(() => dateKey(mondayOfWeek(new Date())));
+  const [retry, setRetry] = useState(0);
+  const view = isNarrow ? "agenda" : viewOverride ?? "month";
+  const agendaDays = useMemo(() => {
+    const start = new Date(`${agendaStart}T12:00:00`);
+    return Array.from({ length: 7 }, (_, index) => shiftDays(start, index));
+  }, [agendaStart]);
+  const { from, to } = view === "agenda"
+    ? { from: agendaStart, to: dateKey(shiftDays(agendaDays[0], 7)) }
+    : monthGridRange(month);
 
-  const loadCalendar = useCallback(async () => {
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 639px)");
+    const update = () => setIsNarrow(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  const loadCalendar = useCallback(async (signal: AbortSignal) => {
     const {
       data: { session },
       error: sessionError,
     } = await supabaseBrowser.auth.getSession();
+    if (signal.aborted) return;
     if (sessionError) throw sessionError;
     if (!session) {
       router.replace("/auth/login");
       return;
     }
 
-    const { from, to } = monthGridRange(month);
+    // Include adjacent UTC dates so reminders near local midnight are not missed.
+    const fetchFrom = dateKey(shiftDays(new Date(`${from}T12:00:00`), -1));
+    const fetchTo = dateKey(shiftDays(new Date(`${to}T12:00:00`), 1));
     const response = await fetch(
-      `/api/calendar?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
-      { cache: "no-store", credentials: "include" }
+      `/api/calendar?from=${encodeURIComponent(fetchFrom)}&to=${encodeURIComponent(fetchTo)}`,
+      { cache: "no-store", credentials: "include", signal }
     );
     const result: {
       batches?: CalendarBatch[];
       reminders?: CalendarReminder[];
       error?: string;
     } = await response.json();
+    if (signal.aborted) return;
     if (response.status === 403) {
       setPremiumRequired(true);
       return;
     }
     if (!response.ok) throw new Error(result.error || "Could not load calendar");
+    setPremiumRequired(false);
     setBatches(result.batches ?? []);
     setReminders(result.reminders ?? []);
-  }, [month, router]);
+  }, [from, to, router]);
 
   useEffect(() => {
-    let active = true;
+    const controller = new AbortController();
     setLoading(true);
     setError("");
-    loadCalendar()
+    loadCalendar(controller.signal)
       .catch((loadError) => {
+        if (controller.signal.aborted) return;
         console.error("Could not load brewing calendar", loadError);
-        if (active) setError("Calendar events could not be loaded. Please try again.");
+        setError("Calendar events could not be loaded. Please try again.");
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       });
     return () => {
-      active = false;
+      controller.abort();
     };
-  }, [loadCalendar]);
+  }, [loadCalendar, retry]);
 
-  const { from, to } = monthGridRange(month);
   const days = useMemo(() => {
     const first = new Date(`${from}T12:00:00`);
     const last = new Date(`${to}T12:00:00`);
@@ -162,8 +193,13 @@ export default function CalendarPage() {
         hour: "numeric",
         minute: "2-digit",
       })}`,
+      timestamp: reminder.remind_at,
     }));
-    return [...batchEvents, ...reminderEvents];
+    return [...batchEvents, ...reminderEvents]
+      .filter(event => event.date >= from && event.date < to)
+      .sort((left, right) => left.date.localeCompare(right.date) ||
+        (left.timestamp ?? "").localeCompare(right.timestamp ?? "") ||
+        left.title.localeCompare(right.title));
   }, [batches, reminders, from, to]);
 
   const eventsByDate = useMemo(() => {
@@ -181,9 +217,14 @@ export default function CalendarPage() {
     setSelectedDate(dateKey(nextMonth));
   }
 
+  function changePeriod(offset: number) {
+    if (view === "month") changeMonth(offset);
+    else setAgendaStart(dateKey(shiftDays(new Date(`${agendaStart}T12:00:00`), offset * 7)));
+  }
+
   return (
-    <main className="min-h-screen px-4 py-10 text-white sm:px-6">
-      <div className="relative mx-auto w-full max-w-6xl rounded-xl border border-white/10 bg-black/60 p-5 pt-16 backdrop-blur-md sm:p-8 sm:pt-16">
+    <main className="min-h-screen px-2 py-10 text-white sm:px-6">
+      <div className="relative mx-auto w-full max-w-6xl rounded-xl border border-white/10 bg-black/60 p-2 pt-16 backdrop-blur-md sm:p-8 sm:pt-16">
         <div className="absolute left-4 top-3 z-20">
           <BackButton />
         </div>
@@ -194,7 +235,7 @@ export default function CalendarPage() {
           title="Brew calendar"
           subtitle="See batch milestones and scheduled reminders in one place."
         />
-        {!premiumRequired && !loading && (
+        {!premiumRequired && !loading && !error && (
           <div className="mb-5 text-center">
             <a
               href="/api/calendar/export"
@@ -207,13 +248,28 @@ export default function CalendarPage() {
         )}
 
         <section aria-label="Calendar" className="mt-8">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex gap-2">
+          <div role="group" aria-label="Calendar view" className="mb-4 flex flex-wrap justify-center gap-2">
+            {(["agenda", "month"] as const).filter(option => option === "agenda" || !isNarrow).map(option => (
+              <button
+                key={option}
+                type="button"
+                aria-pressed={view === option}
+                onClick={() => setViewOverride(option)}
+                className={`min-h-11 rounded-lg border px-4 py-2 text-sm ${
+                  view === option ? "border-green-400 bg-green-700" : "border-white/20 bg-white/5 hover:bg-white/10"
+                }`}
+              >
+                {option === "agenda" ? "Agenda" : "Month"}
+              </button>
+            ))}
+          </div>
+          <div className="mb-4 flex flex-wrap items-center justify-center gap-3">
+            <div className="flex flex-wrap justify-center gap-2">
               <button
                 type="button"
-                onClick={() => changeMonth(-1)}
-                aria-label="Previous month"
-                className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 hover:bg-white/20"
+                onClick={() => changePeriod(-1)}
+                aria-label={view === "agenda" ? "Previous week" : "Previous month"}
+                className="min-h-11 min-w-11 rounded-lg border border-white/20 bg-white/10 px-3 py-2 hover:bg-white/20"
               >
                 ←
               </button>
@@ -223,42 +279,84 @@ export default function CalendarPage() {
                   const current = new Date();
                   setMonth(new Date(current.getFullYear(), current.getMonth(), 1));
                   setSelectedDate(dateKey(current));
+                  setAgendaStart(dateKey(mondayOfWeek(current)));
                 }}
-                className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm hover:bg-white/20"
+                className="min-h-11 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm hover:bg-white/20"
               >
                 Today
               </button>
               <button
                 type="button"
-                onClick={() => changeMonth(1)}
-                aria-label="Next month"
-                className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 hover:bg-white/20"
+                onClick={() => changePeriod(1)}
+                aria-label={view === "agenda" ? "Next week" : "Next month"}
+                className="min-h-11 min-w-11 rounded-lg border border-white/20 bg-white/10 px-3 py-2 hover:bg-white/20"
               >
                 →
               </button>
             </div>
-            <h2 className="text-xl font-semibold text-green-300">
-              {month.toLocaleDateString(undefined, { month: "long", year: "numeric" })}
+            <h2 aria-live="polite" className="w-full break-words text-center text-sm font-semibold text-green-300 sm:w-auto sm:text-xl">
+              {view === "agenda"
+                ? `${agendaDays[0].toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })} – ${agendaDays[6].toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`
+                : month.toLocaleDateString(undefined, { month: "long", year: "numeric" })}
             </h2>
           </div>
 
           {premiumRequired ? (
-            <div className="rounded-xl border border-green-400/20 bg-green-500/10 p-6 text-center">
-              <p className="text-white/80">The brew calendar is part of Batchlogg Premium.</p>
-              <Link href="/premium" className="mt-4 inline-block rounded-lg bg-green-700 px-5 py-3 font-semibold hover:bg-green-600">
-                Explore Premium
-              </Link>
-            </div>
+            <PremiumFeaturePrompt
+              feature="The brew calendar"
+              description="Keep your brewing schedule in one place and plan around upcoming fermentation and finishing dates."
+              benefits={[
+                "See batch start and finish dates alongside scheduled brew reminders.",
+                "Switch between a monthly calendar and a weekly agenda.",
+                "Export your schedule to calendar apps with an iCalendar (.ics) file.",
+              ]}
+            />
           ) : error ? (
             <div role="alert" className="mb-4 rounded-lg border border-red-500/40 bg-red-950/40 p-4 text-center">
               <p>{error}</p>
-              <button type="button" onClick={() => void loadCalendar()} className="mt-2 underline">
+              <button type="button" onClick={() => setRetry(value => value + 1)} className="mt-2 min-h-11 underline">
                 Try again
               </button>
             </div>
           ) : null}
 
-          <div className="grid grid-cols-7 overflow-hidden rounded-lg border border-white/10">
+          {!premiumRequired && loading ? (
+            <p role="status" className="py-6 text-center text-sm text-white/60">Loading calendar…</p>
+          ) : !premiumRequired && !error && view === "agenda" ? (
+            <section aria-label="Weekly agenda" className="space-y-3">
+              {agendaDays.map(day => {
+                const key = dateKey(day);
+                const dayEvents = eventsByDate.get(key) ?? [];
+                return (
+                  <section key={key} aria-labelledby={`agenda-${key}`} className={`rounded-lg border p-4 ${key === today ? "border-green-400/40 bg-green-400/5" : "border-white/10 bg-white/5"}`}>
+                    <h3 id={`agenda-${key}`} className="font-semibold text-green-200">
+                      {key === today ? "Today · " : ""}
+                      <time dateTime={key}>{day.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}</time>
+                    </h3>
+                    {dayEvents.length === 0 ? (
+                      <p className="mt-2 text-sm text-white/50">Nothing scheduled.</p>
+                    ) : (
+                      <ul className="mt-3 space-y-2">
+                        {dayEvents.map(event => (
+                          <li key={event.id}>
+                            <Link href={event.href} className="block min-h-11 rounded-lg border border-white/10 bg-black/20 p-3 hover:bg-white/10">
+                              <span className={`block text-xs font-medium ${event.kind === "reminder" ? "text-amber-200" : event.kind === "finish" ? "text-blue-200" : "text-green-200"}`}>
+                                {event.kind === "reminder" ? "Reminder" : event.kind === "finish" ? "Batch finished" : "Batch started"}
+                              </span>
+                              <span className="mt-1 block break-words">{event.title}</span>
+                              {event.detail && <span className="mt-1 block break-words text-sm text-white/65">{event.detail}</span>}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </section>
+                );
+              })}
+            </section>
+          ) : null}
+
+          {!premiumRequired && !error && !loading && view === "month" && <div className="grid grid-cols-7 overflow-hidden rounded-lg border border-white/10">
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((weekday) => (
               <div key={weekday} className="border-b border-white/10 bg-white/5 p-2 text-center text-xs text-white/60">
                 <span className="hidden sm:inline">{weekday}</span>
@@ -309,10 +407,10 @@ export default function CalendarPage() {
                 </button>
               );
             })}
-          </div>
+          </div>}
         </section>
 
-        <section aria-live="polite" className="mt-6 rounded-lg border border-white/10 bg-white/5 p-4">
+        {!premiumRequired && !error && !loading && view === "month" && <section aria-live="polite" className="mt-6 rounded-lg border border-white/10 bg-white/5 p-4">
           <h2 className="text-lg font-semibold text-green-300">
             {new Date(`${selectedDate}T12:00:00`).toLocaleDateString(undefined, {
               weekday: "long",
@@ -340,7 +438,7 @@ export default function CalendarPage() {
               ))}
             </ul>
           ) : null}
-        </section>
+        </section>}
 
         <div className="mt-4 flex flex-wrap justify-center gap-4 text-xs text-white/65">
           <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-green-300" />Batch started</span>

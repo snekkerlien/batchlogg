@@ -88,7 +88,7 @@ export default function MuteCountdownBanner() {
 
   return (
     <aside
-      role="status"
+      aria-label="Account restriction status"
       className="rounded-xl border border-amber-300/20 bg-black/60 px-4 py-2 text-center text-sm text-amber-100 backdrop-blur-md"
     >
       {mute.ends_at ? (

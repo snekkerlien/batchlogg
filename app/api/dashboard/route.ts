@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
   const [profileResult, karResult, sharesResult] = await Promise.all([
     serviceRole
       .from("profiles")
-      .select("username, account_tier")
+      .select("username, account_tier, batch_reminders_enabled")
       .eq("id", user.id)
       .maybeSingle(),
     serviceRole
@@ -125,14 +125,17 @@ export async function GET(request: NextRequest) {
 
   const allVessels = [...vessels, ...(sharedVessels ?? [])];
   const vesselIds = allVessels.map((vessel) => vessel.id);
-  let batchByVessel = new Map<string, { status: string; name: string | null }>();
+  let batchByVessel = new Map<
+    string,
+    { id: string; status: string; name: string | null }
+  >();
 
   if (vesselIds.length > 0) {
     const { data: batches, error: batchesError } = await supabase
       .from("batches")
-      .select("aktivt_kar, status, name, startdato")
+      .select("id, aktivt_kar, status, name, startdato")
       .in("aktivt_kar", vesselIds)
-      .in("status", ["Aktiv", "Sekundær", "secondary"])
+      .in("status", ["Aktiv", "Sekundær", "secondary", "Conditioning"])
       .order("startdato", { ascending: false });
 
     if (batchesError) {
@@ -146,6 +149,7 @@ export async function GET(request: NextRequest) {
     for (const batch of batches ?? []) {
       if (batch.aktivt_kar && !batchByVessel.has(batch.aktivt_kar)) {
         batchByVessel.set(batch.aktivt_kar, {
+          id: batch.id,
           status: batch.status,
           name: batch.name,
         });
@@ -172,6 +176,70 @@ export async function GET(request: NextRequest) {
   }
   const ownerNames = new Map((owners ?? []).map((owner) => [owner.id, owner.username]));
 
+  const activeBatchIds = [
+    ...new Set([...batchByVessel.values()].map((batch) => batch.id)),
+  ];
+  const [readingsResult, remindersResult] = await Promise.all([
+    activeBatchIds.length > 0
+      ? serviceRole
+          .from("sg_readings")
+          .select("batch_id, sg, created_at")
+          .in("batch_id", activeBatchIds)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+      : Promise.resolve({ data: [], error: null }),
+    activeBatchIds.length > 0 &&
+    profileResult.data?.batch_reminders_enabled !== false
+      ? serviceRole
+          .from("batch_reminders")
+          .select("batch_id, type, message, remind_at")
+          .eq("user_id", user.id)
+          .in("batch_id", activeBatchIds)
+          .is("read_at", null)
+          .order("remind_at", { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  if (readingsResult.error) {
+    return NextResponse.json(
+      { error: readingsResult.error.message },
+      { status: 500 }
+    );
+  }
+  if (remindersResult.error) {
+    return NextResponse.json(
+      { error: remindersResult.error.message },
+      { status: 500 }
+    );
+  }
+
+  const latestReadingByBatch = new Map<
+    string,
+    { sg: number | string; created_at: string }
+  >();
+  for (const reading of readingsResult.data ?? []) {
+    if (reading.batch_id && !latestReadingByBatch.has(reading.batch_id)) {
+      latestReadingByBatch.set(reading.batch_id, {
+        sg: reading.sg,
+        created_at: reading.created_at,
+      });
+    }
+  }
+
+  const nextReminderByBatch = new Map<
+    string,
+    { type: "manual" | "sg_check"; message: string; remind_at: string }
+  >();
+  for (const reminder of remindersResult.data ?? []) {
+    if (reminder.batch_id && !nextReminderByBatch.has(reminder.batch_id)) {
+      nextReminderByBatch.set(reminder.batch_id, {
+        type: reminder.type,
+        message: reminder.message,
+        remind_at: reminder.remind_at,
+      });
+    }
+  }
+
   return NextResponse.json(
     {
       username: profileResult.data?.username ?? "Unknown",
@@ -183,12 +251,21 @@ export async function GET(request: NextRequest) {
           nummer: index + 1,
           created_at: vessel.created_at,
           status:
-            batch?.status === "Sekundær" || batch?.status === "secondary"
-              ? "Sekundær"
-              : batch
-                ? "Aktiv"
-                : "Ledig",
+            batch?.status === "Conditioning"
+              ? "Conditioning"
+              : batch?.status === "Sekundær" || batch?.status === "secondary"
+                ? "Sekundær"
+                : batch
+                  ? "Aktiv"
+                  : "Ledig",
           batchName: batch?.name ?? null,
+          activeBatchId: batch?.id ?? null,
+          latestReading: batch
+            ? latestReadingByBatch.get(batch.id) ?? null
+            : null,
+          nextReminder: batch
+            ? nextReminderByBatch.get(batch.id) ?? null
+            : null,
           isShared: ownedSharedIds.has(vessel.id),
         };
       }),
@@ -199,12 +276,21 @@ export async function GET(request: NextRequest) {
           nummer: vessel.nummer,
           created_at: vessel.created_at,
           status:
-            batch?.status === "Sekundær" || batch?.status === "secondary"
-              ? "Sekundær"
-              : batch
-                ? "Aktiv"
-                : "Ledig",
+            batch?.status === "Conditioning"
+              ? "Conditioning"
+              : batch?.status === "Sekundær" || batch?.status === "secondary"
+                ? "Sekundær"
+                : batch
+                  ? "Aktiv"
+                  : "Ledig",
           batchName: batch?.name ?? null,
+          activeBatchId: batch?.id ?? null,
+          latestReading: batch
+            ? latestReadingByBatch.get(batch.id) ?? null
+            : null,
+          nextReminder: batch
+            ? nextReminderByBatch.get(batch.id) ?? null
+            : null,
           ownerUsername: ownerNames.get(vessel.user_id) ?? "Another user",
           isShared: true,
         };

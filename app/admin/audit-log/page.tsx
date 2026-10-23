@@ -30,6 +30,15 @@ const ACTION_LABELS: Record<string, string> = {
   "analytics.sponsor_link_created": "Created sponsor analytics link",
   "analytics.sponsor_link_revoked": "Revoked sponsor analytics link",
   "analytics.sponsor_link_deleted": "Deleted sponsor analytics link",
+  "brewery.approve": "Approved brewery account",
+  "brewery.reject": "Rejected brewery account",
+  "brewery.suspend": "Suspended brewery account",
+  "brewery.grant": "Granted complimentary brewery access",
+  "brewery.revoke_grant": "Revoked complimentary brewery access",
+  "brewery.review_report_updated": "Moderated brewery product review",
+  "business.manual_account_created": "Created business page with complimentary access",
+  "business.access_granted": "Granted complimentary business access",
+  "business.access_revoked": "Revoked complimentary business access",
 };
 
 function describeDetails(details: Record<string, unknown> | null) {

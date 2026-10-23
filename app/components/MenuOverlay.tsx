@@ -19,14 +19,58 @@ export default function MenuOverlay({ current }: { current: string }) {
 function MenuOverlayContent({ current }: { current: string }) {
   const { user, loading } = useAuthContext();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const [canManageKegs, setCanManageKegs] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isModerator, setIsModerator] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const menuDropdownRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    let activeGroup: string | null = null;
+    if (current === "admin" || current === "kegs") {
+      activeGroup = isModerator && !isAdmin ? "Moderation" : "Admin";
+    } else if (current === "recipes") {
+      activeGroup = pathname.startsWith("/my-recipes")
+        ? null
+        : "Community";
+    } else if (current === "brewery") {
+      activeGroup = pathname.startsWith("/business/manage") ? "Account" : "More tools";
+    } else {
+      const groupByCurrent: Record<string, string> = {
+        "shopping-list": "More tools",
+        "brew-insights": "More tools",
+        abvtools: "More tools",
+        breweries: "More tools",
+        profiles: "Community",
+        friends: "Community",
+        messages: "Community",
+        forum: "Community",
+        account: "Account",
+        settings: "Account",
+      };
+      activeGroup = groupByCurrent[current] ?? null;
+    }
+    setExpandedGroups(activeGroup ? [activeGroup] : []);
+  }, [menuOpen, current, pathname, isAdmin, isModerator, canManageKegs]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+        menuButtonRef.current?.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [menuOpen]);
 
   useEffect(() => {
     let active = true;
@@ -95,48 +139,6 @@ function MenuOverlayContent({ current }: { current: string }) {
     };
   }, []);
 
-  useEffect(() => {
-    if (!menuOpen || !menuDropdownRef.current) return;
-
-    const footer = document.querySelector<HTMLElement>("footer");
-    const dropdown = menuDropdownRef.current;
-    if (!footer) return;
-
-    const originalInlineMarginTop = footer.style.marginTop;
-    const baseMarginTop =
-      Number.parseFloat(window.getComputedStyle(footer).marginTop) || 0;
-    let addedMargin = 0;
-    let frame = 0;
-
-    function updateFooterSpace() {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        if (!footer) return;
-        const dropdownBottom = dropdown.getBoundingClientRect().bottom;
-        const footerTop = footer.getBoundingClientRect().top - addedMargin;
-        const nextAddedMargin = Math.max(0, dropdownBottom + 16 - footerTop);
-        if (Math.abs(nextAddedMargin - addedMargin) < 1) return;
-        addedMargin = nextAddedMargin;
-        footer.style.marginTop = `${baseMarginTop + addedMargin}px`;
-      });
-    }
-
-    const observer = new ResizeObserver(updateFooterSpace);
-    observer.observe(dropdown);
-    observer.observe(footer);
-    window.addEventListener("resize", updateFooterSpace);
-    window.addEventListener("scroll", updateFooterSpace, true);
-    updateFooterSpace();
-
-    return () => {
-      cancelAnimationFrame(frame);
-      observer.disconnect();
-      window.removeEventListener("resize", updateFooterSpace);
-      window.removeEventListener("scroll", updateFooterSpace, true);
-      footer.style.marginTop = originalInlineMarginTop;
-    };
-  }, [menuOpen]);
-
   async function logout() {
     await supabaseBrowser.auth.signOut();
     router.refresh();
@@ -154,14 +156,12 @@ function MenuOverlayContent({ current }: { current: string }) {
     );
   }
 
-  const brewingItems: { href: string; label: string; key: string }[] = [
+  const primaryItems: { href: string; label: string; key: string }[] = [
     { href: "/dashboard", label: "Dashboard", key: "dashboard" },
     { href: "/batch-history", label: "Batch history", key: "batchhistorikk" },
-  ];
-
-  const planningItems = [
     { href: "/my-recipes", label: "My recipes", key: "recipes" },
     { href: "/inventory", label: "Inventory", key: "inventory" },
+    { href: "/calendar", label: "Brew calendar", key: "calendar" },
   ];
 
   const groups: {
@@ -169,20 +169,12 @@ function MenuOverlayContent({ current }: { current: string }) {
     items: { href: string; label: string; key: string }[];
   }[] = [
     {
-      label: "Brewing",
-      items: brewingItems,
-    },
-    {
-      label: "Recipes & inventory",
-      items: planningItems,
-    },
-    {
-      label: "Tools",
+      label: "More tools",
       items: [
-        { href: "/calendar", label: "Brew calendar", key: "calendar" },
         { href: "/shopping-list", label: "Shopping list", key: "shopping-list" },
         { href: "/brew-insights", label: "Brewing insights", key: "brew-insights" },
         { href: "/abv-tools", label: "Brewing calculators", key: "abvtools" },
+        { href: "/business", label: "Beer & Brewing Reviews", key: "breweries" },
       ],
     },
     {
@@ -218,20 +210,31 @@ function MenuOverlayContent({ current }: { current: string }) {
       label: "Account",
       items: [
         { href: "/my-account", label: "My account", key: "account" },
+        { href: "/business/manage", label: "Business account", key: "brewery" },
         { href: "/settings", label: "Settings", key: "settings" },
       ],
     },
   ];
+
+  function isActiveItem(item: { href: string; key: string }) {
+    if (current === "brewery" && pathname.startsWith("/business")) {
+      return item.href === (pathname.startsWith("/business/manage") ? "/business/manage" : "/business");
+    }
+    return item.key === current &&
+      (pathname === item.href || pathname.startsWith(`${item.href}/`));
+  }
 
   return (
     <div ref={menuRef} className="relative inline-flex">
       <div className="flex items-center gap-2">
         <NotificationBell onOpen={() => setMenuOpen(false)} />
         <button
+          ref={menuButtonRef}
           type="button"
           onClick={() => setMenuOpen((open) => !open)}
           aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
           aria-expanded={menuOpen}
+          aria-controls="navigation-menu"
           className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg flex items-center justify-center"
         >
           <svg
@@ -254,72 +257,129 @@ function MenuOverlayContent({ current }: { current: string }) {
 
       {menuOpen && (
         <div
-          ref={menuDropdownRef}
+          id="navigation-menu"
           className="
-            absolute right-0 top-full mt-2
+            menu-overlay-dropdown
+            absolute -right-12 top-full mt-2
             bg-black/90 backdrop-blur-md
             border border-white/20
             rounded-lg shadow-xl
-            p-3
+            p-3 sm:p-4
             text-left
             z-50
-            w-56
+            w-[min(20rem,calc(100vw-1rem))]
+            max-h-[calc(100dvh-5rem)]
+            overflow-y-auto
+            sm:right-0
+            sm:max-h-[calc(100dvh-5rem)]
           "
+          data-menu-dropdown
+          style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}
         >
-          {groups.map((group, groupIndex) => (
-            <section
-              key={group.label}
-              className={groupIndex > 0 ? "mt-3 border-t border-white/10 pt-3" : ""}
+          <section aria-labelledby="workspace-menu-heading" className="mb-2 border-b border-white/10 pb-2">
+            <h2
+              id="workspace-menu-heading"
+              className="px-3 pb-1 text-xs font-semibold text-zinc-400"
             >
-              <h2 className="px-2 pb-1 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                {group.label}
-              </h2>
-              <div className="mt-1">
-                {group.items.map((item) => (
-                  <Link
-                    key={item.key}
-                    href={
-                      item.key === "messages"
-                        ? (() => {
-                            const currentReturnTo =
-                              pathname === "/community/messages"
-                                ? searchParams.get("return_to")
-                                : `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
-                            return currentReturnTo
-                              ? `${item.href}?return_to=${encodeURIComponent(currentReturnTo)}`
-                              : item.href;
-                          })()
-                        : item.href
-                    }
-                    onClick={() => setMenuOpen(false)}
-                    className="flex items-center rounded-md px-2 py-2 font-semibold text-white hover:bg-white/5 hover:text-green-300"
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
-            </section>
-          ))}
+              Brewing
+            </h2>
+            <nav aria-label="Brewing navigation" className="flex flex-col">
+              {primaryItems.map((item) => (
+                <Link
+                  key={item.key}
+                  href={item.href}
+                  onClick={() => setMenuOpen(false)}
+                  aria-current={isActiveItem(item) ? "page" : undefined}
+                  className={`flex min-h-10 items-center border-l-2 px-3 py-2 text-sm font-medium transition-colors hover:bg-white/5 hover:text-green-300 ${
+                    isActiveItem(item)
+                      ? "border-green-400 bg-white/5 text-green-300"
+                      : "border-transparent text-white/90"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+          </section>
 
-          <section
-            aria-label="Desktop app"
-            className="mt-3 border-t border-white/10 pt-3"
-          >
+          <div>
+            {groups.map((group) => {
+              const expanded = expandedGroups.includes(group.label);
+              const containsCurrentItem = group.items.some(isActiveItem);
+              return (
+                <section
+                  key={group.label}
+                  className="border-b border-white/10 py-1 last:border-b-0"
+                >
+                  <button
+                    type="button"
+                    aria-expanded={expanded}
+                    onClick={() => setExpandedGroups((previous) =>
+                      expanded
+                        ? previous.filter((label) => label !== group.label)
+                        : [group.label]
+                    )}
+                    className={`flex min-h-10 w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-white/5 ${
+                      containsCurrentItem ? "text-green-300" : "text-white/80"
+                    }`}
+                  >
+                    {group.label}
+                    <span aria-hidden="true" className="ml-3 text-sm text-white/50">
+                      {expanded ? "−" : "+"}
+                    </span>
+                  </button>
+                  {expanded && (
+                    <nav aria-label={`${group.label} navigation`} className="pb-1 pl-3">
+                      {group.items.map((item) => (
+                        <Link
+                          key={item.key}
+                          href={
+                            item.key === "messages"
+                              ? (() => {
+                                  const currentReturnTo =
+                                    pathname === "/community/messages"
+                                      ? searchParams.get("return_to")
+                                      : `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
+                                  return currentReturnTo
+                                    ? `${item.href}?return_to=${encodeURIComponent(currentReturnTo)}`
+                                    : item.href;
+                                })()
+                              : item.href
+                          }
+                          onClick={() => setMenuOpen(false)}
+                          aria-current={isActiveItem(item) ? "page" : undefined}
+                          className={`flex min-h-10 items-center rounded-md border-l-2 px-3 py-2 text-sm transition-colors hover:bg-white/5 hover:text-green-300 ${
+                            isActiveItem(item)
+                              ? "border-green-400 bg-white/5 text-green-300"
+                              : "border-transparent text-white/90"
+                          }`}
+                        >
+                          {item.label}
+                        </Link>
+                      ))}
+                    </nav>
+                  )}
+                </section>
+              );
+            })}
+          </div>
+
+          <div className="mt-2 flex items-center justify-between border-t border-white/10 pt-2">
             <Link
               href="/download-app"
               onClick={() => setMenuOpen(false)}
-              className="flex items-center px-2 py-2 text-white font-semibold hover:text-green-300 hover:bg-white/5 rounded-md whitespace-nowrap"
+              className="hidden min-h-10 items-center rounded-md px-3 py-2 text-sm text-white/80 hover:bg-white/5 hover:text-green-300 sm:flex"
             >
               Download desktop app
             </Link>
-          </section>
-
-          <button
-            onClick={logout}
-            className="mt-3 w-full border-t border-white/10 px-2 pt-3 text-left text-white font-semibold hover:text-zinc-300 rounded-md whitespace-nowrap"
-          >
-            Log out
-          </button>
+            <button
+              type="button"
+              onClick={logout}
+              className="min-h-10 rounded-md px-3 py-2 text-sm text-white/80 hover:bg-white/5 hover:text-green-300"
+            >
+              Log out
+            </button>
+          </div>
         </div>
       )}
     </div>

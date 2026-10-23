@@ -14,7 +14,7 @@ import RecipeFilters, { type RecipeSort } from "./RecipeFilters";
 import RecipeImport from "./RecipeImport";
 import RecipeAdditiveFields from "./new/RecipeAdditiveFields";
 import RecipeSecondaryFields from "./new/RecipeSecondaryFields";
-import RecipePresentation from "@/app/components/RecipePresentation";
+import RecipePresentation, { RecipeBadges } from "@/app/components/RecipePresentation";
 import BeerColorGlass from "@/app/components/BeerColorGlass";
 import BeerStyleSelect from "@/app/components/BeerStyleSelect";
 import ExpandArrowButton from "@/app/components/ExpandArrowButton";
@@ -77,6 +77,7 @@ export default function RecipesPage() {
   const { label } = useUnits();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [recipes, setRecipes] = useState<any[]>([]);
   const [emptyVessels, setEmptyVessels] = useState<{ id: string; nummer: number }[]>([]);
   const [vesselsLoaded, setVesselsLoaded] = useState(false);
@@ -95,6 +96,9 @@ export default function RecipesPage() {
   const [savingCopyrightRecipeId, setSavingCopyrightRecipeId] = useState<
     string | null
   >(null);
+  const [recipeActionErrors, setRecipeActionErrors] = useState<Record<string, string>>({});
+  const [recipeStartErrors, setRecipeStartErrors] = useState<Record<string, string>>({});
+  const [recipeManageOpen, setRecipeManageOpen] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<string>("All");
   const [recipeSearch, setRecipeSearch] = useState("");
   const [recipeSort, setRecipeSort] = useState<RecipeSort>("newest");
@@ -104,7 +108,6 @@ export default function RecipesPage() {
   const [editBeerStyle, setEditBeerStyle] = useState("");
   const [editOtherStyle, setEditOtherStyle] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
-  const [recipeActionError, setRecipeActionError] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
   const [editFruits, setEditFruits] = useState<Fruit[]>([]);
   const [editMalts, setEditMalts] = useState<Malt[]>([]);
@@ -117,11 +120,15 @@ export default function RecipesPage() {
 
 
   useEffect(() => {
+  setLoading(true);
+  setLoadError("");
   async function load() {
     try {
       const {
         data: { session },
+        error: sessionError,
       } = await supabaseBrowser.auth.getSession();
+      if (sessionError) throw sessionError;
 
       if (!session) {
         router.replace("/auth/login");
@@ -129,10 +136,11 @@ export default function RecipesPage() {
       }
 
       // ⭐ HENT BATCH NOTES
-      const { data: notesRaw } = await supabaseBrowser
+      const { data: notesRaw, error: notesError } = await supabaseBrowser
         .from("batch_notes")
         .select("batch_id")
         .eq("user_id", session.user.id);
+      if (notesError) throw notesError;
 
       // ⭐ TYPE: Map batch_id → boolean
       const notesMap: Record<string, boolean> =
@@ -213,20 +221,22 @@ export default function RecipesPage() {
         has_notes: notesMap[r.batch_id] || false,
       }));
 
-      const { data: vessels } = await supabaseBrowser
+      const { data: vessels, error: vesselsError } = await supabaseBrowser
         .from("kar")
         .select("id, nummer")
         .eq("user_id", session.user.id)
         .order("created_at", { ascending: true });
+      if (vesselsError) throw vesselsError;
 
       const vesselIds = (vessels ?? []).map((vessel) => vessel.id);
       let occupiedVesselIds = new Set<string>();
       if (vesselIds.length > 0) {
-        const { data: activeBatches } = await supabaseBrowser
+        const { data: activeBatches, error: batchesError } = await supabaseBrowser
           .from("batches")
           .select("aktivt_kar")
           .in("aktivt_kar", vesselIds)
-          .in("status", ["Aktiv", "Sekundær", "secondary"]);
+          .in("status", ["Aktiv", "Sekundær", "secondary", "Conditioning"]);
+        if (batchesError) throw batchesError;
         occupiedVesselIds = new Set(
           (activeBatches ?? []).map((batch) => batch.aktivt_kar).filter(Boolean)
         );
@@ -236,14 +246,21 @@ export default function RecipesPage() {
         ...vessel,
         nummer: index + 1,
       }));
-      setEmptyVessels(
-        numberedVessels.filter((vessel) => !occupiedVesselIds.has(vessel.id))
+      const availableVessels = numberedVessels.filter(
+        (vessel) => !occupiedVesselIds.has(vessel.id)
       );
+      setEmptyVessels(availableVessels);
       setVesselsLoaded(true);
       setRecipes(recipesWithNotes);
-      const requestedStartRecipe = new URLSearchParams(
-        window.location.search
-      ).get("start");
+      const searchParams = new URLSearchParams(window.location.search);
+      const requestedStartRecipe = searchParams.get("start");
+      const requestedVesselId = searchParams.get("vessel");
+      if (
+        requestedVesselId &&
+        availableVessels.some((vessel) => vessel.id === requestedVesselId)
+      ) {
+        setSelectedVesselId(requestedVesselId);
+      }
       if (
         requestedStartRecipe &&
         recipesWithNotes.some((recipe) => String(recipe.id) === requestedStartRecipe)
@@ -260,7 +277,7 @@ export default function RecipesPage() {
   }
 
   load();
-}, []);
+}, [loadAttempt, router]);
 
   useEffect(() => {
     if (openEdit) {
@@ -340,11 +357,11 @@ export default function RecipesPage() {
       openRecipeBatch(recipe, vesselId);
     } catch (error) {
       console.error("Could not check recipe ingredients against inventory", error);
-      setBatchInventoryDialog({
-        recipe,
-        vesselId,
-        error: "Inventory could not be checked. Please try again before starting this batch.",
-      });
+      setRecipeStartErrors((previous) => ({
+        ...previous,
+        [String(recipe.id)]:
+          "Inventory could not be checked. Please try again before starting this batch.",
+      }));
     } finally {
       setStartingRecipeId(null);
     }
@@ -360,7 +377,7 @@ export default function RecipesPage() {
 
 
   async function togglePublic(id: string, current: boolean) {
-    setRecipeActionError("");
+    setRecipeActionErrors((previous) => ({ ...previous, [id]: "" }));
     try {
       const response = await fetch(`/api/recipes/${encodeURIComponent(id)}`, {
         method: "PATCH",
@@ -376,18 +393,20 @@ export default function RecipesPage() {
       );
     } catch (updateError) {
       console.error("Could not update recipe visibility", updateError);
-      setRecipeActionError(
-        updateError instanceof Error
-          ? updateError.message
-          : "Could not update recipe visibility."
-      );
+      setRecipeActionErrors((previous) => ({
+        ...previous,
+        [id]:
+          updateError instanceof Error
+            ? updateError.message
+            : "Could not update recipe visibility.",
+      }));
     }
   }
 
   async function updateRecipeCopyright(id: string, copyrightFree: boolean) {
     if (savingCopyrightRecipeId) return;
     setSavingCopyrightRecipeId(id);
-    setRecipeActionError("");
+    setRecipeActionErrors((previous) => ({ ...previous, [id]: "" }));
     try {
       const response = await fetch(`/api/recipes/${encodeURIComponent(id)}`, {
         method: "PATCH",
@@ -413,11 +432,13 @@ export default function RecipesPage() {
       );
     } catch (updateError) {
       console.error("Could not update recipe copyright setting", updateError);
-      setRecipeActionError(
-        updateError instanceof Error
-          ? updateError.message
-          : "Could not update the recipe's copyright setting."
-      );
+      setRecipeActionErrors((previous) => ({
+        ...previous,
+        [id]:
+          updateError instanceof Error
+            ? updateError.message
+            : "Could not update the recipe's copyright setting.",
+      }));
     } finally {
       setSavingCopyrightRecipeId(null);
     }
@@ -427,14 +448,31 @@ export default function RecipesPage() {
 
 
   async function deleteRecipe(id: string) {
-    const res = await fetch("/api/recipes/delete", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-
-    if (res.ok) {
+    setRecipeActionErrors((previous) => ({ ...previous, [id]: "" }));
+    try {
+      const response = await fetch("/api/recipes/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ id }),
+      });
+      const result: { error?: string } = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Could not delete this recipe.");
+      }
       setRecipes((prev) => prev.filter((r) => r.id !== id));
+      return true;
+    } catch (deleteError) {
+      console.error("Could not delete recipe", deleteError);
+      setExpanded(id);
+      setRecipeActionErrors((previous) => ({
+        ...previous,
+        [id]:
+          deleteError instanceof Error
+            ? deleteError.message
+            : "Could not delete this recipe.",
+      }));
+      return false;
     }
   }
 
@@ -642,12 +680,6 @@ function removeDryHop(index: number) {
           title="My recipes"
           subtitle="All your recipes in one place."
         />
-        {recipeActionError && (
-          <p role="alert" className="mb-4 rounded border border-red-400/40 bg-red-950/50 p-3 text-red-200">
-            {recipeActionError}
-          </p>
-        )}
-
         {/* NEW RECIPE BUTTON */}
         <div className="flex justify-center mb-6">
           <button
@@ -689,7 +721,19 @@ function removeDryHop(index: number) {
         {/* RECIPE LIST */}
         <div className={openEdit ? "hidden" : "space-y-4"}>
           {loadError ? (
-            <p role="alert" className="text-center text-red-300">{loadError}</p>
+            <div
+              role="alert"
+              className="rounded-lg border border-red-500/40 bg-red-950/40 p-5 text-center text-red-200"
+            >
+              <p>{loadError}</p>
+              <button
+                type="button"
+                onClick={() => setLoadAttempt((attempt) => attempt + 1)}
+                className="mt-3 rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold text-white hover:bg-white/20"
+              >
+                Try again
+              </button>
+            </div>
           ) : filteredRecipes.length > 0 ? (
             filteredRecipes.map((r) => {
               const og = r.og ? Number(r.og).toFixed(3) : "—";
@@ -720,59 +764,22 @@ function removeDryHop(index: number) {
 >
   {/* Tittel */}
   <div
-    className="min-w-0 flex-1 text-left flex flex-col items-start gap-1"
+    className={`min-w-0 flex-1 text-left ${expanded === r.id ? "flex flex-wrap items-center gap-2" : ""}`}
   >
-    <span className="flex items-center gap-3 text-lg font-bold leading-tight text-green-300 sm:text-xl">
+    <Link
+      href={`/my-recipes/${encodeURIComponent(r.id)}`}
+      className="flex items-center gap-3 text-lg font-bold leading-tight text-green-300 hover:text-green-200 sm:text-xl"
+    >
       {r.name ? r.name.charAt(0).toUpperCase() + r.name.slice(1) : "Unnamed recipe"}
-    </span>
-    {expanded !== r.id && (
-      <span className="text-xs leading-tight text-white/65">{recipeCategory}</span>
+    </Link>
+    {expanded === r.id ? (
+      <RecipeBadges recipe={r} />
+    ) : (
+      <p className="mt-1 text-sm text-white/60">{recipeCategory}</p>
     )}
   </div>
 
-  <span className="sm:hidden">
-    <ExpandArrowButton
-      expanded={expanded === r.id}
-      label={r.name || "recipe"}
-      controls={`recipe-details-${r.id}`}
-      onClick={() => toggle(r.id)}
-    />
-  </span>
-
-  {/* Knapper + pil (PC) */}
-<div className="hidden sm:flex flex-row items-center justify-end gap-2 sm:mt-[6px]">
-
-  <span onClick={(e) => e.stopPropagation()}>
-    <VisibilitySwitch
-      checked={r.is_public}
-      onChange={() => togglePublic(r.id, r.is_public)}
-      publicText="Public"
-      privateText="Private"
-      ariaLabel={`Recipe ${r.name} visibility`}
-    />
-  </span>
-
-  {/* ⭐ EDIT RECIPE BUTTON */}
-  <button
-    onClick={(e) => {
-      e.stopPropagation();
-      openRecipeEditor(r);
-    }}
-    className="px-4 py-2 rounded-lg font-semibold border bg-green-700 hover:bg-green-600 border-green-500"
-  >
-    Edit
-  </button>
-
-  <button
-    onClick={(e) => {
-      e.stopPropagation();
-      setConfirmDeleteId(r.id);
-    }}
-    className="px-4 py-2 rounded-lg font-semibold border bg-white/10 hover:bg-white/20 border-white/20"
-  >
-    Delete
-  </button>
-
+<div className="flex shrink-0 items-center justify-end sm:mt-[6px]">
   <ExpandArrowButton
     expanded={expanded === r.id}
     label={r.name || "recipe"}
@@ -819,49 +826,26 @@ function removeDryHop(index: number) {
 </div>
 )}
 
-{/* Mobil-knapper + pil */}
-<div className="mt-3 flex flex-wrap items-center gap-2 sm:hidden">
-  <span
-    onClick={(e) => e.stopPropagation()}
-    className="inline-flex h-10 items-center rounded-lg border border-white/10 bg-black/20 px-2"
+<div className="mt-3 flex flex-wrap gap-2">
+  <Link
+    href={`/my-recipes/${encodeURIComponent(r.id)}`}
+    className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/20"
   >
-      <VisibilitySwitch
-        checked={r.is_public}
-        onChange={() => togglePublic(r.id, r.is_public)}
-        publicText="Public"
-        privateText="Private"
-        ariaLabel={`Recipe ${r.name} visibility`}
-        compact
-        className="gap-1.5"
-      />
-  </span>
-
-  <div className="flex shrink-0 items-center gap-2">
+    View recipe
+  </Link>
   <button
-    onClick={(e) => {
-      e.stopPropagation();
-      openRecipeEditor(r);
+    type="button"
+    onClick={() => {
+      setExpanded(r.id);
+      setStartRecipeId(r.id);
+      setSelectedVesselId("");
+      setRecipeStartErrors((previous) => ({ ...previous, [r.id]: "" }));
     }}
-    className="h-10 rounded-lg border border-green-500 bg-green-700 px-3 text-sm font-semibold hover:bg-green-600"
+    className="rounded-lg border border-green-500 bg-green-700 px-3 py-2 text-sm font-semibold hover:bg-green-600"
   >
-    Edit
+    Start a batch
   </button>
-
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        setConfirmDeleteId(r.id);
-      }}
-      className="h-10 rounded-lg border border-white/15 bg-white/5 px-3 text-sm font-medium text-white/80 hover:bg-white/10"
-    >
-      Delete
-    </button>
-
-  </div>
 </div>
-
-
-
 
                   {/* SLIDER CONTENT */}
                   <div
@@ -876,7 +860,69 @@ function removeDryHop(index: number) {
                           This is your version of a shared community recipe.
                         </p>
                       )}
-                      <RecipePresentation recipe={r} compact />
+                      <RecipePresentation
+                        recipe={r}
+                        compact
+                        showBadges={false}
+                        beforeMetrics={
+                          <div className="mb-3 w-full rounded-lg border border-white/10 bg-black/20">
+                            <button
+                              type="button"
+                              aria-expanded={recipeManageOpen === r.id}
+                              aria-controls={`recipe-manage-${r.id}`}
+                              onClick={() =>
+                                setRecipeManageOpen((current) =>
+                                  current === r.id ? null : r.id
+                                )
+                              }
+                              className="w-full cursor-pointer px-4 py-3 text-left text-sm font-semibold text-white/75 hover:text-white"
+                            >
+                              Manage recipe
+                              <span aria-hidden="true" className="float-right text-white/60">
+                                {recipeManageOpen === r.id ? "−" : "+"}
+                              </span>
+                            </button>
+                            {recipeManageOpen === r.id && (
+                              <div
+                                id={`recipe-manage-${r.id}`}
+                                className="border-t border-white/10 p-4"
+                              >
+                                {recipeActionErrors[r.id] && (
+                                  <p
+                                    role="alert"
+                                    className="mb-3 rounded-lg border border-red-400/40 bg-red-950/50 p-3 text-sm text-red-200"
+                                  >
+                                    {recipeActionErrors[r.id]}
+                                  </p>
+                                )}
+                                <div className="flex flex-wrap items-center gap-3">
+                                  <VisibilitySwitch
+                                    checked={r.is_public}
+                                    onChange={() => togglePublic(r.id, r.is_public)}
+                                    publicText="Public"
+                                    privateText="Private"
+                                    ariaLabel={`Recipe ${r.name} visibility`}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => openRecipeEditor(r)}
+                                    className="rounded-lg border border-green-500 bg-green-700 px-4 py-2 text-sm font-semibold hover:bg-green-600"
+                                  >
+                                    Edit recipe
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setConfirmDeleteId(r.id)}
+                                    className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20"
+                                  >
+                                    Delete recipe
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        }
+                      />
                       <section className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
                         <p className="text-sm text-white/70">
                           Copyright belongs to you as the recipe uploader by
@@ -971,25 +1017,15 @@ function removeDryHop(index: number) {
                             Cancel
                           </button>
                         </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setStartRecipeId(r.id);
-                            setSelectedVesselId("");
-                          }}
-                          className="px-4 py-2 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold"
+                      ) : null}
+                      {recipeStartErrors[r.id] && (
+                        <p
+                          role="alert"
+                          className="w-full rounded-lg border border-red-400/40 bg-red-950/50 p-3 text-sm text-red-200"
                         >
-                          Start batch from recipe
-                        </button>
+                          {recipeStartErrors[r.id]}
+                        </p>
                       )}
-                      <Link
-                        href={`/my-recipes/${encodeURIComponent(r.id)}`}
-                        onClick={(event) => event.stopPropagation()}
-                        className="ml-auto rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-center text-sm font-semibold hover:bg-white/20"
-                      >
-                        View recipe details and history →
-                      </Link>
                     </div>
                     </div>
                     <p className="mt-4 border-t border-white/10 pt-3 text-center text-xs text-white/55">
@@ -1006,8 +1042,31 @@ function removeDryHop(index: number) {
                 </div>
               );
             })
+          ) : recipes.length === 0 ? (
+            <div role="status" className="rounded-xl border border-white/10 bg-white/5 p-8 text-center">
+              <p className="text-white/75">You haven’t saved any recipes yet.</p>
+              <button
+                type="button"
+                onClick={() => setOpenStyleSelect(true)}
+                className="mt-4 rounded-lg border border-green-500/40 bg-green-800/60 px-4 py-2 font-semibold hover:bg-green-700"
+              >
+                Create your first recipe
+              </button>
+            </div>
           ) : (
-            <p className="opacity-60 text-center">No recipes found.</p>
+            <div role="status" className="rounded-xl border border-white/10 bg-white/5 p-6 text-center">
+              <p className="text-white/75">No recipes match your search or filters.</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setFilterType("All");
+                  setRecipeSearch("");
+                }}
+                className="mt-3 rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold hover:bg-white/20"
+              >
+                Clear filters
+              </button>
+            </div>
           )}
         </div>
 
@@ -1766,7 +1825,11 @@ function removeDryHop(index: number) {
 <ConfirmDialog
   open={confirmDeleteId !== null}
   title="Delete recipe?"
-  message="Are you sure you want to delete this recipe? This action cannot be undone."
+  message={
+    confirmDeleteId && recipeActionErrors[confirmDeleteId]
+      ? `Could not delete this recipe: ${recipeActionErrors[confirmDeleteId]}`
+      : "Are you sure you want to delete this recipe? This action cannot be undone."
+  }
   confirmLabel="Delete"
   onConfirm={async () => {
     if (!confirmDeleteId) return false;

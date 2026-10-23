@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import * as Actions from "../../actions/createRecipe";
 import MenuOverlay from "../../MenuOverlay";
 import BackButton from "../../BackButton";
+import FormField from "@/app/components/FormField";
 import { UnitInput, UnitSymbol } from "../../../components/Units";
 import RecipeAdditiveFields from "../RecipeAdditiveFields";
 import RecipeSecondaryFields from "../RecipeSecondaryFields";
@@ -96,20 +97,21 @@ export default function NewOtherRecipePage() {
 
         <form
           onSubmit={handleSubmit}
+          aria-busy={loading}
           className="flex flex-col gap-6"
         >
           <input type="hidden" name="type" value="Other" />
 
           {/* Recipe name */}
-          <div>
-            <label className="block mb-1 font-semibold">Recipe name</label>
+          <FormField id="recipe-name" label="Recipe name" required>
             <input
+              id="recipe-name"
               name="name"
               placeholder="Example: Experimental Blend #1"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
             />
-          </div>
+          </FormField>
 
           <div>
             <label htmlFor="other-style" className="mb-1 block font-semibold">
@@ -125,39 +127,39 @@ export default function NewOtherRecipePage() {
           </div>
 
           {/* Volume */}
-          <div>
-            <label className="block mb-1 font-semibold">Volume (<UnitSymbol kind="volume" />)</label>
+          <FormField id="recipe-volume" label={<>Volume (<UnitSymbol kind="volume" />)</>}>
             <UnitInput
+              id="recipe-volume"
               name="volume"
               kind="volume"
               placeholder="Example: 5"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
-          </div>
+          </FormField>
 
           {/* OG */}
-          <div>
-            <label className="block mb-1 font-semibold">Original Gravity (OG)</label>
+          <FormField id="recipe-og" label="Original Gravity (OG)">
             <input
+              id="recipe-og"
               name="og"
               type="number"
               step="0.001"
               placeholder="Example: 1.060"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
-          </div>
+          </FormField>
 
           {/* FG */}
-          <div>
-            <label className="block mb-1 font-semibold">Final Gravity (FG)</label>
+          <FormField id="recipe-fg" label="Final Gravity (FG)">
             <input
+              id="recipe-fg"
               name="fg"
               type="number"
               step="0.001"
               placeholder="Example: 1.010"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
-          </div>
+          </FormField>
 
           {/* Dynamic ingredients */}
           <div>
@@ -166,6 +168,7 @@ export default function NewOtherRecipePage() {
             {ingredients.map((ing, i) => (
               <div key={i} className="flex gap-2 mb-2 items-center">
                 <input
+                  aria-label={`Ingredient ${i + 1} name`}
                   placeholder="Ingredient name"
                   className="flex-1 p-3 rounded bg-black/40 border border-white/20"
                   value={ing.name}
@@ -177,6 +180,7 @@ export default function NewOtherRecipePage() {
                 />
 
                 <input
+                  aria-label={`Ingredient ${i + 1} amount`}
                   placeholder="Amount"
                   type="number"
                   min="0"
@@ -191,6 +195,7 @@ export default function NewOtherRecipePage() {
                 />
 
                 <input
+                  aria-label={`Ingredient ${i + 1} unit`}
                   placeholder="Unit"
                   className="w-20 p-3 rounded bg-black/40 border border-white/20"
                   value={ing.unit}
@@ -229,6 +234,7 @@ export default function NewOtherRecipePage() {
             {steps.map((step, i) => (
               <div key={i} className="flex gap-2 mb-2 items-center">
                 <textarea
+                  aria-label={`Process step ${i + 1}`}
                   placeholder={`Step ${i + 1}`}
                   className="flex-1 p-3 rounded bg-black/40 border border-white/20 h-24"
                   value={step}
@@ -265,23 +271,23 @@ export default function NewOtherRecipePage() {
             <label className="block mb-1 font-semibold">Additives</label>
             <RecipeAdditiveFields />
           </div>
-          <div>
-            <label className="block mb-1 font-semibold">Full process</label>
+          <FormField id="recipe-process" label="Full process">
             <textarea
+              id="recipe-process"
               name="full_process"
               placeholder="Describe the overall preparation and fermentation process..."
               className="h-40 w-full rounded border border-white/20 bg-black/40 p-3"
             />
-          </div>
+          </FormField>
           {/* Notes */}
-          <div>
-            <label className="block mb-1 font-semibold">Notes</label>
+          <FormField id="recipe-notes" label="Notes">
             <textarea
+              id="recipe-notes"
               name="notes"
               placeholder="Any additional notes about the recipe..."
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
             />
-          </div>
+          </FormField>
           <RecipeSecondaryFields />
 
           {/* Submit */}

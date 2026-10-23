@@ -8,6 +8,7 @@ export default function BackButton({ href }: { href?: string } = {}) {
   return (
     <button
       type="button"
+      aria-label="Go back"
       onClick={() => {
         if (href) {
           router.push(href);

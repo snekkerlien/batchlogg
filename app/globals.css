@@ -4,6 +4,12 @@
   --background: #0a0a0a;
   --foreground: #ededed;
   --user-accent: #22c55e;
+  --user-accent-text: color-mix(in srgb, var(--user-accent) 80%, white);
+  --user-accent-control-opacity-700-70: 70%;
+  --user-accent-control-opacity-700-50: 50%;
+  --user-accent-control-opacity-600-80: 80%;
+  --user-accent-control-opacity-800-60: 60%;
+  --user-accent-control-opacity-800-50: 50%;
 }
 
 @theme inline {
@@ -30,8 +36,43 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+:is(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="hidden"]),
+  textarea,
+  select
+):focus:not([aria-invalid="true"]) {
+  border-color: rgb(255 255 255 / 55%);
+}
+
+:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px #09090b;
+}
+
+.skip-to-content {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 100;
+  transform: translateY(-200%);
+  border-radius: 0.5rem;
+  background: var(--background);
+  padding: 0.75rem 1rem;
+  color: var(--foreground);
+  box-shadow: 0 0 0 2px #09090b, 0 0 0 4px #fff;
+}
+
+.skip-to-content:focus {
+  transform: translateY(0);
+}
+
 details[open] > summary .disclosure-arrow {
   transform: rotate(90deg);
+}
+
+.menu-overlay-dropdown::-webkit-scrollbar {
+  display: none;
 }
 
 .fermentation-bubble-container {
@@ -106,5 +147,356 @@ body.desktop-app a[href="/download-app"] {
 .text-green-800,
 .text-green-900,
 .text-green-950 {
-  color: color-mix(in srgb, var(--user-accent) 80%, white);
+  color: var(
+    --user-accent-text-on-green,
+    var(--user-accent-text, color-mix(in srgb, var(--user-accent) 80%, white))
+  );
+}
+
+[class~="text-green-200/60"] {
+  color: var(--user-accent-muted-text-200-60);
+}
+
+[class~="text-green-300/70"] {
+  color: var(--user-accent-muted-text-300-70);
+}
+
+[class~="text-green-200/75"] {
+  color: var(--user-accent-muted-text-200-75);
+}
+
+[class~="bg-green-50"],
+[class~="hover:bg-green-50"]:hover {
+  --user-accent-text-on-green: var(--user-accent-control-text-50, #09090b);
+}
+
+[class~="bg-green-100"],
+[class~="hover:bg-green-100"]:hover {
+  --user-accent-text-on-green: var(--user-accent-control-text-100, #09090b);
+}
+
+[class~="bg-green-200"],
+[class~="hover:bg-green-200"]:hover {
+  --user-accent-text-on-green: var(--user-accent-control-text-200, #09090b);
+}
+
+[class~="bg-green-300"],
+[class~="hover:bg-green-300"]:hover {
+  --user-accent-text-on-green: var(--user-accent-control-text-300, #09090b);
+}
+
+[class~="bg-green-400"],
+[class~="hover:bg-green-400"]:hover {
+  --user-accent-text-on-green: var(--user-accent-control-text-400, #09090b);
+}
+
+[class~="bg-green-500"],
+[class~="hover:bg-green-500"]:hover {
+  --user-accent-text-on-green: var(--user-accent-control-text-500, #09090b);
+}
+
+[class~="bg-green-600"],
+[class~="hover:bg-green-600"]:hover {
+  --user-accent-text-on-green: var(--user-accent-control-text-600, #09090b);
+}
+
+[class~="bg-green-700"],
+[class~="hover:bg-green-700"]:hover {
+  --user-accent-text-on-green: var(--user-accent-control-text-700, #09090b);
+}
+
+[class~="bg-green-800"],
+[class~="hover:bg-green-800"]:hover {
+  --user-accent-text-on-green: var(--user-accent-control-text-800, #fff);
+}
+
+[class~="bg-green-900"],
+[class~="hover:bg-green-900"]:hover {
+  --user-accent-text-on-green: var(--user-accent-control-text-900, #fff);
+}
+
+[class~="bg-green-950"],
+[class~="hover:bg-green-950"]:hover {
+  --user-accent-text-on-green: var(--user-accent-control-text-950, #fff);
+}
+
+[class~="bg-green-300/5"] {
+  --user-accent-text-on-green: var(
+    --user-accent-text-on-green-300-5,
+    var(--user-accent-text)
+  );
+}
+
+[class~="bg-green-300/10"],
+[class~="hover:bg-green-300/10"]:hover {
+  --user-accent-text-on-green: var(
+    --user-accent-text-on-green-300-10,
+    var(--user-accent-text)
+  );
+}
+
+[class~="bg-green-300/15"] {
+  --user-accent-text-on-green: var(
+    --user-accent-text-on-green-300-15,
+    var(--user-accent-text)
+  );
+}
+
+[class~="bg-green-300/20"] {
+  --user-accent-text-on-green: var(
+    --user-accent-text-on-green-300-20,
+    var(--user-accent-text)
+  );
+}
+
+[class~="bg-green-400/10"] {
+  --user-accent-text-on-green: var(
+    --user-accent-text-on-green-400-10,
+    var(--user-accent-text)
+  );
+}
+
+[class~="bg-green-400/15"] {
+  --user-accent-text-on-green: var(
+    --user-accent-text-on-green-400-15,
+    var(--user-accent-text)
+  );
+}
+
+[class~="bg-green-400/20"] {
+  --user-accent-text-on-green: var(
+    --user-accent-text-on-green-400-20,
+    var(--user-accent-text)
+  );
+}
+
+[class~="bg-green-500/10"],
+[class~="hover:bg-green-500/10"]:hover {
+  --user-accent-text-on-green: var(
+    --user-accent-text-on-green-500-10,
+    var(--user-accent-text)
+  );
+}
+
+[class~="bg-green-500/20"],
+[class~="hover:bg-green-500/20"]:hover {
+  --user-accent-text-on-green: var(
+    --user-accent-text-on-green-500-20,
+    var(--user-accent-text)
+  );
+}
+
+[class~="bg-green-500/30"],
+[class~="hover:bg-green-500/30"]:hover {
+  --user-accent-text-on-green: var(
+    --user-accent-text-on-green-500-30,
+    var(--user-accent-text)
+  );
+}
+
+[class~="bg-green-950/20"] {
+  --user-accent-text-on-green: var(
+    --user-accent-text-on-green-950-20,
+    var(--user-accent-text)
+  );
+}
+
+[class~="bg-green-950/30"] {
+  --user-accent-text-on-green: var(
+    --user-accent-text-on-green-950-30,
+    var(--user-accent-text)
+  );
+}
+
+[class~="bg-green-950/40"] {
+  --user-accent-text-on-green: var(
+    --user-accent-text-on-green-950-40,
+    var(--user-accent-text)
+  );
+}
+
+[class~="bg-green-700/70"],
+[class~="hover:bg-green-700/70"]:hover {
+  --user-accent-text-on-green: var(
+    --user-accent-control-text-700-70,
+    #fff
+  );
+}
+
+[class~="bg-green-700/50"],
+[class~="hover:bg-green-700/50"]:hover {
+  --user-accent-text-on-green: var(
+    --user-accent-control-text-700-50,
+    #fff
+  );
+}
+
+[class~="bg-green-600/80"],
+[class~="hover:bg-green-600/80"]:hover {
+  --user-accent-text-on-green: var(
+    --user-accent-control-text-600-80,
+    #fff
+  );
+}
+
+[class~="bg-green-800/60"],
+[class~="hover:bg-green-800/60"]:hover {
+  --user-accent-text-on-green: var(
+    --user-accent-control-text-800-60,
+    #fff
+  );
+}
+
+[class~="bg-green-800/50"],
+[class~="hover:bg-green-800/50"]:hover {
+  --user-accent-text-on-green: var(
+    --user-accent-control-text-800-50,
+    #fff
+  );
+}
+
+:is(button, a, [role="button"], [type="button"], [type="submit"], [type="reset"])[class~="bg-green-700/70"],
+:is(button, a, [role="button"], [type="button"], [type="submit"], [type="reset"])[class~="hover:bg-green-700/70"]:hover {
+  background-color: color-mix(in oklab, color-mix(in srgb, var(--user-accent) 72%, black) var(--user-accent-control-opacity-700-70), transparent);
+}
+
+:is(button, a, [role="button"], [type="button"], [type="submit"], [type="reset"])[class~="bg-green-700/50"],
+:is(button, a, [role="button"], [type="button"], [type="submit"], [type="reset"])[class~="hover:bg-green-700/50"]:hover {
+  background-color: color-mix(in oklab, color-mix(in srgb, var(--user-accent) 72%, black) var(--user-accent-control-opacity-700-50), transparent);
+}
+
+:is(button, a, [role="button"], [type="button"], [type="submit"], [type="reset"])[class~="bg-green-600/80"],
+:is(button, a, [role="button"], [type="button"], [type="submit"], [type="reset"])[class~="hover:bg-green-600/80"]:hover {
+  background-color: color-mix(in oklab, color-mix(in srgb, var(--user-accent) 88%, black) var(--user-accent-control-opacity-600-80), transparent);
+}
+
+:is(button, a, [role="button"], [type="button"], [type="submit"], [type="reset"])[class~="bg-green-800/60"],
+:is(button, a, [role="button"], [type="button"], [type="submit"], [type="reset"])[class~="hover:bg-green-800/60"]:hover {
+  background-color: color-mix(in oklab, color-mix(in srgb, var(--user-accent) 56%, black) var(--user-accent-control-opacity-800-60), transparent);
+}
+
+:is(button, a, [role="button"], [type="button"], [type="submit"], [type="reset"])[class~="bg-green-800/50"],
+:is(button, a, [role="button"], [type="button"], [type="submit"], [type="reset"])[class~="hover:bg-green-800/50"]:hover {
+  background-color: color-mix(in oklab, color-mix(in srgb, var(--user-accent) 56%, black) var(--user-accent-control-opacity-800-50), transparent);
+}
+
+:is(button, a, [role="button"], input[type="button"], input[type="submit"], input[type="reset"])[class~="bg-green-50"],
+:is(button, a, [role="button"], input[type="button"], input[type="submit"], input[type="reset"])[class~="hover:bg-green-50"]:hover {
+  color: var(--user-accent-control-text-50, #09090b);
+}
+
+:is(button, a, [role="button"], input[type="button"], input[type="submit"], input[type="reset"])[class~="bg-green-100"],
+:is(button, a, [role="button"], input[type="button"], input[type="submit"], input[type="reset"])[class~="hover:bg-green-100"]:hover {
+  color: var(--user-accent-control-text-100, #09090b);
+}
+
+:is(button, a, [role="button"], input[type="button"], input[type="submit"], input[type="reset"])[class~="bg-green-200"],
+:is(button, a, [role="button"], input[type="button"], input[type="submit"], input[type="reset"])[class~="hover:bg-green-200"]:hover {
+  color: var(--user-accent-control-text-200, #09090b);
+}
+
+:is(button, a, [role="button"], input[type="button"], input[type="submit"], input[type="reset"])[class~="bg-green-300"],
+:is(button, a, [role="button"], input[type="button"], input[type="submit"], input[type="reset"])[class~="hover:bg-green-300"]:hover {
+  color: var(--user-accent-control-text-300, #09090b);
+}
+
+:is(button, a, [role="button"], input[type="button"], input[type="submit"], input[type="reset"])[class~="bg-green-400"],
+:is(button, a, [role="button"], input[type="button"], input[type="submit"], input[type="reset"])[class~="hover:bg-green-400"]:hover {
+  color: var(--user-accent-control-text-400, #09090b);
+}
+
+:is(button, a, [role="button"], input[type="button"], input[type="submit"], input[type="reset"])[class~="bg-green-500"],
+:is(button, a, [role="button"], input[type="button"], input[type="submit"], input[type="reset"])[class~="hover:bg-green-500"]:hover {
+  color: var(--user-accent-control-text-500, #09090b);
+}
+
+:is(button, a, [role="button"], input[type="button"], input[type="submit"], input[type="reset"])[class~="bg-green-600"],
+:is(button, a, [role="button"], input[type="button"], input[type="submit"], input[type="reset"])[class~="hover:bg-green-600"]:hover {
+  color: var(--user-accent-control-text-600, #09090b);
+}
+
+:is(button, a, [role="button"], input[type="button"], input[type="submit"], input[type="reset"])[class~="bg-green-700"],
+:is(button, a, [role="button"], input[type="button"], input[type="submit"], input[type="reset"])[class~="hover:bg-green-700"]:hover {
+  color: var(--user-accent-control-text-700, #09090b);
+}
+
+:is(button, a, [role="button"], input[type="button"], input[type="submit"], input[type="reset"])[class~="bg-green-800"],
+:is(button, a, [role="button"], input[type="button"], input[type="submit"], input[type="reset"])[class~="hover:bg-green-800"]:hover {
+  color: var(--user-accent-control-text-800, #fff);
+}
+
+:is(button, a, [role="button"], input[type="button"], input[type="submit"], input[type="reset"])[class~="bg-green-900"],
+:is(button, a, [role="button"], input[type="button"], input[type="submit"], input[type="reset"])[class~="hover:bg-green-900"]:hover {
+  color: var(--user-accent-control-text-900, #fff);
+}
+
+:is(button, a, [role="button"], input[type="button"], input[type="submit"], input[type="reset"])[class~="bg-green-950"],
+:is(button, a, [role="button"], input[type="button"], input[type="submit"], input[type="reset"])[class~="hover:bg-green-950"]:hover {
+  color: var(--user-accent-control-text-950, #fff);
+}
+
+:is(button, a, [role="button"], [type="button"], [type="submit"], [type="reset"])[class~="bg-green-700/70"],
+:is(button, a, [role="button"], [type="button"], [type="submit"], [type="reset"])[class~="hover:bg-green-700/70"]:hover {
+  color: var(--user-accent-control-text-700-70, #fff);
+}
+
+:is(button, a, [role="button"], [type="button"], [type="submit"], [type="reset"])[class~="bg-green-700/50"],
+:is(button, a, [role="button"], [type="button"], [type="submit"], [type="reset"])[class~="hover:bg-green-700/50"]:hover {
+  color: var(--user-accent-control-text-700-50, #fff);
+}
+
+:is(button, a, [role="button"], [type="button"], [type="submit"], [type="reset"])[class~="bg-green-600/80"],
+:is(button, a, [role="button"], [type="button"], [type="submit"], [type="reset"])[class~="hover:bg-green-600/80"]:hover {
+  color: var(--user-accent-control-text-600-80, #fff);
+}
+
+:is(button, a, [role="button"], [type="button"], [type="submit"], [type="reset"])[class~="bg-green-800/60"],
+:is(button, a, [role="button"], [type="button"], [type="submit"], [type="reset"])[class~="hover:bg-green-800/60"]:hover {
+  color: var(--user-accent-control-text-800-60, #fff);
+}
+
+:is(button, a, [role="button"], [type="button"], [type="submit"], [type="reset"])[class~="bg-green-800/50"],
+:is(button, a, [role="button"], [type="button"], [type="submit"], [type="reset"])[class~="hover:bg-green-800/50"]:hover {
+  color: var(--user-accent-control-text-800-50, #fff);
+}
+
+:is(button, a, [role="button"], input[type="button"], input[type="submit"], input[type="reset"]):is(:disabled, [aria-disabled="true"])[class*="bg-green-"] {
+  background-color: #27272a;
+  border-color: #52525b;
+  color: #a1a1aa;
+  cursor: not-allowed;
+  opacity: 1;
+  --user-accent-text-on-green: #a1a1aa;
+}
+
+:is(button, a, [role="button"], input[type="button"], input[type="submit"], input[type="reset"])[class*="bg-green-"] [class*="text-white"]:not([class*="bg-"]) {
+  color: var(--user-accent-text-on-green, currentColor);
+}
+
+:is(button, a, [role="button"], input[type="button"], input[type="submit"], input[type="reset"]):is(:disabled, [aria-disabled="true"])[class*="bg-green-"] :is([class~="text-white"], [class*="text-green-"]) {
+  color: #a1a1aa;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-reduced-motion="false"]) *,
+  :root:not([data-reduced-motion="false"]) *::before,
+  :root:not([data-reduced-motion="false"]) *::after {
+    animation-delay: 0ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+:root[data-reduced-motion="true"] *,
+:root[data-reduced-motion="true"] *::before,
+:root[data-reduced-motion="true"] *::after {
+  animation-delay: 0ms !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-delay: 0ms !important;
+  transition-duration: 0.01ms !important;
 }

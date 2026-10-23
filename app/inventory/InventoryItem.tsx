@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
+import FormField from "@/app/components/FormField";
 import {
   INVENTORY_CATEGORIES,
   getInventoryItemCategory,
@@ -189,20 +190,22 @@ export default function InventoryItem({
       )}
 
       {editMode && (
-        <div className="mt-1 flex flex-col gap-3">
-          <label className="flex flex-col gap-1 text-sm">
-            Name
+        <div aria-busy={saving} className="mt-1 flex flex-col gap-3">
+          <FormField id={`inventory-edit-${item.id}-name`} label="Name" required>
             <input
+              id={`inventory-edit-${item.id}-name`}
               required
-              className="rounded border border-white/20 bg-black/40 p-2 text-base"
+              disabled={saving}
+              className="w-full rounded border border-white/20 bg-black/40 p-2 text-base focus:border-green-400 focus:outline-none"
               value={name}
               onChange={(event) => setName(event.target.value)}
             />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            Category
+          </FormField>
+          <FormField id={`inventory-edit-${item.id}-category`} label="Category">
             <select
-              className="rounded border border-white/20 bg-black/40 p-2 text-base"
+              id={`inventory-edit-${item.id}-category`}
+              disabled={saving}
+              className="w-full rounded border border-white/20 bg-black/40 p-2 text-base focus:border-green-400 focus:outline-none"
               value={category}
               onChange={(event) => {
                 setCategory(event.target.value);
@@ -215,12 +218,13 @@ export default function InventoryItem({
                 </option>
               ))}
             </select>
-          </label>
+          </FormField>
           {selectedCategory && selectedCategory.subcategories.length > 0 && (
-            <label className="flex flex-col gap-1 text-sm">
-              Subcategory
+            <FormField id={`inventory-edit-${item.id}-subcategory`} label="Subcategory">
               <select
-                className="rounded border border-white/20 bg-black/40 p-2 text-base"
+                id={`inventory-edit-${item.id}-subcategory`}
+                disabled={saving}
+                className="w-full rounded border border-white/20 bg-black/40 p-2 text-base focus:border-green-400 focus:outline-none"
                 value={subcategory}
                 onChange={(event) => setSubcategory(event.target.value)}
               >
@@ -231,34 +235,38 @@ export default function InventoryItem({
                   </option>
                 ))}
               </select>
-            </label>
+            </FormField>
           )}
-          <label className="flex items-center justify-between gap-2 text-sm">
-            Current stock
+          <FormField
+            id={`inventory-edit-${item.id}-amount`}
+            label="Current stock"
+            hint="Set this to the amount you physically have. Stock changes appear in Recent stock history."
+          >
             <input
+              id={`inventory-edit-${item.id}-amount`}
               type="number"
               min="0"
               step="any"
-              className="w-24 rounded border border-white/20 bg-black/40 p-2 text-base"
+              disabled={saving}
+              className="w-full rounded border border-white/20 bg-black/40 p-2 text-base focus:border-green-400 focus:outline-none"
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
             />
-          </label>
-          <p className="text-xs text-white/55">
-            Set this to the amount you physically have. Stock changes appear in
-            Recent stock history.
-          </p>
-          <label className="flex items-center justify-between gap-2 text-sm">
-            Minimum amount
+          </FormField>
+          <FormField id={`inventory-edit-${item.id}-minimum`} label="Minimum amount">
             <input
+              id={`inventory-edit-${item.id}-minimum`}
               type="number"
-              className="w-24 rounded border border-white/20 bg-black/40 p-2 text-base"
+              min="0"
+              step="any"
+              disabled={saving}
+              className="w-full rounded border border-white/20 bg-black/40 p-2 text-base focus:border-green-400 focus:outline-none"
               value={minimumAmount}
               onChange={(event) => setMinimumAmount(event.target.value)}
             />
-          </label>
+          </FormField>
           {editError && (
-            <p role="alert" className="text-sm text-amber-300">
+            <p id={`inventory-edit-${item.id}-error`} role="alert" className="text-sm text-amber-300">
               {editError}
             </p>
           )}

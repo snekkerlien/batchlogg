@@ -128,7 +128,9 @@ export function calculateDilutedAbv(
   ) {
     return null;
   }
-  return (currentAbv * currentVolume) / (currentVolume + addedVolume);
+  const totalVolume = currentVolume + addedVolume;
+  const result = (currentAbv * currentVolume) / totalVolume;
+  return Number.isFinite(totalVolume) && Number.isFinite(result) ? result : null;
 }
 
 export function calculateVolumeForTargetAbv(
@@ -170,7 +172,8 @@ export function calculateDilutedGravity(
 ) {
   if (
     !Number.isFinite(originalGravity) ||
-    originalGravity <= 0 ||
+    originalGravity < 1 ||
+    originalGravity > 2 ||
     !Number.isFinite(currentVolume) ||
     currentVolume <= 0 ||
     !Number.isFinite(addedWaterVolume) ||
@@ -178,7 +181,9 @@ export function calculateDilutedGravity(
   ) {
     return null;
   }
-  return 1 + ((originalGravity - 1) * currentVolume) / (currentVolume + addedWaterVolume);
+  const totalVolume = currentVolume + addedWaterVolume;
+  const result = 1 + ((originalGravity - 1) * currentVolume) / totalVolume;
+  return Number.isFinite(totalVolume) && Number.isFinite(result) ? result : null;
 }
 
 export function calculateFermentableForAbv(
@@ -198,7 +203,8 @@ export function calculateFermentableForAbv(
   const pointsPerPoundPerGallon = fermentable === "sugar" ? 46 : 35;
   const gallons = volumeLiters / 3.785411784;
   const pounds = (gravityPoints * gallons) / pointsPerPoundPerGallon;
-  return pounds * 453.59237;
+  const result = pounds * 453.59237;
+  return Number.isFinite(result) ? result : null;
 }
 
 // Original gravity needed to reach the target ABV, assuming fermentation finishes at 1.000.

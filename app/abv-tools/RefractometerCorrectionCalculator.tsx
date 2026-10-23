@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import CalculatorResult from "./CalculatorResult";
+import { getCalculatorInputError } from "@/lib/brewing/calculatorValidation";
 import {
   calculateWortCorrectionFactor,
   calculateRefractometerCorrection,
@@ -33,10 +35,23 @@ export default function RefractometerCorrectionCalculator() {
     original !== null && final !== null && correctionFactor !== null
       ? calculateRefractometerCorrection(original, final, correctionFactor)
       : null;
-  const hasAllReadings =
-    originalBrix.trim() !== "" &&
-    finalBrix.trim() !== "" &&
-    wortCorrectionFactor.trim() !== "";
+  const inputs = {
+    "original Brix": originalBrix, "current Brix": finalBrix,
+    "wort correction factor": wortCorrectionFactor,
+  };
+  const inputError = getCalculatorInputError([
+    { label: "Original Brix", value: originalBrix, min: 0, max: 35 },
+    { label: "Current Brix", value: finalBrix, min: 0, max: 35 },
+    { label: "Wort correction factor", value: wortCorrectionFactor, min: 0.9, max: 1.1 },
+  ]) || (Object.values(inputs).every(value => value.trim()) && result === null
+    ? "These readings imply an invalid corrected gravity. Corrected FG must be at least 0.800 and no higher than OG. Check the original and current readings and WCF."
+    : null);
+  const calibrationError = getCalculatorInputError([
+    { label: "Calibration Brix", value: calibrationBrix, positive: true, max: 35 },
+    { label: "Hydrometer OG", value: calibrationHydrometerSg, min: 0.8, max: 1.2 },
+  ]) || (calibrationBrix.trim() && calibrationHydrometerSg.trim() && calibrationFactor === null
+    ? "Both readings must come from the same unfermented sample and produce a WCF between 0.9000 and 1.1000."
+    : null);
 
   return (
     <section
@@ -148,30 +163,43 @@ export default function RefractometerCorrectionCalculator() {
               />
             </label>
           </div>
-          {calibrationFactor !== null ? (
-            <p role="status" className="flex flex-wrap items-center gap-3 text-sm">
-              Suggested WCF: <strong>{calibrationFactor.toFixed(4)}</strong>
+          <CalculatorResult
+            name="WCF calibration"
+            inputs={{ "calibration Brix": calibrationBrix, "hydrometer OG": calibrationHydrometerSg }}
+            error={calibrationError}
+            hasResult={calibrationFactor !== null}
+            assumptions="WCF = refractometer Brix ÷ hydrometer-derived Plato, using the same unfermented wort sample at the hydrometer's calibration temperature. Applying it changes the correction calculator's WCF."
+            onReset={() => { setCalibrationBrix(""); setCalibrationHydrometerSg(""); }}
+          >
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              Suggested WCF: <strong>{calibrationFactor?.toFixed(4)}</strong>
               <button
                 type="button"
-                onClick={() =>
-                  setWortCorrectionFactor(calibrationFactor.toFixed(4))
-                }
+                onClick={() => {
+                  if (calibrationFactor !== null) setWortCorrectionFactor(calibrationFactor.toFixed(4));
+                }}
                 className="rounded-lg border border-green-500 bg-green-700 px-3 py-2 font-semibold hover:bg-green-600"
               >
                 Use this WCF
               </button>
-            </p>
-          ) : calibrationBrix.trim() && calibrationHydrometerSg.trim() ? (
-            <p role="alert" className="text-sm text-amber-200">
-              Check both calibration readings. They must produce a WCF between
-              0.9000 and 1.1000.
-            </p>
-          ) : null}
+            </div>
+          </CalculatorResult>
         </div>
       </details>
 
-      {result ? (
-        <dl className="mt-5 grid grid-cols-1 gap-3 text-center sm:grid-cols-3">
+      <CalculatorResult
+        name="refractometer correction"
+        inputs={inputs}
+        error={inputError}
+        hasResult={result !== null}
+        assumptions="Uses a published refractometer correction model and (OG − FG) × 131.25 for ABV. WCF defaults to 1.04 but varies by instrument and wort. This is an estimate; confirm final gravity with a hydrometer."
+        onReset={() => {
+          setOriginalBrix(""); setFinalBrix(""); setWortCorrectionFactor("1.04");
+          setCalibrationBrix(""); setCalibrationHydrometerSg("");
+        }}
+      >
+      {result && (
+        <dl className="grid grid-cols-1 gap-3 text-center sm:grid-cols-3">
           <div className="rounded-lg border border-white/10 bg-black/20 p-3">
             <dt className="text-xs uppercase tracking-wide text-white/50">
               Estimated original gravity
@@ -197,21 +225,8 @@ export default function RefractometerCorrectionCalculator() {
             </dd>
           </div>
         </dl>
-      ) : hasAllReadings ? (
-        <p role="alert" className="mt-5 text-center text-sm text-amber-200">
-          Check the readings and correction factor. The readings must be in
-          range, and the corrected FG cannot be higher than the estimated OG.
-        </p>
-      ) : (
-        <p className="mt-5 text-center text-sm text-white/50">
-          Enter both Brix readings to calculate corrected FG and estimated ABV.
-        </p>
       )}
-      <p className="mt-4 text-xs leading-5 text-amber-100/70">
-        This is an estimate using a published refractometer correction model
-        and the standard gravity-difference ABV approximation. For best
-        accuracy, confirm FG with a hydrometer.
-      </p>
+      </CalculatorResult>
     </section>
   );
 }

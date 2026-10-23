@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import * as Actions from "../../actions/createRecipe";
 import MenuOverlay from "../../MenuOverlay";
 import BackButton from "../../BackButton";
+import FormField from "@/app/components/FormField";
 import { UnitInput, UnitSymbol, useUnits } from "../../../components/Units";
 import BeerStyleSelect from "@/app/components/BeerStyleSelect";
 import RecipeAdditiveFields from "../RecipeAdditiveFields";
@@ -145,6 +146,7 @@ function removeDryHop(index: number) {
 
         <form
           onSubmit={handleSubmit}
+          aria-busy={loading}
           className="flex flex-col gap-6"
         >
           <input type="hidden" name="type" value="Beer" />
@@ -185,34 +187,36 @@ function removeDryHop(index: number) {
           {beerSubtype && (
             <>
           {/* Recipe name */}
-          <div>
-            <label className="block mb-1 font-semibold">
-              {beerSubtype === "all_grain" ? "Recipe name" : "Kit name"}
-            </label>
+          <FormField
+            id="recipe-name"
+            label={beerSubtype === "all_grain" ? "Recipe name" : "Kit name"}
+            required
+          >
             <input
+              id="recipe-name"
               name="name"
               placeholder={beerSubtype === "all_grain" ? "Example: Pale Ale, IPA, Stout" : "Name of the kit"}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
             />
-          </div>
+          </FormField>
 
           {beerSubtype !== "all_grain" && (
-            <div>
-              <label className="mb-1 block font-semibold">Kit link (optional)</label>
+            <FormField id="recipe-kit-url" label="Kit link (optional)">
               <input
+                id="recipe-kit-url"
                 name="kit_url"
                 type="url"
                 placeholder="https://example.com/kit"
                 className="w-full rounded border border-white/20 bg-black/40 p-3"
               />
-            </div>
+            </FormField>
           )}
 
           {/* Volume */}
-          <div>
-            <label className="block mb-1 font-semibold">Volume (<UnitSymbol kind="volume" />)</label>
+          <FormField id="recipe-volume" label={<>Volume (<UnitSymbol kind="volume" />)</>} required={beerSubtype !== "all_grain"}>
             <UnitInput
+              id="recipe-volume"
               name="volume"
               kind="volume"
               placeholder={
@@ -223,34 +227,34 @@ function removeDryHop(index: number) {
               required={beerSubtype !== "all_grain"}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
-          </div>
+          </FormField>
 
           {beerSubtype === "all_grain" && (
           <>
           {/* Boil Volume */}
-          <div>
-            <label className="block mb-1 font-semibold">Boil Volume (<UnitSymbol kind="volume" />)</label>
+          <FormField id="recipe-boil-volume" label={<>Boil Volume (<UnitSymbol kind="volume" />)</>}>
             <UnitInput
+              id="recipe-boil-volume"
               name="boil_volume_l"
               kind="volume"
               placeholder="Total wort volume before the boil"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
-          </div>
+          </FormField>
           </>
           )}
 
           {/* OG */}
-          <div>
-            <label className="block mb-1 font-semibold">Original Gravity (OG)</label>
+          <FormField id="recipe-og" label="Original Gravity (OG)" required={beerSubtype !== "all_grain"}>
             <input
+              id="recipe-og"
               name="og"
               type="text"
               placeholder="Example: 1.050"
               required={beerSubtype !== "all_grain"}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
-          </div>
+          </FormField>
 
           {beerSubtype === "fresh_wort_kit" && (
             <div className="grid gap-4 sm:grid-cols-2">
@@ -282,29 +286,29 @@ function removeDryHop(index: number) {
           {beerSubtype === "all_grain" && (
           <>
           {/* FG */}
-          <div>
-            <label className="block mb-1 font-semibold">Final Gravity (FG)</label>
+          <FormField id="recipe-fg" label="Final Gravity (FG)">
             <input
+              id="recipe-fg"
               name="fg"
               type="text"
               placeholder="Example: 1.010"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
-          </div>
+          </FormField>
           </>
           )}
 
           {/* Yeast */}
-          <div>
-            <label className="block mb-1 font-semibold">Yeast</label>
+          <FormField id="recipe-yeast" label="Yeast" required={beerSubtype !== "all_grain"}>
             <input
+              id="recipe-yeast"
               name="yeast"
               type="text"
               placeholder="Example: US-05"
               required={beerSubtype !== "all_grain"}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
-          </div>
+          </FormField>
 
           {beerSubtype === "all_grain" && (
           <>
@@ -315,6 +319,7 @@ function removeDryHop(index: number) {
             {malts.map((m, i) => (
               <div key={i} className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full">
                 <input
+                  aria-label={`Malt ${i + 1} name`}
                   placeholder="Malt type"
                   className="p-3 rounded bg-black/40 border border-white/20 w-full md:flex-1"
                   value={m.name}
@@ -343,6 +348,7 @@ function removeDryHop(index: number) {
 
                 <UnitInput
                   kind="kg"
+                  aria-label={`Malt ${i + 1} amount`}
                   placeholder={`Amount (${label("kg")})`}
                   className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-32"
                   value={m.amount}
@@ -385,6 +391,7 @@ function removeDryHop(index: number) {
             {hops.map((h, i) => (
               <div key={i} className="mb-4 w-full space-y-2">
                 <input
+                  aria-label={`Hop addition ${i + 1} name`}
                   placeholder="Hop type"
                   className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
                   value={h.name}
@@ -411,7 +418,8 @@ function removeDryHop(index: number) {
 
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(6.5rem,0.8fr)_minmax(5rem,0.6fr)_minmax(7rem,1fr)_minmax(9rem,1.4fr)_auto]">
                 <input
-  placeholder="Alpha (%)"
+                  aria-label={`Hop addition ${i + 1} alpha acid percentage`}
+                  placeholder="Alpha (%)"
                   type="number"
                   min="0"
                   step="any"
@@ -426,6 +434,7 @@ function removeDryHop(index: number) {
 
 
 <input
+  aria-label={`Hop addition ${i + 1} harvest year`}
   placeholder="Year"
   type="number"
   min="1900"
@@ -441,6 +450,7 @@ function removeDryHop(index: number) {
 
                 <UnitInput
                   kind="g"
+                  aria-label={`Hop addition ${i + 1} amount`}
                   placeholder={`Amount (${label("g")})`}
                   className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
                   value={h.amount}
@@ -536,6 +546,7 @@ function removeDryHop(index: number) {
     <div key={i} className="mb-4 w-full space-y-2">
 
       <input
+        aria-label={`Dry hop addition ${i + 1} name`}
         placeholder="Hop type"
         className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
         value={h.name}
@@ -548,6 +559,7 @@ function removeDryHop(index: number) {
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(6.5rem,0.8fr)_minmax(5rem,0.6fr)_minmax(7rem,1fr)_minmax(9rem,1.4fr)_auto]">
       <input
+        aria-label={`Dry hop addition ${i + 1} alpha acid percentage`}
         placeholder="Alpha (%)"
         type="number"
         min="0"
@@ -562,6 +574,7 @@ function removeDryHop(index: number) {
       />
 
       <input
+        aria-label={`Dry hop addition ${i + 1} harvest year`}
         placeholder="Year"
         type="number"
         min="1900"
@@ -577,6 +590,7 @@ function removeDryHop(index: number) {
 
       <UnitInput
         kind="g"
+        aria-label={`Dry hop addition ${i + 1} amount`}
         placeholder={`Amount (${label("g")})`}
         className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
         value={h.amount}
@@ -588,6 +602,7 @@ function removeDryHop(index: number) {
       />
 
       <input
+        aria-label={`Dry hop addition ${i + 1} contact time in days`}
         placeholder="Contact time (days)"
         type="text"
         className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
@@ -629,9 +644,9 @@ function removeDryHop(index: number) {
           {beerSubtype === "all_grain" && (
           <>
           {/* Boil time */}
-          <div>
-            <label className="block mb-1 font-semibold">Total boil time (minutes)</label>
+          <FormField id="recipe-boil-time" label="Total boil time (minutes)">
             <input
+              id="recipe-boil-time"
               name="boil_time"
               type="number"
               min="0"
@@ -639,7 +654,7 @@ function removeDryHop(index: number) {
               placeholder="Length of the boil"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
-          </div>
+          </FormField>
           </>
           )}
 
@@ -649,24 +664,24 @@ function removeDryHop(index: number) {
             <RecipeAdditiveFields />
           </div>
           {/* Full process */}
-          <div>
-            <label className="block mb-1 font-semibold">Full process</label>
+          <FormField id="recipe-process" label="Full process">
             <textarea
+              id="recipe-process"
               name="full_process"
               placeholder="Mash schedule, hop schedule..."
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-40"
             />
-          </div>
+          </FormField>
 
           {/* Notes */}
-          <div>
-            <label className="block mb-1 font-semibold">Notes</label>
+          <FormField id="recipe-notes" label="Notes">
             <textarea
+              id="recipe-notes"
               name="notes"
               placeholder="Any additional notes..."
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
             />
-          </div>
+          </FormField>
           <RecipeSecondaryFields />
 
           {/* Submit */}

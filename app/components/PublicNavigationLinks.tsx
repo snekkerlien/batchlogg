@@ -18,6 +18,9 @@ export default function PublicNavigationLinks({
       <Link href="/recipes" className="hover:text-white hover:underline">
         Public recipes
       </Link>
+      <Link href="/business" className="hover:text-white hover:underline">
+        Beer &amp; Brewing Reviews
+      </Link>
       <Link href="/abv-tools" className="hover:text-white hover:underline">
         ABV tools
       </Link>

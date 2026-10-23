@@ -95,12 +95,13 @@ export default async function KarDetailPage({
   .eq("aktivt_kar", kar.id);
 
   const activeBatch = batches?.find((b) => b.status === "Aktiv");
+const conditioningBatch = batches?.find((b) => b.status === "Conditioning");
 const secondaryBatch = batches?.find((b) =>
   ["Sekundær", "secondary"].includes(b.status)
 );
 
 // Choose batch (active → secondary)
-let batch = activeBatch || secondaryBatch;
+let batch = activeBatch || secondaryBatch || conditioningBatch;
 
 // ⭐ Oversett gamle batches til moderne format
 batch = translateOldRecipe(batch);
@@ -122,9 +123,11 @@ batch = translateOldRecipe(batch);
           subtitle={
             !batch
               ? "This vessel is currently empty."
-              : ["Sekundær", "secondary"].includes(batch.status)
-                ? "Secondary fermentation"
-                : "Active fermentation"
+              : batch.status === "Conditioning"
+                ? "Conditioning"
+                : ["Sekundær", "secondary"].includes(batch.status)
+                  ? "Secondary fermentation"
+                  : "Primary fermentation"
           }
         />
 
@@ -168,6 +171,13 @@ batch = translateOldRecipe(batch);
               <p className="opacity-80 mt-2">
                 Secondary since:{" "}
                 {new Date(batch.secondary_startdate).toLocaleDateString("en-US")}
+              </p>
+            )}
+
+            {batch.status === "Conditioning" && batch.conditioning_startdate && (
+              <p className="opacity-80 mt-2">
+                Conditioning since:{" "}
+                {new Date(batch.conditioning_startdate).toLocaleDateString("en-US")}
               </p>
             )}
 

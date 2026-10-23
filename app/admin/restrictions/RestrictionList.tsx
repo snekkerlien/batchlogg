@@ -9,7 +9,9 @@ interface Restriction {
   starts_at: string;
   ends_at: string | null;
   reason: string | null;
+  created_by: string | null;
   username: string;
+  administrator: string | null;
 }
 
 export default function RestrictionList({
@@ -75,7 +77,7 @@ export default function RestrictionList({
               >
                 <div className="min-w-0">
                   <Link
-                    href={`/members/${encodeURIComponent(restriction.username)}`}
+                    href={`/admin/users/${restriction.user_id}`}
                     className="font-semibold text-green-300 hover:underline"
                   >
                     {restriction.username}
@@ -87,11 +89,13 @@ export default function RestrictionList({
                       ? `Until ${new Date(restriction.ends_at).toLocaleString("en-GB")}`
                       : "Indefinitely"}
                   </p>
-                  {restriction.reason && (
-                    <p className="mt-1 whitespace-pre-wrap text-sm text-white/55">
-                      {restriction.reason}
-                    </p>
-                  )}
+                  <p className="mt-1 text-xs text-white/45">
+                    Started {new Date(restriction.starts_at).toLocaleString("en-GB")}
+                    {restriction.administrator && ` · Applied by ${restriction.administrator}`}
+                  </p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-white/65">
+                    Reason: {restriction.reason || "No reason recorded."}
+                  </p>
                 </div>
                 <button
                   type="button"

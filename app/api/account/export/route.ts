@@ -167,6 +167,8 @@ export async function GET() {
       bookmarks,
       feedback,
       messages,
+      bottleAging,
+      bottleAgingTastings,
     ] = await Promise.all([
       getRowsByOwner(serviceRole, "batches", "user_id", user.id),
       getRowsByOwner(serviceRole, "kar", "user_id", user.id),
@@ -181,6 +183,8 @@ export async function GET() {
       getRowsByOwner(serviceRole, "forum_bookmarks", "user_id", user.id),
       getRowsByOwner(serviceRole, "feedback", "user_id", user.id),
       getPrivateMessages(serviceRole, user.id),
+      getRowsByOwner(serviceRole, "batch_aging", "user_id", user.id),
+      getRowsByOwner(serviceRole, "batch_aging_tastings", "user_id", user.id),
     ]);
     const batchIds = batches.flatMap((batch) =>
       typeof batch.id === "string" ? [batch.id] : []
@@ -216,6 +220,8 @@ export async function GET() {
       ["forum_bookmarks.json", bookmarks],
       ["private_messages.json", messages],
       ["feedback.json", feedback],
+      ["batch_aging.json", bottleAging],
+      ["batch_aging_tastings.json", bottleAgingTastings],
     ];
     for (const [name, value] of entries) {
       zip.file(name, JSON.stringify(value, null, 2));
@@ -225,7 +231,7 @@ export async function GET() {
       JSON.stringify(
         {
           exported_at: new Date().toISOString(),
-          format_version: 4,
+          format_version: 5,
           username: profile.username ?? "unknown",
           user_id: user.id,
           email: user.email ?? null,
@@ -247,10 +253,21 @@ export async function GET() {
             "forum_bookmarks",
             "private_messages",
             "feedback",
+            "batch_aging",
+            "batch_aging_tastings",
             "profile_avatar",
             "batch_note_images",
           ],
-          excluded: ["passwords", "authentication_credentials", "forum_posts", "forum_replies", "friendships", "community_uploads"],
+          excluded: [
+            "passwords",
+            "authentication_credentials",
+            "forum_posts",
+            "forum_replies",
+            "friendships",
+            "community_uploads",
+            "keg_tracker_data",
+            "vessel_sharing_access",
+          ],
         },
         null,
         2

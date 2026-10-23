@@ -12,6 +12,7 @@ import {
   setReducedMotionPreference,
 } from "@/lib/accessibility/reducedMotion";
 import {
+  applyAccentColor,
   DEFAULT_ACCENT_COLOR,
   isAccentColor,
 } from "@/lib/theme/accentColor";
@@ -24,6 +25,7 @@ export default function FirstLoginSetup() {
   const { user } = useAuthContext();
   const { setSystem } = useUnits();
   const [stage, setStage] = useState<SetupStage>(null);
+  const isOpen = stage !== null;
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -106,6 +108,15 @@ export default function FirstLoginSetup() {
     };
   }, [user?.id]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen]);
+
   async function finishSetup() {
     setSaving(true);
     setError("");
@@ -119,7 +130,7 @@ export default function FirstLoginSetup() {
         is_public: publicProfile,
         onboarding_completed: true,
       });
-      document.documentElement.style.setProperty("--user-accent", accentColor);
+      applyAccentColor(accentColor);
       window.dispatchEvent(new Event("batchlogg-preferences-saved"));
       setSystem(unitSystem);
       setStage(null);
@@ -150,18 +161,13 @@ export default function FirstLoginSetup() {
 
   return (
     <div
-      className="fixed inset-0 z-[110] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
-      onClick={(event) => {
-        if (event.target === event.currentTarget && !saving && stage === "welcome") {
-          void finishSetup();
-        }
-      }}
+      className="fixed inset-0 z-[110] flex items-start justify-center overflow-hidden bg-black/75 p-3 backdrop-blur-sm sm:items-center sm:p-6"
     >
       <section
         role="dialog"
         aria-modal="true"
         aria-labelledby="first-login-title"
-        className={`max-h-[min(90vh,52rem)] w-full overflow-y-auto rounded-2xl border border-white/15 bg-zinc-950 p-6 text-white shadow-2xl sm:p-8 ${
+        className={`max-h-[calc(100dvh-1.5rem)] w-full overflow-y-auto overscroll-contain rounded-2xl border border-white/15 bg-zinc-950 p-6 text-white shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:p-8 ${
           stage === "welcome" ? "max-w-3xl" : "max-w-xl"
         }`}
       >

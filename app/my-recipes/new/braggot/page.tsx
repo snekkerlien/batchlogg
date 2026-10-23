@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import * as Actions from "../../actions/createRecipe";
 import MenuOverlay from "../../MenuOverlay";
 import BackButton from "../../BackButton";
+import FormField from "@/app/components/FormField";
 import { UnitInput, UnitSymbol, useUnits } from "../../../components/Units";
 import RecipeAdditiveFields from "../RecipeAdditiveFields";
 import RecipeSecondaryFields from "../RecipeSecondaryFields";
@@ -123,56 +124,57 @@ export default function NewBraggotRecipePage() {
 
         <form
           onSubmit={handleSubmit}
+          aria-busy={loading}
           className="flex flex-col gap-6"
         >
           {/* Hidden fields */}
           <input type="hidden" name="type" value="Braggot" />
 
           {/* Recipe name */}
-          <div>
-            <label className="block mb-1 font-semibold">Recipe name</label>
+          <FormField id="recipe-name" label="Recipe name" required>
             <input
+              id="recipe-name"
               name="name"
               placeholder="Example: Honey Ale Braggot"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
             />
-          </div>
+          </FormField>
 
           {/* Volume */}
-          <div>
-            <label className="block mb-1 font-semibold">Volume (<UnitSymbol kind="volume" />)</label>
+          <FormField id="recipe-volume" label={<>Volume (<UnitSymbol kind="volume" />)</>}>
             <UnitInput
+              id="recipe-volume"
               name="volume"
               kind="volume"
               placeholder="Example: 10"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
-          </div>
+          </FormField>
 
           {/* OG */}
-          <div>
-            <label className="block mb-1 font-semibold">Original Gravity (OG)</label>
+          <FormField id="recipe-og" label="Original Gravity (OG)">
             <input
+              id="recipe-og"
               name="og"
               type="number"
               step="0.001"
               placeholder="Example: 1.070"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
-          </div>
+          </FormField>
 
           {/* FG */}
-          <div>
-            <label className="block mb-1 font-semibold">Final Gravity (FG)</label>
+          <FormField id="recipe-fg" label="Final Gravity (FG)">
             <input
+              id="recipe-fg"
               name="fg"
               type="number"
               step="0.001"
               placeholder="Example: 1.010"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
-          </div>
+          </FormField>
 
           {/* Malt additions */}
           <div>
@@ -184,6 +186,7 @@ export default function NewBraggotRecipePage() {
                 className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full"
               >
                 <input
+                  aria-label={`Malt ${i + 1} name`}
                   placeholder="Malt type (e.g. Pale Ale, Munich)"
                   className="p-3 rounded bg-black/40 border border-white/20 w-full md:flex-1"
                   value={m.name}
@@ -212,6 +215,7 @@ export default function NewBraggotRecipePage() {
 
                 <UnitInput
                   kind="kg"
+                  aria-label={`Malt ${i + 1} amount`}
                   placeholder={`Amount (${label("kg")})`}
                   className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-24"
                   value={m.amount}
@@ -254,6 +258,7 @@ export default function NewBraggotRecipePage() {
                 className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full"
               >
                 <input
+                  aria-label={`Hop addition ${i + 1} name`}
                   placeholder="Hop type (e.g. Citra, Mosaic)"
                   className="p-3 rounded bg-black/40 border border-white/20 w-full md:flex-1"
                   value={h.name}
@@ -265,6 +270,7 @@ export default function NewBraggotRecipePage() {
                 />
 
                 <input
+                  aria-label={`Hop addition ${i + 1} alpha acid percentage`}
                   placeholder="Alpha (%)"
                   type="number"
                   min="0"
@@ -279,6 +285,7 @@ export default function NewBraggotRecipePage() {
                 />
 
                 <input
+                  aria-label={`Hop addition ${i + 1} harvest year`}
                   placeholder="Year"
                   type="number"
                   min="1900"
@@ -294,7 +301,8 @@ export default function NewBraggotRecipePage() {
 
                 <UnitInput
   kind="g"
-  placeholder={`Amount (${label("g")})`}
+                  aria-label={`Hop addition ${i + 1} amount`}
+                  placeholder={`Amount (${label("g")})`}
   className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-20"
   value={h.amount}
   onValueChange={(value) => {
@@ -319,6 +327,7 @@ export default function NewBraggotRecipePage() {
 </select>
 
 <input
+  aria-label={`Hop addition ${i + 1} time in minutes`}
   placeholder={h.addition_type === "whirlpool" ? "Stand time (min)" : "Boil time (min)"}
   type="number"
   min="0"
@@ -374,9 +383,9 @@ export default function NewBraggotRecipePage() {
           <input type="hidden" name="hops_json" value={JSON.stringify(hops)} />
 
           {/* Boil time */}
-          <div>
-            <label className="block mb-1 font-semibold">Boil time (minutes)</label>
+          <FormField id="recipe-boil-time" label="Boil time (minutes)">
             <input
+              id="recipe-boil-time"
               name="boil_time"
               type="number"
               min="0"
@@ -384,39 +393,39 @@ export default function NewBraggotRecipePage() {
               placeholder="Example: 60"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
-          </div>
+          </FormField>
 
           {/* Honey amount */}
-          <div>
-            <label className="block mb-1 font-semibold">Honey amount (<UnitSymbol kind="kg" />)</label>
+          <FormField id="recipe-honey-amount" label={<>Honey amount (<UnitSymbol kind="kg" />)</>}>
             <UnitInput
+              id="recipe-honey-amount"
               name="honey_amount"
               kind="kg"
               placeholder="Example: 1.5"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
-          </div>
+          </FormField>
 
           {/* Honey type */}
-          <div>
-            <label className="block mb-1 font-semibold">Honey type</label>
+          <FormField id="recipe-honey-type" label="Honey type">
             <input
+              id="recipe-honey-type"
               name="honey_type"
               placeholder="Example: Wildflower, Clover, Heather"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
-          </div>
+          </FormField>
 
 
           {/* Yeast */}
-          <div>
-            <label className="block mb-1 font-semibold">Yeast strain</label>
+          <FormField id="recipe-yeast" label="Yeast strain">
             <input
+              id="recipe-yeast"
               name="yeast"
               placeholder="Example: US-05 or Kveik"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
-          </div>
+          </FormField>
 
           {/* Additives */}
           <div>
@@ -424,24 +433,24 @@ export default function NewBraggotRecipePage() {
             <RecipeAdditiveFields />
           </div>
           {/* Full process */}
-          <div>
-            <label className="block mb-1 font-semibold">Full process</label>
+          <FormField id="recipe-process" label="Full process">
             <textarea
+              id="recipe-process"
               name="full_process"
               placeholder="Mash schedule, honey addition, fermentation plan..."
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-40"
             />
-          </div>
+          </FormField>
 
           {/* Notes */}
-          <div>
-            <label className="block mb-1 font-semibold">Notes</label>
+          <FormField id="recipe-notes" label="Notes">
             <textarea
+              id="recipe-notes"
               name="notes"
               placeholder="Any additional notes about the recipe..."
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
             />
-          </div>
+          </FormField>
           <RecipeSecondaryFields />
 
           {/* Submit */}

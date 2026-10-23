@@ -71,7 +71,7 @@ async function getActivityAnalytics(serviceRole: SupabaseClient, now: Date) {
       serviceRole
         .from("batches")
         .select("id,status,volume_l")
-        .in("status", ["Aktiv", "Sekundær", "secondary"]),
+        .in("status", ["Aktiv", "Sekundær", "secondary", "Conditioning"]),
       ...sources.map(({ table, columns }) => getRowsSince(serviceRole, table, columns, since)),
     ]);
 
@@ -203,6 +203,10 @@ async function getActivityAnalytics(serviceRole: SupabaseClient, now: Date) {
         count: activeBatchRows.filter((batch) =>
           secondaryStatuses.has(String(batch.status))
         ).length,
+      },
+      {
+        label: "Conditioning",
+        count: activeBatchRows.filter((batch) => batch.status === "Conditioning").length,
       },
     ],
     activeBatchVolumeLitres: Math.round(activeBatchVolumeLitres * 10) / 10,

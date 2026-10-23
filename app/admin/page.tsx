@@ -83,6 +83,26 @@ export default async function AdminPage() {
 
           {hasPermission(role, "manage_users") && (
             <Link
+              href="/admin/breweries"
+              className="group rounded-xl border border-white/10 bg-white/5 p-6 transition hover:border-green-400/40 hover:bg-white/10"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-wider text-green-300">
+                    Business accounts
+                  </p>
+                  <h2 className="mt-2 text-2xl font-bold">Business accounts</h2>
+                </div>
+                <span aria-hidden="true" className="text-2xl text-green-300 transition group-hover:translate-x-1">→</span>
+              </div>
+              <p className="mt-4 leading-relaxed text-white/70">
+                Review applications, manage complimentary access, and moderate product reviews.
+              </p>
+            </Link>
+          )}
+
+          {hasPermission(role, "manage_users") && (
+            <Link
               href="/admin/audit-log"
               className="group rounded-xl border border-white/10 bg-white/5 p-6 transition hover:border-green-400/40 hover:bg-white/10"
             >

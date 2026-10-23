@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import * as Actions from "../../actions";
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
+import BatchEntryGuide from "@/app/components/BatchEntryGuide";
 import { useRecipePrefill } from "../../../../../lib/recipes/useRecipePrefill";
 import { UnitInput, UnitSymbol, useUnits } from "../../../../components/Units";
 import {
@@ -104,6 +105,7 @@ useEffect(() => {
         </p>
 
         {recipeError && <p role="alert" className="text-red-300 mb-4">{recipeError}</p>}
+        <BatchEntryGuide vesselId={params.id} recipeName={recipe?.name} />
         <form
           key={recipe?.id ?? "new-batch"}
           action={Actions.createBatch}

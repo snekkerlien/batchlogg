@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
       .from("batches")
       .select("id, name, startdato, finished_date, status, aktivt_kar")
       .eq("user_id", user.id)
-      .in("status", ["Aktiv", "Sekundær", "secondary"])
+      .in("status", ["Aktiv", "Sekundær", "secondary", "Conditioning"])
       .lt("startdato", to)
       .limit(1000),
     serviceRole

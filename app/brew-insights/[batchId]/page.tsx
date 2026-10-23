@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
+import BottleAging from "./BottleAging";
 
 type BatchInsight = {
   id: string;
@@ -360,6 +361,8 @@ export default function BatchInsightsPage() {
                 )}
               </dl>
             </section>
+
+            <BottleAging batchId={batch.id} />
 
             {(batch.finished_notes || batch.tasting_notes) && (
               <section className="mt-6 grid gap-3 sm:grid-cols-2">

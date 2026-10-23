@@ -132,6 +132,7 @@ export async function POST(request: NextRequest) {
       details: {
         restriction_type: body.type,
         duration_days: body.durationDays as number | null,
+        reason: typeof body.reason === "string" ? body.reason.trim() || null : null,
       },
     }))
   ) {

@@ -1,6 +1,13 @@
 "use client";
 
-import { ReactNode, Suspense, useEffect, useState } from "react";
+import {
+  ReactNode,
+  Suspense,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { usePathname } from "next/navigation";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -19,11 +26,16 @@ import { UnitsProvider } from "../components/Units";
 import SiteStatusBanner from "../components/SiteStatusBanner";
 import SiteFooter from "../components/SiteFooter";
 import {
+  applyAccentColor,
   DEFAULT_ACCENT_COLOR,
   isAccentColor,
 } from "../../lib/theme/accentColor";
 import { isDesktopApp } from "../../lib/desktopApp";
 import { getErrorMessage, saveDownload } from "../../lib/desktopDownloads";
+import {
+  getReducedMotionPreference,
+  REDUCED_MOTION_EVENT,
+} from "../../lib/accessibility/reducedMotion";
 
 function UserAccentTheme({ children }: { children: ReactNode }) {
   const { user } = useAuthContext();
@@ -44,11 +56,11 @@ function UserAccentTheme({ children }: { children: ReactNode }) {
     let current = true;
 
     if (!user) {
-      root.style.setProperty("--user-accent", DEFAULT_ACCENT_COLOR);
+      applyAccentColor(DEFAULT_ACCENT_COLOR);
       return;
     }
 
-    root.style.setProperty("--user-accent", DEFAULT_ACCENT_COLOR);
+    applyAccentColor(DEFAULT_ACCENT_COLOR);
 
     async function loadAccentColor() {
       const { data, error } = await supabaseBrowser
@@ -64,7 +76,7 @@ function UserAccentTheme({ children }: { children: ReactNode }) {
       }
 
       if (isAccentColor(data?.theme_accent_color)) {
-        root.style.setProperty("--user-accent", data.theme_accent_color);
+        applyAccentColor(data.theme_accent_color);
       }
     }
 
@@ -83,6 +95,48 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const isBannedPage = pathname === "/banned";
   const [desktopActionError, setDesktopActionError] = useState("");
+  const [reducedMotion, setReducedMotion] = useState(true);
+  const mainContentRef = useRef<HTMLDivElement>(null);
+  const previousPathname = useRef(pathname);
+
+  useEffect(() => {
+    const updateMotionPreference = () => {
+      const shouldReduceMotion = getReducedMotionPreference();
+      setReducedMotion(shouldReduceMotion);
+      document.documentElement.dataset.reducedMotion = String(shouldReduceMotion);
+    };
+
+    const motionMedia = window.matchMedia("(prefers-reduced-motion: reduce)");
+    updateMotionPreference();
+    window.addEventListener(REDUCED_MOTION_EVENT, updateMotionPreference);
+    motionMedia.addEventListener("change", updateMotionPreference);
+    return () => {
+      window.removeEventListener(REDUCED_MOTION_EVENT, updateMotionPreference);
+      motionMedia.removeEventListener("change", updateMotionPreference);
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    if (previousPathname.current === pathname) return;
+    previousPathname.current = pathname;
+    let frame = 0;
+    let attempts = 0;
+
+    const focusNewPage = () => {
+      const mainContent = mainContentRef.current;
+      if (mainContent?.dataset.routePath === pathname) {
+        mainContent.focus();
+        return;
+      }
+      if (attempts < 300) {
+        attempts += 1;
+        frame = window.requestAnimationFrame(focusNewPage);
+      }
+    };
+
+    frame = window.requestAnimationFrame(focusNewPage);
+    return () => window.cancelAnimationFrame(frame);
+  }, [pathname]);
 
   useEffect(() => {
     if (!isDesktopApp()) return;
@@ -170,7 +224,10 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
     <AuthProvider>
       <UserAccentTheme>
         <UnitsProvider>
-        {!isBannedPage && <FirstLoginSetup />}
+    <a href="#main-content" className="skip-to-content">
+      Skip to main content
+    </a>
+    {!isBannedPage && <FirstLoginSetup />}
         {!isBannedPage && <PremiumWelcome />}
         {!isBannedPage && (
           <Suspense fallback={null}>
@@ -205,12 +262,17 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
 
         <AnimatePresence mode="wait">
           <motion.div
+            ref={mainContentRef}
             key={pathname}
-            initial={{ opacity: 0, y: 10 }}
+            data-route-path={pathname}
+            id="main-content"
+            tabIndex={-1}
+            aria-label="Main content"
+            initial={reducedMotion ? false : { opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.25, ease: "easeOut" }}
-            className="relative z-0"
+            exit={reducedMotion ? undefined : { opacity: 0, y: -10 }}
+            transition={{ duration: reducedMotion ? 0 : 0.25, ease: "easeOut" }}
+            className="relative z-0 focus:outline-none"
           >
             {children}
           </motion.div>

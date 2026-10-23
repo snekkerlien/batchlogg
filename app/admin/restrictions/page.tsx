@@ -34,15 +34,23 @@ export default async function RestrictionsPage() {
 
   const { data: restrictions, error } = await serviceRole
     .from("user_restrictions")
-    .select("user_id, restriction_type, starts_at, ends_at, reason")
+    .select("user_id, restriction_type, starts_at, ends_at, reason, created_by")
     .is("revoked_at", null)
     .or(`ends_at.is.null,ends_at.gt.${new Date().toISOString()}`)
     .order("starts_at", { ascending: false });
   if (error) console.error("Could not load active user restrictions", error);
 
   const userIds = [...new Set((restrictions ?? []).map((item) => item.user_id))];
-  const { data: profiles, error: profilesError } = userIds.length
-    ? await serviceRole.from("profiles").select("id, username").in("id", userIds)
+  const profileIds = [
+    ...new Set([
+      ...userIds,
+      ...(restrictions ?? []).flatMap((item) =>
+        typeof item.created_by === "string" ? [item.created_by] : []
+      ),
+    ]),
+  ];
+  const { data: profiles, error: profilesError } = profileIds.length
+    ? await serviceRole.from("profiles").select("id, username").in("id", profileIds)
     : { data: [], error: null };
   if (profilesError) {
     console.error("Could not load restricted member names", profilesError);
@@ -51,11 +59,14 @@ export default async function RestrictionsPage() {
   const items = (restrictions ?? []).map((item) => ({
     ...item,
     username: names.get(item.user_id) || item.user_id,
+    administrator: item.created_by
+      ? names.get(item.created_by) || "Administrator"
+      : null,
   }));
 
   return (
-    <main className="min-h-screen px-6 py-12 text-white">
-      <div className="relative mx-auto mt-12 max-w-4xl rounded-xl border border-white/10 bg-black/60 p-6 pt-16 backdrop-blur-md sm:p-10 sm:pt-16">
+    <main className="min-h-screen px-2 py-12 text-white sm:px-6">
+      <div className="relative mx-auto mt-12 max-w-4xl rounded-xl border border-white/10 bg-black/60 p-3 pt-16 backdrop-blur-md sm:p-10 sm:pt-16">
         <div className="absolute left-4 top-2 z-40 sm:top-4">
           <Link
             href="/admin"

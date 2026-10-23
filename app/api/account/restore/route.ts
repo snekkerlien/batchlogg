@@ -84,7 +84,7 @@ async function readArchive(bytes: ArrayBuffer): Promise<ArchiveData> {
     throw new Error("Backup metadata and profile must be JSON objects");
   }
   const version = metadataValue.format_version;
-  if (version !== 1 && version !== 2 && version !== 3 && version !== 4) {
+  if (version !== 1 && version !== 2 && version !== 3 && version !== 4 && version !== 5) {
     throw new Error("Unsupported backup format. Please upload a Batchlog backup.");
   }
 
@@ -107,7 +107,7 @@ async function readArchive(bytes: ArrayBuffer): Promise<ArchiveData> {
       feedback: "feedback.json",
     });
   }
-  if (version === 3 || version === 4) {
+  if (version === 3 || version === 4 || version === 5) {
     Object.assign(files, {
       batch_notes: "batch_notes.json",
       sg_readings: "sg_readings.json",
@@ -121,8 +121,12 @@ async function readArchive(bytes: ArrayBuffer): Promise<ArchiveData> {
       equipment_profiles: "equipment_profiles.json",
     });
   }
-  if (version === 4) {
+  if (version === 4 || version === 5) {
     files.water_chemistry_profiles = "water_chemistry_profiles.json";
+  }
+  if (version === 5) {
+    files.batch_aging = "batch_aging.json";
+    files.batch_aging_tastings = "batch_aging_tastings.json";
   }
 
   const rows: Record<string, JsonRecord[]> = {};
@@ -437,6 +441,8 @@ export async function POST(request: Request) {
       false
     );
     await insertRows(serviceRole, "batch_reminders", rows.batch_reminders ?? [], user.id, processed);
+    await insertRows(serviceRole, "batch_aging", rows.batch_aging ?? [], user.id, processed);
+    await insertRows(serviceRole, "batch_aging_tastings", rows.batch_aging_tastings ?? [], user.id, processed);
     await insertRows(serviceRole, "kegs", rows.kegs ?? [], user.id, processed);
     await insertRows(serviceRole, "shopping_list_items", rows.shopping_list_items ?? [], user.id, processed);
 

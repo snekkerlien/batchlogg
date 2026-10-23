@@ -60,7 +60,7 @@ export async function createBatch(formData: FormData) {
     .from("batches")
     .select("id")
     .eq("aktivt_kar", karId)
-    .in("status", ["Aktiv", "Sekundær", "secondary"])
+    .in("status", ["Aktiv", "Sekundær", "secondary", "Conditioning"])
     .maybeSingle();
 
   if (activeBatchError) {

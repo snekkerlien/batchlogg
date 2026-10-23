@@ -22,7 +22,7 @@ export default function BatchReminders({
   stage,
 }: {
   batchId: string;
-  stage: "primary" | "secondary";
+  stage: "primary" | "secondary" | "conditioning";
 }) {
   const [reminders, setReminders] = useState<BatchReminder[]>([]);
   const [remindAt, setRemindAt] = useState(() =>
@@ -35,10 +35,14 @@ export default function BatchReminders({
   const [error, setError] = useState("");
   const [deleteError, setDeleteError] = useState("");
   const [reminderToDelete, setReminderToDelete] = useState<BatchReminder | null>(null);
-  const stageLabel =
-    stage === "secondary" ? "Secondary fermentation" : "Primary fermentation";
   const suggestedReminders =
-    stage === "secondary"
+    stage === "conditioning"
+      ? [
+          "Check clarity before finishing",
+          "Schedule a tasting",
+          "Prepare packaging",
+        ]
+      : stage === "secondary"
       ? [
           "Check gravity before packaging",
           "Check for clearing",
@@ -164,7 +168,7 @@ export default function BatchReminders({
   return (
     <section id="batch-reminders" className="mt-6 mb-6 scroll-mt-6 rounded-xl border border-white/10 bg-white/5 p-4">
       <div className="flex w-full items-center justify-between gap-3 text-left text-lg font-semibold text-green-300">
-        <span>{stageLabel} reminders</span>
+        <span>Reminders</span>
         <ExpandArrowButton
           expanded={open}
           label="batch reminders"

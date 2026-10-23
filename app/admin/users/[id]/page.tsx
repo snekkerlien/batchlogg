@@ -9,6 +9,14 @@ import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 import UserRestrictionControls from "@/app/components/UserRestrictionControls";
 import DeleteUserButton from "./DeleteUserButton";
+import {
+  BUSINESS_TYPES,
+  isBusinessType,
+} from "@/lib/brewery/business";
+import {
+  slugifyBreweryValue,
+  normalizeOptionalUrl,
+} from "@/lib/brewery/access";
 
 export const runtime = "nodejs";
 
@@ -68,6 +76,196 @@ export default async function UserAdminPage({
     .or(`ends_at.is.null,ends_at.gt.${now}`);
   if (restrictionsError) {
     throw new Error(`Failed to load user restrictions: ${restrictionsError.message}`);
+  }
+
+  const { data: businessAccount, error: businessAccountError } = await serviceRole
+    .from("brewery_accounts")
+    .select("id, name, business_type, business_type_other, slug, status, manual_access_granted_at, manual_access_expires_at, manual_access_note, stripe_subscription_status")
+    .eq("owner_id", userId)
+    .maybeSingle();
+  if (businessAccountError) {
+    throw new Error(`Failed to load user's business account: ${businessAccountError.message}`);
+  }
+
+  async function grantBusinessAccess(formData: FormData) {
+    "use server";
+
+    const { supabase: actionSupabase, serviceRole: actionServiceRole } =
+      supabaseServer();
+    const {
+      data: { user: actionUser },
+    } = await actionSupabase.auth.getUser();
+    if (!actionUser) throw new Error("Forbidden");
+    const actionRole = await getMembershipRole(actionSupabase, actionUser);
+    if (!hasPermission(actionRole, "manage_users")) throw new Error("Forbidden");
+
+    const name = formData.get("business_name")?.toString().trim() ?? "";
+    const businessType = formData.get("business_type")?.toString();
+    const businessTypeOther =
+      formData.get("business_type_other")?.toString().trim() ?? "";
+    const description = formData.get("business_description")?.toString().trim() ?? "";
+    const location = formData.get("business_location")?.toString().trim() ?? "";
+    const websiteValue = formData.get("business_website")?.toString() ?? "";
+    const websiteUrl = normalizeOptionalUrl(websiteValue);
+    const note = formData.get("grant_note")?.toString().trim() ?? "";
+    const expiryValue = formData.get("grant_expires_at")?.toString() ?? "";
+    const expiresAt = expiryValue ? new Date(expiryValue) : null;
+
+    if (
+      name.length < 2 ||
+      name.length > 120 ||
+      !isBusinessType(businessType) ||
+      (businessType === "other" &&
+        (businessTypeOther.length < 2 || businessTypeOther.length > 100)) ||
+      description.length > 5000 ||
+      location.length > 200 ||
+      websiteUrl === undefined ||
+      note.length > 1000 ||
+      (expiryValue &&
+        (!expiresAt || !Number.isFinite(expiresAt.getTime()) || expiresAt.getTime() <= Date.now()))
+    ) {
+      throw new Error("Check the business details and free-access grant settings.");
+    }
+
+    const { data: existingAccount, error: existingError } = await actionServiceRole
+      .from("brewery_accounts")
+      .select("id")
+      .eq("owner_id", userId)
+      .maybeSingle();
+    if (existingError) {
+      throw new Error(`Failed to check for an existing business page: ${existingError.message}`);
+    }
+    if (existingAccount) {
+      throw new Error("This user already has a business account. Use the controls below to grant access.");
+    }
+
+    const slug = slugifyBreweryValue(name);
+    if (!slug) throw new Error("Enter a business name that can be used in a public link.");
+    const now = new Date().toISOString();
+    const { data: createdAccount, error: createError } = await actionServiceRole
+      .from("brewery_accounts")
+      .insert({
+        owner_id: userId,
+        name,
+        business_type: businessType,
+        business_type_other: businessType === "other" ? businessTypeOther : null,
+        slug,
+        description,
+        location,
+        website_url: websiteUrl,
+        status: "approved",
+        approved_by: actionUser.id,
+        approved_at: now,
+        manual_access_granted_by: actionUser.id,
+        manual_access_granted_at: now,
+        manual_access_expires_at: expiresAt?.toISOString() ?? null,
+        manual_access_note: note || null,
+      })
+      .select("id")
+      .single();
+    if (createError) {
+      if (createError.code === "23505") {
+        throw new Error("A business with that name or page address already exists.");
+      }
+      throw new Error(`Failed to create business account: ${createError.message}`);
+    }
+
+    if (
+      !(await writeAdminAuditEvent(actionServiceRole, {
+        actorId: actionUser.id,
+        action: "business.manual_account_created",
+        targetType: "brewery",
+        targetId: createdAccount.id,
+        details: {
+          name,
+          business_type: businessType,
+          owner_id: userId,
+          expires_at: expiresAt?.toISOString() ?? null,
+          note: note || null,
+        },
+      }))
+    ) {
+      throw new Error("Business account was created, but the audit log could not be updated.");
+    }
+
+    revalidatePath(`/admin/users/${userId}`);
+    revalidatePath("/admin/breweries");
+    revalidatePath("/business");
+  }
+
+  async function updateBusinessGrant(formData: FormData) {
+    "use server";
+
+    const action = formData.get("business_grant_action")?.toString();
+    if (action !== "grant" && action !== "revoke") {
+      throw new Error("Invalid business access action.");
+    }
+    const note = formData.get("business_grant_note")?.toString().trim() ?? "";
+    const expiryValue = formData.get("business_grant_expires_at")?.toString() ?? "";
+    const expiresAt = expiryValue ? new Date(expiryValue) : null;
+    if (
+      note.length > 1000 ||
+      (expiryValue &&
+        (!expiresAt ||
+          !Number.isFinite(expiresAt.getTime()) ||
+          expiresAt.getTime() <= Date.now()))
+    ) {
+      throw new Error("Enter a valid future expiration date and grant note.");
+    }
+    const { supabase: actionSupabase, serviceRole: actionServiceRole } =
+      supabaseServer();
+    const {
+      data: { user: actionUser },
+    } = await actionSupabase.auth.getUser();
+    if (!actionUser) throw new Error("Forbidden");
+    const actionRole = await getMembershipRole(actionSupabase, actionUser);
+    if (!hasPermission(actionRole, "manage_users")) throw new Error("Forbidden");
+
+    const { data: targetAccount, error: targetError } = await actionServiceRole
+      .from("brewery_accounts")
+      .select("id")
+      .eq("owner_id", userId)
+      .maybeSingle();
+    if (targetError) throw new Error(`Failed to load business account: ${targetError.message}`);
+    if (!targetAccount) throw new Error("This user does not have a business account.");
+
+    const now = new Date().toISOString();
+    const update: Record<string, string | null> =
+      action === "grant"
+        ? {
+            status: "approved",
+            approved_by: actionUser.id,
+            approved_at: now,
+            manual_access_granted_by: actionUser.id,
+            manual_access_granted_at: now,
+            manual_access_expires_at: expiresAt?.toISOString() ?? null,
+            manual_access_note: note || "Granted from user administration",
+          }
+        : {
+            manual_access_granted_by: null,
+            manual_access_granted_at: null,
+            manual_access_expires_at: null,
+            manual_access_note: null,
+          };
+    const { error: updateError } = await actionServiceRole
+      .from("brewery_accounts")
+      .update(update)
+      .eq("id", targetAccount.id);
+    if (updateError) throw new Error(`Failed to update business access: ${updateError.message}`);
+    if (
+      !(await writeAdminAuditEvent(actionServiceRole, {
+        actorId: actionUser.id,
+        action: action === "grant" ? "business.access_granted" : "business.access_revoked",
+        targetType: "brewery",
+        targetId: targetAccount.id,
+        details: { owner_id: userId },
+      }))
+    ) {
+      throw new Error("Business access was updated, but the audit log could not be updated.");
+    }
+    revalidatePath(`/admin/users/${userId}`);
+    revalidatePath("/admin/breweries");
+    revalidatePath("/business");
   }
 
   async function updateUser(formData: FormData) {
@@ -262,6 +460,174 @@ export default async function UserAdminPage({
               Save changes
             </button>
           </form>
+
+          <section className="mt-8 rounded-xl border border-white/10 bg-black/20 p-5">
+            <h2 className="text-lg font-semibold text-green-200">Business account access</h2>
+            {businessAccount ? (
+              <div className="mt-3 space-y-3">
+                <div>
+                  <p className="font-medium">{businessAccount.name}</p>
+                  <p className="text-sm text-white/60">
+                    {businessAccount.business_type === "other"
+                      ? businessAccount.business_type_other || "Other"
+                      : BUSINESS_TYPES.find((type) => type.value === businessAccount.business_type)?.label || "Business"}
+                    {" · "}
+                    <span className="capitalize">{businessAccount.status}</span>
+                  </p>
+                  <p className="text-sm text-white/50">
+                    {businessAccount.stripe_subscription_status
+                      ? `Stripe: ${businessAccount.stripe_subscription_status}`
+                      : businessAccount.manual_access_granted_at
+                        ? `Free access${businessAccount.manual_access_expires_at ? ` expires ${new Date(businessAccount.manual_access_expires_at).toLocaleString()}` : " (no expiry)"}`
+                        : "No free-access grant"}
+                  </p>
+                  {businessAccount.manual_access_note && (
+                    <p className="text-sm text-white/50">Grant note: {businessAccount.manual_access_note}</p>
+                  )}
+                  <Link
+                    href={`/business/${businessAccount.slug}`}
+                    className="mt-2 inline-block text-sm text-green-200 underline"
+                  >
+                    View public page
+                  </Link>
+                </div>
+                <form action={updateBusinessGrant} className="space-y-3">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="block text-xs text-white/60">
+                      Grant note
+                      <input
+                        name="business_grant_note"
+                        maxLength={1000}
+                        defaultValue={businessAccount.manual_access_note ?? ""}
+                        className="mt-1 w-full rounded-lg border border-white/20 bg-black/40 p-3 text-sm text-white"
+                      />
+                    </label>
+                    <label className="block text-xs text-white/60">
+                      Optional grant expiration
+                      <input
+                        type="datetime-local"
+                        name="business_grant_expires_at"
+                        className="mt-1 w-full rounded-lg border border-white/20 bg-black/40 p-3 text-sm text-white"
+                      />
+                    </label>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      name="business_grant_action"
+                      value="grant"
+                      type="submit"
+                      className="rounded-lg border border-green-400/30 bg-green-700 px-4 py-2 font-semibold text-white hover:bg-green-600"
+                    >
+                      {businessAccount.manual_access_granted_at ? "Update free access" : "Grant free access"}
+                    </button>
+                    {businessAccount.manual_access_granted_at && (
+                      <button
+                        name="business_grant_action"
+                        value="revoke"
+                        type="submit"
+                        className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold hover:bg-white/20"
+                      >
+                        Revoke free access
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-white/45">
+                    Free access approves the page and is managed separately from any Stripe subscription.
+                  </p>
+                </form>
+              </div>
+            ) : (
+              <form action={grantBusinessAccess} className="mt-3 space-y-4">
+                <p className="text-sm text-white/60">
+                  Create and approve a business page with complimentary access for this user.
+                </p>
+                <label className="block">
+                  <span className="text-sm text-white/80">Business name</span>
+                  <input
+                    name="business_name"
+                    required
+                    minLength={2}
+                    maxLength={120}
+                    className="mt-1 w-full rounded-lg border border-white/20 bg-black/40 p-3 text-white"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm text-white/80">Business type</span>
+                  <select
+                    name="business_type"
+                    defaultValue="brewery"
+                    className="mt-1 w-full rounded-lg border border-white/20 bg-black/40 p-3 text-white"
+                  >
+                    {BUSINESS_TYPES.map((type) => (
+                      <option key={type.value} value={type.value} className="bg-zinc-900">
+                        {type.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-sm text-white/80">Custom business type (if Other)</span>
+                  <input
+                    name="business_type_other"
+                    maxLength={100}
+                    className="mt-1 w-full rounded-lg border border-white/20 bg-black/40 p-3 text-white"
+                    placeholder="e.g. tasting room"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm text-white/80">Description</span>
+                  <textarea
+                    name="business_description"
+                    maxLength={5000}
+                    rows={3}
+                    className="mt-1 w-full rounded-lg border border-white/20 bg-black/40 p-3 text-white"
+                  />
+                </label>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="text-sm text-white/80">Location</span>
+                    <input
+                      name="business_location"
+                      maxLength={200}
+                      className="mt-1 w-full rounded-lg border border-white/20 bg-black/40 p-3 text-white"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-sm text-white/80">Website URL</span>
+                    <input
+                      name="business_website"
+                      type="text"
+                      inputMode="url"
+                      placeholder="homebrew.no"
+                      className="mt-1 w-full rounded-lg border border-white/20 bg-black/40 p-3 text-white"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-sm text-white/80">Optional grant note</span>
+                    <input
+                      name="grant_note"
+                      maxLength={1000}
+                      className="mt-1 w-full rounded-lg border border-white/20 bg-black/40 p-3 text-white"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-sm text-white/80">Optional grant expiration</span>
+                    <input
+                      name="grant_expires_at"
+                      type="datetime-local"
+                      className="mt-1 w-full rounded-lg border border-white/20 bg-black/40 p-3 text-white"
+                    />
+                  </label>
+                </div>
+                <button
+                  type="submit"
+                  className="rounded-lg border border-green-400/30 bg-green-700 px-4 py-3 font-semibold text-white hover:bg-green-600"
+                >
+                  Create page & grant free access
+                </button>
+              </form>
+            )}
+          </section>
 
           <DeleteUserButton
             userId={userId}

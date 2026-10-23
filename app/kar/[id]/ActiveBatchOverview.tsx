@@ -48,16 +48,27 @@ export default function ActiveBatchOverview({
           <Metric label="Beer style">{batch.beer_style}</Metric>
         )}
         <Metric label="Fermentation stage">
-          {secondary ? "Secondary fermentation" : "Primary fermentation"}
+          {batch.status === "Conditioning"
+            ? "Conditioning"
+            : secondary
+              ? "Secondary fermentation"
+              : "Primary fermentation"}
         </Metric>
         {(batch.type === "Beer" || batch.type === "Braggot") && batch.ibu != null && (
           <Metric label="Bitterness"><BitternessMeter ibu={Number(batch.ibu)} /></Metric>
         )}
         {(batch.type === "Beer" || batch.type === "Braggot") && batch.ebc != null && (
           <Metric label="Color">
-            <span className="flex items-center gap-2">
-              <span>{Number(batch.ebc).toFixed(0)} EBC</span>
-              <BeerColorGlass ebc={Number(batch.ebc)} />
+            <span className="flex min-h-[5.5rem] items-start">
+              <span className="flex items-baseline gap-1.5">
+                <span className="text-xl font-bold leading-none tracking-tight text-white">
+                  {Number(batch.ebc).toFixed(0)}
+                </span>
+                <span className="text-xs font-medium text-white/50">EBC</span>
+              </span>
+              <span className="flex flex-1 items-center justify-center">
+                <BeerColorGlass ebc={Number(batch.ebc)} />
+              </span>
             </span>
           </Metric>
         )}

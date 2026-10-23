@@ -1,6 +1,7 @@
 export const BATCH_GUIDE_MILESTONES = [
   "first-batch",
   "secondary",
+  "conditioning",
   "bottling",
 ] as const;
 

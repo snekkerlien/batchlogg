@@ -14,6 +14,9 @@ const TOPICS_PER_PAGE = 20;
 export async function GET(request: NextRequest) {
   const requestedPage = Number(request.nextUrl.searchParams.get("page") ?? "1");
   const topicId = request.nextUrl.searchParams.get("topic_id");
+  if (topicId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(topicId)) {
+    return NextResponse.json({ error: "Invalid discussion ID" }, { status: 400 });
+  }
   if (!Number.isInteger(requestedPage) || requestedPage < 1) {
     return NextResponse.json({ error: "Invalid forum page" }, { status: 400 });
   }
@@ -206,7 +209,7 @@ export async function GET(request: NextRequest) {
           .from("batches")
           .select("id, user_id, name, aktivt_kar, status")
           .in("id", batchIds)
-          .in("status", ["Aktiv", "Sekundær", "secondary"])
+          .in("status", ["Aktiv", "Sekundær", "secondary", "Conditioning"])
       : { data: [], error: null },
   ]);
   if (recipesError || batchesError) {

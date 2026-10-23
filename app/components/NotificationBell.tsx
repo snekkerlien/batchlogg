@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
+import { forumTopicHref } from "@/lib/community/forumDraft";
 
 interface ForumReplyNotification {
   kind: "forum_reply";
@@ -85,6 +86,7 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
     width: number;
   } | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const notificationButtonRef = useRef<HTMLButtonElement>(null);
   const seenAchievementIds = useRef<Set<string> | null>(null);
   const router = useRouter();
 
@@ -321,6 +323,20 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (!open) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+        notificationButtonRef.current?.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open]);
+
   function toggleOpen() {
     if (open) {
       setOpen(false);
@@ -382,7 +398,7 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
 
     setOpen(false);
     if (notification.kind === "forum_reply" || notification.kind === "forum_like") {
-      router.push(`/community/forum#forum-topic-${notification.topic_id}`);
+      router.push(forumTopicHref(notification.topic_id));
     } else if (notification.kind === "batch_reminder") {
       router.push(
         notification.kar_id
@@ -521,6 +537,7 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
   return (
     <div ref={rootRef} className="relative">
       <button
+        ref={notificationButtonRef}
         type="button"
         onClick={toggleOpen}
         aria-label={
@@ -529,6 +546,7 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
             : "Notifications"
         }
         aria-expanded={open}
+        aria-controls="notification-panel"
         className="relative flex items-center justify-center rounded-lg border border-white/20 bg-white/10 px-3 py-2 hover:bg-white/20"
       >
         <svg
@@ -546,15 +564,22 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
           <path d="M10 21h4" />
         </svg>
         {unreadCount > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-green-600 px-1 text-xs font-bold text-white">
+          <span aria-hidden="true" className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-green-600 px-1 text-xs font-bold text-white">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
       </button>
+      <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {unreadCount === 0
+          ? "No unread notifications"
+          : `${unreadCount} unread ${unreadCount === 1 ? "notification" : "notifications"}`}
+      </span>
 
       {open && (
         <section
+          id="notification-panel"
           aria-label="Notifications"
+          role="region"
           className={`absolute top-full z-[60] mt-2 ${mobilePanelPosition ? "" : "right-0 w-[min(22rem,calc(100vw-2rem))]"} rounded-xl border border-white/20 bg-zinc-950/95 p-3 text-left shadow-2xl backdrop-blur-md`}
           style={
             mobilePanelPosition
@@ -618,6 +643,9 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
                       notification.read_at ? "" : "bg-white/5"
                     }`}
                   >
+                    <span className="sr-only">
+                      {notification.read_at ? "Read notification. " : "Unread notification. "}
+                    </span>
                     {notification.kind === "forum_reply" ? (
                       <>
                         <span className="block text-sm font-semibold text-green-300">

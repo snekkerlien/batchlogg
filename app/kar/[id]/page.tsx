@@ -26,6 +26,8 @@ import { formatSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
 import RecipeSecondaryFields from "@/app/my-recipes/new/RecipeSecondaryFields";
 import VesselActivity from "./VesselActivity";
 import ExpandArrowButton from "@/app/components/ExpandArrowButton";
+import SplitBatchPanel from "./SplitBatchPanel";
+import ConditioningLog from "./ConditioningLog";
 
 const BatchSGChart = dynamic(
   () => import("@/app/components/BatchSGChart"),
@@ -46,9 +48,8 @@ export default function KarPage({ params }: { params: { id: string } }) {
     searchParams.get("racked") ??
     searchParams.get("guide");
   const [openSecondary, setOpenSecondary] = useState(false);
-  const [openSecondaryActive, setOpenSecondaryActive] = useState(false);
+  const [openConditioningActive, setOpenConditioningActive] = useState(false);
   const [openFinish, setOpenFinish] = useState(false);
-  const [openMove, setOpenMove] = useState(false);
   const [openSharing, setOpenSharing] = useState(false);
   const [openSharedNotes, setOpenSharedNotes] = useState(false);
   const [confirmCancelBatch, setConfirmCancelBatch] = useState(false);
@@ -76,6 +77,9 @@ export default function KarPage({ params }: { params: { id: string } }) {
   const [qrPng, setQrPng] = useState<string | null>(null);
   const [karLoading, setKarLoading] = useState(true);
   const [lifecycleSchemaStatus, setLifecycleSchemaStatus] = useState<
+    "checking" | "ready" | "unavailable"
+  >("checking");
+  const [conditioningSchemaStatus, setConditioningSchemaStatus] = useState<
     "checking" | "ready" | "unavailable"
   >("checking");
   const [lifecycleSchemaMessage, setLifecycleSchemaMessage] = useState("");
@@ -127,6 +131,42 @@ export default function KarPage({ params }: { params: { id: string } }) {
     return () => {
       active = false;
     };
+  }, [activeBatch?.id]);
+
+  useEffect(() => {
+    if (!activeBatch?.id) return;
+    let active = true;
+    setConditioningSchemaStatus("checking");
+    void (async () => {
+      try {
+        const { error } = await supabase
+          .from("batches")
+          .select("conditioning_startdate, conditioning_notes")
+          .eq("id", activeBatch.id)
+          .maybeSingle();
+        if (!active) return;
+        if (error) {
+          console.error("Could not verify conditioning database fields", error);
+          setConditioningSchemaStatus("unavailable");
+          return;
+        }
+        const { error: entriesError } = await supabase
+          .from("batch_conditioning_entries")
+          .select("id")
+          .limit(1);
+        if (!active) return;
+        if (entriesError) {
+          console.error("Could not verify conditioning activity storage", entriesError);
+          setConditioningSchemaStatus("unavailable");
+          return;
+        }
+        setConditioningSchemaStatus("ready");
+      } catch (error) {
+        console.error("Could not verify conditioning database storage", error);
+        if (active) setConditioningSchemaStatus("unavailable");
+      }
+    })();
+    return () => { active = false; };
   }, [activeBatch?.id]);
 
   const currentAbv =
@@ -213,7 +253,7 @@ export default function KarPage({ params }: { params: { id: string } }) {
       .from("batches")
       .select("*")
       .eq("aktivt_kar", kar.id)
-      .in("status", ["Aktiv", "Sekundær", "secondary"])
+      .in("status", ["Aktiv", "Sekundær", "secondary", "Conditioning"])
       .order("created_at", { ascending: false })
       .maybeSingle()
       .then(({ data, error }) => {
@@ -248,7 +288,7 @@ export default function KarPage({ params }: { params: { id: string } }) {
           .from("batches")
           .select("aktivt_kar")
           .eq("user_id", kar.user_id)
-          .in("status", ["Aktiv", "Sekundær", "secondary"]),
+          .in("status", ["Aktiv", "Sekundær", "secondary", "Conditioning"]),
       ]);
       const numbered = (vessels ?? []).map((v: any, i: number) => ({
         id: v.id,
@@ -375,6 +415,14 @@ export default function KarPage({ params }: { params: { id: string } }) {
   const hasActive = !!activeBatch;
 
   const hasHistory = !!historyBatch;
+  const splitVessels = [
+    { id: kar.id, nummer: vesselNumber, isCurrent: true },
+    ...freeVessels.map((vessel) => ({
+      id: vessel.id,
+      nummer: vessel.nummer,
+      isCurrent: false,
+    })),
+  ];
 
   async function saveBatchChanges(formData: FormData) {
     setSavingBatch(true);
@@ -602,9 +650,11 @@ const sharingSection = isOwner ? (
   title={vesselNumber ? `Vessel ${vesselNumber}` : isOwner ? "Vessel" : "Shared vessel"}
   subtitle={
     activeBatch
-      ? ["Sekundær", "secondary"].includes(activeBatch.status)
-        ? "Secondary fermentation"
-        : "Active fermentation"
+      ? activeBatch.status === "Conditioning"
+        ? "Conditioning"
+        : ["Sekundær", "secondary"].includes(activeBatch.status)
+          ? "Secondary fermentation"
+          : "Primary fermentation"
       : "View vessel details and start a new batch."
   }
 />
@@ -647,6 +697,12 @@ const sharingSection = isOwner ? (
       <h2 className="text-2xl font-bold text-center mb-6">Choose batch type</h2>
 
       <div className="flex flex-col gap-4">
+        <Link
+          href={`/my-recipes?vessel=${encodeURIComponent(kar.id)}`}
+          className="rounded-lg border border-green-500/60 bg-green-700/30 px-4 py-3 text-center font-semibold text-green-100 hover:bg-green-700/50"
+        >
+          Start from a saved recipe
+        </Link>
         {["Mead", "Beer", "Cider", "Wine", "Hard Seltzer", "Braggot", "Other"].map((type) => (
           <button
             key={type}
@@ -811,6 +867,99 @@ const sharingSection = isOwner ? (
   </>
 )}
 
+{/* CONDITIONING */}
+{hasActive && activeBatch?.status === "Conditioning" && (
+  <>
+    <h2 className="mb-4 text-center text-2xl font-semibold text-green-300">
+      Conditioning
+    </h2>
+    <div className="mb-10 rounded-xl border border-white/20 bg-white/10 p-4">
+      <div className="mb-2 flex items-center justify-between">
+        <h3 className="text-xl font-bold text-green-300">{activeBatch.name}</h3>
+        {canContribute && (
+          <button
+            type="button"
+            onClick={() => setOpenEdit(!openEdit)}
+            className="cursor-pointer font-semibold text-green-300"
+          >
+            Edit batch
+          </button>
+        )}
+      </div>
+      {openEdit && (
+        <div className="mb-4 rounded-lg border border-white/10 bg-white/5 p-4">
+          <form action={saveBatchChanges} className="flex flex-col gap-4">
+            <input type="hidden" name="batch_id" value={activeBatch.id} />
+            <input type="hidden" name="kar_id" value={kar.id} />
+            <label className="font-semibold">Batch name</label>
+            <input name="name" defaultValue={activeBatch.name} className="rounded border border-white/20 bg-black/40 p-3" />
+            <label className="font-semibold">
+              Volume (<UnitSymbol kind="volume" />)
+            </label>
+            <UnitInput kind="volume" name="volume_l" defaultValue={String(activeBatch.volume_l ?? "")} className="rounded border border-white/20 bg-black/40 p-3" />
+            <label className="font-semibold">Start date</label>
+            <input name="startdato" type="date" defaultValue={activeBatch.startdato.split("T")[0]} className="rounded border border-white/20 bg-black/40 p-3" />
+            <label className="font-semibold">Original Gravity (OG)</label>
+            <input name="og" type="number" step="0.001" defaultValue={activeBatch.og} className="rounded border border-white/20 bg-black/40 p-3" />
+            <BatchEditTypeFields batch={activeBatch} />
+            <RecipeSecondaryFields defaultValue={activeBatch.secondary_additions} defaultNotes={activeBatch.secondary_notes} defaultEnabled showToggle={false} includeHadSecondaryField={false} />
+            {editBatchError && <p role="alert" className="text-sm text-amber-300">{editBatchError}</p>}
+            <button disabled={savingBatch} className="rounded-lg border border-green-500 bg-green-700 px-4 py-3 font-semibold hover:bg-green-600 disabled:opacity-50">
+              {savingBatch ? "Saving…" : "Save changes"}
+            </button>
+          </form>
+        </div>
+      )}
+      <ActiveBatchOverview batch={activeBatch} secondary />
+      <div id="batch-recipe" className="scroll-mt-6">
+        <BatchRecipeCard batch={activeBatch} />
+      </div>
+      <section className="mb-5 mt-5 rounded-xl border border-white/10 bg-white/[0.04] p-5">
+        <h3 className="mb-3 text-lg font-semibold text-green-300">Conditioning started</h3>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-white/50">Racked on</p>
+            <p className="mt-1 font-medium text-white">
+              {activeBatch.conditioning_startdate
+                ? new Date(activeBatch.conditioning_startdate).toLocaleDateString("en-US")
+                : "Date not recorded"}
+            </p>
+          </div>
+          <div className="rounded-lg border border-white/10 bg-black/20 p-4 sm:col-span-2">
+            <p className="text-xs font-medium uppercase tracking-wide text-white/50">Initial notes</p>
+            <p className="mt-1 whitespace-pre-wrap text-sm text-white/85">
+              {activeBatch.conditioning_notes?.trim() || "No conditioning notes recorded."}
+            </p>
+          </div>
+        </div>
+      </section>
+      {conditioningSchemaStatus === "ready" ? (
+        <ConditioningLog
+          batchId={String(activeBatch.id)}
+          karId={String(kar.id)}
+          canContribute={canContribute}
+        />
+      ) : (
+        <p role={conditioningSchemaStatus === "unavailable" ? "alert" : undefined} className="mb-5 text-sm text-amber-200">
+          {conditioningSchemaStatus === "checking"
+            ? "Checking conditioning activity storage…"
+            : "Conditioning activity is unavailable until the conditioning database migration is applied."}
+        </p>
+      )}
+      {activeBatch.recipe_id && (
+        <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
+          <Link href={`/my-recipes/${encodeURIComponent(activeBatch.recipe_id)}`} className="text-sm font-semibold text-amber-200 underline underline-offset-4">
+            View source recipe
+          </Link>
+          <Link href={`/my-recipes?start=${encodeURIComponent(activeBatch.recipe_id)}`} className="text-sm font-semibold text-amber-200 underline underline-offset-4">
+            Brew this recipe again
+          </Link>
+        </div>
+      )}
+    </div>
+  </>
+)}
+
 
 {/* PRIMARY FERMENTATION */}
 {hasActive && activeBatch?.status === "Aktiv" && (
@@ -929,43 +1078,92 @@ const sharingSection = isOwner ? (
 
 
 
-    {/* ⭐ Rack to secondary */}
+    {/* Rack to secondary */}
 {hasActive && canContribute && activeBatch.status === "Aktiv" && (
-  <div className="mt-6 bg-white/5 border border-white/10 rounded-lg p-4">
+  <div className="mt-6 rounded-lg border border-white/10 bg-white/5 p-4">
     <div className="flex w-full items-center justify-between gap-3 font-semibold text-green-300">
       <span className="text-lg">Rack to secondary</span>
       <ExpandArrowButton
-        expanded={openSecondaryActive}
+        expanded={openSecondary}
         label="rack to secondary"
         controls="rack-to-secondary-content"
-        onClick={() => setOpenSecondaryActive((open) => !open)}
+        onClick={() => setOpenSecondary((open) => !open)}
       />
     </div>
-
     <div
       id="rack-to-secondary-content"
       className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
-        openSecondaryActive ? "[grid-template-rows:1fr]" : "[grid-template-rows:0fr]"
+        openSecondary ? "[grid-template-rows:1fr]" : "[grid-template-rows:0fr]"
       }`}
     >
       <div className="overflow-hidden">
-        <form
-          action={Actions.moveToSecondary}
-          className="mt-4 flex flex-col gap-4"
-        >
+        <form action={Actions.moveToSecondary} className="mt-4 flex flex-col gap-4">
           <input type="hidden" name="batch_id" value={activeBatch.id} />
           <input type="hidden" name="kar_id" value={kar.id} />
-
           <RecipeSecondaryFields
             defaultEnabled
             showToggle={false}
             includeHadSecondaryField={false}
           />
-
-          <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
+          <button className="rounded-lg border border-green-500 bg-green-700 px-4 py-3 font-semibold hover:bg-green-600">
             Confirm rack to secondary
           </button>
         </form>
+      </div>
+    </div>
+  </div>
+)}
+
+    {/* Rack to conditioning */}
+{hasActive && canContribute && ["Sekundær", "secondary"].includes(activeBatch.status) && (
+  <div className="mt-6 bg-white/5 border border-white/10 rounded-lg p-4">
+    <div className="flex w-full items-center justify-between gap-3 font-semibold text-green-300">
+      <span className="text-lg">Rack to conditioning</span>
+      <ExpandArrowButton
+        expanded={openConditioningActive}
+        label="rack to conditioning"
+        controls="rack-to-conditioning-content"
+        onClick={() => setOpenConditioningActive((open) => !open)}
+      />
+    </div>
+
+    <div
+      id="rack-to-conditioning-content"
+      className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+        openConditioningActive ? "[grid-template-rows:1fr]" : "[grid-template-rows:0fr]"
+      }`}
+    >
+      <div className="overflow-hidden">
+        {conditioningSchemaStatus === "ready" ? (
+          <form
+            action={Actions.rackToConditioning}
+            className="mt-4 flex flex-col gap-4"
+          >
+            <input type="hidden" name="batch_id" value={activeBatch.id} />
+            <input type="hidden" name="kar_id" value={kar.id} />
+            <p className="text-sm text-white/70">
+              Conditioning is an optional vessel stage after secondary fermentation and before finishing.
+            </p>
+            <label className="flex flex-col gap-2 text-sm font-medium">
+              Conditioning notes (optional)
+              <textarea
+                name="conditioning_notes"
+                maxLength={3000}
+                rows={3}
+                className="rounded border border-white/20 bg-black/40 p-3"
+              />
+            </label>
+            <button className="rounded-lg border border-green-500 bg-green-700 px-4 py-3 font-semibold hover:bg-green-600">
+              Move batch to conditioning
+            </button>
+          </form>
+        ) : (
+          <p role="status" className="mt-4 text-sm text-amber-200">
+            {conditioningSchemaStatus === "checking"
+              ? "Checking conditioning storage…"
+              : "Conditioning is unavailable until the conditioning database migration is applied."}
+          </p>
+        )}
       </div>
     </div>
   </div>
@@ -1146,7 +1344,6 @@ const sharingSection = isOwner ? (
               <option value="Keg">Keg</option>
               <option value="Cans">Cans</option>
               <option value="Mixed packaging">Mixed bottles / cans</option>
-              <option value="Still / not carbonated">Still / not carbonated</option>
               <option value="Other">Other</option>
             </select>
           </label>
@@ -1304,62 +1501,24 @@ const sharingSection = isOwner ? (
   </>
 )}
 
-    {/* Move batch to another vessel */}
-{hasActive && isOwner && freeVessels.length > 0 && (
-  <div className="mt-6 bg-white/5 border border-white/10 rounded-lg p-4">
-    <div className="flex w-full items-center justify-between gap-3 font-semibold text-green-300">
-      <span className="text-lg">Move to another vessel</span>
-      <ExpandArrowButton
-        expanded={openMove}
-        label="move to another vessel"
-        controls="move-batch-content"
-        onClick={() => setOpenMove((open) => !open)}
-      />
-    </div>
-
-    <div
-      id="move-batch-content"
-      className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
-        openMove ? "[grid-template-rows:1fr]" : "[grid-template-rows:0fr]"
-      }`}
-    >
-      <div className="overflow-hidden">
-        <form
-          action={Actions.moveBatchToVessel}
-          className="mt-4 flex flex-col gap-3"
-        >
-          <input type="hidden" name="batch_id" value={activeBatch.id} />
-          <input type="hidden" name="kar_id" value={kar.id} />
-          <select
-            name="target_kar_id"
-            required
-            defaultValue=""
-            className="p-3 rounded bg-black/40 border border-white/20"
-          >
-            <option value="" disabled>Select empty vessel</option>
-            {freeVessels.map((v) => (
-              <option key={v.id} value={v.id}>
-                Vessel {v.nummer}
-              </option>
-            ))}
-          </select>
-          <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
-            Move batch
-          </button>
-        </form>
-      </div>
-    </div>
-  </div>
+{hasActive && isOwner && splitVessels.length >= 2 && (
+  <SplitBatchPanel
+    key={`split-${activeBatch.id}`}
+    batch={activeBatch}
+    vessels={splitVessels}
+  />
 )}
 
 {hasActive && isOwner && (
   <BatchReminders
-    key={activeBatch.id}
+    key={`reminders-${activeBatch.id}`}
     batchId={activeBatch.id}
     stage={
-      ["Sekundær", "secondary"].includes(activeBatch.status)
-        ? "secondary"
-        : "primary"
+      activeBatch.status === "Conditioning"
+        ? "conditioning"
+        : ["Sekundær", "secondary"].includes(activeBatch.status)
+          ? "secondary"
+          : "primary"
     }
   />
 )}

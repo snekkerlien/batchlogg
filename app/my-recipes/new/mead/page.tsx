@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import * as Actions from "../../actions/createRecipe";
 import MenuOverlay from "../../MenuOverlay";
 import BackButton from "../../BackButton";
+import FormField from "@/app/components/FormField";
 import { UnitInput, UnitSymbol } from "../../../components/Units";
 import BaseLiquidField from "../../../components/BaseLiquidField";
 import RecipeAdditiveFields from "../RecipeAdditiveFields";
@@ -85,77 +86,78 @@ export default function NewMeadRecipePage() {
 
         <form
           onSubmit={handleSubmit}
+          aria-busy={loading}
           className="flex flex-col gap-6"
         >
           <input type="hidden" name="type" value="Mead" />
 
           {/* Recipe name */}
-          <div>
-            <label className="block mb-1 font-semibold">Recipe name</label>
+          <FormField id="recipe-name" label="Recipe name" required>
             <input
+              id="recipe-name"
               name="name"
               placeholder="Example: Mango Melomel"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
             />
-          </div>
+          </FormField>
 
           {/* Volume */}
-          <div>
-            <label className="block mb-1 font-semibold">Volume (<UnitSymbol kind="volume" />)</label>
+          <FormField id="recipe-volume" label={<>Volume (<UnitSymbol kind="volume" />)</>}>
             <UnitInput
+              id="recipe-volume"
               name="volume"
               kind="volume"
               placeholder="Example: 10"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
-          </div>
+          </FormField>
 
           {/* OG */}
-          <div>
-            <label className="block mb-1 font-semibold">Original Gravity (OG)</label>
+          <FormField id="recipe-og" label="Original Gravity (OG)">
             <input
+              id="recipe-og"
               name="og"
               type="number"
               step="0.001"
               placeholder="Example: 1.110"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
-          </div>
+          </FormField>
 
           {/* FG */}
-          <div>
-            <label className="block mb-1 font-semibold">Final Gravity (FG)</label>
+          <FormField id="recipe-fg" label="Final Gravity (FG)">
             <input
+              id="recipe-fg"
               name="fg"
               type="number"
               step="0.001"
               placeholder="Example: 1.020"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
-          </div>
+          </FormField>
 
           <BaseLiquidField />
 
           {/* Honey */}
-          <div>
-            <label className="block mb-1 font-semibold">Honey type</label>
+          <FormField id="recipe-honey-type" label="Honey type">
             <input
+              id="recipe-honey-type"
               name="honey_type"
               placeholder="Example: Wildflower honey"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
-          </div>
+          </FormField>
 
-          <div>
-            <label className="block mb-1 font-semibold">Honey amount (<UnitSymbol kind="kg" />)</label>
+          <FormField id="recipe-honey-amount" label={<>Honey amount (<UnitSymbol kind="kg" />)</>}>
             <UnitInput
+              id="recipe-honey-amount"
               name="honey_amount"
               kind="kg"
               placeholder="Example: 3.5"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
-          </div>
+          </FormField>
 
           {/* Fruit additions */}
 <div>
@@ -229,14 +231,14 @@ export default function NewMeadRecipePage() {
           <input type="hidden" name="fruits_json" value={JSON.stringify(fruits)} />
 
           {/* Yeast */}
-          <div>
-            <label className="block mb-1 font-semibold">Yeast strain</label>
+          <FormField id="recipe-yeast" label="Yeast strain">
             <input
+              id="recipe-yeast"
               name="yeast"
               placeholder="Example: Lalvin 71B"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
-          </div>
+          </FormField>
 
           {/* Additives */}
           <div>
@@ -244,24 +246,24 @@ export default function NewMeadRecipePage() {
             <RecipeAdditiveFields />
           </div>
           {/* Full process */}
-          <div>
-            <label className="block mb-1 font-semibold">Full process</label>
+          <FormField id="recipe-process" label="Full process">
             <textarea
+              id="recipe-process"
               name="full_process"
               placeholder="Rehydration, pitching, degassing schedule, fermentation notes..."
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-40"
             />
-          </div>
+          </FormField>
 
           {/* Notes */}
-          <div>
-            <label className="block mb-1 font-semibold">Notes</label>
+          <FormField id="recipe-notes" label="Notes">
             <textarea
+              id="recipe-notes"
               name="notes"
               placeholder="Any additional notes about the recipe..."
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
             />
-          </div>
+          </FormField>
           <RecipeSecondaryFields />
 
           {/* Submit */}

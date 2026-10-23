@@ -12,6 +12,7 @@ type GuideAction = { title: string; description: string; target: string };
 const milestones = [
   { id: "first-batch", label: "Primary", caption: "Get your batch underway" },
   { id: "secondary", label: "Secondary", caption: "An optional next chapter" },
+  { id: "conditioning", label: "Conditioning", caption: "Log the steps along the way" },
   { id: "bottling", label: "Finish & Bottle", caption: "Keep the story for next time" },
 ] as const;
 
@@ -48,6 +49,19 @@ const content: Record<BatchGuideMilestone, {
       { title: "Tell the transfer story", description: "Record observations, additions, or a photo.", target: "#batch-notes-content" },
       { title: "Add a gravity reading", description: "Keep your measurements together across stages.", target: "#sg-log" },
       { title: "Plan a follow-up", description: "Set a reminder for your next check-in.", target: "#batch-reminders-content" },
+    ],
+  },
+  conditioning: {
+    eyebrow: "A quieter stage",
+    title: "Keep track of every conditioning step.",
+    description: "Conditioning is a flexible stage for clearing, maturing, stabilizing, backsweetening, and preparing your batch before finishing.",
+    heading: "Your process, recorded your way.",
+    guidance: "Use Conditioning activity to add a dated entry whenever you rack, clarify, mature, stabilize, backsweeten, adjust, taste, or do something else. Each action has its own details, with notes for anything extra.",
+    takeaway: "Log stabilization and backsweetening as separate steps. For example, record the stabilizer and your chosen wait time, then add a backsweetening entry when you do it. The guide records your process; it does not prescribe a schedule.",
+    actions: [
+      { title: "Log a conditioning step", description: "Add a dated entry for a transfer, treatment, tasting, or other action.", target: "#conditioning-activity" },
+      { title: "Check readings and reminders", description: "Track gravity and plan your next check-in.", target: "#sg-log" },
+      { title: "Finish when ready", description: "Open Finish & Bottle when you are ready to package.", target: "#finish-batch" },
     ],
   },
   bottling: {
@@ -169,8 +183,10 @@ export default function BatchGuide() {
       loadedBatchTargetRef.current = `vessel:${vesselId}`;
       setBatch(data);
       setStage(
-        data && ["Sekundær", "secondary"].includes(data.status ?? "")
-          ? "secondary"
+        data?.status === "Conditioning"
+          ? "conditioning"
+          : data && ["Sekundær", "secondary"].includes(data.status ?? "")
+            ? "secondary"
           : data
             ? "first-batch"
             : "overview"
@@ -205,11 +221,8 @@ export default function BatchGuide() {
   useEffect(() => {
     if (!isOpen) return;
     const previousFocus = document.activeElement;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     dialogRef.current?.focus();
     return () => {
-      document.body.style.overflow = previousOverflow;
       if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus();
     };
   }, [isOpen]);
@@ -244,8 +257,7 @@ export default function BatchGuide() {
         </button>
       )}
       {stage && (
-        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/80 p-3 backdrop-blur-sm sm:p-6"
-          onClick={(event) => { if (event.target === event.currentTarget) void dismiss(); }}>
+        <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/80 p-3 backdrop-blur-sm sm:p-6">
           <section ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="batch-guide-title"
             onKeyDown={(event) => {
               if (event.key === "Escape") { event.stopPropagation(); void dismiss(); }
@@ -260,7 +272,7 @@ export default function BatchGuide() {
                 event.preventDefault(); first.focus();
               }
             }}
-            className="max-h-[90dvh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-white/15 bg-zinc-950 text-white shadow-2xl outline-none">
+            className="w-full max-w-3xl shrink-0 rounded-2xl border border-white/15 bg-zinc-950 text-white shadow-2xl outline-none">
             <div className="flex items-center justify-between border-b border-white/10 px-5 py-4 sm:px-8">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-green-300">Your batch journey</p>
               <button type="button" aria-label="Close batch guide" disabled={saving} onClick={() => void dismiss()}
@@ -321,6 +333,18 @@ export default function BatchGuide() {
                   <h3 className="font-semibold text-white/90">{current.heading}</h3>
                   <p className="mt-2 text-sm leading-7 text-white/60">{current.guidance}</p>
                   <p className="mt-4 border-l-2 border-green-300/40 pl-4 text-sm leading-6 text-white/60">{current.takeaway}</p>
+                  {stage === "first-batch" && (
+                    <aside className="mt-5 rounded-xl border border-green-300/40 bg-green-400/10 p-4 shadow-[0_0_24px_color-mix(in_srgb,var(--user-accent)_12%,transparent)] sm:p-5">
+                      <p className="text-xs font-bold uppercase tracking-widest text-green-300">
+                        Planning flavor variations?
+                      </p>
+                      <p className="mt-2 text-sm font-medium leading-6 text-white/90 sm:text-base">
+                        Split the batch into separate vessels before secondary to
+                        try different flavor combinations and track each
+                        variation on its own.
+                      </p>
+                    </aside>
+                  )}
                   <h3 className="mb-3 mt-7 text-xs font-semibold uppercase tracking-widest text-white/45">Make your next move</h3>
                   <div className="grid gap-3 sm:grid-cols-3">
                     {current.actions.flatMap((action) => {

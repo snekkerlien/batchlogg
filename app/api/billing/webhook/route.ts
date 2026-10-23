@@ -62,6 +62,34 @@ async function syncSubscription(
   }
 }
 
+async function syncBrewerySubscription(
+  serviceRole: ReturnType<typeof supabaseServer>["serviceRole"],
+  subscription: Stripe.Subscription
+) {
+  const customerId =
+    typeof subscription.customer === "string"
+      ? subscription.customer
+      : subscription.customer.id;
+  const breweryId = subscription.metadata.brewery_id;
+  if (!breweryId) throw new Error("Brewery subscription is missing its brewery ID");
+
+  const periodEnds = subscription.items.data
+    .map((item) => item.current_period_end)
+    .filter((value): value is number => typeof value === "number");
+  const { error } = await serviceRole
+    .from("brewery_accounts")
+    .update({
+      stripe_customer_id: customerId,
+      stripe_subscription_id: subscription.id,
+      stripe_subscription_status: subscription.status,
+      stripe_current_period_end: periodEnds.length
+        ? new Date(Math.max(...periodEnds) * 1000).toISOString()
+        : null,
+    })
+    .eq("id", breweryId);
+  if (error) throw new Error(`Could not sync brewery subscription: ${error.message}`);
+}
+
 export async function POST(request: NextRequest) {
   const signature = request.headers.get("stripe-signature");
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -95,11 +123,12 @@ export async function POST(request: NextRequest) {
 
   try {
     if (event.type.startsWith("customer.subscription.")) {
-      await syncSubscription(
-        getStripeClient(),
-        serviceRole,
-        event.data.object as Stripe.Subscription
-      );
+      const subscription = event.data.object as Stripe.Subscription;
+      if (subscription.metadata.brewery_id) {
+        await syncBrewerySubscription(serviceRole, subscription);
+      } else {
+        await syncSubscription(getStripeClient(), serviceRole, subscription);
+      }
     } else if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
       if (session.mode === "subscription" && session.subscription) {
@@ -108,7 +137,11 @@ export async function POST(request: NextRequest) {
             ? session.subscription
             : session.subscription.id;
         const subscription = await getStripeClient().subscriptions.retrieve(subscriptionId);
-        await syncSubscription(getStripeClient(), serviceRole, subscription);
+        if (subscription.metadata.brewery_id) {
+          await syncBrewerySubscription(serviceRole, subscription);
+        } else {
+          await syncSubscription(getStripeClient(), serviceRole, subscription);
+        }
       }
     }
 

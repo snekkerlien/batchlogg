@@ -23,10 +23,58 @@ interface Report {
     id: string;
     previous_status: string;
     new_status: string;
+    actor: string;
     created_at: string;
+  }[];
+  priorReports: {
+    id: string;
+    content_type: string;
+    status: string;
+    reason: string;
+    created_at: string;
+  }[];
+  priorActions: {
+    id: string;
+    action: string;
+    details: Record<string, unknown> | null;
+    actor: string;
+    created_at: string;
+  }[];
+  activeRestrictions: {
+    restriction_type: string;
+    starts_at: string;
+    ends_at: string | null;
+    reason: string | null;
   }[];
   created_at: string;
 }
+
+const REPORT_OUTCOMES: {
+  status: Report["status"];
+  label: string;
+  className: string;
+}[] = [
+  {
+    status: "under_review",
+    label: "Mark under review",
+    className: "border-blue-400/30 bg-blue-900/20 text-blue-100 hover:bg-blue-900/40",
+  },
+  {
+    status: "action_taken",
+    label: "Mark action taken",
+    className: "border-green-400/30 bg-green-900/20 text-green-100 hover:bg-green-900/40",
+  },
+  {
+    status: "closed",
+    label: "Close report",
+    className: "border-white/20 bg-white/5 text-white/80 hover:bg-white/10",
+  },
+  {
+    status: "open",
+    label: "Reopen report",
+    className: "border-amber-400/30 bg-amber-900/20 text-amber-100 hover:bg-amber-900/40",
+  },
+];
 
 export function CommunityReportsClient() {
   const [reports, setReports] = useState<Report[]>([]);
@@ -120,8 +168,8 @@ export function CommunityReportsClient() {
   });
 
   return (
-    <main className="min-h-screen px-6 py-12 text-white">
-      <div className="relative mx-auto mt-12 max-w-4xl rounded-xl border border-white/10 bg-black/60 p-6 pt-16 backdrop-blur-md sm:p-10 sm:pt-16">
+    <main className="min-h-screen px-2 py-12 text-white sm:px-6">
+      <div className="relative mx-auto mt-12 max-w-4xl rounded-xl border border-white/10 bg-black/60 p-3 pt-16 backdrop-blur-md sm:p-10 sm:pt-16">
         <div className="absolute left-4 top-2 z-40 sm:top-4">
           <Link
             href="/admin"
@@ -226,23 +274,6 @@ export function CommunityReportsClient() {
                       {removingReportId === report.id ? "Removing…" : "Remove reported content"}
                     </button>
                   )}
-                  <button
-                    type="button"
-                    disabled={updatingReportId === report.id}
-                    onClick={() => {
-                      const nextStatus: Report["status"] =
-                        report.status === "open" ? "under_review" :
-                        report.status === "under_review" ? "action_taken" :
-                        report.status === "action_taken" ? "closed" : "open";
-                      void updateStatus(report, nextStatus);
-                    }}
-                    className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold transition hover:bg-white/20 disabled:cursor-wait disabled:opacity-50"
-                  >
-                    {updatingReportId === report.id ? "Saving…" :
-                    report.status === "open" ? "Review" :
-                      report.status === "under_review" ? "Mark action taken" :
-                      report.status === "action_taken" ? "Close report" : "Reopen"}
-                  </button>
                 </div>
                 <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-white/80">
                   {report.reason}
@@ -254,6 +285,11 @@ export function CommunityReportsClient() {
                   <blockquote className="mt-4 rounded-r-lg border-l-2 border-red-400/50 bg-black/30 py-3 pl-4 pr-3 text-sm text-white/60">
                     {report.reportedMessage}
                   </blockquote>
+                )}
+                {report.content_id && (
+                  <p className="mt-2 break-all text-xs text-white/45">
+                    Reported {report.content_type} ID: {report.content_id}
+                  </p>
                 )}
                 {report.attachments.length > 0 && (
                   <div className="mt-4">
@@ -311,12 +347,107 @@ export function CommunityReportsClient() {
                         {report.history.map((event) => (
                           <li key={event.id}>
                             {event.previous_status.replace("_", " ")} → {event.new_status.replace("_", " ")}
-                            {" · "}{new Date(event.created_at).toLocaleString()}
+                            {" · "}{event.actor} · {new Date(event.created_at).toLocaleString()}
                           </li>
                         ))}
                       </ul>
                     </details>
                 )}
+                <details className="mt-4 border-t border-white/10 pt-3 text-sm">
+                  <summary className="cursor-pointer font-semibold text-white/75">
+                    Member moderation context
+                    {" · "}
+                    {report.priorReports.length} earlier report{report.priorReports.length === 1 ? "" : "s"}
+                    {" · "}
+                    {report.priorActions.length} prior action{report.priorActions.length === 1 ? "" : "s"}
+                    {" · "}
+                    {report.activeRestrictions.length} active restriction{report.activeRestrictions.length === 1 ? "" : "s"}
+                  </summary>
+                  <div className="mt-3 grid gap-4 sm:grid-cols-3">
+                    <section>
+                      <h3 className="font-semibold text-white/85">Earlier reports</h3>
+                      {report.priorReports.length ? (
+                        <ul className="mt-2 space-y-2 text-xs text-white/65">
+                          {report.priorReports.map((previous) => (
+                            <li key={previous.id} className="rounded border border-white/10 p-2">
+                              <p className="font-medium">
+                                {previous.content_type} · {previous.status.replace("_", " ")}
+                              </p>
+                              <p className="mt-1 line-clamp-3">{previous.reason}</p>
+                              <time className="mt-1 block text-white/45">
+                                {new Date(previous.created_at).toLocaleString()}
+                              </time>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-2 text-xs text-white/50">No earlier reports in the available report history.</p>
+                      )}
+                    </section>
+                    <section>
+                      <h3 className="font-semibold text-white/85">Prior moderation actions</h3>
+                      {report.priorActions.length ? (
+                        <ul className="mt-2 space-y-2 text-xs text-white/65">
+                          {report.priorActions.slice(0, 10).map((action) => (
+                            <li key={action.id} className="rounded border border-white/10 p-2">
+                              <p className="font-medium">{action.action.replace(/[._]/g, " ")}</p>
+                              {action.details && Object.keys(action.details).length > 0 && (
+                                <p className="mt-1">
+                                  {Object.entries(action.details)
+                                    .map(([key, value]) => `${key.replace(/_/g, " ")}: ${String(value)}`)
+                                    .join(" · ")}
+                                </p>
+                              )}
+                              <p className="mt-1 text-white/45">
+                                {action.actor} · {new Date(action.created_at).toLocaleString()}
+                              </p>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-2 text-xs text-white/50">No prior moderation actions were found.</p>
+                      )}
+                    </section>
+                    <section>
+                      <h3 className="font-semibold text-white/85">Active restrictions</h3>
+                      {report.activeRestrictions.length ? (
+                        <ul className="mt-2 space-y-2 text-xs text-white/65">
+                          {report.activeRestrictions.map((restriction) => (
+                            <li key={`${restriction.restriction_type}:${restriction.starts_at}`} className="rounded border border-amber-300/20 bg-amber-950/20 p-2">
+                              <p className="font-medium capitalize">{restriction.restriction_type}</p>
+                              <p className="mt-1">
+                                {restriction.ends_at
+                                  ? `Until ${new Date(restriction.ends_at).toLocaleString()}`
+                                  : "Indefinite"}
+                              </p>
+                              <p className="mt-1">{restriction.reason || "No reason recorded."}</p>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-2 text-xs text-white/50">No active restrictions.</p>
+                      )}
+                    </section>
+                  </div>
+                </details>
+                <div className="mt-4 border-t border-white/10 pt-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/50">
+                    Available outcomes
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {REPORT_OUTCOMES.filter((outcome) => outcome.status !== report.status).map((outcome) => (
+                      <button
+                        key={outcome.status}
+                        type="button"
+                        disabled={updatingReportId === report.id}
+                        onClick={() => void updateStatus(report, outcome.status)}
+                        className={`rounded-lg border px-3 py-2 text-xs font-semibold disabled:cursor-wait disabled:opacity-50 ${outcome.className}`}
+                      >
+                        {updatingReportId === report.id ? "Saving…" : outcome.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </li>
             ))}
           </ul>

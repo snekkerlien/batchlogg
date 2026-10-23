@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import BackButton from "@/app/components/BackButton";
@@ -38,6 +38,8 @@ export default function MessagesPage() {
   const searchParams = useSearchParams();
   const peerId = searchParams.get("peer_id");
   const requestedReturnTo = searchParams.get("return_to");
+  const currentPeerIdRef = useRef(peerId);
+  currentPeerIdRef.current = peerId;
   const returnTo =
     requestedReturnTo?.startsWith("/") &&
     !requestedReturnTo.startsWith("//") &&
@@ -56,9 +58,53 @@ export default function MessagesPage() {
   const [confirmBlock, setConfirmBlock] = useState(false);
   const [userId, setUserId] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
   const [status, setStatus] = useState("");
+  const [failedMessageText, setFailedMessageText] = useState("");
+  const [failedMessagePeerId, setFailedMessagePeerId] = useState("");
+  const [draftReadyKey, setDraftReadyKey] = useState("");
+  const [draftStorageError, setDraftStorageError] = useState("");
+  const draftKey =
+    userId && peerId ? `batchlogg-message-draft:${userId}:${peerId}` : "";
+
+  useEffect(() => {
+    setError("");
+    setStatus("");
+    setFailedMessageText("");
+    setFailedMessagePeerId("");
+  }, [peerId]);
+
+  useEffect(() => {
+    if (!draftKey) return;
+    setDraftReadyKey("");
+    try {
+      setMessageText(window.localStorage.getItem(draftKey) ?? "");
+      setDraftStorageError("");
+    } catch (storageError) {
+      console.error("Could not load message draft", storageError);
+      setDraftStorageError("This draft could not be saved between visits.");
+      setMessageText("");
+    }
+    setDraftReadyKey(draftKey);
+  }, [draftKey]);
+
+  useEffect(() => {
+    if (!draftKey || draftReadyKey !== draftKey) return;
+    try {
+      if (messageText) {
+        window.localStorage.setItem(draftKey, messageText);
+      } else {
+        window.localStorage.removeItem(draftKey);
+      }
+      setDraftStorageError("");
+    } catch (storageError) {
+      console.error("Could not save message draft", storageError);
+      setDraftStorageError("This draft could not be saved between visits.");
+    }
+  }, [draftKey, draftReadyKey, messageText]);
 
   const loadInbox = useCallback(async () => {
     const response = await fetch("/api/community/messages", {
@@ -91,6 +137,9 @@ export default function MessagesPage() {
 
   useEffect(() => {
     let active = true;
+    setLoading(true);
+    setLoadError("");
+    setPeer(null);
     async function load() {
       const {
         data: { session },
@@ -109,7 +158,7 @@ export default function MessagesPage() {
     load()
       .catch((loadError) => {
         console.error("Could not load community messages", loadError);
-        if (active) setError(loadError instanceof Error ? loadError.message : "Could not load messages.");
+        if (active) setLoadError(loadError instanceof Error ? loadError.message : "Could not load messages.");
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -117,7 +166,7 @@ export default function MessagesPage() {
     return () => {
       active = false;
     };
-  }, [loadConversation, loadInbox, peerId, router]);
+  }, [loadAttempt, loadConversation, loadInbox, peerId, router]);
 
   useEffect(() => {
     if (!peerId) return;
@@ -129,7 +178,7 @@ export default function MessagesPage() {
         await Promise.all([loadInbox(), loadConversation(selectedPeerId, true)]);
       } catch (refreshError) {
         console.error("Could not refresh conversation", refreshError);
-        setError("Could not refresh the conversation.");
+        setLoadError("Could not refresh the conversation.");
       }
     }
 
@@ -143,9 +192,9 @@ export default function MessagesPage() {
     };
   }, [loadConversation, loadInbox, peerId]);
 
-  async function sendMessage(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!peerId || !messageText.trim()) return;
+  async function sendMessageText(text: string) {
+    if (!peerId || !peer || !text.trim()) return;
+    const sendingPeerId = peerId;
     setSending(true);
     setError("");
     setStatus("");
@@ -154,20 +203,36 @@ export default function MessagesPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ peerId, message: messageText }),
+        body: JSON.stringify({ peerId: sendingPeerId, message: text }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not send message");
+      if (currentPeerIdRef.current !== sendingPeerId) return;
       setMessages((current) => [...current, data.message]);
-      setMessageText("");
+      setFailedMessageText("");
+      setFailedMessagePeerId("");
+      if (messageText === text) setMessageText("");
       if (data.warning) setStatus(data.warning);
-      await loadInbox();
+      try {
+        await loadInbox();
+      } catch (inboxError) {
+        console.error("Message sent, but inbox could not refresh", inboxError);
+        setLoadError("Message sent, but the inbox could not refresh.");
+      }
     } catch (sendError) {
+      if (currentPeerIdRef.current !== sendingPeerId) return;
       console.error("Could not send message", sendError);
+      setFailedMessageText(text);
+      setFailedMessagePeerId(peerId);
       setError(sendError instanceof Error ? sendError.message : "Could not send message.");
     } finally {
       setSending(false);
     }
+  }
+
+  async function sendMessage(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await sendMessageText(messageText);
   }
 
   async function loadOlderMessages() {
@@ -258,6 +323,18 @@ export default function MessagesPage() {
           subtitle="Private conversations with accepted friends."
         />
         {error && <p role="alert" className="mb-4 text-sm text-amber-300">{error}</p>}
+        {loadError && (
+          <div role="alert" className="mb-4 rounded-lg border border-amber-400/30 bg-amber-950/30 p-3 text-sm text-amber-200">
+            <p>{loadError}</p>
+            <button
+              type="button"
+              onClick={() => setLoadAttempt((attempt) => attempt + 1)}
+              className="mt-2 rounded-md border border-white/20 bg-white/10 px-3 py-1.5 font-semibold text-white hover:bg-white/20"
+            >
+              Try again
+            </button>
+          </div>
+        )}
         {status && <p role="status" className="mb-4 text-sm text-green-300">{status}</p>}
 
         {peerId ? (
@@ -276,14 +353,16 @@ export default function MessagesPage() {
                 >
                   ←
                 </button>
-                {peer && (
+                {peer ? (
                   <div className="flex items-center gap-3">
                     <Image src={peer.avatar_url || "/default-avatar.png"} alt="" width={40} height={40} sizes="40px" unoptimized className="h-10 w-10 rounded-full object-cover" />
                     <h2 className="font-semibold">{peer.username}</h2>
                   </div>
+                ) : (
+                  <h2 className="font-semibold text-amber-200">Conversation unavailable</h2>
                 )}
               </div>
-              <div className="flex gap-2">
+              {peer && <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => setShowReport((value) => !value)}
@@ -298,9 +377,9 @@ export default function MessagesPage() {
                 >
                   Block
                 </button>
-              </div>
+              </div>}
             </div>
-            {showReport && (
+            {peer && showReport && (
               <form onSubmit={submitReport} className="border-b border-white/10 bg-white/5 p-4">
                 <label htmlFor="community-report" className="mb-2 block text-sm">
                   Tell us why you’re reporting this user (10-2000 characters)
@@ -319,7 +398,7 @@ export default function MessagesPage() {
                 </button>
               </form>
             )}
-            <ol className="flex max-h-[55vh] min-h-72 flex-col gap-3 overflow-y-auto p-4">
+            {peer && <ol className="flex max-h-[55vh] min-h-72 flex-col gap-3 overflow-y-auto p-4">
               {hasOlderMessages && (
                 <li className="self-center">
                   <button
@@ -340,6 +419,11 @@ export default function MessagesPage() {
                     <time className="mt-2 block text-right text-xs text-white/55">
                       {new Date(message.created_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}
                     </time>
+                    {ownMessage && (
+                      <span className="mt-1 block text-right text-xs text-white/55">
+                        {message.read_at ? "Read" : "Sent"}
+                      </span>
+                    )}
                     {!ownMessage && (
                       <div className="mt-2 text-right">
                         <ReportContentButton
@@ -352,9 +436,10 @@ export default function MessagesPage() {
                   </li>
                 );
               }) : <li className="m-auto text-sm text-white/55">Start the conversation.</li>}
-            </ol>
-            <form onSubmit={sendMessage} className="flex gap-2 border-t border-white/10 p-4">
+            </ol>}
+            {peer && <form onSubmit={sendMessage} className="flex gap-2 border-t border-white/10 p-4">
               <textarea
+                aria-label="Write a message"
                 value={messageText}
                 onChange={(event) => setMessageText(event.target.value)}
                 onKeyDown={(event) => {
@@ -381,7 +466,30 @@ export default function MessagesPage() {
               >
                 {sending ? "Sending…" : "Send"}
               </button>
-            </form>
+            </form>}
+            {peer && (
+              <p className="border-t border-white/10 px-4 py-2 text-xs text-white/50">
+                Unsent text is saved as a draft on this device.
+              </p>
+            )}
+            {peer && draftStorageError && (
+              <p role="status" className="border-t border-white/10 px-4 py-2 text-xs text-amber-200">
+                {draftStorageError}
+              </p>
+            )}
+            {peer && failedMessageText && failedMessagePeerId === peerId && (
+              <div role="alert" className="flex flex-wrap items-center justify-between gap-3 border-t border-amber-400/20 bg-amber-950/30 px-4 py-3 text-sm text-amber-100">
+                <span>Message not sent. Your text is still here.</span>
+                <button
+                  type="button"
+                  onClick={() => void sendMessageText(failedMessageText)}
+                  disabled={sending}
+                  className="rounded-lg border border-amber-200/30 bg-amber-100/10 px-3 py-2 font-semibold hover:bg-amber-100/20 disabled:cursor-wait disabled:opacity-60"
+                >
+                  {sending ? "Retrying…" : "Retry send"}
+                </button>
+              </div>
+            )}
           </section>
         ) : (
           <section>
@@ -395,7 +503,11 @@ export default function MessagesPage() {
                 Find friends
               </button>
             </div>
-            {conversations.length ? (
+            {loadError ? (
+              <p className="rounded-xl border border-white/10 bg-white/5 p-8 text-center text-white/65">
+                Inbox is unavailable until messages load.
+              </p>
+            ) : conversations.length ? (
               <ul className="space-y-2">
                 {conversations.map((conversation) => (
                   <li key={conversation.id}>
@@ -406,17 +518,29 @@ export default function MessagesPage() {
                           `/community/messages?peer_id=${encodeURIComponent(conversation.id)}${returnToQuery}`
                         )
                       }
-                      className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-4 text-left hover:bg-white/10"
+                      className={`flex w-full items-center gap-3 rounded-xl border p-4 text-left hover:bg-white/10 ${
+                        conversation.unreadCount > 0
+                          ? "border-green-400/40 bg-green-950/30"
+                          : "border-white/10 bg-white/5"
+                      }`}
+                      aria-label={`${conversation.username}${conversation.unreadCount > 0 ? `, ${conversation.unreadCount} unread messages` : ""}`}
                     >
                       <Image src={conversation.avatar_url || "/default-avatar.png"} alt="" width={48} height={48} sizes="48px" unoptimized className="h-12 w-12 rounded-full object-cover" />
                       <span className="min-w-0 flex-1">
-                        <span className="block font-semibold">{conversation.username}</span>
-                        <span className="block truncate text-sm text-white/60">
+                        <span className={`block ${conversation.unreadCount > 0 ? "font-bold text-white" : "font-semibold"}`}>
+                          {conversation.username}
+                          {conversation.unreadCount > 0 && (
+                            <span className="ml-2 text-xs font-semibold uppercase tracking-wide text-green-200">
+                              Unread
+                            </span>
+                          )}
+                        </span>
+                        <span className={`block truncate text-sm ${conversation.unreadCount > 0 ? "font-medium text-white/85" : "text-white/60"}`}>
                           {conversation.latest?.body || "No messages yet"}
                         </span>
                       </span>
                       {conversation.unreadCount > 0 && (
-                        <span className="rounded-full bg-green-600 px-2 py-1 text-xs font-bold">
+                        <span aria-hidden="true" className="rounded-full bg-green-600 px-2 py-1 text-xs font-bold">
                           {conversation.unreadCount}
                         </span>
                       )}
@@ -426,7 +550,7 @@ export default function MessagesPage() {
               </ul>
             ) : (
               <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center">
-                <p className="text-white/65">You don’t have any friends to message yet.</p>
+                <p className="text-white/65">No conversations yet. Find a brewer to start a conversation.</p>
                 <button
                   type="button"
                   onClick={() => router.push("/community/friends")}

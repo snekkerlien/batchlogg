@@ -6,6 +6,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  const preview = request.nextUrl.searchParams.get("preview") === "public";
   const { supabase, serviceRole } = supabaseServer();
   const {
     data: { user },
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
   if (authError || !user) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
-  const canManageUsers = hasPermission(
+  const canManageUsers = !preview && hasPermission(
     await getMembershipRole(supabase, user),
     "manage_users"
   );
@@ -40,7 +41,7 @@ export async function GET(request: NextRequest) {
   for (const candidate of usernames) {
     const result = await serviceRole
       .from("profiles")
-      .select("id, username, avatar_url, is_public, allow_friend_requests, membership_status, account_tier, award_winning_brewer, profile_banner, featured_recipe_id")
+      .select("id, username, avatar_url, is_public, allow_friend_requests, membership_status, account_tier, award_winning_brewer, profile_banner, featured_recipe_id, theme_accent_color")
       .eq("username", candidate)
       .maybeSingle();
 
@@ -62,10 +63,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Profile not found" }, { status: 404 });
   }
 
-  const isOwner = profile.id === user.id;
+  if (preview && profile.id !== user.id) {
+    return NextResponse.json({ error: "You can only preview your own profile" }, { status: 403 });
+  }
+  const isOwner = !preview && profile.id === user.id;
   let isFriend = false;
   let friendRequest: { id: string; status: "sent" | "received" } | null = null;
-  if (!isOwner) {
+  if (!isOwner && !preview) {
     const [user_a, user_b] =
       user.id < profile.id ? [user.id, profile.id] : [profile.id, user.id];
     const [

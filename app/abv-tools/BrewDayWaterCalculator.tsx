@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
 import { Qty, UnitInput, UnitSymbol } from "@/app/components/Units";
 import { calculateBrewWaterPlan } from "@/lib/brewing/waterPlanning";
+import { getCalculatorInputError } from "@/lib/brewing/calculatorValidation";
+import CalculatorResult from "./CalculatorResult";
 
 type EquipmentProfile = {
   id: string;
@@ -197,10 +199,14 @@ export default function BrewDayWaterCalculator() {
     tunDeadSpace,
   ];
   const parsed = values.map(toNumber);
-  const hasIncompleteValues = parsed.some((value) => value === null);
-  const result = useMemo(() => {
-    if (hasIncompleteValues) return null;
-    return calculateBrewWaterPlan({
+  const inputs = {
+    "target fermenter volume": targetVolume, "boil time": boilTime,
+    "boil-off rate": boilOffRate, "kettle loss": kettleLoss,
+    "grain bill": grainBill, "grain absorption": grainAbsorption,
+    "mash ratio": mashRatio, "tun dead space": tunDeadSpace,
+  };
+  const result = parsed.every(value => value !== null)
+    ? calculateBrewWaterPlan({
       targetFermenterVolumeL: parsed[0]!,
       boilTimeMinutes: parsed[1]!,
       boilOffRateLPerHour: parsed[2]!,
@@ -209,8 +215,20 @@ export default function BrewDayWaterCalculator() {
       grainAbsorptionLPerKg: parsed[5]!,
       mashRatioLPerKg: parsed[6]!,
       mashTunDeadSpaceL: parsed[7]!,
-    });
-  }, [hasIncompleteValues, ...parsed]);
+    })
+    : null;
+  const inputError = getCalculatorInputError([
+    { label: "Target fermenter volume", value: targetVolume, positive: true },
+    { label: "Boil time", value: boilTime, positive: true },
+    { label: "Boil-off rate", value: boilOffRate, min: 0 },
+    { label: "Kettle loss", value: kettleLoss, min: 0 },
+    { label: "Grain bill", value: grainBill, positive: true },
+    { label: "Grain absorption", value: grainAbsorption, min: 0 },
+    { label: "Mash ratio", value: mashRatio, positive: true },
+    { label: "Tun dead space", value: tunDeadSpace, min: 0 },
+  ]) || (parsed.every(value => value !== null) && result === null
+    ? "The mash water exceeds the total water needed, giving negative sparge water, or the values are too large. Reduce the mash ratio or review your grain bill, target volume, and losses."
+    : null);
 
   return (
     <section className="mt-12 rounded-xl border border-white/10 bg-white/5 p-6">
@@ -460,8 +478,20 @@ export default function BrewDayWaterCalculator() {
         top-up water, or changes in grain absorption.
       </p>
 
-      {result ? (
-        <dl className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <CalculatorResult
+        name="all-grain water planner"
+        inputs={inputs}
+        error={inputError}
+        hasResult={result !== null}
+        assumptions="Single-infusion all-grain brewing with your measured equipment losses. Total water includes grain absorption and tun dead space; mash water = grain bill × mash ratio, and sparge water is the remainder. No decoction, top-up water, or thermal expansion/shrinkage correction."
+        resetDisabled={profileBusy}
+        onReset={() => {
+          setTargetVolume(""); setBoilTime(""); setBoilOffRate(""); setKettleLoss("");
+          setGrainBill(""); setGrainAbsorption(""); setMashRatio(""); setTunDeadSpace("");
+          setSelectedProfileId(""); setProfileName(""); setProfileError(""); setProfileMessage("");
+        }}
+      >
+        {result && <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {[
             ["Mash water", result.mashWaterL],
             ["Sparge water", result.spargeWaterL],
@@ -481,19 +511,8 @@ export default function BrewDayWaterCalculator() {
               </dd>
             </div>
           ))}
-        </dl>
-      ) : !hasIncompleteValues && parsed.every((value) => value !== null) ? (
-        <p role="alert" className="mt-5 text-center text-sm text-amber-200">
-          Check the values: target volume, boil time, and mash ratio must be
-          greater than zero, and the calculated sparge volume cannot be
-          negative.
-        </p>
-      ) : (
-        <p className="mt-5 text-center text-sm text-white/50">
-          Enter your target volume, boil settings, grain bill, and equipment
-          losses to see the water plan.
-        </p>
-      )}
+        </dl>}
+      </CalculatorResult>
       <ConfirmDialog
         open={confirmDeleteProfile}
         title="Delete equipment profile?"

@@ -137,8 +137,6 @@ export default function PremiumWelcome() {
   useEffect(() => {
     if (!open) return;
     const previousFocus = document.activeElement;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     dialogRef.current?.focus();
 
     function onKeyDown(event: KeyboardEvent) {
@@ -150,21 +148,26 @@ export default function PremiumWelcome() {
     document.addEventListener("keydown", onKeyDown);
     return () => {
       document.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = previousOverflow;
       if (previousFocus instanceof HTMLElement && previousFocus.isConnected) {
         previousFocus.focus();
       }
     };
   }, [open, close]);
 
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
+
   if (!open) return null;
 
   return (
     <div
-      className="fixed inset-0 z-[125] flex items-center justify-center bg-black/80 p-3 backdrop-blur-sm sm:p-6"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) void close();
-      }}
+      className="fixed inset-0 z-[125] flex items-start justify-center overflow-hidden bg-black/80 p-3 backdrop-blur-sm sm:items-center sm:p-6"
     >
       <section
         ref={dialogRef}
@@ -172,7 +175,7 @@ export default function PremiumWelcome() {
         role="dialog"
         aria-modal="true"
         aria-labelledby="premium-welcome-title"
-        className="max-h-[90dvh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-green-300/20 bg-zinc-950 text-white shadow-2xl outline-none"
+        className="max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl overflow-y-auto overscroll-contain rounded-2xl border border-green-300/20 bg-zinc-950 text-white shadow-2xl outline-none sm:max-h-[calc(100dvh-3rem)]"
       >
         <div className="flex items-center justify-between border-b border-white/10 px-5 py-4 sm:px-8">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-green-200">

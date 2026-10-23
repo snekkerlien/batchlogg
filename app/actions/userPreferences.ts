@@ -53,6 +53,7 @@ export async function saveBrewingPreferences(
 
   if (error) throw new Error(`Could not save brewing preferences: ${error.message}`);
   if (!data) throw new Error("Could not find the profile to save brewing preferences");
+  return { saved: true };
 }
 
 export async function saveUserPreferences(preferences: UserPreferences) {

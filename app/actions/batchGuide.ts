@@ -34,7 +34,7 @@ export async function getGuideBatch(
   );
   if ("vesselId" in target) {
     query = query.eq("aktivt_kar", target.vesselId)
-      .in("status", ["Aktiv", "Sekundær", "secondary"]);
+      .in("status", ["Aktiv", "Sekundær", "secondary", "Conditioning"]);
   } else {
     query = query.eq("id", target.batchId).eq("user_id", user.id);
   }

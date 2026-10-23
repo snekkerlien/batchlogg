@@ -9,6 +9,7 @@ import { notFound } from "next/navigation";
 import PageHeading from "@/app/components/PageHeading";
 import PublicPageNavigation from "@/app/components/PublicPageNavigation";
 import RecipePresentation from "@/app/components/RecipePresentation";
+import StartPublicRecipeButton from "@/app/components/StartPublicRecipeButton";
 
 export default async function RecipeNotesPage({
   params,
@@ -175,6 +176,11 @@ export default async function RecipeNotesPage({
             : `Copyright © ${recipe.created_at ? new Date(recipe.created_at).getFullYear() : new Date().getFullYear()} ${profile.username}. All rights reserved.`}
         </p>
 
+        {user && recipe.is_public && profile.is_public && (
+          <div className="mb-6 flex justify-center">
+            <StartPublicRecipeButton recipeId={recipe.id} />
+          </div>
+        )}
         <RecipePresentation recipe={recipe} />
 
         {recipe.is_public && (

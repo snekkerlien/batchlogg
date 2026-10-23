@@ -4,48 +4,129 @@ import { NextResponse } from "next/server";
 import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
 
 export async function POST(req: Request) {
-  console.log("=== DELETE MULTIPLE START ===");
-
   const { supabase } = supabaseServer();
 
   const {
     data: { user },
-    error: userError
   } = await supabase.auth.getUser();
 
-  console.log("Bruker:", user);
-  console.log("UserError:", userError);
-
   if (!user) {
-    console.log("Ingen bruker funnet → 401");
     return NextResponse.json({ error: "Not logged in" }, { status: 401 });
   }
 
-  const body = await req.json();
-  const ids: string[] = body.ids ?? [];
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+  const requestedIds =
+    typeof body === "object" && body !== null && "ids" in body
+      ? body.ids
+      : null;
+  const ids = Array.isArray(requestedIds)
+    ? [
+        ...new Set(
+          requestedIds.filter((id): id is string => typeof id === "string")
+        ),
+      ]
+    : [];
 
-  console.log("Mottatte IDs:", ids);
-
-  if (!Array.isArray(ids) || ids.length === 0) {
-    console.log("Ingen IDs → 400");
+  if (ids.length === 0) {
     return NextResponse.json({ error: "No IDs provided" }, { status: 400 });
   }
 
-  const { data, error } = await supabase
+  const { data: vessels, error: vesselsError } = await supabase
+    .from("kar")
+    .select("id")
+    .in("id", ids)
+    .eq("user_id", user.id);
+
+  if (vesselsError) {
+    console.error("Could not load selected vessels for deletion", vesselsError);
+    return NextResponse.json(
+      { error: "Could not load selected vessels" },
+      { status: 500 }
+    );
+  }
+
+  const ownedVesselIds = (vessels ?? []).map((vessel) => vessel.id);
+  if (ownedVesselIds.length === 0) {
+    return NextResponse.json(
+      { error: "No selected vessels were found" },
+      { status: 404 }
+    );
+  }
+
+  const { data: activeBatches, error: batchesError } = await supabase
+    .from("batches")
+    .select("id")
+    .eq("user_id", user.id)
+    .in("aktivt_kar", ownedVesselIds)
+    .in("status", ["Aktiv", "Sekundær", "secondary", "Conditioning"]);
+
+  if (batchesError) {
+    console.error("Could not load active batches for vessel deletion", batchesError);
+    return NextResponse.json(
+      { error: "Could not load active batches" },
+      { status: 500 }
+    );
+  }
+
+  const activeBatchIds = (activeBatches ?? []).map((batch) => batch.id);
+  if (activeBatchIds.length > 0) {
+    const { error: notesError } = await supabase
+      .from("batch_notes")
+      .delete()
+      .in("batch_id", activeBatchIds);
+    if (notesError) {
+      console.error("Could not delete notes for cancelled batches", notesError);
+      return NextResponse.json(
+        { error: "Could not delete active batch notes" },
+        { status: 500 }
+      );
+    }
+
+    const { data: deletedBatches, error: deleteBatchesError } = await supabase
+      .from("batches")
+      .delete()
+      .eq("user_id", user.id)
+      .in("id", activeBatchIds)
+      .select("id");
+
+    if (deleteBatchesError) {
+      console.error("Could not cancel active batches before vessel deletion", deleteBatchesError);
+      return NextResponse.json(
+        { error: "Could not cancel active batches" },
+        { status: 500 }
+      );
+    }
+    if ((deletedBatches ?? []).length !== activeBatchIds.length) {
+      return NextResponse.json(
+        { error: "One or more active batches could not be cancelled" },
+        { status: 409 }
+      );
+    }
+  }
+
+  const { data: deletedVessels, error: deleteVesselsError } = await supabase
     .from("kar")
     .delete()
-    .in("id", ids)
+    .in("id", ownedVesselIds)
     .eq("user_id", user.id)
     .select("id");
 
-  console.log("Delete result:", data);
-  console.log("Delete error:", error);
-
-  console.log("=== DELETE MULTIPLE END ===");
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (deleteVesselsError) {
+    console.error("Could not delete selected vessels", deleteVesselsError);
+    return NextResponse.json(
+      { error: "Could not delete selected vessels" },
+      { status: 500 }
+    );
   }
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({
+    success: true,
+    deletedVesselIds: (deletedVessels ?? []).map((vessel) => vessel.id),
+    cancelledBatchCount: activeBatchIds.length,
+  });
 }

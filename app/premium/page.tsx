@@ -77,8 +77,8 @@ export default function PremiumPage() {
   }
 
   return (
-    <main className="min-h-screen px-6 py-12 text-white">
-      <div className="relative mx-auto mt-12 max-w-3xl rounded-xl border border-white/10 bg-black/60 p-6 pt-16 backdrop-blur-md sm:p-10">
+    <main className="min-h-screen px-2 py-12 text-white sm:px-6">
+      <div className="relative mx-auto mt-12 max-w-3xl rounded-xl border border-white/10 bg-black/60 p-3 pt-16 backdrop-blur-md sm:p-10">
         <div className="absolute left-4 top-2 z-40 sm:top-4">
           <BackButton />
         </div>
@@ -107,24 +107,51 @@ export default function PremiumPage() {
           </p>
         )}
 
+        {!loading && profile?.account_tier !== "premium" && (
+          <div className="mb-8 flex flex-col items-center gap-3">
+            <p className="text-center text-white/80">
+              Premium is $4.99 USD per month, before VAT.
+            </p>
+            <p className="max-w-md text-center text-sm text-white/60">
+              Batchlogg is an independent, community-driven project that’s
+              still growing. Active users have a real say in what we build
+              next—community feedback helps shape our priorities and improve
+              the brewing tools. Your subscription supports that ongoing work.
+            </p>
+            <p className="max-w-md text-center text-sm text-white/60">
+              Applicable VAT will be calculated and added during checkout based on your billing address. The final total will be shown before payment.
+            </p>
+            {profile?.account_tier === "free" && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void openBillingEndpoint("checkout")}
+                className="rounded-lg border border-green-400/40 bg-green-700 px-5 py-3 font-semibold text-white hover:bg-green-600 disabled:opacity-50"
+              >
+                {busy ? "Opening checkout…" : "Upgrade to Premium"}
+              </button>
+            )}
+          </div>
+        )}
+
         <section aria-labelledby="premium-features-heading" className="mb-8">
           <h2
             id="premium-features-heading"
-            className="mb-4 text-lg font-semibold text-green-200"
+            className="mb-4 text-center text-lg font-semibold text-green-200"
           >
             What Premium unlocks
           </h2>
           <div className="space-y-4">
             <section className="rounded-xl border border-white/10 bg-white/5 p-4">
               <h3 className="font-semibold text-white">More brewing capacity</h3>
-              <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-white/75">
+              <ul className="mt-2 list-outside list-disc space-y-1 pl-5 text-sm text-white/75">
                 <li>Track up to 20 vessels instead of the Free plan’s 6.</li>
               </ul>
             </section>
 
             <section className="rounded-xl border border-white/10 bg-white/5 p-4">
               <h3 className="font-semibold text-white">Plan and track your brewing</h3>
-              <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-white/75">
+              <ul className="mt-2 list-outside list-disc space-y-1 pl-5 text-sm text-white/75">
                 <li>
                   Use the brew calendar to see batch dates and scheduled
                   reminders, and export them to calendar apps with iCalendar.
@@ -146,7 +173,7 @@ export default function PremiumPage() {
 
             <section className="rounded-xl border border-white/10 bg-white/5 p-4">
               <h3 className="font-semibold text-white">Learn from your batches</h3>
-              <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-white/75">
+              <ul className="mt-2 list-outside list-disc space-y-1 pl-5 text-sm text-white/75">
                 <li>
                   Review brewing insights and analytics from your batch
                   history.
@@ -156,7 +183,7 @@ export default function PremiumPage() {
 
             <section className="rounded-xl border border-white/10 bg-white/5 p-4">
               <h3 className="font-semibold text-white">Keep and export recipe history</h3>
-              <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-white/75">
+              <ul className="mt-2 list-outside list-disc space-y-1 pl-5 text-sm text-white/75">
                 <li>
                   Save recipe snapshots as you edit recipes, then view and
                   compare earlier versions.
@@ -170,7 +197,7 @@ export default function PremiumPage() {
 
             <section className="rounded-xl border border-white/10 bg-white/5 p-4">
               <h3 className="font-semibold text-white">Showcase a recipe</h3>
-              <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-white/75">
+              <ul className="mt-2 list-outside list-disc space-y-1 pl-5 text-sm text-white/75">
                 <li>
                   Feature one of your public recipes on your profile. The
                   profile banner is available on Free too.
@@ -180,26 +207,6 @@ export default function PremiumPage() {
           </div>
         </section>
 
-        {!loading && profile?.account_tier !== "premium" && (
-          <div className="flex flex-col items-center gap-3">
-            <p className="text-center text-white/80">
-              Premium is NOK 49 per month, before VAT.
-            </p>
-            <p className="max-w-md text-center text-sm text-white/60">
-              Applicable VAT will be calculated and added during checkout based on your billing address. The final total will be shown before payment.
-            </p>
-            {profile?.account_tier === "free" && (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void openBillingEndpoint("checkout")}
-                className="rounded-lg border border-green-400/40 bg-green-700 px-5 py-3 font-semibold text-white hover:bg-green-600 disabled:opacity-50"
-              >
-                {busy ? "Opening checkout…" : "Upgrade to Premium"}
-              </button>
-            )}
-          </div>
-        )}
         {profile?.account_tier === "premium" && profile.premium_grant_source === "stripe" && (
           <div className="flex flex-col items-center gap-3">
             <button

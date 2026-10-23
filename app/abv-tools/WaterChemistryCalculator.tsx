@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
 import { UnitInput, UnitSymbol } from "@/app/components/Units";
+import { getCalculatorInputError } from "@/lib/brewing/calculatorValidation";
+import CalculatorResult from "./CalculatorResult";
 import {
   calculateWaterTreatment,
   WATER_ION_LABELS,
@@ -236,6 +238,19 @@ export default function WaterChemistryCalculator() {
     targetProfile
         ? calculateWaterTreatment(sourceProfile, targetProfile, numericVolume)
         : null;
+  const inputs = {
+    "water volume": volume,
+    ...Object.fromEntries(IONS.map(ion => [`source ${WATER_ION_LABELS[ion]}`, source[ion]])),
+    ...Object.fromEntries(IONS.map(ion => [`target ${WATER_ION_LABELS[ion]}`, target[ion]])),
+  };
+  const inputError = getCalculatorInputError([
+    { label: "Water volume", value: volume, positive: true },
+    ...IONS.map(ion => ({ label: `Source ${WATER_ION_LABELS[ion]}`, value: source[ion], min: 0 })),
+    ...IONS.map(ion => ({ label: `Target ${WATER_ION_LABELS[ion]}`, value: target[ion], min: 0 })),
+  ]);
+  const aboveTarget = sourceProfile && targetProfile
+    ? IONS.filter(ion => sourceProfile[ion] > targetProfile[ion]).map(ion => WATER_ION_LABELS[ion])
+    : [];
 
   function updateTarget(ion: keyof WaterIonProfile, value: string) {
     setTarget((current) => ({
@@ -517,9 +532,27 @@ export default function WaterChemistryCalculator() {
         multiply it by 1.22 to estimate bicarbonate before entering it.
       </p>
 
-      {plan ? (
+      <CalculatorResult
+        name="water chemistry planner"
+        inputs={inputs}
+        error={inputError}
+        hasResult={plan !== null}
+        assumptions="Uses calcium chloride dihydrate, gypsum, Epsom salt heptahydrate, baking soda, and 88% lactic acid. Additions affect multiple ions, so targets may not all be achievable. Calcium is predicted from the other additions, not independently targeted. The acid estimate neutralizes alkalinity only; it does not predict mash pH. Verify measurements and follow product guidance."
+        resetDisabled={profileBusy}
+        onReset={() => {
+          setVolume("");
+          setSource({ calcium: "", magnesium: "", sodium: "", chloride: "", sulfate: "", bicarbonate: "" });
+          setTarget({ calcium: "", magnesium: "", sodium: "", chloride: "", sulfate: "", bicarbonate: "" });
+          setTargetName(""); setSelectedProfileId(""); setProfileName("");
+          setProfileError(""); setProfileMessage("");
+        }}
+      >
+      {plan && (
         <>
-          <div className="mt-6 rounded-lg border border-white/10 bg-black/20 p-4">
+          {aboveTarget.length > 0 && <p className="mb-3 text-sm text-amber-200">
+            Already above target in the source water: {aboveTarget.join(", ")}. Salt additions cannot lower these values; this plan does not calculate dilution or mineral removal. The separate acid estimate may reduce bicarbonate.
+          </p>}
+          <div className="rounded-lg border border-white/10 bg-black/20 p-4">
             <h3 className="mb-3 font-semibold text-green-200">
               Estimated additions for the water volume entered above
             </h3>
@@ -571,12 +604,8 @@ export default function WaterChemistryCalculator() {
             treating a full batch.
           </p>
         </>
-      ) : (
-        <p className="mt-5 text-center text-sm text-white/55">
-          Enter the treatment volume and all six source-water values to see an
-          estimate.
-        </p>
       )}
+      </CalculatorResult>
       <ConfirmDialog
         open={confirmDeleteProfile}
         title="Delete water profile?"

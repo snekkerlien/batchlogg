@@ -85,15 +85,7 @@ function isBeerIngredients(
   );
 }
 
-export default function RecipePresentation({
-  recipe,
-  linkTabIndex,
-  compact = false,
-}: {
-  recipe: RecipePresentationData;
-  linkTabIndex?: number;
-  compact?: boolean;
-}) {
+export function RecipeBadges({ recipe }: { recipe: RecipePresentationData }) {
   const beerIngredients = recipe.type === "Beer" && isBeerIngredients(recipe.ingredients)
     ? recipe.ingredients
     : null;
@@ -102,6 +94,44 @@ export default function RecipePresentation({
     : beerIngredients?.beer_subtype === "malt_extract_kit"
       ? "Malt extract kit"
       : "All-grain";
+  const otherRecipeStyle = recipe.type === "Other"
+    ? getOtherRecipeStyle(recipe.ingredients)
+    : "";
+  return (
+    <>
+      <span className="rounded-full border border-green-300/30 bg-green-300/10 px-3 py-1 text-sm font-medium text-green-200">
+        {otherRecipeStyle || recipe.type}
+      </span>
+      {recipe.type === "Beer" && (
+        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-white/70">
+          {beerMethod}
+        </span>
+      )}
+      {recipe.type === "Beer" && beerIngredients?.beer_style && (
+        <span className="rounded-full border border-green-300/30 bg-green-300/10 px-3 py-1 text-sm text-green-100">
+          {beerIngredients.beer_style}
+        </span>
+      )}
+    </>
+  );
+}
+
+export default function RecipePresentation({
+  recipe,
+  linkTabIndex,
+  compact = false,
+  beforeMetrics,
+  showBadges = true,
+}: {
+  recipe: RecipePresentationData;
+  linkTabIndex?: number;
+  compact?: boolean;
+  beforeMetrics?: ReactNode;
+  showBadges?: boolean;
+}) {
+  const beerIngredients = recipe.type === "Beer" && isBeerIngredients(recipe.ingredients)
+    ? recipe.ingredients
+    : null;
   const otherRecipeStyle = recipe.type === "Other"
     ? getOtherRecipeStyle(recipe.ingredients)
     : "";
@@ -140,23 +170,15 @@ export default function RecipePresentation({
 
   return (
     <div>
-      <div
-        className={`${compact ? "mb-2" : "mb-6"} flex flex-wrap justify-center gap-2`}
-      >
-        <span className="rounded-full border border-green-300/30 bg-green-300/10 px-3 py-1 text-sm font-medium text-green-200">
-          {otherRecipeStyle || recipe.type}
-        </span>
-        {recipe.type === "Beer" && (
-          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-white/70">
-            {beerMethod}
-          </span>
-        )}
-        {recipe.type === "Beer" && beerIngredients?.beer_style && (
-          <span className="rounded-full border border-green-300/30 bg-green-300/10 px-3 py-1 text-sm text-green-100">
-            {beerIngredients.beer_style}
-          </span>
-        )}
-      </div>
+      {showBadges && (
+        <div
+          className={`${compact ? "mb-2" : "mb-6"} flex flex-wrap justify-center gap-2`}
+        >
+          <RecipeBadges recipe={recipe} />
+        </div>
+      )}
+
+      {beforeMetrics}
 
       <section className={`mb-6 rounded-xl border border-white/10 bg-white/[0.04] ${compact ? "p-3 sm:p-4" : "p-5 sm:p-6"}`}>
         <h2 className="mb-4 text-lg font-semibold text-green-300">Recipe at a glance</h2>
@@ -172,9 +194,16 @@ export default function RecipePresentation({
           )}
           {(recipe.type === "Beer" || recipe.type === "Braggot") && recipe.ebc != null && (
             <RecipeMetric label="Color">
-              <span className="flex items-center gap-3">
-                <BeerColorGlass ebc={Number(recipe.ebc)} />
-                <span>{Number(recipe.ebc).toFixed(0)} EBC</span>
+              <span className="flex min-h-[5.5rem] items-start">
+                <span className="flex items-baseline gap-1.5">
+                  <span className="text-xl font-bold leading-none tracking-tight text-white">
+                    {Number(recipe.ebc).toFixed(0)}
+                  </span>
+                  <span className="text-xs font-medium text-white/50">EBC</span>
+                </span>
+                <span className="flex flex-1 items-center justify-center">
+                  <BeerColorGlass ebc={Number(recipe.ebc)} />
+                </span>
               </span>
             </RecipeMetric>
           )}

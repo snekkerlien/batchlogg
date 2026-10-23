@@ -46,6 +46,8 @@ export async function GET() {
     { data: messages, error: messagesError },
     { data: history, error: historyError },
     { data: reportCounts, error: reportCountsError },
+    { data: priorActions, error: priorActionsError },
+    { data: activeRestrictions, error: activeRestrictionsError },
   ] =
     await Promise.all([
       profileIds.length
@@ -66,11 +68,47 @@ export async function GET() {
             p_user_ids: reportedUserIds,
           })
         : { data: [], error: null },
+      reportedUserIds.length
+        ? context.serviceRole
+            .from("admin_audit_log")
+            .select("id, actor_id, action, target_id, details, created_at")
+            .eq("target_type", "user")
+            .in("target_id", reportedUserIds)
+            .in("action", [
+              "user.restriction_applied",
+              "user.restriction_removed",
+              "forum.content_removed",
+              "community_report.content_removed",
+            ])
+            .order("created_at", { ascending: false })
+            .limit(500)
+        : { data: [], error: null },
+      reportedUserIds.length
+        ? context.serviceRole
+            .from("user_restrictions")
+            .select("user_id, restriction_type, starts_at, ends_at, reason")
+            .in("user_id", reportedUserIds)
+            .is("revoked_at", null)
+            .lte("starts_at", new Date().toISOString())
+            .or(`ends_at.is.null,ends_at.gt.${new Date().toISOString()}`)
+        : { data: [], error: null },
     ]);
-  if (profilesError || messagesError || historyError || reportCountsError) {
+  if (
+    profilesError ||
+    messagesError ||
+    historyError ||
+    reportCountsError ||
+    priorActionsError ||
+    activeRestrictionsError
+  ) {
     console.error(
       "Could not load community report details",
-      profilesError || messagesError || historyError || reportCountsError
+      profilesError ||
+        messagesError ||
+        historyError ||
+        reportCountsError ||
+        priorActionsError ||
+        activeRestrictionsError
     );
     return NextResponse.json({ error: "Could not load report details" }, { status: 500 });
   }
@@ -117,6 +155,45 @@ export async function GET() {
 
   const profilesById = new Map((profiles ?? []).map((profile) => [profile.id, profile]));
   const messagesById = new Map((messages ?? []).map((message) => [message.id, message]));
+  const relatedActionActorIds = [
+    ...new Set([
+      ...(priorActions ?? []).flatMap((event) =>
+        typeof event.actor_id === "string" ? [event.actor_id] : []
+      ),
+      ...(history ?? []).flatMap((event) =>
+        typeof event.actor_id === "string" ? [event.actor_id] : []
+      ),
+    ]),
+  ].filter((actorId) => !profilesById.has(actorId));
+  const { data: relatedActionActors, error: relatedActionActorsError } =
+    relatedActionActorIds.length
+      ? await context.serviceRole
+          .from("profiles")
+          .select("id, username")
+          .in("id", relatedActionActorIds)
+      : { data: [], error: null };
+  if (relatedActionActorsError) {
+    console.error("Could not load moderation action names", relatedActionActorsError);
+    return NextResponse.json({ error: "Could not load moderation history" }, { status: 500 });
+  }
+  for (const profile of relatedActionActors ?? []) {
+    profilesById.set(profile.id, profile);
+  }
+  const actionsByUser = new Map<string, typeof priorActions>();
+  for (const event of priorActions ?? []) {
+    if (!event.target_id) continue;
+    actionsByUser.set(event.target_id, [
+      ...(actionsByUser.get(event.target_id) ?? []),
+      event,
+    ]);
+  }
+  const restrictionsByUser = new Map<string, typeof activeRestrictions>();
+  for (const restriction of activeRestrictions ?? []) {
+    restrictionsByUser.set(restriction.user_id, [
+      ...(restrictionsByUser.get(restriction.user_id) ?? []),
+      restriction,
+    ]);
+  }
   const reportCountByUser = new Map<string, number>(
     (reportCounts ?? []).map(
       (item: { reported_user_id: string; report_count: number | string }) => [
@@ -148,7 +225,45 @@ export async function GET() {
             .filter((part): part is string => part !== null)
             .join("\n\n") || null,
       attachments: evidenceByReportId.get(report.id) ?? [],
-      history: (history ?? []).filter((event) => event.report_id === report.id),
+      priorReports: rows
+        .filter((previous) =>
+          previous.reported_user_id === report.reported_user_id &&
+          previous.id !== report.id &&
+          new Date(previous.created_at).getTime() < new Date(report.created_at).getTime()
+        )
+        .slice(0, 5)
+        .map((previous) => ({
+          id: previous.id,
+          content_type: previous.content_type,
+          status: previous.status,
+          reason: previous.reason,
+          created_at: previous.created_at,
+        })),
+      priorActions: (actionsByUser.get(report.reported_user_id) ?? []).map((event) => ({
+        id: event.id,
+        action: event.action,
+        details: event.details,
+        actor: event.actor_id
+          ? profilesById.get(event.actor_id)?.username || "Administrator"
+          : "Administrator",
+        created_at: event.created_at,
+      })),
+      activeRestrictions: (restrictionsByUser.get(report.reported_user_id) ?? []).map(
+        (restriction) => ({
+          restriction_type: restriction.restriction_type,
+          starts_at: restriction.starts_at,
+          ends_at: restriction.ends_at,
+          reason: restriction.reason,
+        })
+      ),
+      history: (history ?? [])
+        .filter((event) => event.report_id === report.id)
+        .map((event) => ({
+          ...event,
+          actor: event.actor_id
+            ? profilesById.get(event.actor_id)?.username || "Administrator"
+            : "Administrator",
+        })),
     })),
   });
 }

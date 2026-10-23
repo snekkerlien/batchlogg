@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -13,13 +13,18 @@ import PageHeading from "../../components/PageHeading";
 import MembershipStatus from "@/app/components/MembershipStatus";
 import ProfileOverview, { ProfileAchievements } from "@/app/components/ProfileOverview";
 import ExpandArrowButton from "@/app/components/ExpandArrowButton";
+import { saveBrewingPreferences } from "@/app/actions/userPreferences";
 
 export default function AccountPage() {
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
+  const [savingVisibility, setSavingVisibility] = useState(false);
+  const [visibilityError, setVisibilityError] = useState("");
 
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [confirmRemoveAvatar, setConfirmRemoveAvatar] = useState(false);
@@ -33,6 +38,10 @@ export default function AccountPage() {
   const [showcaseMessage, setShowcaseMessage] = useState("");
   const [showcaseOpen, setShowcaseOpen] = useState(false);
   const [profileStats, setProfileStats] = useState<any>(null);
+  const [categoryPercentiles, setCategoryPercentiles] = useState<Record<
+    string,
+    number | null
+  > | null>(null);
 
 
   console.log("LOGGED IN USER ID:", user?.id);
@@ -71,10 +80,15 @@ export default function AccountPage() {
 }
 
 
-  async function load() {
+  const load = useCallback(async (showLoading = false) => {
+    if (showLoading) setLoading(true);
+    setLoadError("");
+    try {
     const {
       data: { session },
+      error: sessionError,
     } = await supabaseBrowser.auth.getSession();
+    if (sessionError) throw sessionError;
 
     if (!session) {
       router.replace("/auth/login");
@@ -90,6 +104,9 @@ export default function AccountPage() {
       },
     });
 
+    if (!res.ok) {
+      throw new Error(`Profile request failed (${res.status})`);
+    }
     const data = await res.json();
 
     // ⭐ VIKTIG: dette var feilen
@@ -110,40 +127,66 @@ export default function AccountPage() {
     }
 
     if (data.username) {
-      const statsRes = await fetch(`/api/community/profile?username=${encodeURIComponent(data.username)}`, {
-        cache: "no-store",
-        credentials: "include",
-      });
-      if (statsRes.ok) setProfileStats((await statsRes.json()).stats ?? null);
+      const [statsRes, rankingsRes] = await Promise.all([
+        fetch(`/api/community/profile?username=${encodeURIComponent(data.username)}`, {
+          cache: "no-store",
+          credentials: "include",
+        }),
+        fetch("/api/community/achievement-rankings", {
+          cache: "no-store",
+          credentials: "include",
+        }),
+      ]);
+      if (statsRes.ok) {
+        setProfileStats((await statsRes.json()).stats ?? null);
+      } else {
+        console.error("Could not load account profile statistics", statsRes.status);
+      }
+      if (rankingsRes.ok) {
+        setCategoryPercentiles((await rankingsRes.json()).categoryPercentiles ?? null);
+      } else {
+        console.error("Could not load account achievement rankings", rankingsRes.status);
+      }
     }
 
-    setLoading(false);
-  }
+    } catch (error) {
+      console.error("Could not load account", error);
+      setLoadError("Your account could not be loaded. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, [router]);
 
   useEffect(() => {
-    load();
-  }, [router]);
+    void load(true);
+  }, [load, loadAttempt]);
 
   useEffect(() => {
   const onFocus = () => {
     if (!showAvatarModal) {
-      load();
+      void load();
     }
   };
 
   window.addEventListener("focus", onFocus);
   return () => window.removeEventListener("focus", onFocus);
-}, [showAvatarModal]);
+}, [showAvatarModal, load]);
 
   async function toggleVisibility() {
+    if (savingVisibility) return;
     const newValue = !profile.is_public;
-
-    await supabaseBrowser
-      .from("profiles")
-      .update({ is_public: newValue })
-      .eq("id", user.id);
-
-    setProfile((prev: any) => ({ ...prev, is_public: newValue }));
+    setSavingVisibility(true);
+    setVisibilityError("");
+    try {
+      const result = await saveBrewingPreferences({ is_public: newValue });
+      if (result?.saved !== true) throw new Error("Profile visibility save was not confirmed");
+      setProfile((prev: any) => ({ ...prev, is_public: newValue }));
+    } catch (error) {
+      console.error("Could not save profile visibility", error);
+      setVisibilityError("Could not save profile visibility. Your previous setting is unchanged. Please try again.");
+    } finally {
+      setSavingVisibility(false);
+    }
   }
 
   async function saveShowcase(event: FormEvent<HTMLFormElement>) {
@@ -181,11 +224,28 @@ export default function AccountPage() {
   return (
     <main className="min-h-screen flex items-center justify-center text-white">
       <div className="bg-black/60 backdrop-blur-md px-6 py-4 rounded-xl border border-white/10">
-        Loading account…
+        <p role="status">Loading account…</p>
       </div>
     </main>
   );
 }
+
+  if (loadError && !profile) {
+    return (
+      <main className="flex min-h-screen items-center justify-center px-6 py-12 text-white">
+        <div role="alert" className="w-full max-w-md rounded-xl border border-red-500/40 bg-black/60 p-6 text-center">
+          <p>{loadError}</p>
+          <button
+            type="button"
+            onClick={() => setLoadAttempt((attempt) => attempt + 1)}
+            className="mt-4 rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold hover:bg-white/20"
+          >
+            Try again
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen flex flex-col items-center px-6 py-12 text-white">
@@ -222,6 +282,18 @@ export default function AccountPage() {
           title="My Account"
           subtitle="Manage your profile and visibility."
         />
+        {loadError && (
+          <div role="alert" className="mb-6 rounded-lg border border-amber-400/30 bg-amber-950/30 p-4 text-center text-sm text-amber-200">
+            <p>{loadError}</p>
+            <button
+              type="button"
+              onClick={() => setLoadAttempt((attempt) => attempt + 1)}
+              className="mt-3 rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold text-white hover:bg-white/20"
+            >
+              Try again
+            </button>
+          </div>
+        )}
 
         {/* AVATAR SECTION */}
         <div className="flex flex-col items-center mb-6">
@@ -341,7 +413,13 @@ export default function AccountPage() {
           </div>
         </form>
 
-        {profileStats && <ProfileAchievements stats={profileStats} />}
+        {profileStats && (
+          <ProfileAchievements
+            stats={profileStats}
+            accentColor={profile?.theme_accent_color}
+            categoryPercentiles={categoryPercentiles}
+          />
+        )}
 
         {/* PUBLIC / PRIVATE SLIDER */}
         <div className="mt-10 flex items-center justify-center gap-4">
@@ -353,6 +431,14 @@ export default function AccountPage() {
             privateText="Private"
             ariaLabel="Profile visibility"
           />
+        </div>
+        <div className="mt-3 text-center text-sm">
+          {savingVisibility && <p role="status" className="text-white/60">Saving visibility...</p>}
+          {visibilityError && <p role="alert" className="text-amber-200">{visibilityError}</p>}
+          <div className="flex flex-wrap justify-center gap-x-4">
+            <Link href="/settings#sharing-privacy" className="inline-flex min-h-11 items-center text-green-200 underline">Sharing and privacy</Link>
+            <a href={`/members/${encodeURIComponent(profile.username)}?preview=public`} className="inline-flex min-h-11 items-center text-green-200 underline">Preview my community profile</a>
+          </div>
         </div>
 
       </div>

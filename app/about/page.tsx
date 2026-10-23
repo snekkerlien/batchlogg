@@ -21,13 +21,67 @@ export default function AboutPage() {
             Current version: {packageJson.version}
           </p>
           <p className="mt-4 text-lg leading-8 text-white/80">
-            Brewing gets better when you can learn from what you did last time.
-            Batchlogg is being built to make that history easier to keep and
-            useful when you plan the next brew.
+            Batchlogg is a brewing workspace for planning recipes, tracking
+            batches from brew day to bottle, and learning from every result.
+            Keep your brewing history in one place and make the next brew with
+            more confidence.
           </p>
         </header>
 
         <div className="mx-auto max-w-2xl space-y-8 text-sm leading-7 text-white/80">
+          <section aria-labelledby="workspace-heading" className="border-t border-white/10 pt-7">
+            <h2
+              id="workspace-heading"
+              className="mb-5 text-xl font-semibold text-green-300"
+            >
+              Your brewing, all in one workspace
+            </h2>
+            <div className="grid gap-4 text-left sm:grid-cols-2">
+              <div className="rounded-lg border border-white/10 bg-white/5 p-5">
+                <h3 className="font-semibold text-green-200">Plan your brew</h3>
+                <p className="mt-2">
+                  Create and refine recipes, keep track of ingredients and
+                  equipment, and use brewing calculators to prepare your next
+                  batch.
+                </p>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-white/5 p-5">
+                <h3 className="font-semibold text-green-200">Track each batch</h3>
+                <p className="mt-2">
+                  Manage vessels and follow fermentation with measurements,
+                  dates, notes, and photos—from brew day through bottling.
+                </p>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-white/5 p-5">
+                <h3 className="font-semibold text-green-200">Learn as you go</h3>
+                <p className="mt-2">
+                  Revisit a searchable batch history, compare results, and use
+                  what worked to make your recipes better next time.
+                </p>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-white/5 p-5">
+                <h3 className="font-semibold text-green-200">Share on your terms</h3>
+                <p className="mt-2">
+                  Browse public recipes and brewing discussions, while keeping
+                  personal recipes and profile details private if you choose.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section className="border-t border-white/10 pt-7">
+            <h2 className="mb-3 text-xl font-semibold text-green-300">
+              For brewers, by brewers
+            </h2>
+            <p>
+              Batchlogg is built for brewers who want more than a basic logbook.
+              Whether you’re brewing small experimental batches or running a
+              larger, more structured setup, the platform helps you stay
+              organized, learn from each batch, and share your work with the
+              wider brewing community.
+            </p>
+          </section>
+
           <section className="border-t border-white/10 pt-7">
             <h2 className="mb-3 text-xl font-semibold text-green-300">
               A record you can learn from

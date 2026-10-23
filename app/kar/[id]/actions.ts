@@ -88,6 +88,9 @@ export async function createBatch(formData: FormData) {
     typeof recipeId === "string" && recipeId.trim() ? recipeId.trim() : null;
   let recipeSnapshot: Record<string, unknown> | null = null;
   if (sourceRecipeId) {
+    if (!lifecycleSchemaAvailable) {
+      throw new Error("Apply the batch lifecycle migration before starting a batch from a recipe.");
+    }
     const { data: sourceRecipe, error: sourceRecipeError } = await supabase
       .from("recipes")
       .select("*")
@@ -133,6 +136,8 @@ export async function createBatch(formData: FormData) {
         .filter((field) => field in sourceRecipe)
         .map((field) => [field, sourceRecipe[field]])
     );
+    recipeSnapshot.source_recipe_id = sourceRecipe.source_recipe_id ?? null;
+    recipeSnapshot.recipe_id = sourceRecipe.id;
   }
   const inventoryBypassed =
     formData.get("inventory_bypass") === "true" &&
@@ -209,7 +214,7 @@ export async function createBatch(formData: FormData) {
     .from("batches")
     .select("id")
     .eq("aktivt_kar", karId)
-    .in("status", ["Aktiv", "Sekundær", "secondary"])
+    .in("status", ["Aktiv", "Sekundær", "secondary", "Conditioning"])
     .maybeSingle();
 
   if (activeBatchError) {
@@ -1327,6 +1332,222 @@ export async function moveToSecondary(formData: FormData) {
   redirect(`/kar/${karId}${guideQuery}`);
 }
 
+export async function rackToConditioning(formData: FormData) {
+  const { supabase } = supabaseServer();
+
+  const batchId = String(formData.get("batch_id") ?? "");
+  const karId = String(formData.get("kar_id") ?? "");
+  const notes = String(formData.get("conditioning_notes") ?? "").trim();
+  if (!batchId || !karId) throw new Error("Batch ID and vessel ID are required");
+  if (notes.length > 3000) throw new Error("Conditioning notes must be 3000 characters or fewer");
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Authentication required");
+
+  const { data: batch, error: batchError } = await supabase
+    .from("batches")
+    .select("id")
+    .eq("id", batchId)
+    .eq("aktivt_kar", karId)
+    .in("status", ["Sekundær", "secondary"])
+    .maybeSingle();
+  if (batchError) throw new Error(`Could not verify batch: ${batchError.message}`);
+  if (!batch) throw new Error("Batch not found or access denied");
+
+  const { error: updateError } = await supabase
+    .from("batches")
+    .update({
+      status: "Conditioning",
+      conditioning_startdate: new Date().toISOString(),
+      conditioning_notes: notes || null,
+    })
+    .eq("id", batchId)
+    .eq("aktivt_kar", karId);
+  if (updateError) {
+    throw new Error(`Could not rack batch to conditioning: ${updateError.message}`);
+  }
+
+  const { data: vessel, error: vesselError } = await supabase
+    .from("kar")
+    .select("user_id")
+    .eq("id", karId)
+    .maybeSingle();
+  if (vesselError) throw new Error(`Could not load vessel: ${vesselError.message}`);
+  if (vessel?.user_id === user.id) {
+    const { error: updateVesselError } = await supabase
+      .from("kar")
+      .update({ status: "Conditioning" })
+      .eq("id", karId);
+    if (updateVesselError) {
+      throw new Error(`Could not update vessel status: ${updateVesselError.message}`);
+    }
+  }
+
+  revalidatePath(`/kar/${karId}`);
+  revalidatePath("/dashboard");
+  const guideQuery = isBatchGuideDismissed(user, "conditioning")
+    ? `?racked=${Date.now()}`
+    : "?guide=conditioning";
+  redirect(`/kar/${karId}${guideQuery}`);
+}
+
+const conditioningEntryTypes = [
+  "rack",
+  "clarify",
+  "mature",
+  "stabilize",
+  "backsweeten",
+  "adjustment",
+  "taste",
+  "other",
+] as const;
+
+type ConditioningEntryType = (typeof conditioningEntryTypes)[number];
+
+const conditioningEntryFields: Record<ConditioningEntryType, string[]> = {
+  rack: ["from_vessel", "to_vessel", "volume", "gravity"],
+  clarify: ["agent", "amount", "unit", "contact_time"],
+  mature: ["vessel", "temperature", "target_date"],
+  stabilize: ["product", "amount", "unit", "wait_hours"],
+  backsweeten: ["sweetener", "amount", "unit", "gravity"],
+  adjustment: ["adjustment", "amount", "unit"],
+  taste: ["aroma", "flavor", "next_step"],
+  other: ["description"],
+};
+
+const requiredConditioningEntryFields: Partial<
+  Record<ConditioningEntryType, string[]>
+> = {
+  rack: ["to_vessel"],
+  clarify: ["agent"],
+  stabilize: ["product"],
+  backsweeten: ["sweetener"],
+  adjustment: ["adjustment"],
+  other: ["description"],
+};
+
+export async function addConditioningEntry(
+  batchId: string,
+  karId: string,
+  formData: FormData
+) {
+  const { supabase, serviceRole } = supabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Authentication required");
+  if (!batchId || !karId) throw new Error("Batch ID and vessel ID are required");
+
+  const type = String(formData.get("entry_type") ?? "");
+  if (!conditioningEntryTypes.includes(type as ConditioningEntryType)) {
+    throw new Error("Choose a valid conditioning action");
+  }
+  const entryType = type as ConditioningEntryType;
+  const occurredAt = String(formData.get("occurred_at") ?? "");
+  const selectedTime = new Date(`${occurredAt}:00Z`);
+  if (
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(occurredAt) ||
+    Number.isNaN(selectedTime.getTime()) ||
+    selectedTime.toISOString().slice(0, 16) !== occurredAt
+  ) {
+    throw new Error("Enter a valid conditioning date and time");
+  }
+  const timezoneOffset = Number(formData.get("timezone_offset_minutes"));
+  if (!Number.isInteger(timezoneOffset) || Math.abs(timezoneOffset) > 14 * 60) {
+    throw new Error("Could not determine the time zone for this entry");
+  }
+  const occurredDate = new Date(selectedTime.getTime() + timezoneOffset * 60_000);
+  const notes = String(formData.get("notes") ?? "").trim();
+  if (notes.length > 3000) throw new Error("Notes must be 3000 characters or fewer");
+
+  const details: Record<string, string> = {};
+  for (const field of conditioningEntryFields[entryType]) {
+    const value = String(formData.get(field) ?? "").trim();
+    if (value.length > 200) throw new Error("Conditioning details must be 200 characters or fewer");
+    if (value) details[field] = value;
+  }
+  for (const field of requiredConditioningEntryFields[entryType] ?? []) {
+    if (!details[field]) throw new Error(`Enter ${field.replace(/_/g, " ")}`);
+  }
+
+  for (const field of ["amount", "volume", "gravity", "temperature", "wait_hours"]) {
+    const value = details[field];
+    if (value === undefined) continue;
+    const number = Number(value);
+    if (
+      !Number.isFinite(number) ||
+      (field !== "temperature" && number < 0) ||
+      (field !== "wait_hours" && field !== "temperature" && number === 0)
+    ) {
+      throw new Error(`Enter a valid ${field.replace("_", " ")}`);
+    }
+  }
+  if (details.target_date) {
+    const targetDate = new Date(`${details.target_date}T00:00:00Z`);
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(details.target_date) ||
+      Number.isNaN(targetDate.getTime()) ||
+      targetDate.toISOString().slice(0, 10) !== details.target_date
+    ) {
+      throw new Error("Enter a valid target tasting date");
+    }
+  }
+
+  const { data: batch, error: batchError } = await serviceRole
+    .from("batches")
+    .select("id, user_id, aktivt_kar, status")
+    .eq("id", batchId)
+    .eq("aktivt_kar", karId)
+    .maybeSingle();
+  if (batchError) throw new Error(`Could not verify batch: ${batchError.message}`);
+  if (!batch || batch.status !== "Conditioning") {
+    throw new Error("Conditioning entries can only be added to a batch in conditioning");
+  }
+
+  const { data: vessel, error: vesselError } = await serviceRole
+    .from("kar")
+    .select("user_id")
+    .eq("id", karId)
+    .maybeSingle();
+  if (vesselError) throw new Error(`Could not verify vessel: ${vesselError.message}`);
+  if (!vessel) throw new Error("Vessel not found");
+
+  let hasAccess = vessel.user_id === user.id;
+  if (!hasAccess) {
+    const { data: contribution, error: contributionError } = await serviceRole
+      .from("kar_contributors")
+      .select("kar_id")
+      .eq("kar_id", karId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (contributionError) {
+      throw new Error(`Could not verify vessel access: ${contributionError.message}`);
+    }
+    hasAccess = !!contribution;
+  }
+  if (!hasAccess) throw new Error("You do not have permission to update this vessel");
+
+  const { error: insertError } = await serviceRole
+    .from("batch_conditioning_entries")
+    .insert({
+      batch_id: batch.id,
+      user_id: batch.user_id,
+      created_by: user.id,
+      entry_type: entryType,
+      occurred_at: occurredDate.toISOString(),
+      details,
+      notes: notes || null,
+    });
+  if (insertError) {
+    throw new Error(`Could not save conditioning entry: ${insertError.message}`);
+  }
+
+  revalidatePath(`/kar/${karId}`);
+  return { success: true };
+}
+
 // ---------------------------------------------------------
 // FLYTT BATCH TIL ANNET KAR
 // ---------------------------------------------------------
@@ -1351,7 +1572,7 @@ export async function moveBatchToVessel(formData: FormData) {
     .select("id, status")
     .eq("id", batchId)
     .eq("aktivt_kar", karId)
-    .in("status", ["Aktiv", "Sekundær", "secondary"])
+    .in("status", ["Aktiv", "Sekundær", "secondary", "Conditioning"])
     .maybeSingle();
   if (!batch) throw new Error("Batch not found or access denied");
 
@@ -1366,7 +1587,7 @@ export async function moveBatchToVessel(formData: FormData) {
     .from("batches")
     .select("id")
     .eq("aktivt_kar", targetKarId)
-    .in("status", ["Aktiv", "Sekundær", "secondary"])
+    .in("status", ["Aktiv", "Sekundær", "secondary", "Conditioning"])
     .limit(1);
   if (occupied && occupied.length > 0) {
     throw new Error("Target vessel is not empty");
@@ -1380,7 +1601,12 @@ export async function moveBatchToVessel(formData: FormData) {
   if (error) throw new Error(`Could not move batch: ${error.message}`);
 
   if (target.user_id === user.id) {
-    const karStatus = batch.status === "Aktiv" ? "Aktiv" : "Sekundær";
+    const karStatus =
+      batch.status === "Aktiv"
+        ? "Aktiv"
+        : batch.status === "Conditioning"
+          ? "Conditioning"
+          : "Sekundær";
     const { error: targetStatusError } = await supabase
       .from("kar")
       .update({ status: karStatus })
@@ -1455,7 +1681,6 @@ export async function finishBatch(formData: FormData) {
     "Keg",
     "Cans",
     "Mixed packaging",
-    "Still / not carbonated",
     "Other",
   ]);
   if (!allowedPackagingMethods.has(packagingMethod)) {
@@ -1521,7 +1746,7 @@ export async function finishBatch(formData: FormData) {
     .select("*")
     .eq("id", batchId)
     .eq("aktivt_kar", karId)
-    .in("status", ["Aktiv", "Sekundær", "secondary"])
+    .in("status", ["Aktiv", "Sekundær", "secondary", "Conditioning"])
     .maybeSingle();
 
   if (batchError) {

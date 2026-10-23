@@ -2,6 +2,16 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  async redirects() {
+    return [
+      {
+        source: "/brewery/:path*",
+        destination: "/business/:path*",
+        permanent: true,
+      },
+    ];
+  },
+
   experimental: {
     appDir: false
   },

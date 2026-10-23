@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import FormField from "@/app/components/FormField";
 import {
   parseSecondaryAdditions,
   type SecondaryAdditionItem,
@@ -133,16 +134,16 @@ export default function RecipeSecondaryFields({
               onChange={(fruits) => setAdditions((current) => ({ ...current, fruits }))}
             />
           </div>
-          <div>
-            <label className="mb-1 block font-semibold">Secondary notes</label>
+          <FormField id="recipe-secondary-notes" label="Secondary notes">
             <textarea
+              id="recipe-secondary-notes"
               name="secondary_notes"
               placeholder="Notes about the secondary fermentation..."
               className="h-28 w-full rounded border border-white/20 bg-black/40 p-3"
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
             />
-          </div>
+          </FormField>
         </>
       )}
     </div>

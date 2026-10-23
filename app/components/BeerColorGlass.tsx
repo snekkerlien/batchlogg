@@ -48,12 +48,19 @@ export default function BeerColorGlass({
     motionMedia.addEventListener("change", updateMotionPreference);
 
     setBubbles(
-      Array.from({ length: 8 }, () => {
-        const startX = 14 + Math.random() * 20;
+      Array.from({ length: 8 }, (_, index) => {
+        const laneWidth = 18 / 8;
+        const startX = Math.max(
+          15,
+          Math.min(
+            33,
+            15 + laneWidth * (index + 0.5) + (Math.random() * 1.5 - 0.75)
+          )
+        );
         const duration = 1.7 + Math.random() * 2.1;
         return {
           startX,
-          endX: Math.max(14, Math.min(34, startX + (Math.random() * 5 - 2.5))),
+          endX: Math.max(15, Math.min(33, startX + (Math.random() * 5 - 2.5))),
           radius: 0.55 + Math.random() * 0.75,
           duration,
           delay: -(Math.random() * duration),
@@ -72,7 +79,7 @@ export default function BeerColorGlass({
       role="img"
       aria-label={`${Math.round(ebc)} EBC beer color`}
       viewBox="0 0 48 64"
-      className={`beer-color-glass shrink-0 ${compact ? "beer-color-glass--compact h-5 w-4" : "h-12 w-9"}`}
+      className={`beer-color-glass shrink-0 ${compact ? "beer-color-glass--compact h-5 w-4" : "h-[5.5rem] w-[4.125rem]"}`}
     >
       <defs>
         <clipPath id={liquidClipId}>
@@ -129,7 +136,7 @@ export default function BeerColorGlass({
         ))}
       </g>
       <path
-        d="M12 23c-.2-1.8 1.2-3.2 3-3.2.2-2.1 2-3.6 4-3.2 1.2-2.1 4.1-2.3 5.6-.4 1.8-1.5 4.6-.8 5.4 1.4 2.2-.3 3.9 1.3 3.8 3.3 1.5.4 2.3 1.6 2.2 3.2l-.2 2.8-1.1 2.7c-1.7-1.8-3.2-1.8-4.8 0-1.4-2.4-3.4-2.4-4.8 0-1.4-2.5-3.4-2.5-4.8 0-1.4-2.4-3.5-2.4-4.9 0-1.5-2.3-3.4-2.3-4.9 0l-.8-2.7L12 23Z"
+        d="M11.5 24v-4.5c0-1.7 1.3-3 3-3h19c1.7 0 3 1.3 3 3V24H11.5Z"
         fill="rgb(255 255 255 / 94%)"
       />
       <path

@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import PageHeading from "@/app/components/PageHeading";
 import PublicPageNavigation from "@/app/components/PublicPageNavigation";
 import BrewDayWaterCalculator from "./BrewDayWaterCalculator";
 import RefractometerCorrectionCalculator from "./RefractometerCorrectionCalculator";
 import WaterChemistryCalculator from "./WaterChemistryCalculator";
+import CalculatorResult from "./CalculatorResult";
+import { getCalculatorInputError, parseCalculatorNumber } from "@/lib/brewing/calculatorValidation";
 import { Qty, UnitInput, UnitSymbol } from "@/app/components/Units";
 import {
   calculateAbvFromGravity,
@@ -22,17 +24,11 @@ export default function ABVToolsClient() {
   const [og, setOg] = useState("");
   const [fg, setFg] = useState("");
   const [gravityScale, setGravityScale] = useState<GravityScale>("sg");
-  const [abv, setAbv] = useState<number | null>(null);
-  const [specificGravityReadings, setSpecificGravityReadings] = useState<{
-    original: number;
-    final: number;
-  } | null>(null);
 
   // ⭐ Blend/Fortify states
   const [dilutionAbv, setDilutionAbv] = useState("");
   const [dilutionVol, setDilutionVol] = useState("");
   const [dilutionAddedVol, setDilutionAddedVol] = useState("");
-  const [dilutionResult, setDilutionResult] = useState<number | null>(null);
 
 
   // ⭐ Target ABV states
@@ -40,18 +36,14 @@ export default function ABVToolsClient() {
   const [targetBatchVol, setTargetBatchVol] = useState("");
   const [targetAddAbv, setTargetAddAbv] = useState("");
   const [targetDesiredAbv, setTargetDesiredAbv] = useState("");
-  const [targetResult, setTargetResult] = useState<number | null>(null);
 
   // ⭐ OG Dilution states
 const [ogDilutionOg, setOgDilutionOg] = useState("");
 const [ogDilutionVol, setOgDilutionVol] = useState("");
 const [ogDilutionAddedVol, setOgDilutionAddedVol] = useState("");
-const [ogDilutionResult, setOgDilutionResult] = useState<number | null>(null);
 
 const [targetAbvVol, setTargetAbvVol] = useState("");
 const [targetAbvPercent, setTargetAbvPercent] = useState("");
-const [sugarNeeded, setSugarNeeded] = useState<number | null>(null);
-const [honeyNeeded, setHoneyNeeded] = useState<number | null>(null);
 const [abvMode, setAbvMode] = useState<"sugar" | "honey">("sugar");
 const gravityScales: { value: GravityScale; label: string }[] = [
   { value: "sg", label: "Specific Gravity" },
@@ -61,65 +53,65 @@ const gravityScales: { value: GravityScale; label: string }[] = [
   { value: "balling", label: "Balling" },
 ];
 
-useEffect(() => {
-  const volume = Number.parseFloat(targetAbvVol);
-  const abvTarget = Number.parseFloat(targetAbvPercent);
-  const grams = calculateFermentableForAbv(volume, abvTarget, abvMode);
-  setSugarNeeded(abvMode === "sugar" ? grams : null);
-  setHoneyNeeded(abvMode === "honey" ? grams : null);
-}, [targetAbvVol, targetAbvPercent, abvMode]);
+  const original = convertGravityToSpecificGravity(parseCalculatorNumber(og), gravityScale);
+  const final = convertGravityToSpecificGravity(parseCalculatorNumber(fg), gravityScale);
+  const abv = original !== null && final !== null
+    ? calculateAbvFromGravity(original, final)
+    : null;
+  const gravityMin = gravityScale === "sg" ? 0.8 : 0;
+  const gravityMax = gravityScale === "sg" ? 2 : gravityScale === "oechsle" ? 1000 : 100;
+  const gravityError = getCalculatorInputError([
+    { label: "OG", value: og, min: gravityMin, max: gravityMax },
+    { label: "FG", value: fg, min: gravityMin, max: gravityMax },
+  ]) || (original !== null && final !== null && original < final
+    ? "FG cannot be higher than OG. Check that both readings use the selected scale."
+    : original !== null && final !== null && abv === null
+      ? "These readings imply ABV above 100%. Check your readings and gravity scale."
+      : null);
 
+  const dilutionResult = calculateDilutedAbv(
+    parseCalculatorNumber(dilutionAbv), parseCalculatorNumber(dilutionVol), parseCalculatorNumber(dilutionAddedVol)
+  );
+  const dilutionError = getCalculatorInputError([
+    { label: "Current ABV (%)", value: dilutionAbv, min: 0, max: 100 },
+    { label: "Batch volume", value: dilutionVol, positive: true },
+    { label: "Volume added", value: dilutionAddedVol, min: 0 },
+  ]);
 
+  const targetResult = calculateVolumeForTargetAbv(
+    parseCalculatorNumber(targetBatchAbv), parseCalculatorNumber(targetBatchVol),
+    parseCalculatorNumber(targetAddAbv), parseCalculatorNumber(targetDesiredAbv)
+  );
+  const targetInputs = {
+    "current ABV": targetBatchAbv, "batch volume": targetBatchVol,
+    "addition ABV": targetAddAbv, "target ABV": targetDesiredAbv,
+  };
+  const targetError = getCalculatorInputError([
+    { label: "Current ABV (%)", value: targetBatchAbv, min: 0, max: 100 },
+    { label: "Batch volume", value: targetBatchVol, positive: true },
+    { label: "Addition ABV (%)", value: targetAddAbv, min: 0, max: 100 },
+    { label: "Target ABV (%)", value: targetDesiredAbv, min: 0, max: 100 },
+  ]) || (Object.values(targetInputs).every(value => value.trim()) && targetResult === null
+    ? "The target must lie strictly between the batch and addition ABVs, or equal the current ABV (no addition). You cannot reach the addition's exact ABV with a finite addition."
+    : null);
 
-  // ⭐ Live ABV calculation
-  useEffect(() => {
-    const ogValue = Number(og.replace(",", "."));
-    const fgValue = Number(fg.replace(",", "."));
-    const ogNum =
-      og.trim() === ""
-        ? null
-        : convertGravityToSpecificGravity(ogValue, gravityScale);
-    const fgNum =
-      fg.trim() === ""
-        ? null
-        : convertGravityToSpecificGravity(fgValue, gravityScale);
+  const ogDilutionResult = calculateDilutedGravity(
+    parseCalculatorNumber(ogDilutionOg), parseCalculatorNumber(ogDilutionVol), parseCalculatorNumber(ogDilutionAddedVol)
+  );
+  const ogDilutionError = getCalculatorInputError([
+    { label: "Original OG (SG)", value: ogDilutionOg, min: 1, max: 2 },
+    { label: "Batch volume", value: ogDilutionVol, positive: true },
+    { label: "Water added", value: ogDilutionAddedVol, min: 0 },
+  ]);
 
-    if (ogNum === null || fgNum === null) {
-      setAbv(null);
-      setSpecificGravityReadings(null);
-      return;
-    }
-    setAbv(calculateAbvFromGravity(ogNum, fgNum));
-    setSpecificGravityReadings({ original: ogNum, final: fgNum });
-  }, [og, fg, gravityScale]);
-
-  // ⭐ Live Blend/Fortify calculation
-  useEffect(() => {
-  const A1 = parseFloat(dilutionAbv);
-  const V1 = parseFloat(dilutionVol);
-  const V2 = parseFloat(dilutionAddedVol);
-
-  setDilutionResult(calculateDilutedAbv(A1, V1, V2));
-}, [dilutionAbv, dilutionVol, dilutionAddedVol]);
-
-  // ⭐ Live Target ABV calculation
-  useEffect(() => {
-    const A1 = parseFloat(targetBatchAbv);
-    const V1 = parseFloat(targetBatchVol);
-    const A2 = parseFloat(targetAddAbv);
-    const AT = parseFloat(targetDesiredAbv);
-
-    setTargetResult(calculateVolumeForTargetAbv(A1, V1, A2, AT));
-  }, [targetBatchAbv, targetBatchVol, targetAddAbv, targetDesiredAbv]);
-
-  // ⭐ Live OG Dilution calculation
-useEffect(() => {
-  const OG1 = parseFloat(ogDilutionOg);
-  const V1 = parseFloat(ogDilutionVol);
-  const V2 = parseFloat(ogDilutionAddedVol);
-
-  setOgDilutionResult(calculateDilutedGravity(OG1, V1, V2));
-}, [ogDilutionOg, ogDilutionVol, ogDilutionAddedVol]);
+  const fermentableNeeded = calculateFermentableForAbv(
+    parseCalculatorNumber(targetAbvVol), parseCalculatorNumber(targetAbvPercent), abvMode
+  );
+  const estimatedOg = calculateOgForAbv(parseCalculatorNumber(targetAbvPercent));
+  const fermentableError = getCalculatorInputError([
+    { label: "Final batch volume", value: targetAbvVol, positive: true },
+    { label: "Desired ABV (%)", value: targetAbvPercent, min: 0, max: 100 },
+  ]);
 
 
   return (
@@ -218,18 +210,25 @@ useEffect(() => {
               </a>
             </p>
 
-            {abv !== null && (
-              <div className="mt-4 text-center">
-                <p className="text-xl font-bold">ABV: {abv.toFixed(2)}%</p>
-                {specificGravityReadings && (
+            <CalculatorResult
+              name="ABV calculator"
+              inputs={{ OG: og, FG: fg }}
+              error={gravityError}
+              hasResult={abv !== null}
+              assumptions="Estimated ABV = (OG − FG) × 131.25. Use temperature-corrected hydrometer readings or alcohol-corrected refractometer readings. Brix, Plato, and Balling use the same approximate SG conversion."
+              onReset={() => { setOg(""); setFg(""); setGravityScale("sg"); }}
+            >
+              <div className="text-center">
+                <p className="text-xl font-bold">Estimated ABV: {abv?.toFixed(2)}%</p>
+                {original !== null && final !== null && (
                   <p className="mt-1 text-sm text-white/55">
                     Converted to SG: OG{" "}
-                    {specificGravityReadings.original.toFixed(3)}, FG{" "}
-                    {specificGravityReadings.final.toFixed(3)}
+                    {original.toFixed(3)}, FG{" "}
+                    {final.toFixed(3)}
                   </p>
                 )}
               </div>
-            )}
+            </CalculatorResult>
           </div>
         </div>
 
@@ -239,7 +238,7 @@ useEffect(() => {
   Dilution Calculator
 </h2>
 <p className="text-center opacity-70 mb-6">
-  Find your new ABV after adding juice or other liquids
+  Find your new ABV after adding water, juice, or another alcohol-free liquid.
 </p>
 
 
@@ -249,8 +248,9 @@ useEffect(() => {
     <div>
       <h3 className="text-xl font-semibold mb-2">Your batch</h3>
 
-      <label className="block mb-1 opacity-80">Current ABV (%)</label>
+      <label htmlFor="dilution-abv" className="block mb-1 opacity-80">Current ABV (%)</label>
       <input
+        id="dilution-abv"
         type="text"
         value={dilutionAbv}
         onChange={(e) => setDilutionAbv(e.target.value)}
@@ -258,22 +258,29 @@ useEffect(() => {
         className="w-full p-3 rounded bg-black/40 border border-white/20"
       />
 
-      <label className="block mt-4 mb-1 opacity-80">Volume (<UnitSymbol kind="volume" />)</label>
-      <UnitInput kind="volume" value={dilutionVol} onValueChange={setDilutionVol} placeholder="e.g. 20" className="w-full p-3 rounded bg-black/40 border border-white/20" />
+      <label htmlFor="dilution-volume" className="block mt-4 mb-1 opacity-80">Volume (<UnitSymbol kind="volume" />)</label>
+      <UnitInput id="dilution-volume" kind="volume" value={dilutionVol} onValueChange={setDilutionVol} placeholder="e.g. 20" className="w-full p-3 rounded bg-black/40 border border-white/20" />
     </div>
 
     {/* Added volume */}
     <div>
-      <label className="block mb-1 opacity-80">Volume added (<UnitSymbol kind="volume" />)</label>
-      <UnitInput kind="volume" value={dilutionAddedVol} onValueChange={setDilutionAddedVol} placeholder="e.g. 5" className="w-full p-3 rounded bg-black/40 border border-white/20" />
+      <label htmlFor="dilution-added-volume" className="block mb-1 opacity-80">Volume added (<UnitSymbol kind="volume" />)</label>
+      <UnitInput id="dilution-added-volume" kind="volume" value={dilutionAddedVol} onValueChange={setDilutionAddedVol} placeholder="e.g. 5" className="w-full p-3 rounded bg-black/40 border border-white/20" />
     </div>
 
     {/* Result */}
-    {dilutionResult !== null && (
-      <p className="text-center text-xl font-bold mt-4">
-        New ABV: {dilutionResult.toFixed(2)}%
+    <CalculatorResult
+      name="dilution calculator"
+      inputs={{ "current ABV": dilutionAbv, "batch volume": dilutionVol, "volume added": dilutionAddedVol }}
+      error={dilutionError}
+      hasResult={dilutionResult !== null}
+      assumptions="The added liquid has 0% ABV, alcohol is conserved, and volumes add directly without contraction. Juice may ferment later; this is the immediate ABV, not a prediction after fermentation. Use Target ABV for alcoholic additions."
+      onReset={() => { setDilutionAbv(""); setDilutionVol(""); setDilutionAddedVol(""); }}
+    >
+      <p className="text-center text-xl font-bold">
+        New ABV: {dilutionResult?.toFixed(2)}%
       </p>
-    )}
+    </CalculatorResult>
   </div>
 </div>
 
@@ -294,8 +301,9 @@ useEffect(() => {
             <div>
               <h3 className="text-xl font-semibold mb-2">Your batch</h3>
 
-              <label className="block mb-1 opacity-80">Current ABV (%)</label>
+              <label htmlFor="target-current-abv" className="block mb-1 opacity-80">Current ABV (%)</label>
               <input
+                id="target-current-abv"
                 type="text"
                 value={targetBatchAbv}
                 onChange={(e) => setTargetBatchAbv(e.target.value)}
@@ -303,16 +311,17 @@ useEffect(() => {
                 className="w-full p-3 rounded bg-black/40 border border-white/20"
               />
 
-              <label className="block mt-4 mb-1 opacity-80">Volume (<UnitSymbol kind="volume" />)</label>
-              <UnitInput kind="volume" value={targetBatchVol} onValueChange={setTargetBatchVol} placeholder="e.g. 20" className="w-full p-3 rounded bg-black/40 border border-white/20" />
+              <label htmlFor="target-batch-volume" className="block mt-4 mb-1 opacity-80">Volume (<UnitSymbol kind="volume" />)</label>
+              <UnitInput id="target-batch-volume" kind="volume" value={targetBatchVol} onValueChange={setTargetBatchVol} placeholder="e.g. 20" className="w-full p-3 rounded bg-black/40 border border-white/20" />
             </div>
 
             {/* Addition ABV */}
             <div>
               <h3 className="text-xl font-semibold mb-2">Addition</h3>
 
-              <label className="block mb-1 opacity-80">ABV (%)</label>
+              <label htmlFor="target-addition-abv" className="block mb-1 opacity-80">ABV (%)</label>
               <input
+                id="target-addition-abv"
                 type="number"
                 value={targetAddAbv}
                 onChange={(e) => setTargetAddAbv(e.target.value)}
@@ -325,8 +334,9 @@ useEffect(() => {
             <div>
               <h3 className="text-xl font-semibold mb-2">Desired ABV</h3>
 
-              <label className="block mb-1 opacity-80">Target ABV (%)</label>
+              <label htmlFor="desired-abv" className="block mb-1 opacity-80">Target ABV (%)</label>
               <input
+                id="desired-abv"
                 type="number"
                 value={targetDesiredAbv}
                 onChange={(e) => setTargetDesiredAbv(e.target.value)}
@@ -336,11 +346,19 @@ useEffect(() => {
             </div>
 
             {/* Result */}
-            {targetResult !== null && (
-              <p className="text-center text-xl font-bold mt-4">
+            <CalculatorResult
+              name="target ABV calculator"
+              inputs={targetInputs}
+              error={targetError}
+              hasResult={targetResult !== null}
+              assumptions="Alcohol is conserved and volumes add directly without contraction or further fermentation. A target equal to the current ABV needs no addition; other targets must be between the two strengths."
+              onReset={() => { setTargetBatchAbv(""); setTargetBatchVol(""); setTargetAddAbv(""); setTargetDesiredAbv(""); }}
+            >
+              <p className="text-center text-xl font-bold">
                 Required addition: <Qty kind="volume" value={targetResult} />
               </p>
-            )}
+              {targetResult === 0 && <p className="mt-2 text-center text-sm">Your batch is already at the target ABV. No addition is needed.</p>}
+            </CalculatorResult>
           </div>
         </div>
 
@@ -360,8 +378,9 @@ useEffect(() => {
     <div>
       <h3 className="text-xl font-semibold mb-2">Your batch</h3>
 
-      <label className="block mb-1 opacity-80">Original OG</label>
+      <label htmlFor="og-dilution-original-gravity" className="block mb-1 opacity-80">Original OG</label>
       <input
+        id="og-dilution-original-gravity"
         type="text"
         value={ogDilutionOg}
         onChange={(e) => setOgDilutionOg(e.target.value)}
@@ -369,22 +388,29 @@ useEffect(() => {
         className="w-full p-3 rounded bg-black/40 border border-white/20"
       />
 
-      <label className="block mt-4 mb-1 opacity-80">Volume (<UnitSymbol kind="volume" />)</label>
-      <UnitInput kind="volume" value={ogDilutionVol} onValueChange={setOgDilutionVol} placeholder="e.g. 4" className="w-full p-3 rounded bg-black/40 border border-white/20" />
+      <label htmlFor="og-dilution-volume" className="block mt-4 mb-1 opacity-80">Volume (<UnitSymbol kind="volume" />)</label>
+      <UnitInput id="og-dilution-volume" kind="volume" value={ogDilutionVol} onValueChange={setOgDilutionVol} placeholder="e.g. 4" className="w-full p-3 rounded bg-black/40 border border-white/20" />
     </div>
 
     {/* Added water */}
     <div>
-      <label className="block mb-1 opacity-80">Water added (<UnitSymbol kind="volume" />)</label>
-      <UnitInput kind="volume" value={ogDilutionAddedVol} onValueChange={setOgDilutionAddedVol} placeholder="e.g. 1" className="w-full p-3 rounded bg-black/40 border border-white/20" />
+      <label htmlFor="og-dilution-added-volume" className="block mb-1 opacity-80">Water added (<UnitSymbol kind="volume" />)</label>
+      <UnitInput id="og-dilution-added-volume" kind="volume" value={ogDilutionAddedVol} onValueChange={setOgDilutionAddedVol} placeholder="e.g. 1" className="w-full p-3 rounded bg-black/40 border border-white/20" />
     </div>
 
     {/* Result */}
-    {ogDilutionResult !== null && (
-      <p className="text-center text-xl font-bold mt-4">
-        New OG: {ogDilutionResult.toFixed(3)}
+    <CalculatorResult
+      name="OG dilution calculator"
+      inputs={{ "original OG": ogDilutionOg, "batch volume": ogDilutionVol, "water added": ogDilutionAddedVol }}
+      error={ogDilutionError}
+      hasResult={ogDilutionResult !== null}
+      assumptions="Pre-fermentation dilution with sugar-free water at SG 1.000. Gravity points are conserved and volumes add directly. Do not use this for juice, fermentable additions, or a fermented drink's FG."
+      onReset={() => { setOgDilutionOg(""); setOgDilutionVol(""); setOgDilutionAddedVol(""); }}
+    >
+      <p className="text-center text-xl font-bold">
+        New OG: {ogDilutionResult?.toFixed(3)} SG
       </p>
-    )}
+    </CalculatorResult>
   </div>
 </div>
 
@@ -402,6 +428,7 @@ useEffect(() => {
     <button
       type="button"
       onClick={() => setAbvMode("sugar")}
+      aria-pressed={abvMode === "sugar"}
       className={`px-4 py-2 rounded-lg border ${
         abvMode === "sugar"
           ? "bg-green-600 border-green-400"
@@ -414,6 +441,7 @@ useEffect(() => {
     <button
       type="button"
       onClick={() => setAbvMode("honey")}
+      aria-pressed={abvMode === "honey"}
       className={`px-4 py-2 rounded-lg border ${
         abvMode === "honey"
           ? "bg-yellow-600 border-yellow-400"
@@ -426,13 +454,14 @@ useEffect(() => {
 
   <div className="space-y-6">
     <div>
-      <label className="block mb-1 opacity-80">Batch volume (<UnitSymbol kind="volume" />)</label>
-      <UnitInput kind="volume" value={targetAbvVol} onValueChange={setTargetAbvVol} placeholder="e.g. 10" className="w-full p-3 rounded bg-black/40 border border-white/20" />
+      <label htmlFor="fermentable-batch-volume" className="block mb-1 opacity-80">Batch volume (<UnitSymbol kind="volume" />)</label>
+      <UnitInput id="fermentable-batch-volume" kind="volume" value={targetAbvVol} onValueChange={setTargetAbvVol} placeholder="e.g. 10" className="w-full p-3 rounded bg-black/40 border border-white/20" />
     </div>
 
     <div>
-      <label className="block mb-1 opacity-80">Desired ABV (%)</label>
+      <label htmlFor="fermentable-desired-abv" className="block mb-1 opacity-80">Desired ABV (%)</label>
       <input
+        id="fermentable-desired-abv"
         type="number"
         value={targetAbvPercent}
         onChange={(e) => setTargetAbvPercent(e.target.value)}
@@ -441,23 +470,21 @@ useEffect(() => {
       />
     </div>
 
-    {sugarNeeded !== null && (
-      <p className="text-center text-xl font-bold mt-4">
-        Sugar needed: <Qty kind="kg" value={sugarNeeded / 1000} />
+    <CalculatorResult
+      name="sugar and honey ABV calculator"
+      inputs={{ "final batch volume": targetAbvVol, "desired ABV": targetAbvPercent }}
+      error={fermentableError}
+      hasResult={fermentableNeeded !== null && estimatedOg !== null}
+      assumptions="Starting with no other fermentable sugar, using 46 PPG for sugar or 35 PPG for honey, and fermenting completely to FG 1.000. Volume is the final batch volume including fermentables. This is potential ABV, not a guarantee: yeast tolerance, honey composition, and residual sugar affect the outcome."
+      onReset={() => { setTargetAbvVol(""); setTargetAbvPercent(""); setAbvMode("sugar"); }}
+    >
+      <p className="text-center text-xl font-bold">
+        {abvMode === "sugar" ? "Sugar" : "Honey"} needed: <Qty kind="kg" value={fermentableNeeded !== null ? fermentableNeeded / 1000 : null} />
       </p>
-    )}
-
-    {(sugarNeeded !== null || honeyNeeded !== null) && calculateOgForAbv(Number.parseFloat(targetAbvPercent)) !== null && (
-      <p className="text-center text-sm opacity-70">
-        Estimated starting gravity: {calculateOgForAbv(Number.parseFloat(targetAbvPercent))!.toFixed(3)}
+      <p className="mt-2 text-center text-sm text-white/70">
+        Estimated starting gravity: {estimatedOg?.toFixed(3)} SG
       </p>
-    )}
-
-    {honeyNeeded !== null && (
-      <p className="text-center text-xl font-bold mt-4">
-        Honey needed: <Qty kind="kg" value={honeyNeeded / 1000} />
-      </p>
-    )}
+    </CalculatorResult>
   </div>
 </div>
 
@@ -469,6 +496,16 @@ useEffect(() => {
             Using the brewing calculators
           </h2>
           <div className="mt-4 space-y-4 text-sm leading-6 text-white/75">
+            <p>
+              Results update automatically. “Waiting for input” lists missing
+              fields; “Check your inputs” explains invalid values or impossible
+              combinations. Enter an explicit zero where appropriate. Each
+              calculated result includes its assumptions. Reset clears only
+              that calculator and restores its default scale or mode; it does
+              not delete saved profiles or change your unit preference.
+              Refractometer reset restores WCF to 1.04; resetting the optional
+              WCF calibration only clears its two sample readings.
+            </p>
             <p>
               The ABV calculator accepts specific gravity, Oechsle, Plato,
               Brix, or Balling for OG and FG, and converts those readings to

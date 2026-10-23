@@ -17,9 +17,22 @@ import MemberAdminActions, { type MemberAdminDetails } from "./MemberAdminAction
 import FermentationBubbles from "@/app/components/FermentationBubbles";
 import ExpandArrowButton from "@/app/components/ExpandArrowButton";
 
+function ProfilePreviewNotice() {
+  return (
+    <aside aria-label="Profile preview" className="mb-6 w-full rounded-lg border border-green-300/30 bg-green-300/5 p-4 text-sm">
+      <p className="font-semibold text-green-200">Community profile preview</p>
+      <p className="mt-1 text-white/70">This is what a signed-in member who is not your friend can see. Owner and admin access are excluded. No visibility settings have changed.</p>
+      <Link href="/settings#sharing-privacy" className="mt-2 inline-flex min-h-11 items-center text-green-200 underline">Sharing and privacy settings</Link>
+    </aside>
+  );
+}
 
-export default function ProfileDetailPage({ params }: { params: { username: string } }) {
+export default function ProfileDetailPage({ params, searchParams }: {
+  params: { username: string };
+  searchParams?: { preview?: string };
+}) {
   const router = useRouter();
+  const preview = searchParams?.preview === "public";
   let routeUsername = params.username;
   try {
     routeUsername = decodeURIComponent(routeUsername);
@@ -28,6 +41,7 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
   }
 
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [profile, setProfile] = useState<any>(null);
   const [privateProfile, setPrivateProfile] = useState<{
     id: string;
@@ -64,27 +78,43 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
 
   
   useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setLoadError("");
+    setProfile(null);
+    setPrivateProfile(null);
     async function load() {
       const {
         data: { session },
+        error: sessionError,
       } = await supabaseBrowser.auth.getSession();
 
-      if (!session) return;
+      if (!active) return;
+      if (sessionError) throw sessionError;
+      if (!session) {
+        router.replace(`/auth/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+        return;
+      }
 
       const response = await fetch(
-        `/api/community/profile?username=${encodeURIComponent(routeUsername)}`,
+        `/api/community/profile?username=${encodeURIComponent(routeUsername)}${preview ? "&preview=public" : ""}`,
         { cache: "no-store", credentials: "include" }
       );
       const profileResult = await response.json();
+      if (!active) return;
       if (response.status === 403 && profileResult.private && profileResult.profile) {
         setPrivateProfile(profileResult.profile);
         setFriendRequest(profileResult.friendRequest ?? null);
         setLoading(false);
         return;
       }
-      if (!response.ok || !profileResult.profile) {
+      if (response.status === 404) {
+        setProfile(null);
         setLoading(false);
         return;
+      }
+      if (!response.ok || !profileResult.profile) {
+        throw new Error(profileResult.error || "Could not load profile");
       }
 
       const profileData = profileResult.profile;
@@ -93,12 +123,12 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
       setCanManageUsers(profileResult.canManageUsers === true);
       setAdminDetails(profileResult.adminDetails ?? null);
       setProfileStats(profileResult.stats ?? null);
-      setIsOwner(session.user.id === profileData.id);
+      setIsOwner(!preview && session.user.id === profileData.id);
       setIsFriend(profileResult.isFriend);
       setFriendRequest(profileResult.friendRequest);
 
       const userId = profileData.id;
-      const isOwner = session?.user?.id === userId;
+      const isOwner = !preview && session.user.id === userId;
 
       if (!profileResult.canViewContent) {
         setKar([]);
@@ -107,16 +137,27 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
         return;
       }
 
-      const { data: karRaw } = await supabaseBrowser
+      let vesselQuery = supabaseBrowser
         .from("kar")
         .select("*")
         .eq("user_id", userId)
         .order("nummer");
+      if (!isOwner) vesselQuery = vesselQuery.eq("is_public", true);
+      const { data: karRaw, error: vesselsError } = await vesselQuery;
 
-      const { data: batchesRaw } = await supabaseBrowser
+      if (!active) return;
+      if (vesselsError) throw vesselsError;
+      const vesselIds = (karRaw ?? []).map(vessel => vessel.id);
+      let batchQuery = supabaseBrowser
         .from("batches")
         .select("*")
         .eq("user_id", userId);
+      if (!isOwner) batchQuery = batchQuery.in("aktivt_kar", vesselIds);
+      const { data: batchesRaw, error: batchesError } = !isOwner && vesselIds.length === 0
+        ? { data: [], error: null }
+        : await batchQuery;
+      if (!active) return;
+      if (batchesError) throw batchesError;
 
       const visibleKar = isOwner
         ? karRaw ?? []
@@ -126,6 +167,16 @@ export default function ProfileDetailPage({ params }: { params: { username: stri
         const active = batchesRaw
   ?.filter((b: any) =>
     b.aktivt_kar === k.id && b.status === "Aktiv"
+  )
+  .sort(
+    (a: any, b: any) =>
+      new Date(b.created_at).getTime() -
+      new Date(a.created_at).getTime()
+  )[0];
+
+const conditioning = batchesRaw
+  ?.filter((b: any) =>
+    b.aktivt_kar === k.id && b.status === "Conditioning"
   )
   .sort(
     (a: any, b: any) =>
@@ -146,31 +197,52 @@ const secondary = batchesRaw
         let status = "Empty";
         if (active) status = "Primary";
         else if (secondary) status = "Secondary";
+        else if (conditioning) status = "Conditioning";
 
         return {
           id: k.id,
           nummer: index + 1,
           created_at: k.created_at,
           status,
-          batchName: active?.name ?? secondary?.name ?? null,
+          batchName: active?.name ?? secondary?.name ?? conditioning?.name ?? null,
         };
       });
 
       setKar(karProcessed);
 
-      const { data: recipesRaw } = await supabaseBrowser
+      const { data: recipesRaw, error: recipesError } = await supabaseBrowser
         .from("recipes")
         .select("*")
         .eq("user_id", userId)
         .eq("is_public", true)
         .order("created_at", { ascending: false });
+      if (!active) return;
+      if (recipesError) throw recipesError;
 
       setRecipes(recipesRaw ?? []);
       setLoading(false);
     }
 
-    load();
-  }, [routeUsername]);
+    load().catch(error => {
+      console.error("Could not load member profile", error);
+      if (!active) return;
+      setLoadError("This profile could not be loaded. Please reload and try again.");
+      setLoading(false);
+    });
+    return () => { active = false; };
+  }, [routeUsername, router, preview]);
+
+  if (loadError) {
+    return (
+      <main className="min-h-screen flex items-center justify-center px-6 text-white">
+        <div className="rounded-xl border border-white/10 bg-black/60 p-6">
+          <p role="alert">{loadError}</p>
+          <button type="button" onClick={() => window.location.reload()} className="mt-3 min-h-11 rounded-lg border border-white/20 px-4 py-2">Reload profile</button>
+          <Link href="/settings#sharing-privacy" className="ml-4 inline-flex min-h-11 items-center underline">Sharing and privacy</Link>
+        </div>
+      </main>
+    );
+  }
 
   if (loading) {
     return (
@@ -188,6 +260,7 @@ const secondary = batchesRaw
     return (
       <main className="min-h-screen flex items-center justify-center px-6 text-white">
         <div className="flex flex-col items-center gap-3 rounded-xl border border-white/10 bg-black/60 px-8 py-8 text-center backdrop-blur-md">
+          {preview && <ProfilePreviewNotice />}
           <Image
             src={
               privateProfile.avatar_url && privateProfile.avatar_url.length > 5
@@ -213,7 +286,7 @@ const secondary = batchesRaw
               <button
                 type="button"
                 onClick={!friendRequest ? sendFriendRequest : undefined}
-                disabled={!!friendRequest || friendRequestBusy}
+                disabled={preview || !!friendRequest || friendRequestBusy}
                 className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20 disabled:cursor-default disabled:opacity-80"
               >
                 {friendRequest?.status === "sent"
@@ -379,6 +452,13 @@ const secondary = batchesRaw
           <MenuOverlay />
         </div>
 
+{preview ? <ProfilePreviewNotice /> : isOwner && (
+  <div className="mb-6 flex flex-wrap justify-center gap-4 text-sm">
+    <a href={`/members/${encodeURIComponent(profile.username)}?preview=public`} className="inline-flex min-h-11 items-center text-green-200 underline">Preview my community profile</a>
+    <Link href="/settings#sharing-privacy" className="inline-flex min-h-11 items-center text-white/70 underline">Sharing and privacy</Link>
+  </div>
+)}
+
 {canManageUsers && adminDetails && (
   <MemberAdminActions
     userId={profile.id}
@@ -421,7 +501,7 @@ const secondary = batchesRaw
   tier={profile.account_tier}
 />
 
-{!isOwner && (
+{!isOwner && !preview && (
   <div className="mb-6 flex justify-center">
     <ReportContentButton
       contentType="profile"
@@ -431,7 +511,7 @@ const secondary = batchesRaw
   </div>
 )}
 
-{!isOwner && (
+{!isOwner && !preview && (
   <div className="mb-8 flex flex-wrap justify-center gap-3">
     {(isFriend || friendRequest || profile.allow_friend_requests) && (
       <button
@@ -587,7 +667,7 @@ const secondary = batchesRaw
                 Open full recipe →
               </Link>
             </div>
-            {!isOwner && (
+            {!isOwner && !preview && (
               <div className="flex justify-end">
                 <ReportContentButton
                   contentType="recipe"
@@ -616,7 +696,13 @@ const secondary = batchesRaw
   )}
 </div>
 
-{profileStats && <ProfileAchievements stats={profileStats} showProgress={isOwner} />}
+{profileStats && (
+  <ProfileAchievements
+    stats={profileStats}
+    showProgress={isOwner}
+    accentColor={profile?.theme_accent_color}
+  />
+)}
 
 
   </>

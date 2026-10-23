@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
 import { getNextMotd } from "../../lib/motd/motdList";
@@ -8,14 +9,22 @@ import MenuOverlay from "@/app/components/MenuOverlay";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
 import PageHeading from "@/app/components/PageHeading";
 import FermentationBubbles from "@/app/components/FermentationBubbles";
+import DashboardGuide from "./DashboardGuide";
 
 
 interface KarType {
   id: string;
   nummer: number;
   created_at: string;
-  status: "Aktiv" | "Ledig" | "Sekundær";
+  status: "Aktiv" | "Ledig" | "Sekundær" | "Conditioning";
   batchName?: string | null;
+  activeBatchId?: string | null;
+  latestReading?: { sg: number | string; created_at: string } | null;
+  nextReminder?: {
+    type: "manual" | "sg_check";
+    message: string;
+    remind_at: string;
+  } | null;
   isShared: boolean;
 }
 
@@ -28,8 +37,14 @@ interface DashboardResponse {
 
 function sharedVesselName(vessel: KarType & { ownerUsername: string }): string {
   if (vessel.batchName) return vessel.batchName;
-  if (vessel.status === "Ledig") return `${vessel.ownerUsername}'s vessel`;
   return `Vessel ${vessel.nummer}`;
+}
+
+function vesselStageLabel(status: KarType["status"]): string {
+  if (status === "Aktiv") return "Primary fermentation";
+  if (status === "Sekundær") return "Secondary fermentation";
+  if (status === "Conditioning") return "Conditioning";
+  return "Empty vessel";
 }
 
 const sharedVesselCardStyle = {
@@ -82,35 +97,18 @@ export default function DashboardClient() {
   const [fadeMessage, setFadeMessage] = useState("");
   const [maxVessels, setMaxVessels] = useState(6);
   const [creatingKar, setCreatingKar] = useState(false);
-  const [showDashboardInfo, setShowDashboardInfo] = useState(false);
-  const [infoPreferenceLoaded, setInfoPreferenceLoaded] = useState(false);
+  const [movingBatchId, setMovingBatchId] = useState<string | null>(null);
+  const [moveSourceVesselId, setMoveSourceVesselId] = useState<string | null>(null);
+  const [pendingMove, setPendingMove] = useState<{
+    sourceVesselId: string;
+    targetVesselId: string;
+  } | null>(null);
+  const [moveNotice, setMoveNotice] = useState<{
+    message: string;
+    isError: boolean;
+  } | null>(null);
   const dashboardLoadInProgress = useRef(false);
   const lastSilentDashboardLoad = useRef(0);
-
-useEffect(() => {
-  try {
-    setShowDashboardInfo(
-      window.localStorage.getItem("dashboard-info-visible") === "true"
-    );
-  } catch (error) {
-    console.error("Could not load dashboard info preference", error);
-  } finally {
-    setInfoPreferenceLoaded(true);
-  }
-}, []);
-
-useEffect(() => {
-  if (!infoPreferenceLoaded) return;
-
-  try {
-    window.localStorage.setItem(
-      "dashboard-info-visible",
-      String(showDashboardInfo)
-    );
-  } catch (error) {
-    console.error("Could not save dashboard info preference", error);
-  }
-}, [showDashboardInfo, infoPreferenceLoaded]);
 
 // ⭐ Hent MOTD ved mount
 useEffect(() => {
@@ -201,21 +199,39 @@ useEffect(() => {
   function toggleSelectMode() {
     setSelectMode(!selectMode);
     setSelectedKars([]);
+    setMoveSourceVesselId(null);
+    setPendingMove(null);
   }
 
-  function toggleKarSelection(id: string, nummer: number) {
-    if (nummer === 1) {
-      setFadeMessage("Vessel 1 cannot be deleted");
-      setTimeout(() => setFadeMessage(""), 1500);
-      return;
-    }
-
+  function toggleKarSelection(id: string) {
     setSelectedKars((prev) =>
       prev.includes(id)
         ? prev.filter((k) => k !== id)
         : [...prev, id]
     );
   }
+
+  const selectedActiveBatches = kar.filter(
+    (vessel) =>
+      selectedKars.includes(vessel.id) &&
+      vessel.activeBatchId &&
+      (vessel.status === "Aktiv" || vessel.status === "Sekundær" || vessel.status === "Conditioning")
+  );
+
+  const deleteConfirmationMessage =
+    selectedActiveBatches.length > 0
+      ? `Deleting these vessels will also cancel and permanently delete ${
+          selectedActiveBatches.length === 1
+            ? `the active batch “${selectedActiveBatches[0].batchName || "Unnamed batch"}” and its notes`
+            : `${selectedActiveBatches.length} active batches (${selectedActiveBatches
+                .map((vessel) => vessel.batchName || "Unnamed batch")
+                .join(", ")}) and their notes`
+        }. Delete ${selectedKars.length} selected vessel${
+          selectedKars.length === 1 ? "" : "s"
+        }? This action cannot be undone.`
+      : `Delete ${selectedKars.length} selected vessel${
+          selectedKars.length === 1 ? "" : "s"
+        }? This action cannot be undone.`;
 
   async function deleteSelectedKars() {
     try {
@@ -351,6 +367,53 @@ useEffect(() => {
     }
   }
 
+  async function moveBatch(batchId: string, sourceVesselId: string, targetVesselId: string) {
+    if (movingBatchId || sourceVesselId === targetVesselId) return;
+
+    setMovingBatchId(batchId);
+    setMoveNotice(null);
+    try {
+      const response = await fetch("/api/batches/move", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ batchId, sourceVesselId, targetVesselId }),
+      });
+      const result: { error?: string } = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Could not move the batch.");
+      }
+
+      setMoveNotice({
+        message: `Batch moved from Vessel ${
+          kar.find((vessel) => vessel.id === sourceVesselId)?.nummer ?? ""
+        } to Vessel ${
+          kar.find((vessel) => vessel.id === targetVesselId)?.nummer ?? ""
+        }.`,
+        isError: false,
+      });
+      setMoveSourceVesselId(null);
+      await loadDashboardData();
+    } catch (error) {
+      console.error("Could not move batch to another vessel", error);
+      setMoveNotice({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Could not move the batch. Please try again.",
+        isError: true,
+      });
+    } finally {
+      setMovingBatchId(null);
+    }
+  }
+
+  const activeVessels = [...kar, ...sharedKar].filter(
+    (vessel) =>
+      vessel.activeBatchId &&
+      (vessel.status === "Aktiv" || vessel.status === "Sekundær" || vessel.status === "Conditioning")
+  );
+
   if (loading) {
   return (
     <main className="min-h-screen flex items-center justify-center text-white">
@@ -421,48 +484,102 @@ useEffect(() => {
         </div>
       )}
 
-      <h2 className="text-2xl font-semibold mb-4 text-center text-green-300">
-        Vessel Overview
+      <h2 className="text-2xl font-semibold mb-2 text-center text-green-300">
+        Your vessels
       </h2>
+      <p className="mb-4 text-center text-sm text-white/55">
+        Open a vessel to view its batch, or choose an empty vessel to start one.
+      </p>
 
-      <div className="flex flex-wrap justify-center gap-6">
+      {selectMode && moveSourceVesselId && (
+        <p className="mb-4 rounded-lg border border-green-400/30 bg-green-950/30 px-4 py-3 text-center text-sm text-green-100">
+          Choose an empty vessel to move “
+          {kar.find((vessel) => vessel.id === moveSourceVesselId)?.batchName ||
+            "active batch"}
+          ” from Vessel{" "}
+          {kar.find((vessel) => vessel.id === moveSourceVesselId)?.nummer}.
+        </p>
+      )}
+
+      {selectMode && !moveSourceVesselId && (
+        <p className="mb-4 rounded-lg border border-amber-300/20 bg-amber-300/5 px-4 py-3 text-center text-sm text-amber-100/80">
+          Select vessels to delete. Deleting a vessel with an active batch also
+          permanently deletes that batch and its notes.
+        </p>
+      )}
+
+      {moveNotice && (
+        <p
+          role={moveNotice.isError ? "alert" : "status"}
+          className={`mb-4 rounded-lg border px-4 py-3 text-center text-sm ${
+            moveNotice.isError
+              ? "border-red-400/30 bg-red-950/40 text-red-200"
+              : "border-green-400/30 bg-green-950/40 text-green-200"
+          }`}
+        >
+          {moveNotice.message}
+        </p>
+      )}
+
+      <div className="flex flex-wrap items-start justify-center gap-6">
         {kar.map((k) => (
-          <div key={k.id} className="flex w-32 flex-col items-center gap-1">
-          <a
+          <div key={k.id} className="flex w-32 flex-col items-center gap-3">
+          <motion.a
+            layout="position"
+            transition={{ layout: { duration: 0.22, ease: "easeOut" } }}
             href={selectMode ? "#" : `/kar/${k.id}`}
             onClick={(e) => {
               if (selectMode) {
                 e.preventDefault();
 
-                if (k.nummer === 1) {
-                  setFadeMessage("Fermentation Vessel 1 cannot be deleted");
-                  setTimeout(() => setFadeMessage(""), 1500);
-                } else {
-                  toggleKarSelection(k.id, k.nummer);
+                if (moveSourceVesselId) {
+                  if (k.id !== moveSourceVesselId && k.status === "Ledig") {
+                    setPendingMove({
+                      sourceVesselId: moveSourceVesselId,
+                      targetVesselId: k.id,
+                    });
+                    setMoveNotice(null);
+                  } else if (k.id !== moveSourceVesselId) {
+                    setMoveNotice({
+                      message: "Choose an empty vessel as the destination.",
+                      isError: true,
+                    });
+                  }
+                  return;
                 }
+
+                toggleKarSelection(k.id);
               }
             }}
             style={k.isShared ? sharedVesselCardStyle : undefined}
-            className={`relative border rounded-xl p-4 bg-white/5 w-32 h-32 flex flex-col items-center justify-center transition overflow-hidden
+            className={`relative border rounded-xl p-4 bg-white/5 w-32 h-32 flex flex-col items-center justify-center transition-colors overflow-hidden
               ${k.isShared ? "" : "border-white/10"}
-              ${selectMode ? "animate-fadeIn" : ""}
               ${
                 selectMode && selectedKars.includes(k.id)
                   ? "ring-4 ring-red-500"
                   : ""
               }
               ${
-                selectMode && k.nummer === 1
-                  ? "opacity-40 cursor-not-allowed pointer-events-none animate-shake"
+                selectMode && moveSourceVesselId === k.id
+                  ? "ring-4 ring-green-800"
                   : ""
               }
+              ${
+                selectMode &&
+                moveSourceVesselId &&
+                k.id !== moveSourceVesselId &&
+                k.status === "Ledig"
+                  ? "ring-2 ring-green-400/60 cursor-pointer"
+                  : ""
+              }
+              ${selectMode && !moveSourceVesselId ? "cursor-pointer" : ""}
               hover:bg-white/10
             `}
           >
             {k.isShared && (
               <span
-                title="Shared vessel"
-                aria-label="Shared vessel"
+                title="Shared with others"
+                aria-label="Shared with others"
                 style={sharedVesselIconStyle}
                 className="absolute right-2 top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full border bg-black/80"
               >
@@ -484,7 +601,7 @@ useEffect(() => {
               </span>
             )}
             {/* ⭐ Only show bubbles when the vessel has an active batch */}
-{(k.status === "Aktiv" || k.status === "Sekundær") && (
+{(k.status === "Aktiv" || k.status === "Sekundær" || k.status === "Conditioning") && (
   <FermentationBubbles />
 )}
 
@@ -492,109 +609,71 @@ useEffect(() => {
             <div
               className="text-lg font-bold text-green-300 text-center leading-tight line-clamp-2"
             >
-              {k.batchName ?? `Vessel ${k.nummer}`}
+              {k.batchName || `Vessel ${k.nummer}`}
             </div>
 
 
             <span
-              className="text-zinc-400 font-semibold mt-2 relative z-10"
+              className="relative z-10 mt-2 text-center text-xs font-semibold leading-tight text-zinc-400"
             >
-              {k.status === "Aktiv"
-                ? "Primary"
-                : k.status === "Sekundær"
-                ? "Secondary"
-                : "Empty"}
+              {vesselStageLabel(k.status)}
             </span>
-          </a>
+          </motion.a>
+          {selectMode &&
+            k.activeBatchId &&
+            (k.status === "Aktiv" || k.status === "Sekundær" || k.status === "Conditioning") && (
+              <div className="w-full origin-top animate-growIn">
+                <button
+                  type="button"
+                  aria-pressed={moveSourceVesselId === k.id}
+                  onClick={() => {
+                    setMoveSourceVesselId((current) =>
+                      current === k.id ? null : k.id
+                    );
+                    setPendingMove(null);
+                    setSelectedKars([]);
+                    setMoveNotice(null);
+                  }}
+                  className="w-full rounded-lg border border-white/15 bg-white/5 px-2 py-1.5 text-xs font-semibold text-white/75 transition hover:bg-white/10"
+                >
+                  {moveSourceVesselId === k.id ? "Cancel move" : "Move batch"}
+                </button>
+              </div>
+            )}
           </div>
         ))}
 
-        {!selectMode && kar.length < maxVessels && (
-          <button
-            onClick={createKar}
-            disabled={creatingKar}
+        {(selectMode || kar.length < maxVessels) && (
+          <motion.button
+            layout
+            transition={{ layout: { duration: 0.22, ease: "easeOut" } }}
+            onClick={() => {
+              if (selectMode) toggleSelectMode();
+              void createKar();
+            }}
+            disabled={creatingKar || kar.length >= maxVessels}
             aria-label={creatingKar ? "Creating vessel" : "Create vessel"}
+            title={
+              kar.length >= maxVessels
+                ? `Vessel limit reached (${maxVessels})`
+                : "Create vessel"
+            }
             className="border border-white/10 bg-white/5 hover:bg-white/10 disabled:opacity-60 disabled:cursor-wait rounded-xl p-4 w-32 h-32 flex items-center justify-center text-white text-3xl font-bold"
           >
             {creatingKar ? "…" : "+"}
-          </button>
+          </motion.button>
         )}
       </div>
 
-      {sharedKar.length > 0 && (
-        <section className="mt-10 border-t border-white/10 pt-8">
-          <h2 className="mb-4 text-center text-2xl font-semibold text-green-300">
-            Shared with me
-          </h2>
-          <div className="flex flex-wrap justify-center gap-6">
-            {sharedKar.map((vessel) => (
-              <div key={vessel.id} className="flex w-36 flex-col items-center gap-2">
-                <a
-                  href={`/kar/${vessel.id}`}
-                  style={sharedVesselCardStyle}
-                  className="relative flex h-36 w-36 flex-col items-center justify-center overflow-hidden rounded-xl border bg-white/5 p-3 text-center transition hover:bg-white/10"
-                >
-                <span
-                  title="Shared vessel"
-                  aria-label="Shared vessel"
-                  style={sharedVesselIconStyle}
-                  className="absolute right-2 top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full border bg-black/80"
-                >
-                  <svg
-                    aria-hidden="true"
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    className="h-3.5 w-3.5"
-                  >
-                    <circle cx="6" cy="6" r="2.25" stroke="currentColor" strokeWidth="1.5" />
-                    <circle cx="14" cy="6" r="2.25" stroke="currentColor" strokeWidth="1.5" />
-                    <path
-                      d="M2.5 15c.35-2.2 1.55-3.4 3.5-3.4s3.15 1.2 3.5 3.4M10.5 15c.35-2.2 1.55-3.4 3.5-3.4s3.15 1.2 3.5 3.4"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                </span>
-                {(vessel.status === "Aktiv" || vessel.status === "Sekundær") && (
-                  <FermentationBubbles />
-                )}
-                <span className="relative z-10 line-clamp-2 text-base font-bold leading-tight text-green-300">
-                  {sharedVesselName(vessel)}
-                </span>
-                {vessel.status !== "Ledig" && (
-                  <>
-                    <span className="relative z-10 mt-2 text-xs text-zinc-300">
-                      {vessel.status === "Aktiv" ? "Primary" : "Secondary"}
-                    </span>
-                    <span className="relative z-10 mt-1 line-clamp-1 text-xs text-zinc-400">
-                      Shared by {vessel.ownerUsername}
-                    </span>
-                  </>
-                )}
-                </a>
-                <button
-                  type="button"
-                  onClick={() => setSharedVesselToLeave(vessel)}
-                  className="text-xs text-zinc-400 underline underline-offset-2 transition hover:text-red-300"
-                >
-                  Leave vessel
-                </button>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
       <p className="text-center mt-5 opacity-60">
-  Max vessels: {maxVessels}
-</p>
+        Vessel limit: {maxVessels}
+      </p>
 
-      <div className="flex justify-center mt-10 mb-6">
+      <div className="flex justify-center mt-6 mb-6">
         {!selectMode && (
           <button
             onClick={toggleSelectMode}
-            className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold mb-5"
+            className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
           >
             Select vessels
           </button>
@@ -621,31 +700,80 @@ useEffect(() => {
         )}
       </div>
 
-      <div className="mt-8 text-center">
-        <button
-          type="button"
-          aria-expanded={showDashboardInfo}
-          aria-controls="dashboard-info"
-          onClick={() => setShowDashboardInfo((visible) => !visible)}
-          className="text-sm text-zinc-400 hover:text-white underline underline-offset-4"
-        >
-          {showDashboardInfo ? "Hide dashboard info" : "Show dashboard info"}
-        </button>
-        {showDashboardInfo && (
-          <p
-            id="dashboard-info"
-            className="text-center text-zinc-300 mt-4 mb-10 italic"
-          >
-            Check each vessel’s current stage in Vessel Overview, then open one to review or update its batch. Use Plan a recipe to start with a saved recipe, Review batches to revisit your brewing history, or Learn from results to explore your brewing insights. Create vessels with +, or choose Select vessels to manage several at once.
-          </p>
-        )}
-      </div>
+      {sharedKar.length > 0 && (
+        <section className="mt-10 border-t border-white/10 pt-8">
+          <h2 className="mb-4 text-center text-2xl font-semibold text-green-300">
+            Vessels shared with me
+          </h2>
+          <div className="flex flex-wrap justify-center gap-6">
+            {sharedKar.map((vessel) => (
+              <div key={vessel.id} className="flex w-36 flex-col items-center gap-2">
+                <a
+                  href={`/kar/${vessel.id}`}
+                  style={sharedVesselCardStyle}
+                  className="relative flex h-36 w-36 flex-col items-center justify-center overflow-hidden rounded-xl border bg-white/5 p-3 text-center transition hover:bg-white/10"
+                >
+                <span
+                  title="Shared with you"
+                  aria-label="Shared with you"
+                  style={sharedVesselIconStyle}
+                  className="absolute right-2 top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full border bg-black/80"
+                >
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    className="h-3.5 w-3.5"
+                  >
+                    <circle cx="6" cy="6" r="2.25" stroke="currentColor" strokeWidth="1.5" />
+                    <circle cx="14" cy="6" r="2.25" stroke="currentColor" strokeWidth="1.5" />
+                    <path
+                      d="M2.5 15c.35-2.2 1.55-3.4 3.5-3.4s3.15 1.2 3.5 3.4M10.5 15c.35-2.2 1.55-3.4 3.5-3.4s3.15 1.2 3.5 3.4"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </span>
+                {(vessel.status === "Aktiv" || vessel.status === "Sekundær" || vessel.status === "Conditioning") && (
+                  <FermentationBubbles />
+                )}
+                <span className="relative z-10 line-clamp-2 text-base font-bold leading-tight text-green-300">
+                  {sharedVesselName(vessel)}
+                </span>
+                <span className="relative z-10 mt-2 text-xs text-zinc-300">
+                  {vesselStageLabel(vessel.status)}
+                </span>
+                <span className="relative z-10 mt-1 line-clamp-1 text-xs text-zinc-400">
+                  Shared by {vessel.ownerUsername}
+                </span>
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setSharedVesselToLeave(vessel)}
+                  className="text-xs text-zinc-400 underline underline-offset-2 transition hover:text-red-300"
+                >
+                  Leave shared vessel
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <ConfirmDialog
         open={confirmDeleteVessels}
-        title="Delete selected vessels?"
-        message={`Delete ${selectedKars.length} selected vessel${selectedKars.length === 1 ? "" : "s"}? This action cannot be undone.`}
-        confirmLabel="Delete vessels"
+        title={
+          selectedActiveBatches.length > 0
+            ? "Delete vessels and active batches?"
+            : "Delete selected vessels?"
+        }
+        message={deleteConfirmationMessage}
+        confirmLabel={
+          selectedActiveBatches.length > 0
+            ? "Delete vessels and batches"
+            : "Delete vessels"
+        }
         onConfirm={deleteSelectedKars}
         onCancel={() => setConfirmDeleteVessels(false)}
       />
@@ -661,31 +789,65 @@ useEffect(() => {
         onConfirm={leaveSharedVessel}
         onCancel={() => setSharedVesselToLeave(null)}
       />
+      <ConfirmDialog
+        open={pendingMove !== null}
+        title="Move batch to this vessel?"
+        message={
+          pendingMove
+            ? `Move “${
+                kar.find(
+                  (vessel) => vessel.id === pendingMove.sourceVesselId
+                )?.batchName || "active batch"
+              }” from Vessel ${
+                kar.find(
+                  (vessel) => vessel.id === pendingMove.sourceVesselId
+                )?.nummer
+              } to Vessel ${
+                kar.find(
+                  (vessel) => vessel.id === pendingMove.targetVesselId
+                )?.nummer
+              }? Vessel numbers stay fixed.`
+            : ""
+        }
+        confirmLabel="Move batch"
+        onConfirm={async () => {
+          if (!pendingMove) return false;
+          const source = kar.find(
+            (vessel) => vessel.id === pendingMove.sourceVesselId
+          );
+          if (!source?.activeBatchId) {
+            setMoveNotice({
+              message: "The source batch is no longer active. Refresh and try again.",
+              isError: true,
+            });
+            return true;
+          }
+          await moveBatch(
+            source.activeBatchId,
+            pendingMove.sourceVesselId,
+            pendingMove.targetVesselId
+          );
+          return true;
+        }}
+        onCancel={() => setPendingMove(null)}
+      />
+
+      <DashboardGuide vessels={activeVessels} />
 
       <style jsx>{`
-        @keyframes shake {
-          0% {
-            transform: translateX(0);
+        @keyframes growIn {
+          from {
+            opacity: 0;
+            transform: scaleY(0);
           }
-          20% {
-            transform: translateX(-6px);
-          }
-          40% {
-            transform: translateX(6px);
-          }
-          60% {
-            transform: translateX(-4px);
-          }
-          80% {
-            transform: translateX(4px);
-          }
-          100% {
-            transform: translateX(0);
+          to {
+            opacity: 1;
+            transform: scaleY(1);
           }
         }
 
-        .animate-shake {
-          animation: shake 0.4s ease-in-out;
+        .animate-growIn {
+          animation: growIn 220ms ease-out both;
         }
 
         @keyframes fadeOut {
@@ -701,20 +863,6 @@ useEffect(() => {
           animation: fadeOut 1.5s forwards;
         }
 
-        @keyframes fadeIn {
-          0% {
-            opacity: 0;
-            transform: scale(0.95);
-          }
-          100% {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
-
-        .animate-fadeIn {
-          animation: fadeIn 0.4s ease-out;
-        }
       `}</style>
     </div>
   );

@@ -48,6 +48,41 @@ function getCurrentAbv(og: unknown, readings: Array<{ sg: unknown }>) {
   return ((originalGravity - currentGravity) * 131.25).toFixed(2);
 }
 
+function getHistoryStatus(batch: any) {
+  const status = String(batch.status ?? "").toLowerCase();
+  if (batch.finished_date || ["finished", "avsluttet", "ferdig"].includes(status)) {
+    return "finished";
+  }
+  if (status === "split") return "split";
+  if (["aktiv", "active", "sekundær", "secondary", "conditioning"].includes(status)) {
+    return "active";
+  }
+  return "other";
+}
+
+function getFinishedAbv(batch: any) {
+  const abv =
+    batch.abv === null || batch.abv === undefined || batch.abv === ""
+      ? null
+      : Number(batch.abv);
+  if (abv !== null && Number.isFinite(abv)) {
+    return abv;
+  }
+  if (
+    batch.og === null ||
+    batch.og === undefined ||
+    batch.fg === null ||
+    batch.fg === undefined
+  ) {
+    return null;
+  }
+  const og = Number(batch.og);
+  const fg = Number(batch.fg);
+  return Number.isFinite(og) && Number.isFinite(fg) && og >= fg
+    ? (og - fg) * 131.25
+    : null;
+}
+
 function BatchHistoryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -59,9 +94,11 @@ function BatchHistoryContent() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [batchTypeFilter, setBatchTypeFilter] = useState("All");
   const [batchSearch, setBatchSearch] = useState("");
-  const [batchSort, setBatchSort] = useState<"newest" | "oldest" | "name">(
-    "newest"
-  );
+  const [batchStatusFilter, setBatchStatusFilter] = useState("All");
+  const [batchRecipeFilter, setBatchRecipeFilter] = useState("All");
+  const [batchSort, setBatchSort] = useState<
+    "newest" | "oldest" | "name" | "finished" | "abv"
+  >("newest");
   const [sgReadingsError, setSgReadingsError] = useState("");
   const [canViewSGGraph, setCanViewSGGraph] = useState(false);
   const [batchLoadError, setBatchLoadError] = useState("");
@@ -198,12 +235,25 @@ function BatchHistoryContent() {
         batchTypeFilter === "All" ||
         String(batch.type ?? "").toLowerCase() === batchTypeFilter.toLowerCase()
     )
+    .filter(
+      (batch) =>
+        batchStatusFilter === "All" ||
+        getHistoryStatus(batch) === batchStatusFilter
+    )
+    .filter(
+      (batch) =>
+        batchRecipeFilter === "All" ||
+        (batchRecipeFilter === "linked"
+          ? Boolean(batch.recipe_id)
+          : !batch.recipe_id)
+    )
     .filter((batch) => {
       const query = batchSearch.trim().toLowerCase();
       return (
         !query ||
         String(batch.name ?? "").toLowerCase().includes(query) ||
-        String(batch.type ?? "").toLowerCase().includes(query)
+        String(batch.type ?? "").toLowerCase().includes(query) ||
+        String(batch.recipe_snapshot?.name ?? "").toLowerCase().includes(query)
       );
     });
 
@@ -213,11 +263,30 @@ function BatchHistoryContent() {
         sensitivity: "base",
       });
     }
-    const direction = batchSort === "newest" ? -1 : 1;
-    return (
-      direction *
-      (new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-    );
+    if (batchSort === "abv") {
+      const aAbv = getFinishedAbv(a);
+      const bAbv = getFinishedAbv(b);
+      if (aAbv === null) return bAbv === null ? 0 : 1;
+      if (bAbv === null) return -1;
+      return bAbv - aAbv;
+    }
+    const aDate =
+      batchSort === "finished" ? a.finished_date ?? a.startdato : a.startdato;
+    const bDate =
+      batchSort === "finished" ? b.finished_date ?? b.startdato : b.startdato;
+    if (batchSort === "finished") {
+      const aIsFinished = getHistoryStatus(a) === "finished";
+      const bIsFinished = getHistoryStatus(b) === "finished";
+      if (aIsFinished !== bIsFinished) return aIsFinished ? -1 : 1;
+    }
+    const aTimestamp = aDate ? new Date(aDate).getTime() : null;
+    const bTimestamp = bDate ? new Date(bDate).getTime() : null;
+    if (aTimestamp === null || !Number.isFinite(aTimestamp)) {
+      return bTimestamp === null || !Number.isFinite(bTimestamp) ? 0 : 1;
+    }
+    if (bTimestamp === null || !Number.isFinite(bTimestamp)) return -1;
+    const direction = batchSort === "oldest" ? 1 : -1;
+    return direction * (aTimestamp - bTimestamp);
   });
 
   async function deleteBatch(id: string) {
@@ -296,11 +365,46 @@ function BatchHistoryContent() {
                   <option value="newest">Newest first</option>
                   <option value="oldest">Oldest first</option>
                   <option value="name">Name A–Z</option>
+                  <option value="finished">Recently finished</option>
+                  <option value="abv">Highest final ABV</option>
+                </select>
+              </label>
+              <label>
+                <span className="sr-only">Filter by batch stage</span>
+                <select
+                  value={batchStatusFilter}
+                  onChange={(event) => setBatchStatusFilter(event.target.value)}
+                  className="w-full rounded-lg border border-white/20 bg-black/40 p-3 text-sm sm:w-auto"
+                >
+                  <option value="All">All stages</option>
+                  <option value="active">Active</option>
+                  <option value="finished">Finished</option>
+                  <option value="split">Split</option>
+                  <option value="other">Other</option>
+                </select>
+              </label>
+              <label>
+                <span className="sr-only">Filter by recipe</span>
+                <select
+                  value={batchRecipeFilter}
+                  onChange={(event) => setBatchRecipeFilter(event.target.value)}
+                  className="w-full rounded-lg border border-white/20 bg-black/40 p-3 text-sm sm:w-auto"
+                >
+                  <option value="All">All recipes</option>
+                  <option value="linked">Linked to a recipe</option>
+                  <option value="unlinked">No linked recipe</option>
                 </select>
               </label>
             </div>
+            <p aria-live="polite" className="text-center text-xs text-white/50">
+              Showing {sortedBatches.length} of {batches.length} batches
+            </p>
             <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:justify-center">
-              {["All", "Mead", "Beer", "Cider", "Wine", "Seltzer", "Braggot", "Other"].map(
+              {[
+                "All",
+                ...Array.from(new Set(batches.map((batch) => String(batch.type ?? "").trim()).filter(Boolean)))
+                  .sort((a, b) => a.localeCompare(b)),
+              ].map(
                 (batchType) => (
                   <button
                     key={batchType}
@@ -328,20 +432,22 @@ function BatchHistoryContent() {
               Create a batch to track fermentation, readings, bottling, and results in one place.
             </p>
             <Link
-              href="/dashboard"
+              href={kars[0] ? `/kar/${encodeURIComponent(kars[0].id)}` : "/kar/new"}
               className="mt-4 inline-flex min-h-10 items-center rounded-lg border border-green-400/50 bg-green-700 px-4 py-2 text-sm font-semibold text-white hover:bg-green-600"
             >
-              Start a batch
+              {kars[0] ? "Start a batch in a vessel" : "Create a vessel to start a batch"}
             </Link>
           </section>
         ) : !batchLoadError && sortedBatches.length === 0 ? (
           <section className="rounded-xl border border-white/10 bg-white/5 p-6 text-center">
-            <p className="text-white/70">No batches match these search and type filters.</p>
+            <p className="text-white/70">No batches match these filters.</p>
             <button
               type="button"
               onClick={() => {
                 setBatchSearch("");
                 setBatchTypeFilter("All");
+                setBatchStatusFilter("All");
+                setBatchRecipeFilter("All");
               }}
               className="mt-4 rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20"
             >
@@ -351,12 +457,11 @@ function BatchHistoryContent() {
         ) : !batchLoadError ? (
           <div className="space-y-4">
             {sortedBatches.map((batch) => {
+              const isSplit =
+                String(batch.status ?? "").toLowerCase() === "split";
               const isFinished =
-                Boolean(batch.finished_date) ||
-                ["finished", "avsluttet", "ferdig"].includes(
-                  String(batch.status ?? "").toLowerCase()
-                );
-              const currentAbv = isFinished
+                getHistoryStatus(batch) === "finished";
+              const currentAbv = isFinished || isSplit
                 ? null
                 : getCurrentAbv(batch.og, batch.sgReadings);
               const status = String(batch.status ?? "");
@@ -364,7 +469,9 @@ function BatchHistoryContent() {
               const isSecondary = ["sekundær", "secondary"].includes(normalizedStatus);
               const statusLabel = isFinished
                 ? "Finished"
-                : isSecondary
+                : isSplit
+                  ? "Split"
+                  : isSecondary
                   ? "Secondary"
                   : ["aktiv", "active"].includes(normalizedStatus)
                     ? "Primary"
@@ -375,7 +482,7 @@ function BatchHistoryContent() {
                   ? null
                   : Number(batch.fg);
               const currentGravity =
-                !isFinished && batch.sgReadings.length > 0
+                !isFinished && !isSplit && batch.sgReadings.length > 0
                   ? Number(batch.sgReadings[batch.sgReadings.length - 1].sg)
                   : null;
               const abvValue = isFinished
@@ -385,6 +492,12 @@ function BatchHistoryContent() {
                 : currentAbv === null
                   ? null
                   : Number(currentAbv);
+              const packagedYield =
+                isFinished &&
+                Number(batch.volume_l) > 0 &&
+                Number(batch.packaged_volume_l) >= 0
+                  ? (Number(batch.packaged_volume_l) / Number(batch.volume_l)) * 100
+                  : null;
               const batchMetrics = [
                 {
                   label: "OG",
@@ -392,21 +505,33 @@ function BatchHistoryContent() {
                     ? originalGravity.toFixed(3)
                     : "—",
                 },
-                {
-                  label: isFinished ? "FG" : "Current SG",
-                  value: Number.isFinite(isFinished ? finalGravity : currentGravity)
-                    ? Number(isFinished ? finalGravity : currentGravity).toFixed(3)
-                    : "—",
-                },
-                ...(isFinished || canViewSGGraph
+                ...(isSplit
                   ? [{
-                      label: isFinished ? "Final ABV" : "Current ABV",
-                      value: abvValue !== null && Number.isFinite(abvValue)
-                        ? `${abvValue.toFixed(1)}%`
+                      label: "Split on",
+                      value: batch.split_at
+                        ? new Date(batch.split_at).toLocaleDateString("en-GB")
                         : "—",
                     }]
-                  : []),
+                  : [{
+                      label: isFinished ? "FG" : "Current SG",
+                      value: Number.isFinite(isFinished ? finalGravity : currentGravity)
+                        ? Number(isFinished ? finalGravity : currentGravity).toFixed(3)
+                        : "—",
+                    },
+                    ...(isFinished || canViewSGGraph
+                      ? [{
+                          label: isFinished ? "Final ABV" : "Current ABV",
+                          value: abvValue !== null && Number.isFinite(abvValue)
+                            ? `${abvValue.toFixed(1)}%`
+                            : "—",
+                        }]
+                      : [])]),
               ];
+              const splitChildren = isSplit
+                ? batches.filter(
+                    (child) => child.split_parent_batch_id === batch.id
+                  )
+                : [];
               const recipeSnapshot =
                 batch.recipe_snapshot &&
                 typeof batch.recipe_snapshot === "object" &&
@@ -430,6 +555,8 @@ function BatchHistoryContent() {
                         className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
                           isFinished
                             ? "border-green-300/20 bg-green-300/10 text-green-100"
+                            : isSplit
+                              ? "border-sky-300/20 bg-sky-300/10 text-sky-100"
                             : isSecondary
                               ? "border-amber-200/20 bg-amber-200/10 text-amber-100"
                               : "border-white/15 bg-white/5 text-white/75"
@@ -448,6 +575,74 @@ function BatchHistoryContent() {
                         ? ` · Finished ${new Date(batch.finished_date).toLocaleDateString("en-GB")}`
                         : ""}
                     </p>
+                    {batch.recipe_id ? (
+                        <p className="mt-2 text-sm">
+                          <span className="text-white/55">Recipe: </span>
+                          <Link
+                            href={`/my-recipes/${encodeURIComponent(batch.recipe_id)}`}
+                            className="font-semibold text-green-200 underline underline-offset-2"
+                          >
+                            {String(recipeSnapshot?.name ?? "View source recipe")}
+                          </Link>
+                        </p>
+                    ) : recipeSnapshot?.name ? (
+                        <p className="mt-2 text-sm text-white/65">
+                          Recipe at brew time: {String(recipeSnapshot.name)}
+                        </p>
+                    ) : null}
+                    {isFinished && batch.packaged_volume_l != null && (
+                        <p className="mt-2 text-sm text-green-100/80">
+                          <strong>Outcome:</strong>{" "}
+                          <Qty kind="volume" value={batch.packaged_volume_l} /> packaged
+                          {packagedYield !== null
+                            ? ` · ${packagedYield.toFixed(1)}% of planned volume`
+                            : ""}
+                          {abvValue !== null && Number.isFinite(abvValue)
+                            ? ` · ${abvValue.toFixed(1)}% ABV`
+                            : ""}
+                        </p>
+                    )}
+                    {batch.split_parent_batch_id && (
+                      <p className="mt-2 text-sm text-white/65">
+                        Split from{" "}
+                        <Link
+                          href={`/batch-history?batchId=${encodeURIComponent(batch.split_parent_batch_id)}`}
+                          className="font-semibold text-green-200 underline underline-offset-2"
+                        >
+                          batch{" "}
+                          {batches.find(
+                            (parent) => parent.id === batch.split_parent_batch_id
+                          )?.batchnummer ?? "source"}
+                        </Link>
+                      </p>
+                    )}
+                    {isSplit && splitChildren.length > 0 && (
+                      <div className="mt-2 space-y-1 text-sm text-white/65">
+                        <p>
+                          Split into{" "}
+                          {splitChildren.map((child, index) => (
+                            <span key={child.id}>
+                              {index > 0 ? ", " : ""}
+                              <Link
+                                href={`/batch-history?batchId=${encodeURIComponent(child.id)}`}
+                                className="font-semibold text-green-200 underline underline-offset-2"
+                              >
+                                batch {child.batchnummer ?? "—"}
+                              </Link>
+                            </span>
+                          ))}
+                        </p>
+                        {batch.split_loss_volume_l != null && (
+                          <p>
+                            Transfer loss:{" "}
+                            <Qty
+                              kind="volume"
+                              value={batch.split_loss_volume_l}
+                            />
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex shrink-0 items-center gap-2">
@@ -578,8 +773,15 @@ function BatchHistoryContent() {
                     )}
 
                     <p className="text-sm">
-                      <strong>Planned volume:</strong>{" "}
-                      <Qty kind="volume" value={batch.volume_l} />
+                      <strong>{isSplit ? "Volume before split:" : "Planned volume:"}</strong>{" "}
+                      <Qty
+                        kind="volume"
+                        value={
+                          isSplit
+                            ? batch.split_original_volume_l ?? batch.volume_l
+                            : batch.volume_l
+                        }
+                      />
                     </p>
 
                     <p className="text-sm">
@@ -748,6 +950,22 @@ function BatchHistoryContent() {
                           {batch.secondary_notes?.trim() || "No notes"}
                         </p>
                       </>
+                    )}
+
+                    {(batch.conditioning_startdate || batch.conditioning_notes) && (
+                      <section className="space-y-2 rounded-lg border border-white/10 bg-black/20 p-4">
+                        <h3 className="font-semibold text-green-300">Conditioning</h3>
+                        {batch.conditioning_startdate && (
+                          <p className="text-sm">
+                            <strong>Started:</strong>{" "}
+                            {new Date(batch.conditioning_startdate).toLocaleDateString("en-GB")}
+                          </p>
+                        )}
+                        <p className="whitespace-pre-line text-sm">
+                          <strong>Notes:</strong>{" "}
+                          {batch.conditioning_notes?.trim() || "No notes"}
+                        </p>
+                      </section>
                     )}
 
                     <div className="mt-4 p-4 bg-white/5 border border-white/10 rounded-lg">

@@ -2,29 +2,38 @@
 
 import { useState } from "react";
 import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
+import FormField from "@/app/components/FormField";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
+  const [sending, setSending] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
-  e.preventDefault();
-  setMsg("");
-  setError("");
+    e.preventDefault();
+    setMsg("");
+    setError("");
+    setSending(true);
 
-  const { error } = await supabaseBrowser.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/auth/reset`,
-  });
+    try {
+      const { error: resetError } = await supabaseBrowser.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset`,
+      });
 
-  if (error) {
-    setError("Could not send reset link.");
-    return;
+      if (resetError) {
+        setError("Could not send reset link. Please try again.");
+        return;
+      }
+
+      setMsg("A reset link has been sent to your email.");
+    } catch (requestError) {
+      console.error("Could not send password reset link", requestError);
+      setError("Could not send reset link. Please check your connection and try again.");
+    } finally {
+      setSending(false);
+    }
   }
-
-  setMsg("A reset link has been sent to your email.");
-}
-
 
   return (
     <main className="min-h-screen flex items-center justify-center px-6">
@@ -34,23 +43,30 @@ export default function ForgotPasswordPage() {
       >
         <h2 className="text-2xl font-bold text-center">Reset password</h2>
 
-        {msg && <p className="text-green-400 text-center">{msg}</p>}
-        {error && <p className="text-red-400 text-center">{error}</p>}
+        {msg && <p role="status" className="text-green-400 text-center">{msg}</p>}
+        {error && <p id="forgot-password-error" role="alert" className="text-red-400 text-center">{error}</p>}
 
-        <input
-          type="email"
-          placeholder="Your email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full px-4 py-3 rounded-lg bg-black/40 border border-white/20"
-        />
+        <FormField id="forgot-password-email" label="Email address" required>
+          <input
+            id="forgot-password-email"
+            type="email"
+            autoComplete="email"
+            required
+            disabled={sending}
+            value={email}
+            aria-invalid={Boolean(error)}
+            aria-describedby={error ? "forgot-password-error" : undefined}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full rounded-lg border border-white/20 bg-black/40 px-4 py-3 focus:border-green-400 focus:outline-none"
+          />
+        </FormField>
 
         <button
           type="submit"
-          className="w-full bg-blue-600 hover:bg-blue-700 p-3 rounded-lg font-semibold"
+          disabled={sending}
+          className="w-full rounded-lg bg-blue-600 p-3 font-semibold hover:bg-blue-700 disabled:cursor-wait disabled:opacity-60"
         >
-          Send reset link
+          {sending ? "Sending…" : "Send reset link"}
         </button>
 
         <a

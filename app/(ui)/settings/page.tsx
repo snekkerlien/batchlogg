@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createPortal } from "react-dom";
+import JSZip from "jszip";
 import MenuOverlay from "../../components/MenuOverlay";
-import ConfirmDialog from "../../components/ConfirmDialog";
 import PageHeading from "../../components/PageHeading";
 import { UnitToggle } from "../../components/Units";
 import FeedbackForm from "./FeedbackForm";
@@ -15,6 +16,7 @@ import {
 } from "../my-account/actions";
 import { saveBrewingPreferences } from "@/app/actions/userPreferences";
 import {
+  applyAccentColor,
   DEFAULT_ACCENT_COLOR,
   isAccentColor,
 } from "@/lib/theme/accentColor";
@@ -24,6 +26,40 @@ import {
   setReducedMotionPreference,
 } from "@/lib/accessibility/reducedMotion";
 
+type RestorePreview = {
+  formatVersion: number;
+  exportedAt: string | null;
+  username: string | null;
+  included: string[];
+  fileSize: number;
+};
+
+function isJsonRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+const backupContentLabels: Record<string, string> = {
+  profile: "Profile and preferences",
+  batches: "Batches, measurements, and notes",
+  vessels: "Vessels",
+  recipes: "Recipes",
+  inventory: "Inventory",
+  equipment_profiles: "Equipment profiles",
+  water_chemistry_profiles: "Water chemistry profiles",
+  batch_notes: "Batch notes and note images",
+  sg_readings: "Gravity readings",
+  batch_reminders: "Brew reminders",
+  vessel_contributors: "Vessel contributor records (sharing access is not recreated)",
+  shopping_list: "Shopping list",
+  forum_bookmarks: "Saved discussions",
+  private_messages: "Private messages",
+  feedback: "Feedback",
+  batch_aging: "Bottle-aging records",
+  batch_aging_tastings: "Bottle-aging tastings",
+  profile_avatar: "Profile picture",
+  batch_note_images: "Batch note images",
+};
+
 export default function SettingsPage() {
   const router = useRouter();
   const restoreInputRef = useRef<HTMLInputElement | null>(null);
@@ -32,6 +68,7 @@ export default function SettingsPage() {
   const [user, setUser] = useState<any>(null);
   const [accountTier, setAccountTier] = useState<"free" | "premium">("free");
   const [username, setUsername] = useState("account");
+  const [savedUsername, setSavedUsername] = useState("account");
   const [savingUsername, setSavingUsername] = useState(false);
   const [usernameError, setUsernameError] = useState("");
   const [usernameMessage, setUsernameMessage] = useState("");
@@ -42,6 +79,8 @@ export default function SettingsPage() {
   const [themeAccentMessage, setThemeAccentMessage] = useState("");
   const [useInventory, setUseInventory] = useState(false);
   const [publicProfile, setPublicProfile] = useState(true);
+  const [savingPrivacy, setSavingPrivacy] = useState(false);
+  const [privacyMessage, setPrivacyMessage] = useState("");
   const [remindersEnabled, setRemindersEnabled] = useState(true);
   const [savingPreferences, setSavingPreferences] = useState(false);
   const [preferencesMessage, setPreferencesMessage] = useState("");
@@ -63,8 +102,13 @@ export default function SettingsPage() {
   const [deleteError, setDeleteError] = useState("");
   const [showDownloadSpinner, setShowDownloadSpinner] = useState(false);
   const [downloadError, setDownloadError] = useState("");
+  const [downloadProgress, setDownloadProgress] = useState("");
   const [restoringBackup, setRestoringBackup] = useState(false);
   const [pendingRestoreFile, setPendingRestoreFile] = useState<File | null>(null);
+  const [restorePreview, setRestorePreview] = useState<RestorePreview | null>(null);
+  const [reviewingBackup, setReviewingBackup] = useState(false);
+  const [restoreReviewError, setRestoreReviewError] = useState("");
+  const [restoreProgress, setRestoreProgress] = useState("");
   const [restoreMessage, setRestoreMessage] = useState("");
 
   useEffect(() => {
@@ -94,6 +138,7 @@ export default function SettingsPage() {
       const profile = await response.json();
       if (!active) return;
       setUsername(profile.username || "account");
+      setSavedUsername(profile.username || "account");
       setAccountTier(profile.account_tier === "premium" ? "premium" : "free");
       setThemeAccentColor(
         isAccentColor(profile.theme_accent_color)
@@ -124,7 +169,7 @@ export default function SettingsPage() {
     setThemeAccentMessage("");
     try {
       await saveThemeAccentColor(themeAccentColor);
-      document.documentElement.style.setProperty("--user-accent", themeAccentColor);
+      applyAccentColor(themeAccentColor);
       window.dispatchEvent(new Event("batchlogg-preferences-saved"));
       setThemeAccentMessage("Accent color saved.");
     } catch (error) {
@@ -180,7 +225,9 @@ export default function SettingsPage() {
       if (!response.ok) {
         throw new Error(result.error || "Could not update username.");
       }
+
       setUsername(result.username);
+      setSavedUsername(result.username);
       setUsernameMessage("Username updated.");
     } catch (error) {
       console.error("Could not update username", error);
@@ -189,6 +236,22 @@ export default function SettingsPage() {
       );
     } finally {
       setSavingUsername(false);
+    }
+  }
+
+  async function changeProfileVisibility(value: boolean) {
+    setSavingPrivacy(true);
+    setPrivacyMessage("");
+    try {
+      const result = await saveBrewingPreferences({ is_public: value });
+      if (result?.saved !== true) throw new Error("Profile visibility save was not confirmed");
+      setPublicProfile(value);
+      setPrivacyMessage("Profile visibility saved.");
+    } catch (error) {
+      console.error("Could not save profile visibility", error);
+      setPrivacyMessage("Could not save profile visibility. Your previous setting is unchanged. Please try again.");
+    } finally {
+      setSavingPrivacy(false);
     }
   }
 
@@ -288,6 +351,7 @@ export default function SettingsPage() {
   async function handleDownload() {
     setShowDownloadSpinner(true);
     setDownloadError("");
+    setDownloadProgress("Preparing your ZIP export…");
     try {
       const response = await fetch("/api/account/export", {
         credentials: "include",
@@ -297,13 +361,16 @@ export default function SettingsPage() {
         const result: { error?: string } = await response.json();
         throw new Error(result.error || `Backup failed (${response.status})`);
       }
+      setDownloadProgress("Downloading your ZIP file…");
       const filename =
         response.headers
           .get("Content-Disposition")
           ?.match(/filename="([^"]+)"/)?.[1] ?? `${username}-batchlog-backup.zip`;
       await saveDownload(await response.blob(), filename);
+      setDownloadProgress("Your account export is ready.");
     } catch (error) {
       console.error("Failed to export account data", error);
+      setDownloadProgress("");
       setDownloadError(getErrorMessage(error, "Could not create your backup. Please try again."));
     } finally {
       setShowDownloadSpinner(false);
@@ -316,17 +383,73 @@ export default function SettingsPage() {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
+    setRestoreMessage("");
+    setRestoreReviewError("");
+    setRestorePreview(null);
     if (file.size > 50 * 1024 * 1024) {
-      setRestoreMessage("Backup ZIP must be 50 MB or smaller.");
+      setPendingRestoreFile(null);
+      setRestoreReviewError("Backup ZIP must be 50 MB or smaller.");
       return;
     }
     setPendingRestoreFile(file);
+    setReviewingBackup(true);
+    try {
+      const zip = await JSZip.loadAsync(file);
+      const metadataFile = zip.file("metadata.json");
+      const profileFile = zip.file("profile.json");
+      if (!metadataFile || !profileFile) {
+        throw new Error("This ZIP is missing the Batchlogg backup manifest or profile.");
+      }
+      const metadataValue: unknown = JSON.parse(await metadataFile.async("string"));
+      if (!isJsonRecord(metadataValue)) {
+        throw new Error("The backup manifest is not valid.");
+      }
+      const version = metadataValue.format_version;
+      if (
+        typeof version !== "number" ||
+        !Number.isInteger(version) ||
+        version < 1 ||
+        version > 5
+      ) {
+        throw new Error("This backup format is not supported. Choose a Batchlogg ZIP backup.");
+      }
+      const included = Array.isArray(metadataValue.included)
+        ? metadataValue.included.filter(
+            (item): item is string => typeof item === "string"
+          )
+        : Object.keys(zip.files)
+            .filter((name) => name.endsWith(".json") && name !== "metadata.json")
+            .map((name) => name.replace(/\.json$/, ""));
+      setRestorePreview({
+        formatVersion: version,
+        exportedAt:
+          typeof metadataValue.exported_at === "string"
+            ? metadataValue.exported_at
+            : null,
+        username:
+          typeof metadataValue.username === "string"
+            ? metadataValue.username
+            : null,
+        included,
+        fileSize: file.size,
+      });
+    } catch (error) {
+      console.error("Could not review account backup", error);
+      setRestoreReviewError(
+        error instanceof Error
+          ? error.message
+          : "Could not read this backup. Choose a valid Batchlogg ZIP."
+      );
+    } finally {
+      setReviewingBackup(false);
+    }
   }
 
   async function confirmRestoreBackup() {
-    if (!pendingRestoreFile) return false;
+    if (!pendingRestoreFile || !restorePreview || reviewingBackup) return;
     setRestoringBackup(true);
     setRestoreMessage("");
+    setRestoreProgress("Uploading the selected ZIP…");
     try {
       const {
         data: { session },
@@ -344,6 +467,7 @@ export default function SettingsPage() {
         });
       if (uploadError) throw new Error(`Could not upload backup: ${uploadError.message}`);
 
+      setRestoreProgress("Checking the archive and restoring your data…");
       const response = await fetch("/api/account/restore", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -355,15 +479,17 @@ export default function SettingsPage() {
         throw new Error(result.error ?? `Restore failed (${response.status})`);
       }
       setRestoreMessage(result.message ?? "Backup restored.");
-      return true;
+      setRestoreProgress("Restore complete.");
+      setPendingRestoreFile(null);
+      setRestorePreview(null);
     } catch (error) {
       console.error("Failed to restore account backup", error);
+      setRestoreProgress("");
       setRestoreMessage(
         error instanceof Error
           ? error.message
           : "Could not restore the backup. Please try again."
       );
-      return false;
     } finally {
       setRestoringBackup(false);
     }
@@ -423,7 +549,7 @@ export default function SettingsPage() {
           </p>
         )}
 
-        <section className="mb-8 border-t border-white/10 py-5">
+        <section id="appearance-units" className="mb-8 scroll-mt-6 border-t border-white/10 py-5">
           <h2 className="text-lg font-semibold text-center mb-1 text-green-300">
             Units
           </h2>
@@ -471,8 +597,8 @@ export default function SettingsPage() {
             Accessibility
           </h2>
           <p className="text-sm text-zinc-400 text-center mb-5">
-            Reduce motion hides carbonation bubbles in beer glasses, vessel cards,
-            and the background. It is off by default; you can turn it on here.
+            Reduce motion hides carbonation bubbles and minimizes animation,
+            including page transitions. Your device preference is used by default.
           </p>
           <div className="mx-auto max-w-xl">
             <label className="flex items-start gap-3">
@@ -497,7 +623,7 @@ export default function SettingsPage() {
               <span>
                 <span className="block font-medium">Reduce motion</span>
                 <span className="text-sm text-white/60">
-                  Hide carbonation bubbles throughout the site.
+                  Minimize animations and hide carbonation bubbles throughout the site.
                 </span>
               </span>
             </label>
@@ -508,12 +634,12 @@ export default function SettingsPage() {
             )}
           </div>
         </section>
-        <section className="mb-8 border-b border-white/10 pb-6">
+        <section id="notifications" className="mb-8 scroll-mt-6 border-b border-white/10 pb-6">
           <h2 className="text-lg font-semibold text-center mb-1 text-green-300">
-            Brewing preferences
+            Notifications &amp; brewing preferences
           </h2>
           <p className="text-sm text-zinc-400 text-center mb-5">
-            Choose how Batchlogg handles inventory, reminders, and your public profile.
+            Choose how Batchlogg handles inventory and reminders.
           </p>
           <div className="mx-auto max-w-xl space-y-4">
             <label className="flex items-start gap-3">
@@ -552,24 +678,6 @@ export default function SettingsPage() {
                 </span>
               </span>
             </label>
-            <label className="flex items-start gap-3">
-              <input
-                type="checkbox"
-                checked={publicProfile}
-                onChange={(event) => {
-                  const value = event.target.checked;
-                  setPublicProfile(value);
-                  saveBrewingPreference({ is_public: value });
-                }}
-                className="mt-1 h-4 w-4 accent-green-500"
-              />
-              <span>
-                <span className="block font-medium">Make my profile visible to the community</span>
-                <span className="text-sm text-white/60">
-                  This does not change the visibility of individual fermentation vessels.
-                </span>
-              </span>
-            </label>
           </div>
           <div className="mt-5 flex flex-col items-center gap-2">
             {preferencesMessage && (
@@ -580,10 +688,62 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        <section className="mb-8 border-b border-white/10 pb-6">
-          <h2 className="text-lg font-semibold text-center mb-1 text-green-300">
-            Username
+        <section id="sharing-privacy" aria-labelledby="sharing-privacy-title" className="mb-8 scroll-mt-6 border-b border-white/10 pb-6">
+          <h2 id="sharing-privacy-title" className="mb-5 text-center text-lg font-semibold text-green-300">
+            Privacy and sharing
           </h2>
+          <div className="mx-auto max-w-xl space-y-4">
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                checked={publicProfile}
+                disabled={savingPrivacy}
+                onChange={event => void changeProfileVisibility(event.target.checked)}
+                className="mt-1 h-4 w-4 accent-green-500"
+              />
+              <span>
+                <span className="block font-medium">Make my profile visible to the community</span>
+                <span className="text-sm text-white/60">
+                  {publicProfile ? "Public profile: signed-in members can see your showcase, shared vessels, public recipes, and public activity statistics." : "Private profile: other members see only your basic identity and any friend-request option. Friends can see your identity, but not your vessels or recipes through your profile."}
+                </span>
+              </span>
+            </label>
+            {privacyMessage && <p role="status" className="text-sm text-white/70">{privacyMessage}</p>}
+            <dl className="space-y-3 text-sm">
+              <div>
+                <dt className="font-semibold">Recipes</dt>
+                <dd className="text-white/65">A recipe and your profile must both be public for it to appear in Public recipes. Anyone, including signed-out visitors, can read those recipes. Change each recipe in <Link href="/my-recipes" className="text-green-200 underline">My recipes</Link>.</dd>
+              </div>
+              <div>
+                <dt className="font-semibold">Vessels and batches</dt>
+                <dd className="text-white/65">Each vessel has its own visibility switch. Shared vessels can expose their current batch, ingredients, measurements, and log entries. Open a vessel from your <Link href="/dashboard" className="text-green-200 underline">dashboard</Link> to change its visibility. Changing profile visibility does not change vessel or recipe switches.</dd>
+              </div>
+              <div>
+                <dt className="font-semibold">Forum and recipe outcomes</dt>
+                <dd className="text-white/65">Forum posts, replies, and their attachments remain public when your profile is private. Finished-batch outcomes and tasting notes use separate sharing controls when finishing a batch. Making something private does not recall copies others have already saved.</dd>
+              </div>
+              <div>
+                <dt className="font-semibold">Account details</dt>
+                <dd className="text-white/65">Your email and account settings are not shown on your member profile. Your username, avatar, membership, and account tier can still identify you when your profile is private.</dd>
+              </div>
+            </dl>
+            <Link href={`/members/${encodeURIComponent(savedUsername)}?preview=public`} className="inline-flex min-h-11 items-center rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20">
+              Preview my community profile
+            </Link>
+            <p className="text-xs text-white/50">Uses saved settings and shows the view of a signed-in member who is not your friend, without owner or admin access.</p>
+          </div>
+        </section>
+
+        <section id="profile" className="mb-8 scroll-mt-6 border-b border-white/10 pb-6">
+          <h2 className="text-lg font-semibold text-center mb-1 text-green-300">
+            Profile
+          </h2>
+          <p className="mb-4 text-center text-sm text-white/60">
+            Update your username here; change your profile picture and showcase on{" "}
+            <Link href="/my-account" className="text-green-200 underline">
+              My Account
+            </Link>.
+          </p>
           <form
             onSubmit={changeUsername}
             className="mx-auto max-w-md space-y-3"
@@ -621,10 +781,35 @@ export default function SettingsPage() {
           </form>
         </section>
 
-        <section className="mb-8 border-b border-white/10 pb-10">
-          <h2 className="text-lg font-semibold text-center mb-4 text-green-300">
-            Security
+        <section id="billing" className="mb-8 scroll-mt-6 border-b border-white/10 pb-6">
+          <h2 className="mb-2 text-center text-lg font-semibold text-green-300">
+            Billing
           </h2>
+          <p className="mb-4 text-center text-sm text-white/60">
+            {accountTier === "premium"
+              ? "Manage your Premium plan and subscription."
+              : "Compare plans and manage your Batchlogg subscription."}
+          </p>
+          <div className="text-center">
+            <Link
+              href="/premium"
+              className="inline-flex rounded-lg border border-green-500/40 bg-green-800/60 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"
+            >
+              {accountTier === "premium" ? "Manage subscription" : "View plans and billing"}
+            </Link>
+          </div>
+        </section>
+
+        <section id="account-recovery" className="mb-8 scroll-mt-6 border-b border-white/10 pb-10">
+          <h2 className="text-lg font-semibold text-center mb-4 text-green-300">
+            Account recovery &amp; security
+          </h2>
+          <p className="mb-5 text-center text-sm text-white/60">
+            Keep your sign-in email current or change your password. If you are locked out,{" "}
+            <Link href="/auth/forgot" className="text-green-200 underline">
+              reset your password
+            </Link>.
+          </p>
           {!showEmailChange ? (
             <div className="mx-auto mb-6 max-w-md text-center">
               <button
@@ -759,22 +944,46 @@ export default function SettingsPage() {
           <FeedbackForm />
         </section>
 
-        <section className="mb-8 border-b border-white/10 pb-6">
+        <section id="data" className="mb-8 scroll-mt-6 border-b border-white/10 pb-6">
           <h2 className="text-lg font-semibold text-center mb-4 text-green-300">
-            Data &amp; account
+            Your data
           </h2>
           <div className="flex flex-col items-center gap-4">
-            <p className="max-w-xl text-center text-sm text-zinc-400">
-              Your archive includes batches, readings and notes, recipes, inventory, reminders, shopping-list items, saved discussions, private messages, feedback, profile settings, and personal images. Forum posts, friendships, community uploads, passwords, sign-in credentials, and keg-tracker data are not included. Restore adds missing records and restores profile settings; existing records remain unchanged. Vessel-sharing access is not recreated, so ask vessel owners to share access again. ZIPs are limited to 50 MB.
-            </p>
+            <div className="max-w-xl space-y-3 text-sm text-zinc-300">
+              <p>
+                Export creates a ZIP archive containing JSON data files and any personal profile or batch-note images. New exports use Batchlogg backup format version 5; restore accepts versions 1–5. ZIP files must be 50 MB or smaller.
+              </p>
+              <p>
+                Included: profile preferences, vessels and batches, recipes, inventory, equipment and water profiles, notes, readings, reminders, shopping lists, saved discussions, private messages, feedback, bottle-aging data, and personal images.
+              </p>
+              <p>
+                Not included in new exports: passwords or sign-in credentials, forum posts and replies, and friendships or community uploads. Vessel contributor records may be present, but sharing access is not recreated after restore.
+              </p>
+              <p>
+                Restore adds records that are missing. If a record ID already exists, the existing record is kept unchanged. Archived profile settings are applied to your account; an archived username is skipped if another account is already using it. Restoring may therefore change your current profile preferences.
+              </p>
+            </div>
             <button
               type="button"
               onClick={handleDownload}
               disabled={showDownloadSpinner}
               className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm disabled:opacity-60"
             >
-              {showDownloadSpinner ? "Preparing backup…" : "Download my data"}
+              {showDownloadSpinner
+                ? downloadProgress || "Preparing backup…"
+                : "Download my data"}
             </button>
+            {showDownloadSpinner && (
+              <progress
+                aria-label={downloadProgress || "Preparing account export"}
+                className="h-2 w-full max-w-xs accent-green-500"
+              />
+            )}
+            {downloadProgress && (
+              <p role="status" className="text-center text-sm text-green-200">
+                {downloadProgress}
+              </p>
+            )}
             <input
               ref={restoreInputRef}
               type="file"
@@ -786,11 +995,120 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={() => restoreInputRef.current?.click()}
-              disabled={restoringBackup}
+              disabled={restoringBackup || reviewingBackup}
               className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm disabled:cursor-wait disabled:opacity-60"
             >
-              {restoringBackup ? "Restoring backup…" : "Restore from backup"}
+              {reviewingBackup
+                ? "Reviewing backup…"
+                : restoringBackup
+                  ? restoreProgress || "Restoring backup…"
+                  : "Choose a backup to restore"}
             </button>
+            {reviewingBackup && (
+              <p role="status" className="text-center text-sm text-white/70">
+                Reading the archive for your review…
+              </p>
+            )}
+            {pendingRestoreFile && (
+              <div className="w-full max-w-xl rounded-xl border border-green-400/25 bg-green-950/20 p-4">
+                <h3 className="text-base font-semibold text-green-200">
+                  Review this backup before restoring
+                </h3>
+                {restoreReviewError ? (
+                  <p role="alert" className="mt-3 text-sm text-amber-200">
+                    {restoreReviewError}
+                  </p>
+                ) : reviewingBackup || !restorePreview ? (
+                  <p role="status" className="mt-3 text-sm text-white/65">
+                    Reading ZIP contents…
+                  </p>
+                ) : (
+                  <>
+                    <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                      <div>
+                        <dt className="text-white/55">Selected file</dt>
+                        <dd className="break-all">{pendingRestoreFile.name}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-white/55">Archive size</dt>
+                        <dd>
+                          {(restorePreview.fileSize / (1024 * 1024)).toFixed(1)} MB
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-white/55">Backup format</dt>
+                        <dd>Batchlogg ZIP, version {restorePreview.formatVersion}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-white/55">Exported account</dt>
+                        <dd>{restorePreview.username || "Not specified"}</dd>
+                      </div>
+                      {restorePreview.exportedAt && (
+                        <div>
+                          <dt className="text-white/55">Exported</dt>
+                          <dd>
+                            {Number.isNaN(Date.parse(restorePreview.exportedAt))
+                              ? restorePreview.exportedAt
+                              : new Date(restorePreview.exportedAt).toLocaleString()}
+                          </dd>
+                        </div>
+                      )}
+                    </dl>
+                    <h4 className="mt-4 font-semibold">Contents in this archive</h4>
+                    <ul className="mt-1 list-inside list-disc space-y-1 text-sm text-white/75">
+                      {restorePreview.included
+                        .filter((item) => item in backupContentLabels)
+                        .map((item) => (
+                        <li key={item}>
+                          {backupContentLabels[item]}
+                        </li>
+                        ))}
+                    </ul>
+                    <div className="mt-4 rounded-lg border border-amber-300/20 bg-amber-950/25 p-3 text-sm text-amber-100">
+                      <p>
+                        Restore adds records whose IDs are missing; records with IDs already in your account stay unchanged. Profile preferences are restored over your current preferences, except a username already used by someone else is skipped. Passwords, sign-in credentials, forum posts/replies, friendships, community uploads, and vessel-sharing access are not restored.
+                      </p>
+                      <p className="mt-2">
+                        If an error occurs during restore, some earlier records may already have been restored.
+                      </p>
+                    </div>
+                  </>
+                )}
+                <div className="mt-4 flex flex-wrap justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPendingRestoreFile(null);
+                      setRestorePreview(null);
+                      setRestoreReviewError("");
+                    }}
+                    disabled={restoringBackup || reviewingBackup}
+                    className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void confirmRestoreBackup()}
+                    disabled={!restorePreview || reviewingBackup || restoringBackup}
+                    className="rounded-lg border border-green-500/40 bg-green-800/70 px-4 py-2 text-sm font-semibold hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {restoringBackup ? "Restoring…" : "Restore this backup"}
+                  </button>
+                </div>
+              </div>
+            )}
+            {restoringBackup && (
+              <div className="w-full max-w-xl" role="status" aria-live="polite">
+                <p className="mb-2 text-center text-sm text-green-200">
+                  {restoreProgress}
+                </p>
+                <progress
+                  aria-label={restoreProgress || "Restoring account data"}
+                  className="h-2 w-full accent-green-500"
+                />
+              </div>
+            )}
             {downloadError && (
               <p role="alert" className="text-center text-sm text-red-400">
                 {downloadError}
@@ -890,14 +1208,6 @@ export default function SettingsPage() {
         </div>,
         document.body
       )}
-      <ConfirmDialog
-        open={pendingRestoreFile !== null}
-        title="Restore backup?"
-        message="Add missing batches, vessels, and recipes from this backup? Existing records and your current profile settings will be left unchanged."
-        confirmLabel="Restore backup"
-        onConfirm={confirmRestoreBackup}
-        onCancel={() => setPendingRestoreFile(null)}
-      />
     </main>
   );
 }

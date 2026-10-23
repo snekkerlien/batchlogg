@@ -114,56 +114,35 @@ export default function Home() {
         </ul>
       </section>
 
-      <div className="relative z-10 mt-20 max-w-4xl space-y-16">
-        <section className="rounded-xl border border-white/10 bg-black/30 p-8 text-center backdrop-blur-md">
-          <h2 className="mb-4 text-3xl font-bold text-green-300">What is Batchlogg?</h2>
-          <p className="mx-auto mb-6 max-w-3xl text-lg opacity-90">
-            Batchlogg is the all-in-one brewing companion for the modern brewer.
-            It lets you manage vessels, log every batch, save and refine recipes,
-            track ingredients and equipment, calculate ABV, and keep a searchable
-            history of everything you brew.
-          </p>
-          <ul className="mt-10 space-y-3 text-lg opacity-90">
-            <li>Track active, secondary, and finished batches from brew day to bottle</li>
-            <li>Log gravity, dates, notes, photos, and brewer insights for every fermentation</li>
-            <li>Save and revisit recipes, ingredients, and batch details across styles and seasons</li>
-            <li>Explore public brewing recipes shared by the community</li>
-            <li>Manage your inventory and keep tabs on what you have in stock</li>
-            <li>Use ABV tools to estimate strength and plan your next brew</li>
-            <li>Visit the community forum to swap tips, ask questions, and share brewing ideas</li>
-          </ul>
-        </section>
-
-        <section className="rounded-xl border border-white/10 bg-black/30 p-8 text-center backdrop-blur-md">
-          <h2 className="mb-4 text-3xl font-bold text-green-300">
-            Everything in one brewing workspace
-          </h2>
-          <p className="mx-auto mb-6 max-w-3xl text-lg opacity-90">
-            From the dashboard to the batch history, Batchlogg gives you a clear
-            view of the full brewing process. Build a repeatable workflow, spot
-            patterns in your results, and keep all your brewing data in one place
-            instead of scattered across notes, spreadsheets, and messages.
-          </p>
-          <ul className="mt-10 space-y-3 text-lg opacity-90">
-            <li>Dashboard overview for your brewing vessels and current batches</li>
-            <li>Batch history that keeps your process searchable and easy to revisit</li>
-            <li>A personal recipe library for building and improving your best brews</li>
-            <li>Community forums, member profiles, friends, and direct messages</li>
-            <li>A social brewing space where you can connect, follow brewers, and discuss ideas</li>
-            <li>Flexible privacy settings so you can share what you want and keep the rest personal</li>
-          </ul>
-        </section>
-
-        <section className="rounded-xl border border-white/10 bg-black/30 p-8 text-center backdrop-blur-md">
-          <h2 className="mb-4 text-3xl font-bold">For brewers, by brewers</h2>
-          <p className="mx-auto max-w-3xl text-lg opacity-90">
-            Batchlogg is built for brewers who want more than a basic logbook.
-            Whether you’re brewing small experimental batches or running a larger,
-            more structured setup, the platform helps you stay organized, learn
-            from each batch, and share your work with the wider brewing community.
-          </p>
-        </section>
-      </div>
+      <section className="relative z-10 mt-12 w-full max-w-4xl rounded-xl border border-white/10 bg-black/30 p-6 text-center backdrop-blur-md sm:p-8">
+        <h2 className="text-2xl font-bold text-green-300 sm:text-3xl">
+          Plan a brew. Track every step. Improve the next.
+        </h2>
+        <p className="mx-auto mt-3 max-w-2xl text-white/75">
+          Keep your recipes, batches, and brewing notes together so every brew
+          is easier to manage and learn from.
+        </p>
+        <ul className="mt-8 grid gap-4 text-left sm:grid-cols-3">
+          <li className="rounded-lg border border-white/10 bg-white/5 p-5">
+            <h3 className="font-semibold text-green-200">Plan</h3>
+            <p className="mt-2 text-sm text-white/70">
+              Build recipes and keep your ingredients ready for brew day.
+            </p>
+          </li>
+          <li className="rounded-lg border border-white/10 bg-white/5 p-5">
+            <h3 className="font-semibold text-green-200">Brew</h3>
+            <p className="mt-2 text-sm text-white/70">
+              Track vessels, fermentation stages, measurements, and notes.
+            </p>
+          </li>
+          <li className="rounded-lg border border-white/10 bg-white/5 p-5">
+            <h3 className="font-semibold text-green-200">Improve</h3>
+            <p className="mt-2 text-sm text-white/70">
+              Revisit batch history and use what you learned in your next recipe.
+            </p>
+          </li>
+        </ul>
+      </section>
 
     </main>
   );

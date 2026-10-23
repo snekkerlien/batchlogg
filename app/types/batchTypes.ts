@@ -46,11 +46,13 @@ export interface Batch {
   // Basic batch info
   name: string;
   type: string;
-  status: "Aktiv" | "Sekundær" | "secondary" | "Ferdig" | "Other";
+  status: "Aktiv" | "Sekundær" | "secondary" | "Conditioning" | "Ferdig" | "Other";
 
   // Dates
   startdato: string;
   secondary_startdate?: string;
+  conditioning_startdate?: string;
+  conditioning_notes?: string | null;
   created_at: string;
   recipe_id?: string | null;
   recipe_snapshot?: Record<string, unknown> | null;

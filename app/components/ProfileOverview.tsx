@@ -1,7 +1,36 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import Image, { type ImageProps } from "next/image";
+import {
+  getAccessibleAccentStyle,
+  isAccentColor,
+} from "@/lib/theme/accentColor";
+import archiveAccent from "../../icons_achievements/ach_acc_archive.svg";
+import booksAccent from "../../icons_achievements/ach_acc_books.svg";
+import checkmarkAccent from "../../icons_achievements/ach_acc_checkmark.svg";
+import cogwheelsAccent from "../../icons_achievements/ach_acc_cogwheels.svg";
+import crownAccent from "../../icons_achievements/ach_acc_crown.svg";
+import fireAccent from "../../icons_achievements/ach_acc_fire.svg";
+import heartAccent from "../../icons_achievements/ach_acc_heart.svg";
+import hexagonAccent from "../../icons_achievements/ach_acc_hexagon.svg";
+import infinityAccent from "../../icons_achievements/ach_acc_infinity.svg";
+import keyAccent from "../../icons_achievements/ach_acc_key.svg";
+import laurelsAccent from "../../icons_achievements/ach_acc_laurels.svg";
+import lightbulbAccent from "../../icons_achievements/ach_acc_lightbulb.svg";
+import medalAccent from "../../icons_achievements/ach_acc_medal.svg";
+import microphoneAccent from "../../icons_achievements/ach_acc_microphone.svg";
+import penAccent from "../../icons_achievements/ach_acc_pen.svg";
+import peopleAccent from "../../icons_achievements/ach_acc_people.svg";
+import plusAccent from "../../icons_achievements/ach_acc_plus.svg";
+import shareAccent from "../../icons_achievements/ach_acc_share.svg";
+import shieldAccent from "../../icons_achievements/ach_acc_shield.svg";
+import starAccent from "../../icons_achievements/ach_acc_star.svg";
+import trophyAccent from "../../icons_achievements/ach_acc_trophy.svg";
+import brewCategory from "../../icons_achievements/ach_brew.svg";
+import forumCategory from "../../icons_achievements/ach_forum.svg";
+import recipesCategory from "../../icons_achievements/ach_recepies.svg";
 
 type ProfileStats = {
   totalBatches: number;
@@ -33,9 +62,9 @@ const CATEGORIES: {
       ["First Batch", 1],
       ["Brew Day Regular", 5],
       ["Kettle Companion", 10],
-      ["Finding Your Rhythm", 20],
+      ["Brew Rhythm", 20],
       ["Steady Ferment", 35],
-      ["The Usual Batch", 50],
+      ["Batch Fifty", 50],
       ["Brewery Regular", 75],
       ["Century of Brews", 100],
       ["Kettle Keeper", 150],
@@ -80,6 +109,7 @@ const CATEGORIES: {
       ["Recipe Ambassador", 150],
       ["Shared Cellar", 200],
       ["Open Source Cellar", 300],
+      ["The Great Recipe Exchange", 500],
     ],
   },
   {
@@ -265,253 +295,151 @@ function ProgressionIcon({
 function AchievementIcon({
   name,
   stat,
-  tierIndex,
   unlocked,
   className = "h-11 w-11",
 }: {
   name: string;
   stat: keyof ProfileStats;
-  tierIndex: number;
   unlocked: boolean;
   className?: string;
 }) {
-let symbol: ReactNode;
-
-  switch (name) {
-    case "First Batch":
-      symbol = (
-        <>
-          <path d="M15 21h18v13H15zM12 21h24m-15 0v-5h10v5m-16 4h4m14 0h4" />
-          <path d="M20 16c-2-2 1-3 0-5m6 5c-2-2 1-3 0-5" />
-        </>
-      );
-      break;
-    case "Finding Your Rhythm":
-      symbol = (
-        <>
-          <path d="M13 30h22l-3 8H16l-3-8Zm4 0 3-12h8l3 12" />
-          <path d="m19 14 3-4m4 5 2-5m3 7 4-3" />
-          <path d="M17 34h14m-7-16v-5" />
-        </>
-      );
-      break;
-    case "Brewery Regular":
-      symbol = (
-        <>
-          <path d="M17 13h14v23H17zM14 13h20m-13 7h12m-12 5h12" />
-          <path d="M24 13V8m-3 0h6m1 13h7v5h-7m7 0v4" />
-        </>
-      );
-      break;
-    case "Cellar Builder":
-      symbol = (
-        <>
-          <path d="M16 13c0 4 2 7 2 11s-2 8-2 13m16-24c0 4-2 7-2 11s2 8 2 13M16 13h16M16 37h16m-14-7h12m-12-12h12" />
-          <path d="M13 20h3m16 0h3M13 30h3m16 0h3" />
-        </>
-      );
-      break;
-    case "Century of Brews":
-      symbol = (
-        <>
-          <path d="M15 21h18v15H15zM12 21h24m-20 5h14m-14 5h14" />
-          <path d="m18 16 3-5 3 5 3-5 3 5m-6-5V7" />
-          <path d="m13 15-3-3m25 3 3-3" />
-        </>
-      );
-      break;
-    case "Grand Brewmaster":
-      symbol = (
-        <>
-          <path d="m12 17 3-9 8 6 8-6 3 9v4H12v-4Z" />
-          <path d="M12 21h22v15H12zM16 27h14m-14 5h14m5-15h3" />
-          <circle cx="15" cy="13" r="1" /><circle cx="24" cy="13" r="1" /><circle cx="33" cy="13" r="1" />
-        </>
-      );
-      break;
-    case "Brewing Legend":
-      symbol = (
-        <>
-          <path d="M24 37V15m0 10c-6 0-10-4-10-10 6 0 10 4 10 10Zm0-6c0-7 4-11 11-11 0 7-4 11-11 11Z" />
-          <path d="M18 17c-5 0-8-3-8-8 5 0 8 3 8 8Zm12 0c5 0 8-3 8-8-5 0-8 3-8 8ZM18 28c-5 0-8 3-8 8 5 0 8-3 8-8Zm12 0c5 0 8 3 8 8-5 0-8-3-8-8Z" />
-          <path d="M17 40h14" />
-        </>
-      );
-      break;
-    case "First Recipe":
-      symbol = (
-        <>
-          <path d="M15 11h18v27H15zM19 17h10m-10 5h10m-10 5h7" />
-          <path d="m27 33 7-7 3 3-7 7-4 1 1-4Z" />
-        </>
-      );
-      break;
-    case "Recipe Developer":
-      symbol = (
-        <>
-          <path d="M14 25h20l-3 11H17l-3-11Zm-2 0h24" />
-          <path d="M18 21c-2-3 2-4 0-7m7 7c-2-3 2-4 0-7m7 7c-2-3 2-4 0-7" />
-          <path d="m18 29 2 2m6-2 2 2m-1 9h-6" />
-        </>
-      );
-      break;
-    case "Recipe Library":
-      symbol = (
-        <>
-          <path d="M13 15h8v22h-8zm11-4h9v26h-9z" />
-          <path d="M14 19h6m-6 4h6m7-4h5m-5 4h5M13 37h21" />
-        </>
-      );
-      break;
-    case "Recipe Master":
-      symbol = (
-        <>
-          <path d="m13 23 4-9 7 6 7-6 4 9-3 14H16l-3-14Z" />
-          <path d="M18 25h12m-11 5h10m-9 4h8" />
-          <path d="m13 23-4-3m30 3 4-3" />
-        </>
-      );
-      break;
-    case "Recipe Archive":
-      symbol = (
-        <>
-          <path d="M12 15h24v22H12zM16 15v-4h16v4" />
-          <path d="M16 21h16v5H16zm0 8h16v5H16zM21 21v5m6-5v5m-6 3v5m6-5v5" />
-        </>
-      );
-      break;
-    case "Recipe Sage":
-      symbol = (
-        <>
-          <path d="M12 16c5-2 9-1 12 2 3-3 7-4 12-2v19c-5-2-9-1-12 2-3-3-7-4-12-2V16Z" />
-          <path d="M24 18v19m-8-15c2-.5 4-.3 5 0m-5 5c2-.5 4-.3 5 0m7-5c2-.5 4-.5 5 0" />
-          <path d="m16 10 2 2m14-2-2 2m-6-5v3" />
-        </>
-      );
-      break;
-    case "First Share":
-      symbol = (
-        <>
-          <circle cx="15" cy="24" r="4" />
-          <circle cx="33" cy="14" r="4" />
-          <circle cx="33" cy="34" r="4" />
-          <path d="m19 22 10-6m-10 10 10 6" />
-        </>
-      );
-      break;
-    case "Open Cellar":
-      symbol = (
-        <>
-          <path d="M12 37V20a12 12 0 0 1 24 0v17H12Z" />
-          <path d="M16 37V21a8 8 0 0 1 16 0v16" />
-          <path d="M16 21 28 15v18l-12 4V21Zm13 8h1" />
-          <path d="M11 38h26" />
-        </>
-      );
-      break;
-    case "Community Cookbook":
-      symbol = (
-        <>
-          <path d="M12 15c5-2 9-1 12 2 3-3 7-4 12-2v20c-5-2-9-1-12 2-3-3-7-4-12-2V15Z" />
-          <path d="M24 17v20m-8-15c2-.5 4-.3 5 0m-5 5c2-.5 4-.3 5 0m7-5c2-.5 4-.5 5 0m-5 5c2-.5 4-.5 5 0" />
-        </>
-      );
-      break;
-    case "Recipe Ambassador":
-      symbol = (
-        <>
-          <path d="M12 15h13v22H12zM16 20h5m-5 5h5" />
-          <path d="m30 13 2 4 5 .7-3.5 3.4.8 5-4.3-2.3-4.3 2.3.8-5-3.5-3.4 5-.7 2-4Z" />
-          <path d="M29 30h8m-4-4v8" />
-        </>
-      );
-      break;
-    case "Open Source Cellar":
-      symbol = (
-        <>
-          <path d="m11 18 13-7 13 7-13 7-13-7Zm1 5 12 7 12-7m-24 5 12 7 12-7" />
-          <path d="M24 25v12m-5-17 10-5m-1 10 5-3" />
-        </>
-      );
-      break;
-    case "First Conversation":
-      symbol = (
-        <>
-          <path d="M11 13h26v17H23l-8 6v-6h-4V13Z" />
-          <path d="M17 20h14m-14 5h9" />
-        </>
-      );
-      break;
-    case "Community Contributor":
-      symbol = (
-        <>
-          <path d="M10 13h23v15H20l-7 5v-5h-3V13Z" />
-          <path d="M23 20h15v13h-4v5l-7-5h-4" />
-          <path d="M15 19h12m-12 5h8" />
-        </>
-      );
-      break;
-    case "Community Regular":
-      symbol = (
-        <>
-          <circle cx="24" cy="15" r="5" />
-          <circle cx="13" cy="19" r="4" />
-          <circle cx="35" cy="19" r="4" />
-          <path d="M14 36c0-7 4-11 10-11s10 4 10 11m-23-2c0-5 2-8 6-9m21 9c0-5-2-8-6-9" />
-        </>
-      );
-      break;
-    case "Forum Veteran":
-      symbol = (
-        <>
-          <path d="M11 12h25v17H23l-8 6v-6h-4V12Z" />
-          <path d="m23 16 2 4 4 .6-3 3 .7 4.4-3.7-2-3.7 2 .7-4.4-3-3 4-.6 2-4Z" />
-          <path d="M16 31h14" />
-        </>
-      );
-      break;
-    case "Community Pillar":
-      symbol = (
-        <g transform="translate(6 6) scale(0.75)">
-          <path d="M24 8 35 14H13l11-6Z" />
-          <path d="M15 17h18m-16 0v17m14-17v17M12 36h24m-22-3h20" />
-          <circle cx="9" cy="22" r="3" />
-          <circle cx="39" cy="22" r="3" />
-          <circle cx="24" cy="29" r="3" />
-          <path d="M4 34c0-4 2-6 5-6 2 0 4 1 4 4m22 2c0-4 2-6 5-6s5 2 5 6m-26 4c0-4 2-6 6-6s6 2 6 6" />
-        </g>
-      );
-      break;
-    default:
-      symbol = <ProgressionIcon stat={stat} tierIndex={tierIndex} />;
-  }
-
+  const categoryIcon = CATEGORY_ICONS[stat];
+  const accentIcon = ACHIEVEMENT_ACCENTS[name];
+  const customAccent = CUSTOM_ACHIEVEMENT_ACCENTS[name];
   return (
-    <svg
-      viewBox="0 0 48 48"
-      aria-hidden="true"
-      className={`${className} shrink-0 ${
-        unlocked ? "text-green-200" : "text-white/50"
+    <span
+      className={`${className} relative block shrink-0 ${
+        unlocked ? "" : "opacity-70 grayscale"
       }`}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      aria-hidden="true"
     >
-      <circle
-        cx="24"
-        cy="24"
-        r="21"
-        fill="currentColor"
-        fillOpacity={unlocked ? 0.1 : 0.04}
-        strokeOpacity={unlocked ? 0.5 : 0.25}
-      />
-      <circle cx="24" cy="24" r="17" strokeOpacity="0.18" strokeDasharray="1 3" />
-      <g>{symbol}</g>
-    </svg>
+      <svg viewBox="0 0 950.02 919.74" className="h-full w-full">
+        <circle cx="458.87" cy="459.87" r="449.87" fill="var(--user-accent)" />
+        <path
+          d="M909.58,459.87c0,248.45-201.42,449.87-449.87,449.87S19.13,717.48,10.16,476.93c331.55-23.85,435.56-177.37,668.38-189.61,58.39-3.07,124.9,2.75,205.13,21.75,16.78,47.14,25.91,97.9,25.91,150.8Z"
+          fill="color-mix(in srgb, var(--user-accent) 78%, black)"
+          stroke="color-mix(in srgb, var(--user-accent) 45%, white)"
+          strokeWidth="15"
+          strokeLinejoin="round"
+        />
+        <circle
+          cx="459.87"
+          cy="459.87"
+          r="449.87"
+          fill="none"
+          stroke="#282828"
+          strokeWidth="20"
+        />
+      </svg>
+      <span className="absolute left-[12%] top-[12%] h-[76%] w-[76%]">
+        <Image
+          src={categoryIcon}
+          alt=""
+          fill
+          sizes="48px"
+          className="object-contain"
+          unoptimized
+        />
+      </span>
+      <span
+        className="absolute bottom-[2%] right-[2%] flex h-[42%] w-[42%] items-center justify-center rounded-full border-2 border-[#282828] p-[3%] shadow-md"
+        style={{
+          backgroundColor: "color-mix(in srgb, var(--user-accent) 45%, black)",
+        }}
+      >
+        {accentIcon ? (
+          <span className="relative block h-full w-full">
+            <Image
+              src={accentIcon}
+              alt=""
+              fill
+              sizes="32px"
+              className="object-contain invert"
+              unoptimized
+            />
+          </span>
+        ) : (
+          <svg
+            viewBox="6 6 36 36"
+            className="h-full w-full text-white"
+            fill="currentColor"
+            stroke="#282828"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            paintOrder="stroke"
+          >
+            {customAccent}
+          </svg>
+        )}
+      </span>
+    </span>
   );
 }
+
+const CATEGORY_ICONS: Record<keyof ProfileStats, ImageProps["src"]> = {
+  totalBatches: brewCategory,
+  totalRecipes: recipesCategory,
+  publicRecipes: recipesCategory,
+  forumPosts: forumCategory,
+};
+
+const ACHIEVEMENT_ACCENTS: Record<string, ImageProps["src"]> = {
+  "Brew Day Regular": fireAccent,
+  "Brew Rhythm": cogwheelsAccent,
+  "Steady Ferment": infinityAccent,
+  "Century of Brews": trophyAccent,
+  "Brewing Legend": hexagonAccent,
+  "First Recipe": penAccent,
+  "Recipe Notebook": booksAccent,
+  "Recipe Designer": crownAccent,
+  "Recipe Library": archiveAccent,
+  "Recipe Sage": lightbulbAccent,
+  "First Share": shareAccent,
+  "Recipe Friend": peopleAccent,
+  "Open Cellar": keyAccent,
+  "Shared Inspiration": heartAccent,
+  "Open Source Cellar": starAccent,
+  "First Conversation": microphoneAccent,
+  "Community Contributor": checkmarkAccent,
+  "Forum Veteran": medalAccent,
+  "Community Pillar": laurelsAccent,
+  "Community Champion": shieldAccent,
+  "Helpful Regular": plusAccent,
+};
+
+const CUSTOM_ACHIEVEMENT_ACCENTS: Record<string, ReactNode> = {
+  "First Batch": <><path d="M14 19h20v20H14zM11 19h26m-20 0v-6h12v6" /><path d="M18 25h12m-12 6h12" /><circle cx="18" cy="35" r="1" /><circle cx="30" cy="35" r="1" /></>,
+  "Kettle Companion": <><path d="M14 19h20v20H14zM11 19h26m-20 0v-6h12v6" /><path d="M20 25c-3-4-8 0-4 4l8 7 8-7c4-4-1-8-4-4l-4 4-4-4Z" /></>,
+  "Batch Fifty": <><circle cx="24" cy="24" r="15" /><path d="M14 14c2-2 4-3 6-4m14 4c-2-2-4-3-6-4" /><text x="24" y="28" textAnchor="middle" fontSize="11" fontWeight="900" strokeWidth="0.7">50</text><path fill="none" d="M18 34h12" /></>,
+  "Brewery Regular": <><path d="M15 11h18v29H15zM12 11h24m-18 6h12v10H18z" /><path d="M19 33h10m-7 0v7m4-7v7" /></>,
+  "Kettle Keeper": <><path d="M12 23h24l-3 15H15l-3-15Zm-2 0h28M17 19c0-5 3-8 7-8s7 3 7 8m-7-8V7" /><path d="M20 28h8m-4-4v8" /></>,
+  "Brew Enthusiast": <><path d="M12 30h24m-19-4 3-11 7 7 7-7 3 11" /><path d="m17 37 7-4 7 4m-7-4v7" /><circle cx="15" cy="11" r="1" /><circle cx="24" cy="8" r="1.5" /><circle cx="33" cy="11" r="1" /></>,
+  "Cellar Builder": <><path d="M13 18h22v21H13zM10 18h28M17 18v21m14-21v21M13 28h22" /><path d="M16 13h16m-12-5h8" /></>,
+  "Seasoned Brewer": <><path d="M24 8c-2 8-9 12-9 21a9 9 0 0 0 18 0c0-9-7-13-9-21Z" /><path d="M20 30c2 2 6 2 8 0m-4-9v-5m-8 15 3-2m13 2-3-2" /></>,
+  "Fermentation Fanatic": <><path d="M19 10h10m-8 0v12l-7 13a3 3 0 0 0 3 5h14a3 3 0 0 0 3-5l-7-13V10" /><path d="M17 32h14m-11-5h8" /><circle cx="22" cy="29" r="1" /><circle cx="27" cy="24" r="1" /></>,
+  "Grand Brewmaster": <><path d="m12 20 3-10 9 6 9-6 3 10v4H12v-4Z" /><path d="M15 24h18v15H15zM19 30h10m-10 5h10" /><circle cx="17" cy="17" r="1" /><circle cx="24" cy="17" r="1" /><circle cx="31" cy="17" r="1" /></>,
+  "Recipe Tinkerer": <><path d="M15 13h18v26H15zM19 19h10m-10 5h6" /><path d="m28 31 7-7 3 3-7 7-4 1 1-4Z" /><circle cx="18" cy="33" r="1" /></>,
+  "Recipe Developer": <><path d="M13 27h22l-3 12H16l-3-12Zm-2 0h26" /><path d="M18 23c-2-3 2-4 0-7m7 7c-2-3 2-4 0-7m7 7c-2-3 2-4 0-7" /><path d="m19 32 2 2m6-2 2 2" /></>,
+  "Recipe Architect": <><path d="M12 37 30 11l6 4-18 26-6-4Z" /><path d="m25 18 5 4m-9 1 5 4m-9 1 5 4m-9 1 5 4" /><path d="M11 40h26" /></>,
+  "Recipe Collector": <><path d="M14 13h20v27H14zM11 13h26" /><path d="M19 20h10m-10 5h10m-10 5h10m-10 5h6" /><path d="m29 9 2 2 4-5" /></>,
+  "Recipe Curator": <><path d="M15 12h21v28H15zM12 12h25" /><path d="m19 22 2 2 4-5m-6 12 2 2 4-5m2-7h5m-5 12h5" /></>,
+  "Recipe Master": <><path d="M24 8v31m0-19c-7 0-11-4-11-11 7 0 11 4 11 11Zm0-5c0-7 4-11 11-11 0 7-4 11-11 11Z" /><path d="M17 39h14m-12-5 5 5m7-5-5 5" /></>,
+  "Recipe Archive": <><path d="M12 14h24v26H12zM9 14h30v-5H9z" /><path d="M18 20h12v6H18zm0 10h12v6H18zM24 20v6m0 4v6" /></>,
+  "Generous Brewer": <><path d="M24 39s-13-8-13-18a7 7 0 0 1 13-4 7 7 0 0 1 13 4c0 10-13 18-13 18Z" /><path d="M18 25h4l2-4 3 9 2-5h3" /></>,
+  "Open Recipe Shelf": <><path d="M11 15h26v24H11zM9 15h30m-24 8h20m-20 8h20" /><path d="M16 10h6v5m5-5h6v5" /></>,
+  "Community Cookbook": <><path d="M12 13c5-2 9-1 12 2 3-3 7-4 12-2v25c-5-2-9-1-12 2-3-3-7-4-12-2V13Z" /><path d="M24 15v25m-8-20h5m7 0h5m-17 6h5m7 0h5" /></>,
+  "Recipe Advocate": <><path d="M12 13h25v18H23l-8 6v-6h-3V13Z" /><path d="M18 20h14m-14 5h9m8 7 3 3 5-7" /></>,
+  "Recipe Ambassador": <><path d="M12 14h15v25H12zM16 20h7m-7 5h7" /><path d="m33 12 2 5 5 1-4 4 1 5-4-3-5 3 1-5-3-4 5-1 2-5Z" /></>,
+  "Shared Cellar": <><path d="M13 14h22v25H13zM10 14h28" /><path d="M17 20h14v7H17zm0 11h14v5H17zM21 20v7m6-7v7" /></>,
+  "Friendly Voice": <><circle cx="24" cy="17" r="6" /><path d="M12 39c1-8 5-13 12-13s11 5 12 13" /><path d="M17 18c2 2 4 3 7 3s5-1 7-3" /></>,
+  "Conversation Starter": <><path d="M11 12h26v19H23l-8 6v-6h-4V12Z" /><path d="M24 17v10m-5-5h10" /><circle cx="24" cy="22" r="11" /></>,
+  "Brewing Buddy": <><circle cx="18" cy="18" r="5" /><circle cx="31" cy="18" r="5" /><path d="M9 38c0-7 3-11 9-11 3 0 5 1 6 3 2-2 4-3 7-3 6 0 9 4 9 11" /><path d="m19 32 5 5 5-5" /></>,
+  "Community Regular": <><circle cx="24" cy="15" r="5" /><circle cx="12" cy="20" r="4" /><circle cx="36" cy="20" r="4" /><path d="M14 38c0-7 4-11 10-11s10 4 10 11m-23-2c0-5 2-8 6-9m21 9c0-5-2-8-6-9" /></>,
+  "Welcoming Presence": <><path d="M24 39s-13-8-13-18a7 7 0 0 1 13-4 7 7 0 0 1 13 4c0 10-13 18-13 18Z" /><path d="M18 25h12m-6-6v12" /></>,
+  "Community Guide": <><path d="m24 8 4 11 12 1-9 8 3 12-10-6-10 6 3-12-9-8 12-1 4-11Z" /><path d="M24 19v11m-4-5h8" /></>,
+  "The Great Recipe Exchange": <><path d="M7 13h8l4 4v21H7zM29 13h8l4 4v21h-8z" /><path fill="none" d="M10 21h6m-6 5h6m17-5h6m-6 5h6" /><path d="M19 17h8v-3l5 5-5 5v-3h-8zM29 29h-8v-3l-5 5 5 5v-3h8z" /></>,
+};
 
 function ProgressRing({
   ratio,
@@ -583,12 +511,19 @@ export default function ProfileOverview({ stats }: { stats: ProfileStats }) {
 export function ProfileAchievements({
   stats,
   showProgress = true,
+  accentColor,
+  categoryPercentiles,
 }: {
   stats: ProfileStats;
   showProgress?: boolean;
+  accentColor?: string | null;
+  categoryPercentiles?: Record<string, number | null> | null;
 }) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
+  const accentStyle: CSSProperties = isAccentColor(accentColor)
+    ? getAccessibleAccentStyle(accentColor)
+    : {};
   const achievements = CATEGORIES.flatMap(({ name: category, stat, tiers }) =>
     tiers.map(([name, goal], tierIndex): Achievement => {
       const progress = Math.max(0, stats[stat]);
@@ -619,7 +554,10 @@ export function ProfileAchievements({
     visibleAchievements.find((achievement) => achievement.name === selected) ?? null;
 
   return (
-    <section className="mt-10 rounded-xl border border-white/10 bg-white/5 p-5">
+    <section
+      className="mt-10 rounded-xl border border-white/10 bg-white/5 p-5"
+      style={accentStyle}
+    >
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -639,25 +577,31 @@ export function ProfileAchievements({
         </span>
       </button>
       {!open && earnedHighlights.length > 0 && (
-        <ul className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <ul className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
           {earnedHighlights.map((achievement) => (
             <li
               key={achievement.name}
-              className="flex min-w-0 items-center gap-2 rounded-lg border border-green-300/15 bg-green-300/5 p-2"
+              className="flex min-w-0 items-center gap-3 rounded-lg border border-green-300/15 bg-green-300/5 p-3 transition-colors hover:bg-green-300/10"
             >
               <AchievementIcon
                 name={achievement.name}
                 stat={achievement.stat}
-                tierIndex={achievement.tierIndex}
                 unlocked={achievement.unlocked}
-                className="h-10 w-10"
+                className="h-12 w-12"
               />
-              <span className="min-w-0">
-                <span className="block text-[10px] text-white/50">
+              <span className="min-w-0 flex-1">
+                <span className="block text-[10px] font-medium uppercase tracking-wider text-white/50">
                   {achievement.category}
                 </span>
-                <span className="block truncate text-xs font-semibold text-white/85">
-                  {achievement.name}
+                <span className="mt-0.5 flex min-w-0 items-center justify-between gap-2">
+                  <span className="min-w-0 text-xs font-semibold leading-snug text-white/90">
+                    {achievement.name}
+                  </span>
+                  {typeof categoryPercentiles?.[achievement.category] === "number" && (
+                    <span className="shrink-0 rounded-full border border-green-300/20 bg-green-300/10 px-2 py-1 text-[9px] font-semibold uppercase tracking-wide text-green-200">
+                      Top {categoryPercentiles[achievement.category]}%
+                    </span>
+                  )}
                 </span>
               </span>
             </li>
@@ -692,7 +636,7 @@ export function ProfileAchievements({
                       : `${categoryEarned} earned`}
                   </span>
                 </div>
-                <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                   {categoryAchievements.map((achievement) => (
                     <li key={achievement.name}>
                       <button
@@ -708,9 +652,8 @@ export function ProfileAchievements({
                         <AchievementIcon
                           name={achievement.name}
                           stat={achievement.stat}
-                          tierIndex={achievement.tierIndex}
                           unlocked={achievement.unlocked}
-                          className="h-10 w-10"
+                          className="h-14 w-14"
                         />
                         <span className="min-w-0">
                           <span className="block text-xs font-semibold text-white/90">
@@ -757,7 +700,6 @@ export function ProfileAchievements({
                 <AchievementIcon
                   name={active.name}
                   stat={active.stat}
-                  tierIndex={active.tierIndex}
                   unlocked={active.unlocked}
                   className="h-14 w-14"
                 />

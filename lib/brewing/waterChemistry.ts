@@ -159,6 +159,12 @@ export function calculateWaterTreatment(
     0,
     predicted.bicarbonate - target.bicarbonate
   );
+  const lacticAcid88 =
+    ((bicarbonateReduction / 61.0168) * volumeL) / 11.78;
+  if (
+    [...Object.values(predicted), calciumChloride, gypsum, epsomSalt, sodiumBicarbonate, lacticAcid88]
+      .some(value => !Number.isFinite(value))
+  ) return null;
 
   return {
     additions: {
@@ -166,8 +172,7 @@ export function calculateWaterTreatment(
       gypsum,
       epsomSalt,
       bakingSoda: sodiumBicarbonate,
-      lacticAcid88:
-        ((bicarbonateReduction / 61.0168) * volumeL) / 11.78,
+      lacticAcid88,
     },
     predicted,
   };

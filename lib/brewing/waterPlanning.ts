@@ -25,6 +25,7 @@ export function calculateBrewWaterPlan(
   if (
     input.targetFermenterVolumeL <= 0 ||
     input.boilTimeMinutes <= 0 ||
+    input.grainBillKg <= 0 ||
     input.mashRatioLPerKg <= 0
   ) {
     return null;
@@ -41,7 +42,11 @@ export function calculateBrewWaterPlan(
     preBoilVolumeL + grainAbsorptionL + input.mashTunDeadSpaceL;
   const spargeWaterL = totalWaterL - mashWaterL;
 
-  if (spargeWaterL < 0) return null;
+  if (
+    spargeWaterL < 0 ||
+    [boilOffL, preBoilVolumeL, mashWaterL, spargeWaterL, totalWaterL]
+      .some(value => !Number.isFinite(value))
+  ) return null;
 
   return {
     boilOffL,

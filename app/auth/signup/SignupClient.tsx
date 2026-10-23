@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
+import FormField from "@/app/components/FormField";
 
 type SignupStep = "username" | "credentials";
 
@@ -14,6 +15,9 @@ export default function SignupClient() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
+  const [errorField, setErrorField] = useState<
+    "username" | "email" | "password" | "confirmPassword" | null
+  >(null);
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [creatingAccount, setCreatingAccount] = useState(false);
 
@@ -30,14 +34,17 @@ export default function SignupClient() {
   async function handleUsernameSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    setErrorField(null);
 
     const normalizedUsername = username.trim().toLowerCase();
     if (!normalizedUsername) {
       setError("Please choose a username.");
+      setErrorField("username");
       return;
     }
     if (normalizedUsername.length > 64) {
       setError("Username must be 64 characters or fewer.");
+      setErrorField("username");
       return;
     }
 
@@ -54,6 +61,7 @@ export default function SignupClient() {
       }
       if (!result.available) {
         setError("That username is already taken. Please choose another.");
+        setErrorField("username");
         return;
       }
 
@@ -66,6 +74,7 @@ export default function SignupClient() {
           ? availabilityError.message
           : "Could not check username availability. Please try again."
       );
+      setErrorField("username");
     } finally {
       setCheckingUsername(false);
     }
@@ -74,21 +83,31 @@ export default function SignupClient() {
   async function handleSignup(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    setErrorField(null);
 
     const normalizedEmail = email.trim();
     if (!username || !normalizedEmail || !password || !confirmPassword) {
       setError("All fields are required.");
+      setErrorField(
+        !normalizedEmail
+          ? "email"
+          : !password
+            ? "password"
+            : "confirmPassword"
+      );
       return;
     }
 
     const passwordError = validatePassword(password);
     if (passwordError) {
       setError(passwordError);
+      setErrorField("password");
       return;
     }
 
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
+      setErrorField("confirmPassword");
       return;
     }
 
@@ -180,18 +199,22 @@ export default function SignupClient() {
             <p className="text-center text-sm text-white/70">
               Step 1 of 2: Choose a username
             </p>
-            <input
-              type="text"
-              name="username"
-              placeholder="Username"
-              value={username}
-              maxLength={64}
-              autoComplete="username"
-              required
-              disabled={checkingUsername}
-              onChange={(event) => setUsername(event.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-black/40 border border-white/20"
-            />
+            <FormField id="signup-username" label="Username" required>
+              <input
+                id="signup-username"
+                type="text"
+                name="username"
+                value={username}
+                maxLength={64}
+                autoComplete="username"
+                required
+                disabled={checkingUsername}
+                aria-invalid={errorField === "username"}
+                aria-describedby={error ? "signup-error" : undefined}
+                onChange={(event) => setUsername(event.target.value)}
+                className="w-full rounded-lg border border-white/20 bg-black/40 px-4 py-3 focus:border-green-400 focus:outline-none"
+              />
+            </FormField>
             <button
               type="submit"
               disabled={checkingUsername}
@@ -208,39 +231,56 @@ export default function SignupClient() {
             <p className="text-center text-sm text-green-300">
               Username “{username}” is available.
             </p>
-            <input
-              type="email"
-              name="email"
-              placeholder="Email"
-              value={email}
-              autoComplete="email"
+            <FormField id="signup-email" label="Email address" required>
+              <input
+                id="signup-email"
+                type="email"
+                name="email"
+                value={email}
+                autoComplete="email"
+                required
+                disabled={creatingAccount}
+                aria-invalid={errorField === "email"}
+                aria-describedby={error ? "signup-error" : undefined}
+                onChange={(event) => setEmail(event.target.value)}
+                className="w-full rounded-lg border border-white/20 bg-black/40 px-4 py-3 focus:border-green-400 focus:outline-none"
+              />
+            </FormField>
+            <FormField
+              id="signup-password"
+              label="Password"
               required
-              disabled={creatingAccount}
-              onChange={(event) => setEmail(event.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-black/40 border border-white/20"
-            />
-            <input
-              type="password"
-              name="password"
-              placeholder="Password"
-              value={password}
-              autoComplete="new-password"
-              required
-              disabled={creatingAccount}
-              onChange={(event) => setPassword(event.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-black/40 border border-white/20"
-            />
-            <input
-              type="password"
-              name="confirmPassword"
-              placeholder="Confirm password"
-              value={confirmPassword}
-              autoComplete="new-password"
-              required
-              disabled={creatingAccount}
-              onChange={(event) => setConfirmPassword(event.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-black/40 border border-white/20"
-            />
+              hint="At least 8 characters and one uppercase letter."
+            >
+              <input
+                id="signup-password"
+                type="password"
+                name="password"
+                value={password}
+                autoComplete="new-password"
+                required
+                disabled={creatingAccount}
+                aria-invalid={errorField === "password"}
+                aria-describedby={error ? "signup-error" : undefined}
+                onChange={(event) => setPassword(event.target.value)}
+                className="w-full rounded-lg border border-white/20 bg-black/40 px-4 py-3 focus:border-green-400 focus:outline-none"
+              />
+            </FormField>
+            <FormField id="signup-confirm-password" label="Confirm password" required>
+              <input
+                id="signup-confirm-password"
+                type="password"
+                name="confirmPassword"
+                value={confirmPassword}
+                autoComplete="new-password"
+                required
+                disabled={creatingAccount}
+                aria-invalid={errorField === "confirmPassword"}
+                aria-describedby={error ? "signup-error" : undefined}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                className="w-full rounded-lg border border-white/20 bg-black/40 px-4 py-3 focus:border-green-400 focus:outline-none"
+              />
+            </FormField>
             <button
               type="submit"
               disabled={creatingAccount}
@@ -263,7 +303,7 @@ export default function SignupClient() {
         )}
 
         {error && (
-          <p role="alert" className="text-red-400 text-sm text-center">
+          <p id="signup-error" role="alert" className="text-red-400 text-sm text-center">
             {error}
           </p>
         )}

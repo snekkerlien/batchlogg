@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import FormField from "@/app/components/FormField";
 import {
   getInventorySubcategoryOptions,
   INVENTORY_CATEGORIES,
@@ -31,6 +32,8 @@ export default function AddItemForm({
     ebc: "",
     hop_year: "",
   });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const isHop = form.category === "hops";
   const isMalt = form.category === "malts";
   const itemType =
@@ -52,133 +55,176 @@ export default function AddItemForm({
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setSaving(true);
+    setError("");
 
-    const fd = new FormData();
-    Object.entries(form).forEach(([key, value]) =>
-      fd.set(key, value.toString())
-    );
+    try {
+      const fd = new FormData();
+      Object.entries(form).forEach(([key, value]) =>
+        fd.set(key, value.toString())
+      );
 
-    await onAddItem(fd);
+      await onAddItem(fd);
 
-    onSubmitComplete?.();
+      onSubmitComplete?.();
+    } catch (submitError) {
+      console.error("Could not add inventory item", submitError);
+      setError("Could not add this item. Please check the values and try again.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <input
-        required
-        className="p-3 bg-black/40 border border-white/20 rounded"
-        placeholder={isMalt ? "Malt type" : isHop ? "Hop type" : "Name"}
-        value={form.name}
-        onChange={(e) => setForm({ ...form, name: e.target.value })}
-      />
+    <form onSubmit={handleSubmit} aria-busy={saving} className="flex flex-col gap-4">
+      <FormField id="inventory-add-name" label={isMalt ? "Malt type" : isHop ? "Hop type" : "Name"} required>
+        <input
+          id="inventory-add-name"
+          required
+          disabled={saving}
+          className="w-full rounded border border-white/20 bg-black/40 p-3 focus:border-green-400 focus:outline-none"
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+        />
+      </FormField>
 
       {fixedCategory ? (
         <input type="hidden" name="category" value={form.category} />
       ) : (
-        <select
-          className="p-3 bg-black/40 border border-white/20 rounded"
-          value={form.category}
-          onChange={(e) =>
-            setForm({ ...form, category: e.target.value, subcategory: "" })
-          }
-        >
-          {visibleCategories.map((cat) => (
-            <option key={cat.id} value={cat.id}>
-              {cat.label}
-            </option>
-          ))}
-        </select>
+        <FormField id="inventory-add-category" label="Category">
+          <select
+            id="inventory-add-category"
+            disabled={saving}
+            className="w-full rounded border border-white/20 bg-black/40 p-3 focus:border-green-400 focus:outline-none"
+            value={form.category}
+            onChange={(e) =>
+              setForm({ ...form, category: e.target.value, subcategory: "" })
+            }
+          >
+            {visibleCategories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.label}
+              </option>
+            ))}
+          </select>
+        </FormField>
       )}
 
       {selectedCategory && selectedCategory.subcategories.length > 0 && (
-        <select
-          className="rounded border border-white/20 bg-black/40 p-3"
-          value={form.subcategory}
-          onChange={(event) =>
-            setForm({ ...form, subcategory: event.target.value })
-          }
-        >
-          <option value="">Choose a subcategory</option>
-          {getInventorySubcategoryOptions(selectedCategory.id).map((subcategory) => (
-            <option key={subcategory.value} value={subcategory.value}>
-              {subcategory.label}
-            </option>
-          ))}
-        </select>
+        <FormField id="inventory-add-subcategory" label="Subcategory">
+          <select
+            id="inventory-add-subcategory"
+            disabled={saving}
+            className="w-full rounded border border-white/20 bg-black/40 p-3 focus:border-green-400 focus:outline-none"
+            value={form.subcategory}
+            onChange={(event) =>
+              setForm({ ...form, subcategory: event.target.value })
+            }
+          >
+            <option value="">Choose a subcategory</option>
+            {getInventorySubcategoryOptions(selectedCategory.id).map((subcategory) => (
+              <option key={subcategory.value} value={subcategory.value}>
+                {subcategory.label}
+              </option>
+            ))}
+          </select>
+        </FormField>
       )}
 
-      <input
-        className="p-3 bg-black/40 border border-white/20 rounded"
-        placeholder="Amount"
-        type="number"
-        min="0"
-        step="any"
-        value={form.amount}
-        onChange={(e) => setForm({ ...form, amount: e.target.value })}
-      />
-
-      <input
-        className="p-3 bg-black/40 border border-white/20 rounded"
-        placeholder="Unit (kg, g, L, pcs, etc.)"
-        value={form.unit}
-        onChange={(e) => setForm({ ...form, unit: e.target.value })}
-      />
-
-      <input
-        className="p-3 bg-black/40 border border-white/20 rounded"
-        placeholder="Minimum amount"
-        type="number"
-        min="0"
-        step="any"
-        value={form.minimum_amount}
-        onChange={(e) =>
-          setForm({ ...form, minimum_amount: e.target.value })
-        }
-      />
-
-      {isHop && (
+      <FormField id="inventory-add-amount" label="Current stock">
         <input
-          required
-          className="p-3 bg-black/40 border border-white/20 rounded"
-          placeholder="Alpha acid (%)"
+          id="inventory-add-amount"
           type="number"
           min="0"
-          max="100"
           step="any"
-          value={form.alpha_acid}
-          onChange={(e) => setForm({ ...form, alpha_acid: e.target.value })}
+          disabled={saving}
+          className="w-full rounded border border-white/20 bg-black/40 p-3 focus:border-green-400 focus:outline-none"
+          value={form.amount}
+          onChange={(e) => setForm({ ...form, amount: e.target.value })}
         />
+      </FormField>
+
+      <FormField id="inventory-add-unit" label="Unit" hint="For example: kg, g, L, or pcs.">
+        <input
+          id="inventory-add-unit"
+          disabled={saving}
+          className="w-full rounded border border-white/20 bg-black/40 p-3 focus:border-green-400 focus:outline-none"
+          value={form.unit}
+          onChange={(e) => setForm({ ...form, unit: e.target.value })}
+        />
+      </FormField>
+
+      <FormField id="inventory-add-minimum" label="Minimum amount">
+        <input
+          id="inventory-add-minimum"
+          type="number"
+          min="0"
+          step="any"
+          disabled={saving}
+          className="w-full rounded border border-white/20 bg-black/40 p-3 focus:border-green-400 focus:outline-none"
+          value={form.minimum_amount}
+          onChange={(e) =>
+            setForm({ ...form, minimum_amount: e.target.value })
+          }
+        />
+      </FormField>
+
+      {isHop && (
+        <FormField id="inventory-add-alpha-acid" label="Alpha acid (%)" required>
+          <input
+            id="inventory-add-alpha-acid"
+            required
+            type="number"
+            min="0"
+            max="100"
+            step="any"
+            disabled={saving}
+            className="w-full rounded border border-white/20 bg-black/40 p-3 focus:border-green-400 focus:outline-none"
+            value={form.alpha_acid}
+            onChange={(e) => setForm({ ...form, alpha_acid: e.target.value })}
+          />
+        </FormField>
       )}
 
       {isHop && (
-        <input
-          className="p-3 bg-black/40 border border-white/20 rounded"
-          placeholder="Harvest year (e.g. 2025)"
-          type="number"
-          min="1900"
-          max="2200"
-          step="1"
-          value={form.hop_year}
-          onChange={(e) => setForm({ ...form, hop_year: e.target.value })}
-        />
+        <FormField id="inventory-add-hop-year" label="Harvest year">
+          <input
+            id="inventory-add-hop-year"
+            type="number"
+            min="1900"
+            max="2200"
+            step="1"
+            disabled={saving}
+            className="w-full rounded border border-white/20 bg-black/40 p-3 focus:border-green-400 focus:outline-none"
+            value={form.hop_year}
+            onChange={(e) => setForm({ ...form, hop_year: e.target.value })}
+          />
+        </FormField>
       )}
 
       {isMalt && (
-        <input
-          required
-          className="p-3 bg-black/40 border border-white/20 rounded"
-          placeholder="Color (EBC)"
-          type="number"
-          min="0"
-          step="any"
-          value={form.ebc}
-          onChange={(e) => setForm({ ...form, ebc: e.target.value })}
-        />
+        <FormField id="inventory-add-ebc" label="Color (EBC)" required>
+          <input
+            id="inventory-add-ebc"
+            required
+            type="number"
+            min="0"
+            step="any"
+            disabled={saving}
+            className="w-full rounded border border-white/20 bg-black/40 p-3 focus:border-green-400 focus:outline-none"
+            value={form.ebc}
+            onChange={(e) => setForm({ ...form, ebc: e.target.value })}
+          />
+        </FormField>
       )}
 
-      <button className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold">
-        Add {itemType}
+      {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
+      <button
+        type="submit"
+        disabled={saving}
+        className="rounded-lg border border-green-500 bg-green-700 px-4 py-3 font-semibold hover:bg-green-600 disabled:cursor-wait disabled:opacity-60"
+      >
+        {saving ? "Adding…" : `Add ${itemType}`}
       </button>
     </form>
   );
