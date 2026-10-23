@@ -89,25 +89,23 @@ export default function PremiumPage() {
           title="Batchlogg Premium"
           subtitle="More insight, planning, and control for your brewing."
         />
-        {loading ? (
-          <p className="text-center text-white/65">Loading your plan…</p>
-        ) : profile ? (
+        {profile ? (
           <div className="mb-6 rounded-xl border border-green-400/20 bg-green-500/10 p-4 text-center">
             <p className="text-sm text-white/60">Your current tier</p>
             <p className="mt-1 text-xl font-semibold text-green-200">
               {profile.account_tier === "premium" ? "Premium" : "Free"}
             </p>
           </div>
-        ) : (
+        ) : !loading ? (
           <p className="mb-6 text-center text-white/75">
             <Link className="text-green-200 underline" href="/auth/signup">Create an account</Link>
             {" "}or{" "}
             <Link className="text-green-200 underline" href="/auth/login">log in</Link>
             {" "}to manage your plan.
           </p>
-        )}
+        ) : null}
 
-        {!loading && profile?.account_tier !== "premium" && (
+        {profile?.account_tier !== "premium" && (
           <div className="mb-8 flex flex-col items-center gap-3">
             <p className="text-center text-white/80">
               Premium is $4.99 USD per month, before VAT.
@@ -121,7 +119,7 @@ export default function PremiumPage() {
             <p className="max-w-md text-center text-sm text-white/60">
               Applicable VAT will be calculated and added during checkout based on your billing address. The final total will be shown before payment.
             </p>
-            {profile?.account_tier === "free" && (
+            {profile?.account_tier === "free" && !loading && (
               <button
                 type="button"
                 disabled={busy}

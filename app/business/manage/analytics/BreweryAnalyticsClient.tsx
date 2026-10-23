@@ -15,6 +15,8 @@ type ProductSummary = {
   is_published: boolean;
   pageViews: number;
   qrScans: number;
+  outboundClicks: number;
+  shopClickRate: number | null;
   averageRating: number | null;
   reviewCount: number;
   newReviews: number;
@@ -25,6 +27,8 @@ type AnalyticsData = {
   summary: {
     pageViews: number;
     qrScans: number;
+    outboundClicks: number;
+    shopClickRate: number | null;
     averageRating: number | null;
     reviewCount: number;
     newReviews: number;
@@ -39,7 +43,7 @@ type AnalyticsData = {
     body: string;
     createdAt: string;
   }[];
-  daily: { date: string; pageViews: number; qrScans: number }[];
+  daily: { date: string; pageViews: number; qrScans: number; outboundClicks: number }[];
   products: ProductSummary[];
   businessSlug: string;
 };
@@ -89,7 +93,7 @@ export default function BreweryAnalyticsClient() {
     void load(period);
   }, [load, period]);
 
-  const maxDailyViews = Math.max(1, ...(data?.daily.map((day) => day.pageViews + day.qrScans) ?? []));
+  const maxDailyViews = Math.max(1, ...(data?.daily.map((day) => day.pageViews + day.qrScans + day.outboundClicks) ?? []));
   const maxRatingCount = Math.max(1, ...(data?.ratingDistribution.map((entry) => entry.count) ?? []));
 
   return (
@@ -126,28 +130,30 @@ export default function BreweryAnalyticsClient() {
             <section aria-label={`${data.periodDays}-day summary`} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <MetricCard label="Product page visits" value={data.summary.pageViews.toLocaleString()} detail={`Last ${data.periodDays} days`} />
               <MetricCard label="QR scans" value={data.summary.qrScans.toLocaleString()} detail={`Last ${data.periodDays} days`} />
+              <MetricCard label="Shop clicks" value={data.summary.outboundClicks.toLocaleString()} detail={`Last ${data.periodDays} days`} />
+              <MetricCard label="Shop click rate" value={data.summary.shopClickRate == null ? "—" : `${data.summary.shopClickRate.toFixed(1)}%`} detail="Clicks divided by product page visits" />
               <MetricCard label="Published products" value={data.summary.publishedProducts} detail="Visible to customers" />
               <MetricCard label="Customer rating" value={data.summary.averageRating == null ? "—" : `${data.summary.averageRating.toFixed(1)} / 5`} detail={`${data.summary.reviewCount} published review${data.summary.reviewCount === 1 ? "" : "s"} overall`} />
               <MetricCard label="New reviews" value={data.summary.newReviews} detail={`Last ${data.periodDays} days`} />
-              <MetricCard label="Visits per published product" value={data.summary.publishedProducts ? (data.summary.pageViews / data.summary.publishedProducts).toFixed(1) : "—"} detail={`Average page visits over ${data.periodDays} days`} />
             </section>
 
             <section className="rounded-xl border border-white/10 bg-white/5 p-5">
               <h2 className="text-lg font-semibold text-green-200">Product visits</h2>
-              <p className="mt-1 text-sm text-white/55">Product detail page visits and owner QR scans by day. One visit is counted each time the product page loads.</p>
-              {data.daily.every((day) => day.pageViews + day.qrScans === 0) ? (
+              <p className="mt-1 text-sm text-white/55">Product page visits, owner QR scans, and clicks through to product pages. Counts are not deduplicated by visitor.</p>
+              {data.daily.every((day) => day.pageViews + day.qrScans + day.outboundClicks === 0) ? (
                 <p className="mt-5 text-sm text-white/55">No product visits have been recorded in this period yet.</p>
               ) : (
                 <div className="mt-5 flex h-44 items-end gap-1 border-b border-white/10 pb-6">
                   {data.daily.map((day, index) => {
-                    const total = day.pageViews + day.qrScans;
+                    const total = day.pageViews + day.qrScans + day.outboundClicks;
                     const dateLabel = new Date(`${day.date}T00:00:00Z`).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" });
                     return (
-                      <div key={day.date} className="relative flex h-full min-w-0 flex-1 flex-col justify-end" title={`${dateLabel}: ${day.pageViews} page visits, ${day.qrScans} QR scans`}>
+                      <div key={day.date} className="relative flex h-full min-w-0 flex-1 flex-col justify-end" title={`${dateLabel}: ${day.pageViews} page visits, ${day.qrScans} QR scans, ${day.outboundClicks} shop clicks`}>
                         {total > 0 && (
                           <div className="flex w-full flex-col justify-end overflow-hidden rounded-t-sm" style={{ height: `${Math.max(4, total / maxDailyViews * 100)}%` }}>
                             <div className="min-h-0 flex-1 bg-green-400/70" style={{ flexGrow: day.pageViews }} />
                             {day.qrScans > 0 && <div className="min-h-1 bg-amber-300/80" style={{ flexGrow: day.qrScans }} />}
+                            {day.outboundClicks > 0 && <div className="min-h-1 bg-sky-300/80" style={{ flexGrow: day.outboundClicks }} />}
                           </div>
                         )}
                         {(index === 0 || index === data.daily.length - 1 || index % Math.ceil(data.daily.length / 6) === 0) && (
@@ -161,6 +167,7 @@ export default function BreweryAnalyticsClient() {
               <div className="mt-3 flex gap-4 text-xs text-white/55">
                 <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-green-400/70" />Product page visits</span>
                 <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-amber-300/80" />QR scans</span>
+                <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-sky-300/80" />Shop clicks</span>
               </div>
             </section>
 
@@ -182,7 +189,7 @@ export default function BreweryAnalyticsClient() {
               </section>
               <section className="rounded-xl border border-white/10 bg-white/5 p-5">
                 <h2 className="text-lg font-semibold text-green-200">Popular products</h2>
-                <p className="mt-1 text-sm text-white/55">Ranked by page visits and QR scans in the selected period.</p>
+                <p className="mt-1 text-sm text-white/55">Ranked by product page visits and QR scans in the selected period.</p>
                 {data.products.length === 0 ? <p className="mt-4 text-sm text-white/55">Add a product to start seeing product analytics.</p> : (
                   <ol className="mt-4 space-y-3">
                     {data.products.slice(0, 5).map((product, index) => (
@@ -191,6 +198,9 @@ export default function BreweryAnalyticsClient() {
                           <p className="truncate font-medium"><span className="mr-2 text-white/40">{index + 1}.</span>{product.name}</p>
                           <p className="mt-1 text-xs text-white/50">
                             {product.averageRating == null ? "No ratings" : `★ ${product.averageRating.toFixed(1)}`} · {product.reviewCount} review{product.reviewCount === 1 ? "" : "s"}
+                          </p>
+                          <p className="mt-1 text-xs text-white/50">
+                            {product.outboundClicks} shop click{product.outboundClicks === 1 ? "" : "s"} · {product.shopClickRate == null ? "No page visits" : `${product.shopClickRate.toFixed(1)}% click rate`}
                           </p>
                         </div>
                         <p className="shrink-0 text-right text-sm text-white/70">{(product.pageViews + product.qrScans).toLocaleString()} visits</p>

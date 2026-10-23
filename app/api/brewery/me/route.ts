@@ -39,7 +39,7 @@ export async function GET() {
       for (const event of analytics ?? []) {
         const count = stats.get(event.product_id) ?? { pageViews: 0, qrScans: 0 };
         if (event.event_type === "qr_scan") count.qrScans += 1;
-        else count.pageViews += 1;
+        else if (event.event_type === "page_view") count.pageViews += 1;
         stats.set(event.product_id, count);
       }
       productsWithAnalytics = (products ?? []).map((product) => ({

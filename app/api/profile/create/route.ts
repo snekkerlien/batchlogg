@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
+import { getAcquisitionSource } from "@/lib/analytics/acquisitionSource";
 
 export async function POST(req: Request) {
   const debug = process.env.SIGNUP_DEBUG === "true";
@@ -60,6 +61,7 @@ export async function POST(req: Request) {
     username: username.trim().toLowerCase(),
     email: email.trim(),
     onboarding_completed: false,
+    signup_source: getAcquisitionSource(user.user_metadata?.signup_source),
   };
   const { data: updatedProfile, error: updateError } = await serviceRole
     .from("profiles")

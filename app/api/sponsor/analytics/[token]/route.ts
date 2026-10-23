@@ -17,7 +17,9 @@ export async function GET(
     }
 
     const generatedAt = new Date();
-    const metrics = await getAnalyticsMetrics(serviceRole, generatedAt);
+    const metrics = await getAnalyticsMetrics(serviceRole, generatedAt, {
+      includeUserLifecycle: false,
+    });
     return NextResponse.json(
       { generatedAt: generatedAt.toISOString(), metrics },
       { headers: { "Cache-Control": "private, no-store, max-age=0" } }

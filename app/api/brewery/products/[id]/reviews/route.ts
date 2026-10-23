@@ -32,10 +32,17 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   if (!UUID_PATTERN.test(params.id)) return NextResponse.json({ error: "Invalid product ID." }, { status: 400 });
-  const { serviceRole } = supabaseServer();
+  const { supabase, serviceRole } = supabaseServer();
   try {
     if (!(await getPublicProduct(serviceRole, params.id))) {
       return NextResponse.json({ error: "Product not found." }, { status: 404 });
+    }
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+    if (authError && authError.name !== "AuthSessionMissingError") {
+      console.error("Could not verify reviewer session", authError);
     }
     const { data, error } = await serviceRole
       .from("brewery_product_reviews")
@@ -45,6 +52,28 @@ export async function GET(
       .order("created_at", { ascending: false })
       .limit(100);
     if (error) throw error;
+    const reviewIds = (data ?? []).map((review) => review.id);
+    const { data: votes, error: votesError } = reviewIds.length
+      ? await serviceRole
+          .from("brewery_review_helpful_votes")
+          .select("review_id,user_id")
+          .in("review_id", reviewIds)
+      : { data: [], error: null };
+    const helpfulVotingUnavailable = Boolean(
+      votesError && ["42P01", "PGRST205"].includes(votesError.code ?? "")
+    );
+    if (helpfulVotingUnavailable) {
+      console.warn("Helpful votes are unavailable until their database migration is applied.");
+    } else if (votesError) {
+      throw votesError;
+    }
+    const voteSummary = new Map<string, { count: number; viewerVoted: boolean }>();
+    for (const vote of votes ?? []) {
+      const summary = voteSummary.get(vote.review_id) ?? { count: 0, viewerVoted: false };
+      summary.count += 1;
+      if (user?.id === vote.user_id) summary.viewerVoted = true;
+      voteSummary.set(vote.review_id, summary);
+    }
     const userIds = [...new Set((data ?? []).map((review) => review.user_id))];
     const { data: profiles, error: profilesError } = userIds.length
       ? await serviceRole.from("profiles").select("id, username").in("id", userIds)
@@ -53,8 +82,11 @@ export async function GET(
     const usernames = new Map((profiles ?? []).map((profile) => [profile.id, profile.username]));
     const reviews = (data ?? []).map((review) => ({
       id: review.id,
-      user_id: review.user_id,
       username: usernames.get(review.user_id) || "Community member",
+      isOwn: Boolean(user && user.id === review.user_id),
+      helpfulCount: voteSummary.get(review.id)?.count ?? 0,
+      viewerVotedHelpful: voteSummary.get(review.id)?.viewerVoted ?? false,
+      canVoteHelpful: !helpfulVotingUnavailable && Boolean(user && user.id !== review.user_id),
       rating: review.rating,
       title: review.title,
       body: review.body,
@@ -64,10 +96,60 @@ export async function GET(
       reviews.length > 0
         ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
         : null;
-    return NextResponse.json({ reviews, average, count: reviews.length });
+    const ratingBreakdown = [1, 2, 3, 4, 5].map((rating) => ({
+      rating,
+      count: reviews.filter((review) => review.rating === rating).length,
+    }));
+    return NextResponse.json({
+      reviews,
+      average,
+      count: reviews.length,
+      ratingBreakdown,
+      helpfulVotingUnavailable,
+    });
   } catch (error) {
     console.error("Could not load brewery product reviews", error);
     return NextResponse.json({ error: "Could not load product reviews." }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  if (!UUID_PATTERN.test(params.id)) {
+    return NextResponse.json({ error: "Invalid product ID." }, { status: 400 });
+  }
+
+  const { supabase, serviceRole } = supabaseServer();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return NextResponse.json({ error: "Log in to remove your review." }, { status: 401 });
+  }
+
+  try {
+    if (!(await getPublicProduct(serviceRole, params.id))) {
+      return NextResponse.json({ error: "Product not found." }, { status: 404 });
+    }
+
+    const { data, error } = await serviceRole
+      .from("brewery_product_reviews")
+      .delete()
+      .eq("product_id", params.id)
+      .eq("user_id", user.id)
+      .select("id")
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) {
+      return NextResponse.json({ error: "Your review was not found." }, { status: 404 });
+    }
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Could not delete brewery product review", error);
+    return NextResponse.json({ error: "Could not remove your review." }, { status: 500 });
   }
 }
 

@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import {
+  getAcquisitionSource,
+  inferAcquisitionSourceFromRequest,
+} from "@/lib/analytics/acquisitionSource";
 
 export const runtime = "nodejs";
 
@@ -20,6 +24,7 @@ export async function POST(request: Request) {
   }
 
   const { email, password, username } = body;
+  const signupSource = getAcquisitionSource("signupSource" in body ? body.signupSource : null);
   if (
     typeof email !== "string" ||
     typeof password !== "string" ||
@@ -67,7 +72,13 @@ export async function POST(request: Request) {
       email: normalizedEmail,
       password,
       options: {
-        data: { username: normalizedUsername },
+        data: {
+          username: normalizedUsername,
+          signup_source: signupSource ?? inferAcquisitionSourceFromRequest(
+            request.headers.get("referer") ?? "",
+            request.url
+          ),
+        },
       },
     });
 

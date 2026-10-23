@@ -53,6 +53,7 @@ export async function GET(request: NextRequest) {
     const productStats = new Map<string, {
       pageViews: number;
       qrScans: number;
+      outboundClicks: number;
       ratingsTotal: number;
       reviewCount: number;
       newReviews: number;
@@ -61,20 +62,22 @@ export async function GET(request: NextRequest) {
       productStats.set(product.id, {
         pageViews: 0,
         qrScans: 0,
+        outboundClicks: 0,
         ratingsTotal: 0,
         reviewCount: 0,
         newReviews: 0,
       });
     }
 
-    const dailyStats = new Map<string, { pageViews: number; qrScans: number }>();
+    const dailyStats = new Map<string, { pageViews: number; qrScans: number; outboundClicks: number }>();
     for (let offset = periodDays - 1; offset >= 0; offset -= 1) {
       const day = new Date(Date.now() - offset * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-      dailyStats.set(day, { pageViews: 0, qrScans: 0 });
+      dailyStats.set(day, { pageViews: 0, qrScans: 0, outboundClicks: 0 });
     }
 
     let pageViews = 0;
     let qrScans = 0;
+    let outboundClicks = 0;
     for (const event of events ?? []) {
       const stats = productStats.get(event.product_id);
       const dayStats = dailyStats.get(event.created_at.slice(0, 10));
@@ -83,7 +86,11 @@ export async function GET(request: NextRequest) {
         stats.qrScans += 1;
         dayStats.qrScans += 1;
         qrScans += 1;
-      } else {
+      } else if (event.event_type === "outbound_click") {
+        stats.outboundClicks += 1;
+        dayStats.outboundClicks += 1;
+        outboundClicks += 1;
+      } else if (event.event_type === "page_view") {
         stats.pageViews += 1;
         dayStats.pageViews += 1;
         pageViews += 1;
@@ -132,6 +139,8 @@ export async function GET(request: NextRequest) {
           ...product,
           pageViews: stats.pageViews,
           qrScans: stats.qrScans,
+          outboundClicks: stats.outboundClicks,
+          shopClickRate: stats.pageViews ? (stats.outboundClicks / stats.pageViews) * 100 : null,
           averageRating: stats.reviewCount ? stats.ratingsTotal / stats.reviewCount : null,
           reviewCount: stats.reviewCount,
           newReviews: stats.newReviews,
@@ -150,6 +159,8 @@ export async function GET(request: NextRequest) {
         summary: {
           pageViews,
           qrScans,
+          outboundClicks,
+          shopClickRate: pageViews ? (outboundClicks / pageViews) * 100 : null,
           averageRating: reviewCount ? ratingsTotal / reviewCount : null,
           reviewCount,
           newReviews,

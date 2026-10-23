@@ -19,7 +19,6 @@ function formatCountdown(milliseconds: number) {
 export default function MuteCountdownBanner() {
   const [mute, setMute] = useState<MuteDetails | null>(null);
   const [remaining, setRemaining] = useState<number | null>(null);
-  const [error, setError] = useState("");
 
   const loadMute = useCallback(async () => {
     try {
@@ -33,10 +32,9 @@ export default function MuteCountdownBanner() {
         throw new Error(result.error || "Could not check account restrictions.");
       }
       setMute(result.mute ?? null);
-      setError("");
     } catch (loadError) {
       console.error("Could not load mute countdown banner", loadError);
-      setError("Your mute status could not be checked.");
+      setMute(null);
     }
   }, []);
 
@@ -74,16 +72,6 @@ export default function MuteCountdownBanner() {
     return () => window.clearInterval(interval);
   }, [loadMute, mute?.ends_at]);
 
-  if (error) {
-    return (
-      <aside
-        role="status"
-        className="rounded-xl border border-amber-300/20 bg-black/60 px-4 py-2 text-center text-sm text-amber-100 backdrop-blur-md"
-      >
-        {error}
-      </aside>
-    );
-  }
   if (!mute) return null;
 
   return (

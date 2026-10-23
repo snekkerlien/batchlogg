@@ -98,6 +98,64 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
   const [reducedMotion, setReducedMotion] = useState(true);
   const mainContentRef = useRef<HTMLDivElement>(null);
   const previousPathname = useRef(pathname);
+  const trackedPathname = useRef<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const { data: listener } = supabaseBrowser.auth.onAuthStateChange((event, session) => {
+      if (event !== "SIGNED_IN" || !session?.access_token) return;
+      void fetch("/api/analytics", {
+        method: "POST",
+        body: JSON.stringify({ type: "sign_in" }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      })
+        .then((response) => {
+          if (!response.ok) throw new Error(`Analytics request failed (${response.status})`);
+        })
+        .catch((error) => {
+          if (active) console.error("Could not record sign-in analytics", error);
+        });
+    });
+    return () => {
+      active = false;
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (trackedPathname.current === pathname) return;
+    trackedPathname.current = pathname;
+
+    let active = true;
+    void (async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabaseBrowser.auth.getSession();
+        const response = await fetch("/api/analytics", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(session?.access_token
+              ? { Authorization: `Bearer ${session.access_token}` }
+              : {}),
+          },
+          body: JSON.stringify({ type: "page_view", pathname }),
+        });
+        if (!response.ok) {
+          throw new Error(`Analytics request failed (${response.status})`);
+        }
+      } catch (error) {
+        if (active) console.error("Could not record page-view analytics", error);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [pathname]);
 
   useEffect(() => {
     const updateMotionPreference = () => {

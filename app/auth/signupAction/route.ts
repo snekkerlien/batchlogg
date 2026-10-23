@@ -2,6 +2,10 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
+import {
+  getAcquisitionSource,
+  inferAcquisitionSourceFromRequest,
+} from "@/lib/analytics/acquisitionSource";
 
 export async function POST(req: Request) {
   const form = await req.formData();
@@ -39,13 +43,20 @@ export async function POST(req: Request) {
 
   // ⭐ KUN nødvendig endring:
   const { supabase: supabaseAuth, serviceRole: supabaseAdmin } = await supabaseServer();
+  const signupSource = inferAcquisitionSourceFromRequest(
+    req.headers.get("referer") ?? "",
+    req.url
+  );
 
   // Create user in Supabase Auth
   const { data, error } = await supabaseAuth.auth.signUp({
     email,
     password,
     options: {
-      data: { username: username.trim().toLowerCase() },
+      data: {
+        username: username.trim().toLowerCase(),
+        signup_source: signupSource,
+      },
     },
   });
 
@@ -72,6 +83,7 @@ export async function POST(req: Request) {
       email,
       avatar_url: null,
       is_public: true,
+      signup_source: getAcquisitionSource(data.user.user_metadata?.signup_source),
     }, { onConflict: "id" });
 
   if (profileError) {

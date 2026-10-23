@@ -9,16 +9,19 @@ Apply the SQL manually in the Supabase SQL editor:
    Re-run this script after updating the app to add the all-grain-kit category
    and its optional specification columns, or the product URL field, to an
    existing installation.
-2. Confirm the `brewery_accounts`, `brewery_members`, `brewery_products`,
+2. For existing installations, apply new SQL files in `supabase/migrations/`
+   before deploying features that depend on them. The shop-click analytics
+   migration adds `outbound_click` as a supported product analytics event.
+3. Confirm the `brewery_accounts`, `brewery_members`, `brewery_products`,
    `brewery_product_reviews`, `brewery_review_reports`, and
    `brewery_product_analytics` tables were created.
-3. Configure `STRIPE_BREWERY_MONTHLY_PRICE_ID` and
+4. Configure `STRIPE_BREWERY_MONTHLY_PRICE_ID` and
    `STRIPE_BREWERY_YEARLY_PRICE_ID` with the monthly and annual recurring Stripe
    Price IDs for the Business product. The app offers both plan choices on the
    approved Business account page.
-4. Keep the existing `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and
+5. Keep the existing `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and
    `NEXT_PUBLIC_APP_URL` configuration in place.
-5. Configure the existing `/api/billing/webhook` Stripe endpoint to send
+6. Configure the existing `/api/billing/webhook` Stripe endpoint to send
    `checkout.session.completed` and `customer.subscription.created`,
    `customer.subscription.updated`, and `customer.subscription.deleted`.
 
@@ -64,9 +67,11 @@ page, linked from the Business account page only when access is active; it is
 not listed in the site menu. Product QR codes are rendered only in this
 authenticated owner page. They link to the public product page with an
 analytics source marker. Business analytics are available from the Business
-account page and summarize product page visits, QR scans, published products,
-ratings, recent reviews, and popular products over selectable 7-, 30-, or
-90-day periods. Product URLs link customers to the business's own product page.
+account page and summarize product page visits, QR scans, clicks through to
+product URLs, published products, ratings, recent reviews, and popular products
+over selectable 7-, 30-, or 90-day periods. Shop click rate is outbound clicks
+divided by product page visits; events are not deduplicated by visitor. Product
+URLs link customers to the business's own product page.
 Product URLs, website URLs, and logo links must use HTTPS. Uploaded product
 pictures are stored in the public
 `business-product-images` Supabase Storage bucket, created when first needed.

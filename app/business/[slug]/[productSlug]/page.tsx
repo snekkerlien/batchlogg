@@ -5,6 +5,8 @@ import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 import BreweryProductReviews from "../../BreweryProductReviews";
+import BreweryBeerMetrics from "../../BreweryBeerMetrics";
+import BreweryProductLink from "../../BreweryProductLink";
 
 export const dynamic = "force-dynamic";
 
@@ -84,17 +86,19 @@ export default async function BreweryProductPage({
             </span>
           </div>
         )}
-        {product.product_url && <p className="mt-3 text-center"><a href={product.product_url} target="_blank" rel="noreferrer" className="text-green-200 underline underline-offset-4">Visit product page</a></p>}
+        {product.product_url && <p className="mt-3 text-center"><BreweryProductLink productId={product.id} href={product.product_url} /></p>}
         <dl className="my-6 flex flex-wrap justify-center gap-6 text-center text-sm">
           {product.style && <div><dt className="text-white/50">Style</dt><dd className="mt-1">{product.style}</dd></div>}
           {beverageCategories.includes(product.category) && brewedBy && <div><dt className="text-white/50">Brewed by</dt><dd className="mt-1">{brewedBy}</dd></div>}
           {product.abv != null && <div><dt className="text-white/50">{product.category === "all-grain-kit" ? "Target ABV" : "ABV"}</dt><dd className="mt-1">{Number(product.abv).toFixed(1)}%</dd></div>}
           {product.batch_size_l != null && <div><dt className="text-white/50">Batch size</dt><dd className="mt-1">{Number(product.batch_size_l).toLocaleString()} L</dd></div>}
-          {product.ebc != null && <div><dt className="text-white/50">Color</dt><dd className="mt-1">{Number(product.ebc).toLocaleString()} EBC</dd></div>}
-          {product.ibu != null && <div><dt className="text-white/50">Bitterness</dt><dd className="mt-1">{Number(product.ibu).toLocaleString()} IBU</dd></div>}
           {product.package_size && <div><dt className="text-white/50">Package</dt><dd className="mt-1">{product.package_size}</dd></div>}
           <div><dt className="text-white/50">Availability</dt><dd className="mt-1 capitalize">{product.availability}</dd></div>
         </dl>
+        <BreweryBeerMetrics
+          ebc={product.ebc}
+          ibu={product.ibu}
+        />
         {product.description && <p className="mx-auto max-w-3xl whitespace-pre-line text-center leading-7 text-white/75">{product.description}</p>}
         <BreweryProductReviews productId={product.id} qrSource={searchParams?.source === "qr"} />
       </div>

@@ -44,7 +44,16 @@ export default function PrivacyPage() {
           <div className="space-y-2 text-sm text-zinc-300 leading-relaxed">
             <p>Your account details such as email and username.</p>
             <p>Your brewing data including batches, recipes, vessels, and logs.</p>
-            <p>Technical information like device type and basic usage statistics.</p>
+            <p>
+              Daily page-view counts grouped by top-level site section and
+              successful sign-in counts. For account retention reporting, we
+              also store the last-seen timestamp linked to your account and
+              compare it with your signup and first-batch dates. We also store
+              a broad signup source category (such as search, social, or
+              referral) and calculate feature adoption from saved brewing
+              records. We do not store referring URLs, campaign identifiers,
+              IP addresses, or full page URLs for these analytics.
+            </p>
             <p>Optional feedback or messages you submit through the platform.</p>
           </div>
         </section>

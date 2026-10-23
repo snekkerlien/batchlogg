@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
+import { inferAcquisitionSource } from "@/lib/analytics/acquisitionSource";
 import FormField from "@/app/components/FormField";
 
 type SignupStep = "username" | "credentials";
@@ -121,6 +122,11 @@ export default function SignupClient() {
           email: normalizedEmail,
           password,
           username,
+          signupSource: inferAcquisitionSource(
+            document.referrer,
+            window.location.search,
+            window.location.hostname
+          ),
         }),
       });
       const signupResult = await signupResponse.json();

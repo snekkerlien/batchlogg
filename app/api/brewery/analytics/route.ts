@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
   if (
     typeof body.productId !== "string" ||
     !UUID_PATTERN.test(body.productId) ||
-    (body.source !== "page" && body.source !== "qr")
+    (body.source !== "page" && body.source !== "qr" && body.source !== "outbound_click")
   ) return NextResponse.json({ error: "Invalid analytics event." }, { status: 400 });
 
   const { serviceRole } = supabaseServer();
@@ -50,7 +50,12 @@ export async function POST(request: NextRequest) {
   const { error } = await serviceRole.from("brewery_product_analytics").insert({
     brewery_id: account.id,
     product_id: product.id,
-    event_type: body.source === "qr" ? "qr_scan" : "page_view",
+    event_type:
+      body.source === "qr"
+        ? "qr_scan"
+        : body.source === "outbound_click"
+          ? "outbound_click"
+          : "page_view",
   });
   if (error) {
     console.error("Could not record brewery product visit", error);
