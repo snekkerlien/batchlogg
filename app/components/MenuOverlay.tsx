@@ -371,6 +371,16 @@ function MenuOverlayContent({ current }: { current: string }) {
             >
               Download desktop app
             </Link>
+            <Link
+              href="/keg-tetris"
+              onClick={() => setMenuOpen(false)}
+              aria-label="Play Keg Tetris"
+              className="group relative hidden h-10 w-10 shrink-0 items-center justify-center rounded-md opacity-0 focus-visible:opacity-100 sm:flex"
+            >
+              <span className="absolute rounded-md bg-zinc-900 px-2 py-1 text-xs text-white opacity-0 group-focus-visible:opacity-100">
+                Keg Tetris
+              </span>
+            </Link>
             <button
               type="button"
               onClick={logout}
