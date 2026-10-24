@@ -6,7 +6,7 @@ import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import PageHeading from "@/app/components/PageHeading";
-import { Qty, UnitInput, UnitSymbol, useUnits } from "@/app/components/Units";
+import { Qty, UnitAwareText, UnitInput, UnitSymbol, useUnits } from "@/app/components/Units";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import VisibilitySwitch from "../components/VisibilitySwitch";
@@ -27,6 +27,7 @@ import {
   getSavedRecipeInventoryIssues,
   type InventoryItem,
 } from "@/lib/inventory/recipeInventory";
+import { FREE_RECIPE_LIMIT } from "@/lib/recipes/constants";
 
 
 
@@ -79,6 +80,9 @@ export default function RecipesPage() {
   const [loadError, setLoadError] = useState("");
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [recipes, setRecipes] = useState<any[]>([]);
+  const [isPremium, setIsPremium] = useState(false);
+  const [planLoaded, setPlanLoaded] = useState(false);
+  const [limitNotice, setLimitNotice] = useState(false);
   const [emptyVessels, setEmptyVessels] = useState<{ id: string; nummer: number }[]>([]);
   const [vesselsLoaded, setVesselsLoaded] = useState(false);
   const [startRecipeId, setStartRecipeId] = useState<string | null>(null);
@@ -122,6 +126,7 @@ export default function RecipesPage() {
   useEffect(() => {
   setLoading(true);
   setLoadError("");
+  setPlanLoaded(false);
   async function load() {
     try {
       const {
@@ -134,6 +139,21 @@ export default function RecipesPage() {
         router.replace("/auth/login");
         return;
       }
+
+      const profileResponse = await fetch("/api/profile", {
+        cache: "no-store",
+        credentials: "include",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+      const profile = await profileResponse.json();
+      if (!profileResponse.ok) {
+        throw new Error(profile.error || "Could not load your account plan.");
+      }
+      setIsPremium(profile.account_tier === "premium");
+      setPlanLoaded(true);
+      setLimitNotice(new URLSearchParams(window.location.search).get("limit") === "reached");
 
       // ⭐ HENT BATCH NOTES
       const { data: notesRaw, error: notesError } = await supabaseBrowser
@@ -278,6 +298,9 @@ export default function RecipesPage() {
 
   load();
 }, [loadAttempt, router]);
+
+  const recipeLimitReached =
+    planLoaded && !isPremium && recipes.length >= FREE_RECIPE_LIMIT;
 
   useEffect(() => {
     if (openEdit) {
@@ -461,6 +484,7 @@ export default function RecipesPage() {
         throw new Error(result.error || "Could not delete this recipe.");
       }
       setRecipes((prev) => prev.filter((r) => r.id !== id));
+      setLimitNotice(false);
       return true;
     } catch (deleteError) {
       console.error("Could not delete recipe", deleteError);
@@ -680,17 +704,30 @@ function removeDryHop(index: number) {
           title="My recipes"
           subtitle="All your recipes in one place."
         />
+        {(limitNotice || recipeLimitReached) && (
+          <p role="status" className="mb-4 rounded-lg border border-amber-400/30 bg-amber-950/40 p-3 text-center text-sm text-amber-100">
+            Free accounts can save up to {FREE_RECIPE_LIMIT} recipes. Delete a recipe or upgrade to Premium to save more.
+            {" "}<Link href="/premium" className="font-semibold underline">View Premium</Link>
+          </p>
+        )}
+        {planLoaded && !isPremium && (
+          <p className="mb-4 text-center text-sm text-white/60">
+            {recipes.length} of {FREE_RECIPE_LIMIT} free recipes used
+          </p>
+        )}
         {/* NEW RECIPE BUTTON */}
         <div className="flex justify-center mb-6">
           <button
             onClick={() => setOpenStyleSelect(true)}
-            className="px-4 py-2 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold"
+            disabled={recipeLimitReached}
+            className="px-4 py-2 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold disabled:cursor-not-allowed disabled:opacity-50"
           >
             New recipe
           </button>
         </div>
 
         <RecipeImport
+          disabled={recipeLimitReached}
           onImported={(importedRecipes) => {
             setRecipes((current) => [
               ...importedRecipes.map((recipe) => ({
@@ -815,7 +852,7 @@ function removeDryHop(index: number) {
       </span>
       <span className="inline-flex min-w-0 items-center gap-1 whitespace-nowrap rounded-md border border-white/10 bg-black/20 px-2 py-1 sm:gap-1.5 sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
         <strong className="text-[10px] text-white/55 sm:text-sm sm:text-white">EBC:</strong>
-        <span className="inline-flex items-center gap-1 text-xs sm:gap-1.5 sm:text-sm">
+        <span className="inline-flex items-center gap-0.5 text-xs sm:gap-1 sm:text-sm">
           {Number.isFinite(ebc) ? ebc.toFixed(0) : "—"}
           {Number.isFinite(ebc) && <BeerColorGlass ebc={ebc} compact />}
         </span>
@@ -961,7 +998,7 @@ function removeDryHop(index: number) {
                           <ul className="space-y-2">
                             {r.notes_log.map((note: any, index: number) => (
                               <li key={note.id ?? index} className="whitespace-pre-line text-sm text-white/80">
-                                {note.note}
+                                <UnitAwareText text={note.note} />
                               </li>
                             ))}
                           </ul>

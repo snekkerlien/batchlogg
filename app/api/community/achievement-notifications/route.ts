@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
+import { ensureCommunityAndRatingAchievementNotifications } from "@/lib/community/achievementNotifications";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,6 +16,16 @@ export async function GET() {
   } = await supabase.auth.getUser();
   if (authError || !user) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
+
+  try {
+    await ensureCommunityAndRatingAchievementNotifications(serviceRole, user.id);
+  } catch (syncError) {
+    console.error("Could not synchronize community and rating achievement notifications", syncError);
+    return NextResponse.json(
+      { error: "Could not synchronize achievement notifications" },
+      { status: 500 }
+    );
   }
 
   const [

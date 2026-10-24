@@ -53,3 +53,42 @@ export function formatQuantity(
   const shown = roundForDisplay(toDisplay(kind, numeric, system), maxDecimals);
   return `${shown} ${unitLabel(kind, system)}`;
 }
+
+export function formatMetricText(text: string, system: UnitSystem) {
+  if (system !== "imperial") return text;
+
+  return text.replace(
+    /(^|[^\w.])(-?\d+(?:[.,]\d+)?)\s*(milliliters?|millilitres?|ml|liters?|litres?|l|kilograms?|kgs?|kg|grams?|gr|g|degrees?\s*c|°\s*c)\b/gi,
+    (match, prefix: string, rawValue: string, rawUnit: string) => {
+      const value = Number(rawValue.replace(",", "."));
+      if (!Number.isFinite(value)) return match;
+
+      const unit = rawUnit.toLowerCase().replace(/\s/g, "");
+      if (unit === "°c" || unit === "c" || unit === "degreec" || unit === "degreesc") {
+        const fahrenheit = roundForDisplay((value * 9) / 5 + 32, 1);
+        return `${prefix}${fahrenheit}°F`;
+      }
+
+      let kind: UnitKind;
+      let metricValue: number;
+      if (["ml", "milliliter", "milliliters", "millilitre", "millilitres"].includes(unit)) {
+        kind = "volume";
+        metricValue = value / 1000;
+      } else if (["l", "liter", "liters", "litre", "litres"].includes(unit)) {
+        kind = "volume";
+        metricValue = value;
+      } else if (["kg", "kgs", "kilogram", "kilograms"].includes(unit)) {
+        kind = "kg";
+        metricValue = value;
+      } else if (["g", "gr", "gram", "grams"].includes(unit)) {
+        kind = "g";
+        metricValue = value;
+      } else {
+        return match;
+      }
+
+      const formatted = formatQuantity(kind, metricValue, system, 2);
+      return formatted ? `${prefix}${formatted}` : match;
+    }
+  );
+}

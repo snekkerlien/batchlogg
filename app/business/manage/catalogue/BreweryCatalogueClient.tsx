@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
@@ -8,10 +8,17 @@ import BackButton from "@/app/components/BackButton";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
+import ProductCardTitle from "@/app/business/ProductCardTitle";
+import { getErrorMessage, saveDownload } from "@/lib/desktopDownloads";
 
 const inputClass = "mt-1 w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-white";
+const publicAppOrigin = new URL(
+  process.env.NEXT_PUBLIC_APP_URL ?? "https://batchlogg.vercel.app"
+).origin;
 const categories = [
-  ["all-grain-kit", "All-grain beer kit"],
+  ["all-grain-kit", "All-grain kit"],
+  ["fresh-wort-kit", "Fresh wort kit"],
+  ["malt-extract-kit", "Malt extract kit"],
   ["beer", "Beer"],
   ["cider", "Cider"],
   ["mead", "Mead"],
@@ -26,6 +33,9 @@ const categories = [
 const beverageCategories = categories.filter(([value]) =>
   ["beer", "cider", "mead", "wine", "spirits", "non-alcoholic"].includes(value)
 );
+const beerKitCategories = categories.filter(([value]) =>
+  ["all-grain-kit", "fresh-wort-kit", "malt-extract-kit"].includes(value)
+);
 
 type ProductForm = {
   name: string;
@@ -37,6 +47,8 @@ type ProductForm = {
   ebc: string;
   ibu: string;
   packageSize: string;
+  price: string;
+  priceCurrency: string;
   availability: string;
   productUrl: string;
   description: string;
@@ -56,6 +68,7 @@ type Product = {
 type Account = {
   name: string;
   slug: string;
+  business_type: string;
   hasAccess: boolean;
   role: string | null;
   isOwner: boolean;
@@ -71,6 +84,8 @@ const initialProduct: ProductForm = {
   ebc: "",
   ibu: "",
   packageSize: "",
+  price: "",
+  priceCurrency: "",
   availability: "available",
   productUrl: "",
   description: "",
@@ -91,6 +106,8 @@ function productForm(product: Product & Record<string, unknown>): ProductForm {
     ebc: String(product.ebc ?? ""),
     ibu: String(product.ibu ?? ""),
     packageSize: String(product.package_size ?? ""),
+    price: String(product.price ?? ""),
+    priceCurrency: String(product.price_currency ?? ""),
     availability: String(product.availability ?? "available"),
     productUrl: String(product.product_url ?? ""),
     description: product.description ?? "",
@@ -99,6 +116,7 @@ function productForm(product: Product & Record<string, unknown>): ProductForm {
 }
 
 export default function BreweryCatalogueClient() {
+  const qrCodeRef = useRef<HTMLDivElement>(null);
   const [account, setAccount] = useState<Account | null>(null);
   const [products, setProducts] = useState<(Product & Record<string, unknown>)[]>([]);
   const [loading, setLoading] = useState(true);
@@ -111,6 +129,7 @@ export default function BreweryCatalogueClient() {
   const [productKind, setProductKind] = useState<"kit" | "beverage" | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Product | null>(null);
   const [qrProductId, setQrProductId] = useState<string | null>(null);
+  const [downloadingQr, setDownloadingQr] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [currentImageUrl, setCurrentImageUrl] = useState("");
@@ -120,6 +139,8 @@ export default function BreweryCatalogueClient() {
   const [product, setProduct] = useState<ProductForm>(initialProduct);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [suggestingPrice, setSuggestingPrice] = useState(false);
+  const [priceSuggestionMessage, setPriceSuggestionMessage] = useState("");
 
   useEffect(() => {
     if (!selectedImage) {
@@ -200,6 +221,42 @@ export default function BreweryCatalogueClient() {
     }
   }
 
+  async function suggestPriceFromLink() {
+    setSuggestingPrice(true);
+    setPriceSuggestionMessage("");
+    try {
+      const response = await fetch("/api/brewery/products/detect-price", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productUrl: product.productUrl }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Could not suggest a price from this link.");
+      if (
+        typeof result.price?.amount !== "number" ||
+        typeof result.price?.currency !== "string"
+      ) {
+        throw new Error("The product page did not return a valid price suggestion.");
+      }
+      setProduct((current) => ({
+        ...current,
+        price: String(result.price.amount),
+        priceCurrency: result.price.currency,
+      }));
+      setPriceSuggestionMessage("Suggested price filled in. Verify it before saving.");
+    } catch (suggestionError) {
+      console.error("Could not suggest product price", suggestionError);
+      setPriceSuggestionMessage(
+        suggestionError instanceof Error
+          ? suggestionError.message
+          : "Could not suggest a price from this link."
+      );
+    } finally {
+      setSuggestingPrice(false);
+    }
+  }
+
   async function deleteProduct() {
     if (!pendingDelete) return false;
     const item = pendingDelete;
@@ -239,19 +296,22 @@ export default function BreweryCatalogueClient() {
     setImageInputKey((key) => key + 1);
     setError("");
     setNotice("");
+    setPriceSuggestionMessage("");
     setProductModalOpen(true);
   }
 
   function openAddProduct() {
     setEditingId(null);
+    const isHomebrewShop = account?.business_type === "homebrew_shop";
     setProduct(initialProduct);
-    setProductKind(null);
+    setProductKind(isHomebrewShop ? "kit" : null);
     setCurrentImageUrl("");
     setSelectedImage(null);
     setRemoveImage(false);
     setImageInputKey((key) => key + 1);
     setError("");
     setNotice("");
+    setPriceSuggestionMessage("");
     setProductModalOpen(true);
   }
 
@@ -262,10 +322,41 @@ export default function BreweryCatalogueClient() {
     setProduct(initialProduct);
     setProductKind(null);
     setCurrentImageUrl("");
+    setPriceSuggestionMessage("");
     setSelectedImage(null);
     setRemoveImage(false);
     setImageInputKey((key) => key + 1);
   }
+
+  const downloadQrCode = async (productName: string) => {
+    const svg = qrCodeRef.current?.querySelector("svg");
+    if (!svg) {
+      setError("The QR code is not ready to download.");
+      return;
+    }
+
+    const safeProductName = productName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || "product";
+    setDownloadingQr(true);
+    setError("");
+    try {
+      const downloadSvg = svg.cloneNode(true) as SVGSVGElement;
+      downloadSvg.setAttribute("width", "2048");
+      downloadSvg.setAttribute("height", "2048");
+      const svgMarkup = new XMLSerializer().serializeToString(downloadSvg);
+      await saveDownload(
+        new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" }),
+        `${safeProductName}-qr.svg`
+      );
+    } catch (downloadError) {
+      console.error("Could not download product QR code", downloadError);
+      setError(getErrorMessage(downloadError, "Could not download the QR code."));
+    } finally {
+      setDownloadingQr(false);
+    }
+  };
 
   const normalizedSearch = searchQuery.trim().toLocaleLowerCase();
   const filteredProducts = products.filter((item) => {
@@ -326,12 +417,18 @@ export default function BreweryCatalogueClient() {
               <section className="mx-auto max-w-2xl rounded-xl border border-green-400/20 bg-green-950/20 p-5">
                 <h2 className="text-lg font-semibold text-green-100">Start your catalogue</h2>
                 <p className="mt-1 text-sm leading-6 text-white/70">
-                  Add a brewing kit or a beverage. You can include product details and an optional picture, then publish the listing on your business page.
+                  {account.business_type === "homebrew_shop"
+                    ? "List all-grain, fresh wort, and malt extract beer kits on your business page."
+                    : "Add a brewing kit, beverage, or other product. You can include product details and an optional picture, then publish the listing on your business page."}
                 </p>
                 <ol className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
                   <li className="rounded-lg border border-white/10 bg-black/20 p-3">
                     <span className="block font-semibold text-white/90">1. Choose a listing</span>
-                    <span className="mt-1 block text-white/60">Select a brewing kit or beverage.</span>
+                    <span className="mt-1 block text-white/60">
+                      {account.business_type === "homebrew_shop"
+                        ? "Choose a beer kit type."
+                        : "Select a brewing kit or beverage."}
+                    </span>
                   </li>
                   <li className="rounded-lg border border-white/10 bg-black/20 p-3">
                     <span className="block font-semibold text-white/90">2. Add details</span>
@@ -367,32 +464,49 @@ export default function BreweryCatalogueClient() {
                 ) : (
                   <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {filteredProducts.map((item) => {
-                  const publicUrl = `${window.location.origin}/business/${account.slug}/${item.slug}?source=qr`;
+                  const publicUrl = `${publicAppOrigin}/business/${account.slug}/${item.slug}?source=qr`;
                   return (
-                    <li key={item.id} className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-white/10 bg-white/5">
+                    <li key={item.id} className={`relative flex min-w-0 flex-col rounded-xl border border-white/10 bg-white/5 ${qrProductId === item.id ? "z-20" : ""}`}>
                       {typeof item.image_url === "string" && item.image_url && (
-                        <img src={item.image_url} alt="" className="h-40 w-full bg-black/20 object-contain" />
+                        <img src={item.image_url} alt="" className="h-40 w-full rounded-t-xl bg-black/20 object-contain" />
                       )}
                       <div className="flex flex-1 flex-col p-4">
                         <div className="min-w-0">
-                          <p className="break-words font-semibold">{item.name}</p>
+                          <ProductCardTitle name={item.name} />
                           <p className="mt-1 text-xs text-green-200/75">{categories.find(([value]) => value === item.category)?.[1] ?? item.category}</p>
+                          {item.price != null && typeof item.price_currency === "string" && (
+                            <p className="mt-1 text-sm font-semibold text-green-100">
+                              {item.price_currency} {Number(item.price).toFixed(2)} · listed price
+                            </p>
+                          )}
                           <p className="mt-2 text-xs text-white/50">{item.is_published ? "Published" : "Unpublished"} · {item.analytics.pageViews} page views · {item.analytics.qrScans} QR scans (30 days)</p>
                           {item.is_published && <Link href={`/business/${account.slug}/${item.slug}`} className="mt-2 inline-block text-sm text-green-200 underline">Open public product page</Link>}
                         </div>
                         <div className="mt-auto flex flex-wrap gap-2 pt-4">
-                          <button type="button" onClick={() => setQrProductId(qrProductId === item.id ? null : item.id)} className="rounded border border-white/20 bg-white/10 px-3 py-1.5 text-sm">Owner QR</button>
+                          <button type="button" aria-expanded={qrProductId === item.id} onClick={() => setQrProductId(qrProductId === item.id ? null : item.id)} className="rounded border border-white/20 bg-white/10 px-3 py-1.5 text-sm">QR</button>
                           <button type="button" onClick={() => editProduct(item)} className="rounded border border-white/20 bg-white/10 px-3 py-1.5 text-sm">Edit</button>
                           <button type="button" disabled={busy} onClick={() => setPendingDelete(item)} className="rounded border border-red-400/30 bg-red-950/30 px-3 py-1.5 text-sm text-red-200 disabled:opacity-50">Delete</button>
                         </div>
                       </div>
                       {qrProductId === item.id && item.is_published && (
-                        <div className="brewery-owner-qr mt-4 flex flex-wrap items-center gap-4 rounded-lg bg-white p-4 text-zinc-900">
-                          <QRCodeSVG value={publicUrl} size={144} level="M" />
-                          <div className="max-w-sm">
-                            <p className="font-semibold">Owner-only QR code</p>
-                            <p className="mt-1 text-sm">This code opens the public product page. It is shown only in this business account.</p>
-                            <button type="button" onClick={() => window.print()} className="mt-3 rounded bg-zinc-800 px-3 py-2 text-sm font-semibold text-white print:hidden">Print QR</button>
+                        <div className="brewery-product-qr absolute inset-0 z-30 flex flex-col items-center justify-center gap-2 rounded-xl border border-white/10 bg-zinc-900/95 p-3 text-center text-white shadow-xl backdrop-blur-sm">
+                          <button
+                            type="button"
+                            aria-label="Close product QR code"
+                            onClick={() => setQrProductId(null)}
+                            className="absolute right-2 top-2 rounded border border-white/20 bg-white/10 px-2 py-1 text-xs text-white/80 hover:bg-white/15"
+                          >
+                            Close
+                          </button>
+                          <div ref={qrCodeRef} className="shrink-0 rounded bg-white p-2">
+                            <QRCodeSVG value={publicUrl} size={144} level="M" includeMargin bgColor="#FFFFFF" />
+                          </div>
+                          <div className="max-w-sm pt-1">
+                            <p className="font-semibold">Product QR code</p>
+                            <p className="mt-1 text-sm text-white/70">Scan this code to open the public product page.</p>
+                            <button type="button" disabled={downloadingQr} onClick={() => void downloadQrCode(item.name)} className="mt-2 rounded border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold text-white hover:bg-white/15 disabled:opacity-50">
+                              {downloadingQr ? "Preparing download…" : "Download QR code"}
+                            </button>
                           </div>
                         </div>
                       )}
@@ -426,7 +540,7 @@ export default function BreweryCatalogueClient() {
                   >
                     ×
                   </button>
-                  {productKind === null && !editingId ? (
+                  {productKind === null && !editingId && account.business_type !== "homebrew_shop" ? (
                     <>
                       <h2 id="product-modal-title" className="pr-8 text-xl font-semibold text-green-200">What are you adding?</h2>
                       <p className="mt-1 text-sm text-white/60">Choose the type of listing you want to create.</p>
@@ -461,15 +575,43 @@ export default function BreweryCatalogueClient() {
                   <p className="mt-1 text-sm text-white/60">{editingId ? "Update this product listing. Customers can rate and review published listings." : productKind === "beverage" ? "Create a listing for a beverage your bar or business serves or sells. Customers can rate and review published listings." : "Create a listing for your brewing kit. Customers can rate and review published listings."}</p>
                   <form onSubmit={saveProduct} className="mt-5 grid gap-4 sm:grid-cols-2">
               <label className="block text-sm">Product name<input required maxLength={160} className={inputClass} value={product.name} onChange={(event) => setProduct({ ...product, name: event.target.value })} /></label>
-              <label className="block text-sm">Category<select className={inputClass} value={product.category} onChange={(event) => setProduct({ ...product, category: event.target.value })}>{(productKind === "beverage" && !editingId ? beverageCategories : categories).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+              <label className="block text-sm">Category<select className={inputClass} value={product.category} onChange={(event) => setProduct({ ...product, category: event.target.value })}>{(account.business_type === "homebrew_shop" ? beerKitCategories : productKind === "beverage" && !editingId ? beverageCategories : categories).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
               <label className="block text-sm">Style / type<input maxLength={120} className={inputClass} value={product.style} onChange={(event) => setProduct({ ...product, style: event.target.value })} /></label>
+              <label className="block text-sm">
+                Price <span className="text-white/50">(optional)</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="9999999999.99"
+                  step="0.01"
+                  inputMode="decimal"
+                  className={inputClass}
+                  value={product.price}
+                  disabled={suggestingPrice}
+                  onChange={(event) => setProduct({ ...product, price: event.target.value })}
+                />
+              </label>
+              <label className="block text-sm">
+                Currency <span className="text-white/50">(required with a price)</span>
+                <input
+                  type="text"
+                  maxLength={3}
+                  autoCapitalize="characters"
+                  placeholder="NOK"
+                  className={inputClass}
+                  value={product.priceCurrency}
+                  disabled={suggestingPrice}
+                  onChange={(event) => setProduct({ ...product, priceCurrency: event.target.value.toUpperCase() })}
+                />
+                <span className="mt-1 block text-xs text-white/50">Use a 3-letter currency code, such as NOK or EUR.</span>
+              </label>
               {beverageCategories.some(([value]) => value === product.category) && (
                 <label className="block text-sm">
                   Brewed by <span className="text-white/50">(optional)</span>
                   <input maxLength={160} className={inputClass} value={product.brewedBy} onChange={(event) => setProduct({ ...product, brewedBy: event.target.value })} />
                 </label>
               )}
-              {product.category === "all-grain-kit" && (
+              {beerKitCategories.some(([value]) => value === product.category) && (
                 <>
                   <label className="block text-sm">Batch size (litres)<input type="number" min="0" max="10000" step="0.1" className={inputClass} value={product.batchSizeLiters} onChange={(event) => setProduct({ ...product, batchSizeLiters: event.target.value })} /></label>
                   <label className="block text-sm">Target ABV (%)<input type="number" min="0" max="100" step="0.1" className={inputClass} value={product.abv} onChange={(event) => setProduct({ ...product, abv: event.target.value })} /></label>
@@ -477,7 +619,7 @@ export default function BreweryCatalogueClient() {
                   <label className="block text-sm">Bitterness (IBU)<input type="number" min="0" max="1000" step="1" className={inputClass} value={product.ibu} onChange={(event) => setProduct({ ...product, ibu: event.target.value })} /></label>
                 </>
               )}
-              {product.category !== "all-grain-kit" && (
+              {!beerKitCategories.some(([value]) => value === product.category) && (
                 <>
                   <label className="block text-sm">ABV (%)<input type="number" min="0" max="100" step="0.01" className={inputClass} value={product.abv} onChange={(event) => setProduct({ ...product, abv: event.target.value })} /></label>
                   {!beverageCategories.some(([value]) => value === product.category) && (
@@ -485,14 +627,43 @@ export default function BreweryCatalogueClient() {
                   )}
                 </>
               )}
-              <label className="block text-sm sm:col-span-2">
-                Product URL (optional)
-                <input type="text" inputMode="url" placeholder="https://shop.example.com/products/your-product" className={inputClass} value={product.productUrl} onChange={(event) => setProduct({ ...product, productUrl: event.target.value })} />
+              <div className="text-sm sm:col-span-2">
+                <label htmlFor="product-url">Product URL (optional)</label>
+                <input
+                  id="product-url"
+                  type="text"
+                  inputMode="url"
+                  placeholder="https://shop.example.com/products/your-product"
+                  className={inputClass}
+                  value={product.productUrl}
+                  disabled={suggestingPrice}
+                  onChange={(event) => {
+                    setProduct({ ...product, productUrl: event.target.value });
+                    setPriceSuggestionMessage("");
+                  }}
+                />
                 <span className="mt-1 block text-xs text-white/50">Customers can visit this page. Product pictures are added separately by uploading an image below.</span>
-              </label>
+                <button
+                  type="button"
+                  onClick={() => void suggestPriceFromLink()}
+                  disabled={!product.productUrl.trim() || suggestingPrice}
+                  className="mt-2 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {suggestingPrice ? "Checking product page…" : "Suggest price from link"}
+                </button>
+                <span className="ml-3 text-xs text-white/50">
+                  Suggestions only work when the page provides public price metadata. Verify before saving.
+                </span>
+                {priceSuggestionMessage && (
+                  <p role="status" className="mt-2 text-xs text-white/70">{priceSuggestionMessage}</p>
+                )}
+              </div>
               <div className="space-y-2 sm:col-span-2">
                 <label className="block text-sm">
                   Product picture (optional)
+                  <span className="mt-1 block text-xs text-white/50">
+                    Near-white backgrounds touching the image edges are removed automatically.
+                  </span>
                   <input
                     key={imageInputKey}
                     type="file"
@@ -543,7 +714,7 @@ export default function BreweryCatalogueClient() {
               <label className="block text-sm sm:col-span-2">Description<textarea rows={3} maxLength={5000} className={inputClass} value={product.description} onChange={(event) => setProduct({ ...product, description: event.target.value })} /></label>
               <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" checked={product.isPublished} onChange={(event) => setProduct({ ...product, isPublished: event.target.checked })} />Publish this product publicly</label>
               <div className="flex flex-wrap gap-2 sm:col-span-2">
-                <button disabled={saving} className="rounded-lg border border-green-400/30 bg-green-700 px-4 py-2 font-semibold disabled:opacity-50">{saving ? "Saving…" : editingId ? "Save product" : "Add product"}</button>
+                <button disabled={saving || suggestingPrice} className="rounded-lg border border-green-400/30 bg-green-700 px-4 py-2 font-semibold disabled:opacity-50">{saving ? "Saving…" : editingId ? "Save product" : "Add product"}</button>
                 <button type="button" disabled={saving} onClick={closeProductModal} className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 disabled:opacity-50">Cancel</button>
               </div>
             </form>
@@ -564,29 +735,6 @@ export default function BreweryCatalogueClient() {
         onConfirm={deleteProduct}
         onCancel={() => setPendingDelete(null)}
       />
-      <style jsx global>{`
-        @media print {
-          body * {
-            visibility: hidden !important;
-          }
-          .brewery-owner-qr,
-          .brewery-owner-qr * {
-            visibility: visible !important;
-          }
-          .brewery-owner-qr {
-            position: fixed !important;
-            inset: 0 !important;
-            display: flex !important;
-            width: 100% !important;
-            height: 100% !important;
-            align-items: center !important;
-            justify-content: center !important;
-            background: white !important;
-            color: black !important;
-            border: 0 !important;
-          }
-        }
-      `}</style>
     </main>
   );
 }

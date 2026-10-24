@@ -7,6 +7,7 @@ import PageHeading from "@/app/components/PageHeading";
 import BreweryProductReviews from "../../BreweryProductReviews";
 import BreweryBeerMetrics from "../../BreweryBeerMetrics";
 import BreweryProductLink from "../../BreweryProductLink";
+import { isBeerKitProductCategory } from "@/lib/brewery/products";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,7 @@ export default async function BreweryProductPage({
 
   const { data: product, error } = await serviceRole
     .from("brewery_products")
-    .select("id, slug, name, category, description, product_url, image_url, style, abv, batch_size_l, ebc, ibu, package_size, availability, details")
+    .select("id, slug, name, category, description, product_url, image_url, style, abv, batch_size_l, ebc, ibu, package_size, price, price_currency, availability, details")
     .eq("brewery_id", brewery.id)
     .eq("slug", params.productSlug)
     .eq("is_published", true)
@@ -70,7 +71,7 @@ export default async function BreweryProductPage({
         <div className="absolute right-4 top-3 z-40"><MenuOverlay current="brewery" /></div>
         <div className="absolute left-4 top-3 z-40"><BackButton /></div>
         {product.image_url && <img src={product.image_url} alt="" className="mb-6 max-h-96 w-full rounded-xl bg-black/20 object-contain" />}
-        <p className={`text-sm uppercase tracking-widest text-green-300${product.category === "all-grain-kit" ? " text-center" : ""}`}>{product.category.replace("-", " ")}</p>
+        <p className={`text-sm uppercase tracking-widest text-green-300${isBeerKitProductCategory(product.category) ? " text-center" : ""}`}>{product.category.replace(/-/g, " ")}</p>
         <PageHeading title={product.name} subtitle={brewery.name} />
         {averageRating !== null && (
           <div
@@ -90,11 +91,24 @@ export default async function BreweryProductPage({
         <dl className="my-6 flex flex-wrap justify-center gap-6 text-center text-sm">
           {product.style && <div><dt className="text-white/50">Style</dt><dd className="mt-1">{product.style}</dd></div>}
           {beverageCategories.includes(product.category) && brewedBy && <div><dt className="text-white/50">Brewed by</dt><dd className="mt-1">{brewedBy}</dd></div>}
-          {product.abv != null && <div><dt className="text-white/50">{product.category === "all-grain-kit" ? "Target ABV" : "ABV"}</dt><dd className="mt-1">{Number(product.abv).toFixed(1)}%</dd></div>}
+          {product.abv != null && <div><dt className="text-white/50">{isBeerKitProductCategory(product.category) ? "Target ABV" : "ABV"}</dt><dd className="mt-1">{Number(product.abv).toFixed(1)}%</dd></div>}
           {product.batch_size_l != null && <div><dt className="text-white/50">Batch size</dt><dd className="mt-1">{Number(product.batch_size_l).toLocaleString()} L</dd></div>}
           {product.package_size && <div><dt className="text-white/50">Package</dt><dd className="mt-1">{product.package_size}</dd></div>}
+          {product.price != null && product.price_currency && (
+            <div>
+              <dt className="text-white/50">Listed price</dt>
+              <dd className="mt-1 text-lg font-semibold text-green-100">
+                {product.price_currency} {Number(product.price).toFixed(2)}
+              </dd>
+            </div>
+          )}
           <div><dt className="text-white/50">Availability</dt><dd className="mt-1 capitalize">{product.availability}</dd></div>
         </dl>
+        {product.price != null && (
+          <p className="mb-6 text-center text-xs text-white/50">
+            Price supplied by the business; check the product page for the latest price.
+          </p>
+        )}
         <BreweryBeerMetrics
           ebc={product.ebc}
           ibu={product.ibu}

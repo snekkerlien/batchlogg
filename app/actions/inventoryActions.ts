@@ -4,6 +4,7 @@ import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { revalidatePath } from "next/cache";
 import {
   INVENTORY_CATEGORIES,
+  INVENTORY_BOTTLE_TYPES,
   isInventorySubcategory,
   LEGACY_CATEGORY_ALIASES,
   SNUS_CATEGORIES,
@@ -18,6 +19,7 @@ export async function addInventoryItem(formData: FormData, shouldRevalidate = tr
   const name = formData.get("name")?.toString();
   const category = formData.get("category")?.toString();
   const subcategory = formData.get("subcategory")?.toString() ?? "";
+  const bottleType = formData.get("bottle_type")?.toString() ?? "";
   const amount = Number(formData.get("amount"));
   const unit = formData.get("unit")?.toString();
   const minimum = Number(formData.get("minimum_amount"));
@@ -25,6 +27,7 @@ export async function addInventoryItem(formData: FormData, shouldRevalidate = tr
   const ebcRaw = formData.get("ebc")?.toString().trim().replace(",", ".") ?? "";
   const isHop = category === "hops";
   const isMalt = category === "malts";
+  const isBottle = category === "packaging" && subcategory === "Bottles";
   const yearRaw = formData.get("hop_year")?.toString().trim() ?? "";
   const hopYear = isHop && yearRaw ? Number(yearRaw) : null;
   const alphaAcid = isHop ? Number(alphaRaw) : null;
@@ -47,7 +50,9 @@ export async function addInventoryItem(formData: FormData, shouldRevalidate = tr
     minimum < 0 ||
     (selectedCategory &&
       subcategory &&
-      !isInventorySubcategory(selectedCategory.id, subcategory))
+      !isInventorySubcategory(selectedCategory.id, subcategory)) ||
+    (isBottle && !INVENTORY_BOTTLE_TYPES.some((type) => type === bottleType)) ||
+    (!isBottle && bottleType !== "")
   ) {
     throw new Error("Invalid inventory item");
   }
@@ -83,8 +88,9 @@ export async function addInventoryItem(formData: FormData, shouldRevalidate = tr
       alpha_acid: alphaAcid,
       ebc,
       hop_year: hopYear,
+      bottle_type: isBottle ? bottleType : null,
     })
-    .select("id, name, amount, unit, minimum_amount, category, subcategory, alpha_acid, ebc, hop_year")
+    .select("id, name, amount, unit, minimum_amount, category, subcategory, alpha_acid, ebc, hop_year, bottle_type")
     .single();
   if (error) throw new Error(`Failed to add inventory item: ${error.message}`);
 
@@ -101,7 +107,8 @@ export async function updateInventoryItem(
   category: string,
   subcategory: string,
   newAmount: number,
-  newMinimumAmount: number
+  newMinimumAmount: number,
+  bottleType = ""
 ) {
   const { supabase } = await supabaseServer();
 
@@ -113,6 +120,7 @@ export async function updateInventoryItem(
       (item) => item.id === LEGACY_CATEGORY_ALIASES[category]
     );
   const isSnusCategory = SNUS_CATEGORIES.some((value) => value === category);
+  const isBottle = category === "packaging" && subcategory === "Bottles";
   if (
     !id ||
     !name.trim() ||
@@ -124,7 +132,9 @@ export async function updateInventoryItem(
     !Number.isFinite(newAmount) ||
     newAmount < 0 ||
     !Number.isFinite(newMinimumAmount) ||
-    newMinimumAmount < 0
+    newMinimumAmount < 0 ||
+    (isBottle && !INVENTORY_BOTTLE_TYPES.some((type) => type === bottleType)) ||
+    (!isBottle && bottleType !== "")
   ) {
     throw new Error("Invalid inventory item");
   }
@@ -147,6 +157,7 @@ export async function updateInventoryItem(
       subcategory: subcategory || null,
       amount: newAmount,
       minimum_amount: newMinimumAmount,
+      bottle_type: isBottle ? bottleType : null,
     })
     .eq("id", id)
     .eq("user_id", user.id);

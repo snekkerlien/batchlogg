@@ -16,7 +16,8 @@ export default function InventoryList({
     category: string,
     subcategory: string,
     amount: number,
-    minimumAmount: number
+    minimumAmount: number,
+    bottleType: string
   ) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
 }) {

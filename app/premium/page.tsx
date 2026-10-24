@@ -5,6 +5,7 @@ import Link from "next/link";
 import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
+import { FREE_RECIPE_LIMIT } from "@/lib/recipes/constants";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 
 type BillingProfile = {
@@ -143,7 +144,7 @@ export default function PremiumPage() {
             <section className="rounded-xl border border-white/10 bg-white/5 p-4">
               <h3 className="font-semibold text-white">More brewing capacity</h3>
               <ul className="mt-2 list-outside list-disc space-y-1 pl-5 text-sm text-white/75">
-                <li>Track up to 20 vessels instead of the Free plan’s 6.</li>
+                <li>Manage up to 20 vessels; Free includes 6.</li>
               </ul>
             </section>
 
@@ -155,40 +156,46 @@ export default function PremiumPage() {
                   reminders, and export them to calendar apps with iCalendar.
                 </li>
                 <li>
-                  Create and manage a shopping list, and plan restocks from
-                  low-stock inventory.
+                  Turn low-stock inventory into shopping-list restock
+                  suggestions in one step, without changing your recorded
+                  stock.
                 </li>
                 <li>
                   View a batch’s specific-gravity development graph and current
                   ABV. All plans can save and review gravity readings.
                 </li>
                 <li>
-                  Invite collaborators to shared vessels and review their
-                  activity history.
+                  Brew together: invite collaborators to shared vessels, leave
+                  vessel notes, and keep up with the activity history.
                 </li>
               </ul>
             </section>
 
             <section className="rounded-xl border border-white/10 bg-white/5 p-4">
-              <h3 className="font-semibold text-white">Learn from your batches</h3>
+              <h3 className="font-semibold text-white">See how your brewing is progressing</h3>
               <ul className="mt-2 list-outside list-disc space-y-1 pl-5 text-sm text-white/75">
                 <li>
-                  Review brewing insights and analytics from your batch
-                  history.
+                  Track average ABV, attenuation, brew time, and packaged yield;
+                  compare results with recipe targets; and explore monthly
+                  trends and totals by brew type.
                 </li>
               </ul>
             </section>
 
             <section className="rounded-xl border border-white/10 bg-white/5 p-4">
-              <h3 className="font-semibold text-white">Keep and export recipe history</h3>
+              <h3 className="font-semibold text-white">Unlimited recipes and recipe history</h3>
               <ul className="mt-2 list-outside list-disc space-y-1 pl-5 text-sm text-white/75">
+                <li>
+                  Save unlimited recipes. Free accounts can save up to {FREE_RECIPE_LIMIT}.
+                </li>
                 <li>
                   Save recipe snapshots as you edit recipes, then view and
                   compare earlier versions.
                 </li>
                 <li>
-                  Export recipes as JSON or CSV; export BeerXML for beer and
-                  braggot recipes, or BeerJSON.
+                  Take your recipes anywhere: export as JSON or CSV, or use
+                  BeerXML for beer and braggot recipes and BeerJSON for
+                  compatible brewing apps.
                 </li>
               </ul>
             </section>

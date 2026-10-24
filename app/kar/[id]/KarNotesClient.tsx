@@ -6,6 +6,7 @@ import { deleteNoteServer } from "./deleteNoteServer";
 import { deleteImageServer } from "./deleteImage";
 import { addNote } from "@/app/actions/addNote";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
+import { UnitAwareText } from "@/app/components/Units";
 
 type NoteType = {
   id: string;
@@ -150,7 +151,7 @@ export function KarNotesClient({
             </p>
 
             {note.note && (
-              <p className="mb-2 whitespace-pre-wrap">{note.note}</p>
+              <p className="mb-2 whitespace-pre-wrap"><UnitAwareText text={note.note} /></p>
             )}
 
             {note.image_url && (

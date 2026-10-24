@@ -427,17 +427,6 @@ export default function BreweryManageClient() {
 
             {account.hasAccess && (
               <>
-                <nav
-                  aria-label="Business workspace sections"
-                  className="grid gap-2 border-b border-white/10 pb-5 sm:grid-cols-2 lg:grid-cols-4"
-                >
-                  <a href="#business-overview" className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-center text-sm font-semibold text-white/80 hover:bg-white/10">Overview</a>
-                  {(account.isOwner || account.role === "manager" || account.role === "editor") && <Link href="/business/manage/catalogue" className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-center text-sm font-semibold text-white/80 hover:bg-white/10">Products &amp; reviews</Link>}
-                  {(account.isOwner || account.role === "manager" || account.role === "editor") && <Link href="/business/manage/analytics" className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-center text-sm font-semibold text-white/80 hover:bg-white/10">Analytics</Link>}
-                  {(account.isOwner || account.role === "manager") && <a href="#business-page-details" className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-center text-sm font-semibold text-white/80 hover:bg-white/10">Page details</a>}
-                  {account.isOwner && <a href="#business-team" className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-center text-sm font-semibold text-white/80 hover:bg-white/10">Team &amp; roles</a>}
-                  {account.isOwner && account.status === "approved" && <a href="#business-billing" className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-center text-sm font-semibold text-white/80 hover:bg-white/10">Billing</a>}
-                </nav>
                 {account.isOwner && <BreweryTeamManager />}
                 {(account.isOwner || account.role === "manager") && <form id="business-page-details" onSubmit={savePage} className="scroll-mt-6 rounded-xl border border-white/10 bg-white/5 p-5">
                   <h2 className="text-xl font-semibold text-green-200">Page details</h2>

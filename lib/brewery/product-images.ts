@@ -1,13 +1,140 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import sharp from "sharp";
 
 export const PRODUCT_IMAGE_BUCKET = "business-product-images";
 export const MAX_PRODUCT_IMAGE_SIZE = 5 * 1024 * 1024;
+const MAX_PRODUCT_IMAGE_PIXELS = 40_000_000;
+const MAX_PROCESSED_IMAGE_DIMENSION = 2048;
 
 const IMAGE_TYPES = new Map([
   ["image/jpeg", "jpg"],
   ["image/png", "png"],
   ["image/webp", "webp"],
 ]);
+
+export class ProductImageProcessingError extends Error {}
+
+export function removeWhiteBackground(data: Uint8Array, width: number, height: number) {
+  const pixelCount = width * height;
+  const background = new Uint8Array(pixelCount);
+  const queue = new Uint32Array(pixelCount);
+  let queueEnd = 0;
+
+  function enqueueIfBackground(index: number) {
+    if (background[index]) return;
+    const offset = index * 4;
+    const red = data[offset];
+    const green = data[offset + 1];
+    const blue = data[offset + 2];
+    const lightest = Math.max(red, green, blue);
+    const darkest = Math.min(red, green, blue);
+    if (
+      data[offset + 3] !== 0 &&
+      (darkest < 200 || lightest - darkest > 40)
+    ) return;
+
+    background[index] = 1;
+    queue[queueEnd] = index;
+    queueEnd += 1;
+  }
+
+  for (let x = 0; x < width; x += 1) {
+    enqueueIfBackground(x);
+    enqueueIfBackground((height - 1) * width + x);
+  }
+  for (let y = 1; y < height - 1; y += 1) {
+    enqueueIfBackground(y * width);
+    enqueueIfBackground(y * width + width - 1);
+  }
+
+  for (let queueStart = 0; queueStart < queueEnd; queueStart += 1) {
+    const index = queue[queueStart];
+    const x = index % width;
+    if (x > 0) enqueueIfBackground(index - 1);
+    if (x < width - 1) enqueueIfBackground(index + 1);
+    if (index >= width) enqueueIfBackground(index - width);
+    if (index + width < pixelCount) enqueueIfBackground(index + width);
+
+    const offset = index * 4;
+    const alpha = data[offset + 3];
+    const whiteness = Math.min(data[offset], data[offset + 1], data[offset + 2]);
+    const remainingOpacity = alpha === 0
+      ? 0
+      : Math.max(0, Math.min(1, (220 - whiteness) / 40));
+    data[offset + 3] = Math.round(alpha * remainingOpacity);
+  }
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const index = y * width + x;
+      if (background[index]) continue;
+      const offset = index * 4;
+      if (data[offset + 3] === 0) continue;
+
+      let touchesBackground = false;
+      for (let neighborY = Math.max(0, y - 1); neighborY <= Math.min(height - 1, y + 1); neighborY += 1) {
+        for (let neighborX = Math.max(0, x - 1); neighborX <= Math.min(width - 1, x + 1); neighborX += 1) {
+          if (background[neighborY * width + neighborX]) {
+            touchesBackground = true;
+            break;
+          }
+        }
+        if (touchesBackground) break;
+      }
+      if (!touchesBackground) continue;
+
+      const red = data[offset];
+      const green = data[offset + 1];
+      const blue = data[offset + 2];
+      const lightest = Math.max(red, green, blue);
+      const darkest = Math.min(red, green, blue);
+      if (darkest < 190 || lightest - darkest > 50) continue;
+
+      const remainingOpacity = Math.max(0, Math.min(1, (220 - darkest) / 40));
+      data[offset + 3] = Math.round(data[offset + 3] * remainingOpacity);
+    }
+  }
+  return data;
+}
+
+export async function processProductImage(file: File) {
+  try {
+    const input = Buffer.from(await file.arrayBuffer());
+    const image = sharp(input, { limitInputPixels: MAX_PRODUCT_IMAGE_PIXELS });
+    const metadata = await image.metadata();
+    if (!metadata.width || !metadata.height) {
+      throw new Error("Image dimensions are unavailable.");
+    }
+    if (metadata.width * metadata.height > MAX_PRODUCT_IMAGE_PIXELS) {
+      throw new Error("Image dimensions are too large.");
+    }
+
+    const { data, info } = await image
+      .rotate()
+      .resize({
+        width: MAX_PROCESSED_IMAGE_DIMENSION,
+        height: MAX_PROCESSED_IMAGE_DIMENSION,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    removeWhiteBackground(data, info.width, info.height);
+
+    const processed = await sharp(data, {
+      raw: { width: info.width, height: info.height, channels: 4 },
+    })
+      .webp({ quality: 86, alphaQuality: 100 })
+      .toBuffer();
+    return new File([processed], "product.webp", { type: "image/webp" });
+  } catch (error) {
+    if (error instanceof ProductImageProcessingError) throw error;
+    throw new ProductImageProcessingError(
+      "Could not process this image. Try another JPEG, PNG, or WebP file."
+    );
+  }
+}
 
 export async function validateProductImage(file: File | null) {
   if (!file) return null;
@@ -70,16 +197,16 @@ export async function uploadProductImage(
   businessId: string,
   file: File
 ) {
-  const extension = IMAGE_TYPES.get(file.type);
-  if (!extension) throw new Error("Unsupported product image format.");
+  if (!IMAGE_TYPES.has(file.type)) throw new Error("Unsupported product image format.");
+  const processedFile = await processProductImage(file);
 
   await ensureProductImageBucket(serviceRole);
-  const path = `${businessId}/${crypto.randomUUID()}.${extension}`;
+  const path = `${businessId}/${crypto.randomUUID()}.webp`;
   const { error } = await serviceRole.storage
     .from(PRODUCT_IMAGE_BUCKET)
-    .upload(path, file, {
+    .upload(path, processedFile, {
       cacheControl: "31536000",
-      contentType: file.type,
+      contentType: processedFile.type,
       upsert: false,
     });
   if (error) throw error;

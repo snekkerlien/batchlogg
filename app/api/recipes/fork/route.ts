@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { decodeForumContent } from "@/lib/community/forumContent";
+import {
+  FREE_RECIPE_LIMIT,
+  getRecipeLimitStatus,
+  recipeLimitError,
+} from "@/lib/recipes/limits";
 
 export const runtime = "nodejs";
 
@@ -131,6 +136,26 @@ export async function POST(request: Request) {
     );
   }
 
+  let limitStatus: Awaited<ReturnType<typeof getRecipeLimitStatus>>;
+  try {
+    limitStatus = await getRecipeLimitStatus(serviceRole, user.id);
+  } catch (limitError) {
+    console.error("Could not verify recipe version limit", limitError);
+    return NextResponse.json(
+      { error: "Could not verify your recipe limit. Please try again." },
+      { status: 500 }
+    );
+  }
+  if (!limitStatus.isPremium) {
+    const error = recipeLimitError(limitStatus.count);
+    if (error) {
+      return NextResponse.json(
+        { error, upgradeUrl: "/premium", recipeLimit: FREE_RECIPE_LIMIT, recipeCount: limitStatus.count },
+        { status: 403 }
+      );
+    }
+  }
+
   const newRecipe: Record<string, unknown> = {
     user_id: user.id,
     source_recipe_id: source.id,
@@ -141,7 +166,7 @@ export async function POST(request: Request) {
     newRecipe[field] = source[field];
   }
 
-  const { data: fork, error: insertError } = await serviceRole
+  const { data: fork, error: insertError } = await supabase
     .from("recipes")
     .insert(newRecipe)
     .select("id")
@@ -149,6 +174,12 @@ export async function POST(request: Request) {
 
   if (insertError) {
     console.error("Could not create recipe version", insertError);
+    if (insertError.code === "23514" && insertError.message.includes("Free accounts can save")) {
+      return NextResponse.json(
+        { error: insertError.message, upgradeUrl: "/premium", recipeLimit: FREE_RECIPE_LIMIT },
+        { status: 403 }
+      );
+    }
     return NextResponse.json({ error: "Could not create your recipe version." }, { status: 500 });
   }
 

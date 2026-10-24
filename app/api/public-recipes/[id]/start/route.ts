@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { PUBLIC_RECIPE_DETAILS } from "@/lib/recipes/publicRecipes";
+import {
+  FREE_RECIPE_LIMIT,
+  getRecipeLimitStatus,
+  recipeLimitError,
+} from "@/lib/recipes/limits";
 
 export const runtime = "nodejs";
 
@@ -37,6 +42,26 @@ export async function POST(_request: Request, { params }: { params: { id: string
   }
   if (existing) return NextResponse.json({ recipeId: existing.id });
 
+  let limitStatus: Awaited<ReturnType<typeof getRecipeLimitStatus>>;
+  try {
+    limitStatus = await getRecipeLimitStatus(serviceRole, user.id);
+  } catch (limitError) {
+    console.error("Could not verify saved recipe limit", limitError);
+    return NextResponse.json(
+      { error: "Could not verify your recipe limit. Please try again." },
+      { status: 500 }
+    );
+  }
+  if (!limitStatus.isPremium) {
+    const limitError = recipeLimitError(limitStatus.count);
+    if (limitError) {
+      return NextResponse.json(
+        { error: limitError, upgradeUrl: "/premium", recipeLimit: FREE_RECIPE_LIMIT, recipeCount: limitStatus.count },
+        { status: 403 }
+      );
+    }
+  }
+
   const fields = Object.fromEntries(Object.entries(source).filter(([key]) =>
     !["id", "user_id", "source_recipe_id", "created_at", "copyright_free"].includes(key)
   ));
@@ -50,6 +75,12 @@ export async function POST(_request: Request, { params }: { params: { id: string
   }).select("id").single();
   if (saveError) {
     console.error("Could not save public recipe for brewing", saveError);
+    if (saveError.code === "23514" && saveError.message.includes("Free accounts can save")) {
+      return NextResponse.json(
+        { error: saveError.message, upgradeUrl: "/premium", recipeLimit: FREE_RECIPE_LIMIT },
+        { status: 403 }
+      );
+    }
     return NextResponse.json({ error: "Could not save a private version of this recipe." }, { status: 500 });
   }
   return NextResponse.json({ recipeId: saved.id }, { status: 201 });

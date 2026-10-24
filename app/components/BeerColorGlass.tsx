@@ -36,6 +36,8 @@ export default function BeerColorGlass({
 }) {
   const color = ebcToHex(ebc);
   const liquidClipId = useId();
+  const glassGradientId = `${liquidClipId}-glass`;
+  const beerGradientId = `${liquidClipId}-beer`;
   const [bubbles, setBubbles] = useState<CarbonationBubble[]>([]);
   const [reducedMotion, setReducedMotion] = useState(true);
 
@@ -82,24 +84,35 @@ export default function BeerColorGlass({
       className={`beer-color-glass shrink-0 ${compact ? "beer-color-glass--compact h-5 w-4" : "h-[5.5rem] w-[4.125rem]"}`}
     >
       <defs>
+        <linearGradient id={glassGradientId} x1="0" x2="1">
+          <stop offset="0" stopColor="white" stopOpacity="0.24" />
+          <stop offset="0.24" stopColor="white" stopOpacity="0.04" />
+          <stop offset="0.76" stopColor="#b9d7e2" stopOpacity="0.02" />
+          <stop offset="1" stopColor="#b9d7e2" stopOpacity="0.16" />
+        </linearGradient>
+        <linearGradient id={beerGradientId} x1="0" x2="1">
+          <stop offset="0" stopColor="white" stopOpacity="0.2" />
+          <stop offset="0.3" stopColor={color} />
+          <stop offset="0.78" stopColor={color} />
+          <stop offset="1" stopColor="#42240f" stopOpacity="0.24" />
+        </linearGradient>
         <clipPath id={liquidClipId}>
-          <path d="M12 23h24l-2.8 32H14.8L12 23Z" />
+          <path d="M10 6h28l-3 50H13L10 6Z" />
         </clipPath>
       </defs>
       <path
         d="M9 5h30l-4.5 52.5a3 3 0 0 1-3 2.7h-15a3 3 0 0 1-3-2.7L9 5Z"
-        fill="rgb(255 255 255 / 5%)"
+        fill={`url(#${glassGradientId})`}
         stroke="rgb(255 255 255 / 75%)"
         strokeWidth="2"
         strokeLinejoin="round"
       />
-      <path
-        d="M12 23h24l-2.8 32H14.8L12 23Z"
-        fill={color}
-        stroke="rgb(255 255 255 / 18%)"
-        strokeWidth="0.75"
-        strokeLinejoin="round"
-      />
+      <g clipPath={`url(#${liquidClipId})`}>
+        <path
+          d="M9 19h30v40H9V19Z"
+          fill={`url(#${beerGradientId})`}
+        />
+      </g>
       <g clipPath={`url(#${liquidClipId})`} fill="rgb(255 255 255 / 70%)">
         {!reducedMotion && bubbles.map((bubble, index) => (
           <circle
@@ -135,15 +148,34 @@ export default function BeerColorGlass({
           </circle>
         ))}
       </g>
-      <path
-        d="M11.5 24v-4.5c0-1.7 1.3-3 3-3h19c1.7 0 3 1.3 3 3V24H11.5Z"
-        fill="rgb(255 255 255 / 94%)"
-      />
+      <g clipPath={`url(#${liquidClipId})`}>
+        <path
+          d="M9 6h30v14H9V6Z"
+          fill="rgb(255 249 232)"
+        />
+        <circle cx="16" cy="11" r="1.2" fill="rgb(220 202 162 / 40%)" />
+        <circle cx="21" cy="15" r="0.8" fill="rgb(220 202 162 / 35%)" />
+        <circle cx="27" cy="10" r="1.1" fill="rgb(220 202 162 / 38%)" />
+        <circle cx="33" cy="14" r="1.3" fill="rgb(220 202 162 / 40%)" />
+      </g>
       <path
         d="m13 9 3.7 42"
         stroke="rgb(255 255 255 / 35%)"
         strokeWidth="1.5"
         strokeLinecap="round"
+      />
+      <path
+        d="m36 10-3.5 41"
+        stroke="rgb(210 232 242 / 24%)"
+        strokeWidth="1"
+        strokeLinecap="round"
+      />
+      <path
+        d="M9 5h30l-4.5 52.5a3 3 0 0 1-3 2.7h-15a3 3 0 0 1-3-2.7L9 5Z"
+        fill="none"
+        stroke="rgb(255 255 255 / 75%)"
+        strokeWidth="2"
+        strokeLinejoin="round"
       />
       <path
         d="M17 57h14"

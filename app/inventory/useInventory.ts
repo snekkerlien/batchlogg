@@ -108,9 +108,10 @@ export function useInventory() {
     category: string,
     subcategory: string,
     amount: number,
-    minimumAmount: number
+    minimumAmount: number,
+    bottleType: string
   ) => {
-    await updateInventoryItem(id, name, category, subcategory, amount, minimumAmount);
+    await updateInventoryItem(id, name, category, subcategory, amount, minimumAmount, bottleType);
     await loadItems();
   }, [loadItems]);
 

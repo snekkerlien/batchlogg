@@ -6,6 +6,7 @@ import RecipePresentation, { type RecipePresentationData } from "@/app/component
 import ExpandArrowButton from "@/app/components/ExpandArrowButton";
 import { Qty } from "@/app/components/Units";
 import StartPublicRecipeButton from "@/app/components/StartPublicRecipeButton";
+import ConfirmDialog from "@/app/components/ConfirmDialog";
 import { useAuthContext } from "@/app/providers/AuthProvider";
 import {
   filterPublicRecipes,
@@ -18,8 +19,10 @@ import {
 
 export default function PublicRecipeList({
   recipes,
+  canModerateRecipes,
 }: {
   recipes: PublicRecipeSummary[];
+  canModerateRecipes: boolean;
 }) {
   const { user, loading: authLoading } = useAuthContext();
   const [search, setSearch] = useState("");
@@ -32,21 +35,32 @@ export default function PublicRecipeList({
     setRequestedStart(new URLSearchParams(window.location.search).get("start"));
   }, []);
   const [expandedRecipeId, setExpandedRecipeId] = useState<string | null>(null);
+  const [recipeManageOpen, setRecipeManageOpen] = useState<string | null>(null);
+  const [removedRecipeIds, setRemovedRecipeIds] = useState<Set<string>>(() => new Set());
+  const [recipePendingRemoval, setRecipePendingRemoval] =
+    useState<PublicRecipeSummary | null>(null);
+  const [removingRecipeId, setRemovingRecipeId] = useState<string | null>(null);
+  const [moderationError, setModerationError] = useState("");
+  const [moderationNotice, setModerationNotice] = useState("");
   const [visibleCount, setVisibleCount] = useState(PUBLIC_RECIPE_PAGE_SIZE);
   const [details, setDetails] = useState<Record<string, RecipePresentationData>>({});
   const [detailErrors, setDetailErrors] = useState<Record<string, string>>({});
   const [loadingDetails, setLoadingDetails] = useState<Record<string, boolean>>({});
   const pendingDetails = useRef(new Set<string>());
   const recipeItems = useRef(new Map<string, HTMLLIElement>());
+  const availableRecipes = useMemo(
+    () => recipes.filter((recipe) => !removedRecipeIds.has(recipe.id)),
+    [recipes, removedRecipeIds]
+  );
   const types = useMemo(
-    () => [...new Set(recipes.map((recipe) => recipe.type).filter(Boolean))].sort(),
-    [recipes]
+    () => [...new Set(availableRecipes.map((recipe) => recipe.type).filter(Boolean))].sort(),
+    [availableRecipes]
   );
   const filters = { search, type, minimumAbv, maximumAbv };
   const filterError = publicRecipeFilterError(filters);
   const filteredRecipes = useMemo(
-    () => sortPublicRecipes(filterPublicRecipes(recipes, { search, type, minimumAbv, maximumAbv }), sort),
-    [recipes, search, type, minimumAbv, maximumAbv, sort]
+    () => sortPublicRecipes(filterPublicRecipes(availableRecipes, { search, type, minimumAbv, maximumAbv }), sort),
+    [availableRecipes, search, type, minimumAbv, maximumAbv, sort]
   );
   const visibleRecipes = filteredRecipes.slice(0, visibleCount);
   const hasFilters = Boolean(search || type !== "All types" || minimumAbv || maximumAbv);
@@ -93,6 +107,41 @@ export default function PublicRecipeList({
     const opening = expandedRecipeId !== id;
     setExpandedRecipeId(opening ? id : null);
     if (opening) void loadDetails(id);
+  }
+
+  async function removeRecipeFromPublicListing() {
+    if (!recipePendingRemoval || removingRecipeId) return false;
+    const recipe = recipePendingRemoval;
+    setRemovingRecipeId(recipe.id);
+    setModerationError("");
+    setModerationNotice("");
+    try {
+      const response = await fetch(
+        `/api/admin/public-recipes/${encodeURIComponent(recipe.id)}`,
+        { method: "DELETE", credentials: "include" }
+      );
+      const result: { error?: string; warning?: string } = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Could not remove this recipe from public listings.");
+      }
+      setRemovedRecipeIds((current) => new Set(current).add(recipe.id));
+      setExpandedRecipeId((current) => current === recipe.id ? null : current);
+      setRecipeManageOpen((current) => current === recipe.id ? null : current);
+      setModerationNotice(
+        result.warning || `${recipe.name} was removed from public recipes. The owner's saved recipe remains unchanged.`
+      );
+      return true;
+    } catch (error) {
+      console.error("Could not remove public recipe", error);
+      setModerationError(
+        error instanceof Error
+          ? error.message
+          : "Could not remove this recipe from public listings."
+      );
+      return false;
+    } finally {
+      setRemovingRecipeId(null);
+    }
   }
 
   if (!recipes.length) {
@@ -196,6 +245,12 @@ export default function PublicRecipeList({
         </button>}
       </div>
       {filterError && <p role="alert" className="mb-4 text-sm text-amber-200">{filterError}</p>}
+      {moderationNotice && (
+        <p role="status" className="mb-4 text-sm text-green-200">{moderationNotice}</p>
+      )}
+      {moderationError && (
+        <p role="alert" className="mb-4 text-sm text-amber-200">{moderationError}</p>
+      )}
 
       {filteredRecipes.length ? (
         <ul id="public-recipe-results" className="space-y-3">
@@ -257,6 +312,46 @@ export default function PublicRecipeList({
                 hidden={expandedRecipeId !== recipe.id}
               >
                 <div className="border-t border-white/10 px-4 pb-5 pt-5 sm:px-5">
+                  {canModerateRecipes && (
+                    <div className="mb-4 rounded-lg border border-white/10 bg-black/20">
+                      <button
+                        type="button"
+                        aria-expanded={recipeManageOpen === recipe.id}
+                        aria-controls={`public-recipe-manage-${recipe.id}`}
+                        onClick={() =>
+                          setRecipeManageOpen((current) =>
+                            current === recipe.id ? null : recipe.id
+                          )
+                        }
+                        className="w-full cursor-pointer px-4 py-3 text-left text-sm font-semibold text-white/75 hover:text-white"
+                      >
+                        Manage recipe
+                        <span aria-hidden="true" className="float-right text-white/60">
+                          {recipeManageOpen === recipe.id ? "−" : "+"}
+                        </span>
+                      </button>
+                      {recipeManageOpen === recipe.id && (
+                        <div
+                          id={`public-recipe-manage-${recipe.id}`}
+                          className="border-t border-white/10 p-4"
+                        >
+                          <p className="mb-3 text-sm text-white/65">
+                            Remove this recipe from public listings without deleting the owner’s saved recipe.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setModerationError("");
+                              setRecipePendingRemoval(recipe);
+                            }}
+                            className="min-h-10 rounded-lg border border-red-300/25 bg-red-400/5 px-3 py-2 text-sm font-medium text-red-100/85 hover:bg-red-400/10 hover:text-red-100"
+                          >
+                            Remove from public
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {loadingDetails[recipe.id] && <p role="status" className="text-sm text-white/65">Loading recipe details…</p>}
                   {detailErrors[recipe.id] && <div role="alert" className="rounded-lg border border-amber-300/30 bg-amber-300/5 p-3 text-sm text-amber-200">
                     <p>{detailErrors[recipe.id]}</p>
@@ -303,6 +398,21 @@ export default function PublicRecipeList({
           <p className="mt-2 text-xs text-white/50">{filteredRecipes.length - visibleRecipes.length} more matching recipes</p>
         </div>
       )}
+      <ConfirmDialog
+        open={recipePendingRemoval !== null}
+        title="Remove public recipe?"
+        message={
+          recipePendingRemoval
+            ? `Remove "${recipePendingRemoval.name}" from public listings? The author's saved recipe will not be deleted.`
+            : ""
+        }
+        confirmLabel="Remove from public"
+        onConfirm={removeRecipeFromPublicListing}
+        onCancel={() => {
+          setRecipePendingRemoval(null);
+          setModerationError("");
+        }}
+      />
     </>
   );
 }

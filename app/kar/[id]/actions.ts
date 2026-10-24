@@ -17,6 +17,7 @@ import {
 import { parseSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
 import { isBeerStyle } from "@/lib/brewing/beerStyles";
 import { isBatchGuideDismissed } from "@/lib/brewing/batchGuide";
+import { getRecipeLimitStatus, recipeLimitError } from "@/lib/recipes/limits";
 
 
 
@@ -1640,7 +1641,7 @@ export async function moveBatchToVessel(formData: FormData) {
 // 3. AVSLUTT BATCH
 // ---------------------------------------------------------
 export async function finishBatch(formData: FormData) {
-  const { supabase } = supabaseServer();
+  const { supabase, serviceRole } = supabaseServer();
 
   const batchId = formData.get("batch_id") as string;
   const karId = formData.get("kar_id") as string;
@@ -1648,7 +1649,8 @@ export async function finishBatch(formData: FormData) {
   const fgRaw = formData.get("fg") as string;
   const finished_notes = (formData.get("finished_notes") as string) || "";
   const tasting_notes = (formData.get("tasting_notes") as string) || "";
-  const saveRecipe = formData.get("save_as_recipe") === "on";
+  let saveRecipe = formData.get("save_as_recipe") === "on";
+  let recipeLimitReached = false;
   const packagedVolumeRaw = formData.get("packaged_volume_l");
   const packagingMethod = String(formData.get("packaging_method") ?? "").trim();
   const bottleVolumeRaw = formData.get("bottle_volume_l");
@@ -1666,6 +1668,14 @@ export async function finishBatch(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Authentication required");
+
+  if (saveRecipe) {
+    const limitStatus = await getRecipeLimitStatus(serviceRole, user.id);
+    if (!limitStatus.isPremium && recipeLimitError(limitStatus.count)) {
+      saveRecipe = false;
+      recipeLimitReached = true;
+    }
+  }
 
   const fg = Number(fgRaw);
   if (!Number.isFinite(fg) || fg <= 0) {
@@ -1903,31 +1913,54 @@ export async function finishBatch(formData: FormData) {
       .select("id")
       .single();
     if (recipeError) {
-      throw new Error(`Batch was finished, but its recipe could not be saved: ${recipeError.message}`);
+      if (recipeError.code === "23514" && recipeError.message.includes("Free accounts can save")) {
+        recipeLimitReached = true;
+        const { error: batchRecipeFlagError } = await supabase
+          .from("batches")
+          .update({ save_as_recipe: false })
+          .eq("id", batch.id)
+          .eq("user_id", user.id);
+        if (batchRecipeFlagError) {
+          throw new Error(
+            `Batch was finished, but the recipe limit was reached and the batch could not be updated: ${batchRecipeFlagError.message}`
+          );
+        }
+      } else {
+        throw new Error(`Batch was finished, but its recipe could not be saved: ${recipeError.message}`);
+      }
     }
-    if (!savedRecipe) {
+    if (!recipeLimitReached && !savedRecipe) {
       throw new Error("Batch was finished, but the saved recipe could not be verified.");
     }
 
-    const { data: linkedBatch, error: linkError } = await supabase
-      .from("batches")
-      .update({ recipe_id: savedRecipe.id })
-      .eq("id", batch.id)
-      .eq("user_id", user.id)
-      .select("id")
-      .maybeSingle();
-    if (linkError) {
-      throw new Error(`Recipe was saved, but could not be linked to its batch: ${linkError.message}`);
-    }
-    if (!linkedBatch) {
-      throw new Error("Recipe was saved, but its batch link could not be verified.");
+    if (!recipeLimitReached && savedRecipe) {
+      const { data: linkedBatch, error: linkError } = await supabase
+        .from("batches")
+        .update({ recipe_id: savedRecipe.id })
+        .eq("id", batch.id)
+        .eq("user_id", user.id)
+        .select("id")
+        .maybeSingle();
+      if (linkError) {
+        throw new Error(`Recipe was saved, but could not be linked to its batch: ${linkError.message}`);
+      }
+      if (!linkedBatch) {
+        throw new Error("Recipe was saved, but its batch link could not be verified.");
+      }
     }
   }
 
-  const guideQuery = isBatchGuideDismissed(user, "bottling")
-    ? ""
-    : "?guide=bottling";
-  redirect(`/brew-insights/${encodeURIComponent(batchId)}${guideQuery}`);
+  const searchParams = new URLSearchParams();
+  if (!isBatchGuideDismissed(user, "bottling")) {
+    searchParams.set("guide", "bottling");
+  }
+  if (recipeLimitReached) {
+    searchParams.set("recipeLimit", "reached");
+  }
+  const query = searchParams.toString();
+  redirect(
+    `/brew-insights/${encodeURIComponent(batchId)}${query ? `?${query}` : ""}`
+  );
 }
 
 

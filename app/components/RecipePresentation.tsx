@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { DryHop, Fruit, Hop, Ingredient, Malt } from "@/app/types/batchTypes";
-import { Qty } from "@/app/components/Units";
+import { Qty, UnitAwareText } from "@/app/components/Units";
 import BeerColorGlass from "@/app/components/BeerColorGlass";
 import BitternessMeter from "@/app/components/BitternessMeter";
 import { formatSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
@@ -201,7 +201,7 @@ export default function RecipePresentation({
                   </span>
                   <span className="text-xs font-medium text-white/50">EBC</span>
                 </span>
-                <span className="flex flex-1 items-center justify-center">
+                <span className="flex flex-1 -translate-x-3 items-center justify-center">
                   <BeerColorGlass ebc={Number(recipe.ebc)} />
                 </span>
               </span>
@@ -355,8 +355,8 @@ export default function RecipePresentation({
           </RecipeSection>
         )}
 
-        {recipe.full_process && <RecipeSection title="Brewing method"><p className="whitespace-pre-line">{recipe.full_process}</p></RecipeSection>}
-        {recipe.additives && <RecipeSection title="Additives"><p className="whitespace-pre-line">{recipe.additives}</p></RecipeSection>}
+        {recipe.full_process && <RecipeSection title="Brewing method"><p className="whitespace-pre-line"><UnitAwareText text={recipe.full_process} /></p></RecipeSection>}
+        {recipe.additives && <RecipeSection title="Additives"><p className="whitespace-pre-line"><UnitAwareText text={recipe.additives} /></p></RecipeSection>}
 
         {hasSecondaryDetails && (
           <RecipeSection title="Secondary fermentation">
@@ -365,11 +365,11 @@ export default function RecipePresentation({
             ) : recipe.had_secondary ? (
               <p>This recipe includes a secondary fermentation.</p>
             ) : null}
-            {recipe.secondary_notes?.trim() && <p className="whitespace-pre-line text-white/65">{recipe.secondary_notes}</p>}
+            {recipe.secondary_notes?.trim() && <p className="whitespace-pre-line text-white/65"><UnitAwareText text={recipe.secondary_notes} /></p>}
           </RecipeSection>
         )}
 
-        {recipe.notes && <RecipeSection title="Brewer’s notes"><p className="whitespace-pre-line">{recipe.notes}</p></RecipeSection>}
+        {recipe.notes && <RecipeSection title="Brewer’s notes"><p className="whitespace-pre-line"><UnitAwareText text={recipe.notes} /></p></RecipeSection>}
       </div>
     </div>
   );

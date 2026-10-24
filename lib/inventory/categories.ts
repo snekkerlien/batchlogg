@@ -50,6 +50,8 @@ export const INVENTORY_CATEGORIES = [
   },
 ] as const satisfies readonly InventoryCategory[];
 
+export const INVENTORY_BOTTLE_TYPES = ["Swing top", "Cork", "Cap"] as const;
+
 export function getInventorySubcategoryOptions(categoryId: string) {
   const category = INVENTORY_CATEGORIES.find((item) => item.id === categoryId);
   if (!category) return [];

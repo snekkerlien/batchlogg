@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
+import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
+import {
+  FREE_RECIPE_LIMIT,
+  getRecipeLimitStatus,
+  recipeLimitError,
+} from "@/lib/recipes/limits";
 
 export const runtime = "nodejs";
 
@@ -41,6 +47,18 @@ export async function POST(req: Request) {
       );
     }
 
+    const { serviceRole } = supabaseServer();
+    const limitStatus = await getRecipeLimitStatus(serviceRole, user.id);
+    if (!limitStatus.isPremium) {
+      const limitError = recipeLimitError(limitStatus.count);
+      if (limitError) {
+        return NextResponse.json(
+          { error: limitError, upgradeUrl: "/premium", recipeLimit: FREE_RECIPE_LIMIT, recipeCount: limitStatus.count },
+          { status: 403 }
+        );
+      }
+    }
+
     const body = await req.json();
     const { name, ingredients, method, notes, volume } = body;
 
@@ -58,6 +76,12 @@ export async function POST(req: Request) {
       .single();
 
     if (error) {
+      if (error.code === "23514" && error.message.includes("Free accounts can save")) {
+        return NextResponse.json(
+          { error: error.message, upgradeUrl: "/premium", recipeLimit: FREE_RECIPE_LIMIT },
+          { status: 403 }
+        );
+      }
       return NextResponse.json(
         { error: "Kunne ikke lagre oppskriften", details: error.message },
         { status: 500 }
@@ -66,6 +90,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, recipe: data });
   } catch (err: any) {
+    console.error("Could not create recipe", err);
     return NextResponse.json(
       { error: "Serverfeil", details: err.message },
       { status: 500 }

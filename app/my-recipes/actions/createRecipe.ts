@@ -9,12 +9,13 @@ import {
 } from "@/lib/brewing/beerCalculators";
 import { isBeerStyle } from "@/lib/brewing/beerStyles";
 import { withOtherRecipeStyle } from "@/lib/recipes/otherRecipe";
+import { getRecipeLimitStatus, recipeLimitError } from "@/lib/recipes/limits";
 
 // -----------------------------
 // MAIN FUNCTION
 // -----------------------------
 export async function createRecipe(formData: FormData) {
-  const { supabase } = supabaseServer();
+  const { supabase, serviceRole } = supabaseServer();
 
   const {
     data: { user },
@@ -26,6 +27,20 @@ export async function createRecipe(formData: FormData) {
   }
 
   const user_id = user.id;
+  let recipeCount: number;
+  let isPremium: boolean;
+  try {
+    ({ count: recipeCount, isPremium } = await getRecipeLimitStatus(serviceRole, user_id));
+  } catch (error) {
+    console.error("Could not verify recipe creation limit", error);
+    return {
+      success: false,
+      error: "Could not verify your recipe limit. Please try again.",
+    };
+  }
+  if (!isPremium && recipeLimitError(recipeCount)) {
+    redirect("/my-recipes?limit=reached");
+  }
 
   // Core
   const type = formData.get("type") as string;

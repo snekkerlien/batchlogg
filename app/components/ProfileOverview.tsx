@@ -31,12 +31,18 @@ import trophyAccent from "../../icons_achievements/ach_acc_trophy.svg";
 import brewCategory from "../../icons_achievements/ach_brew.svg";
 import forumCategory from "../../icons_achievements/ach_forum.svg";
 import recipesCategory from "../../icons_achievements/ach_recepies.svg";
+import ratingsCategory from "../../icons_achievements/ach_ratings.svg";
+import {
+  COMMUNITY_ACHIEVEMENT_TIERS,
+  RATING_ACHIEVEMENT_TIERS,
+} from "@/lib/community/achievementTiers";
 
 type ProfileStats = {
   totalBatches: number;
   totalRecipes: number;
   publicRecipes: number;
   forumPosts: number;
+  totalRatings: number;
 };
 
 type Achievement = {
@@ -45,7 +51,6 @@ type Achievement = {
   progress: number;
   stat: keyof ProfileStats;
   category: string;
-  tierIndex: number;
   unlocked: boolean;
   ratio: number;
 };
@@ -60,20 +65,25 @@ const CATEGORIES: {
     stat: "totalBatches",
     tiers: [
       ["First Batch", 1],
-      ["Brew Day Regular", 5],
-      ["Kettle Companion", 10],
-      ["Brew Rhythm", 20],
-      ["Steady Ferment", 35],
+      ["Brew Day Regular", 2],
+      ["Kettle Companion", 3],
+      ["Brew Rhythm", 5],
+      ["Steady Ferment", 8],
+      ["Batch Ten", 10],
+      ["Brewery Regular", 15],
+      ["Kettle Keeper", 20],
+      ["Brew Enthusiast", 25],
+      ["Cellar Builder", 35],
       ["Batch Fifty", 50],
-      ["Brewery Regular", 75],
+      ["Seasoned Brewer", 75],
       ["Century of Brews", 100],
-      ["Kettle Keeper", 150],
-      ["Brew Enthusiast", 200],
-      ["Cellar Builder", 300],
-      ["Seasoned Brewer", 500],
-      ["Fermentation Fanatic", 750],
-      ["Grand Brewmaster", 1000],
-      ["Brewing Legend", 2000],
+      ["Fermentation Fanatic", 150],
+      ["Grand Brewmaster", 200],
+      ["Brewing Legend", 250],
+      ["Master of the Mash", 300],
+      ["Brewery Builder", 400],
+      ["Keeper of the Kettle", 450],
+      ["Mythic Brewmaster", 500],
     ],
   },
   {
@@ -81,17 +91,25 @@ const CATEGORIES: {
     stat: "totalRecipes",
     tiers: [
       ["First Recipe", 1],
-      ["Recipe Tinkerer", 5],
-      ["Recipe Notebook", 10],
-      ["Recipe Developer", 20],
-      ["Recipe Architect", 35],
-      ["Recipe Collector", 50],
-      ["Recipe Library", 75],
-      ["Recipe Designer", 100],
-      ["Recipe Curator", 150],
-      ["Recipe Master", 200],
-      ["Recipe Archive", 300],
-      ["Recipe Sage", 500],
+      ["Recipe Tinkerer", 2],
+      ["Recipe Notebook", 3],
+      ["Recipe Developer", 5],
+      ["Recipe Architect", 7],
+      ["Recipe Collector", 10],
+      ["Recipe Library", 15],
+      ["Recipe Designer", 20],
+      ["Recipe Curator", 25],
+      ["Recipe Master", 30],
+      ["Recipe Archive", 35],
+      ["Recipe Sage", 40],
+      ["Recipe Encyclopedia", 50],
+      ["Master Recipe Maker", 60],
+      ["Recipe Innovator", 70],
+      ["Recipe Authority", 80],
+      ["Recipe Visionary", 85],
+      ["Recipe Grandmaster", 90],
+      ["Recipe Legend", 95],
+      ["The Infinite Cookbook", 100],
     ],
   },
   {
@@ -99,36 +117,36 @@ const CATEGORIES: {
     stat: "publicRecipes",
     tiers: [
       ["First Share", 1],
-      ["Generous Brewer", 5],
-      ["Recipe Friend", 10],
-      ["Open Cellar", 20],
-      ["Open Recipe Shelf", 35],
-      ["Shared Inspiration", 50],
-      ["Community Cookbook", 75],
-      ["Recipe Advocate", 100],
-      ["Recipe Ambassador", 150],
-      ["Shared Cellar", 200],
-      ["Open Source Cellar", 300],
-      ["The Great Recipe Exchange", 500],
+      ["Generous Brewer", 2],
+      ["Recipe Friend", 3],
+      ["Open Cellar", 5],
+      ["Open Recipe Shelf", 7],
+      ["Shared Inspiration", 10],
+      ["Community Cookbook", 15],
+      ["Recipe Advocate", 20],
+      ["Recipe Ambassador", 25],
+      ["Shared Cellar", 30],
+      ["Open Source Cellar", 35],
+      ["The Great Recipe Exchange", 40],
+      ["Community Recipe Shelf", 50],
+      ["Recipe Beacon", 60],
+      ["A World of Recipes", 70],
+      ["Inspiration Without Borders", 80],
+      ["The Open Cookbook", 85],
+      ["Recipe Philanthropist", 90],
+      ["Legendary Recipe Exchange", 95],
+      ["A Gift to Every Brewer", 100],
     ],
   },
   {
     name: "Community",
     stat: "forumPosts",
-    tiers: [
-      ["First Conversation", 1],
-      ["Friendly Voice", 5],
-      ["Conversation Starter", 10],
-      ["Community Contributor", 25],
-      ["Helpful Regular", 50],
-      ["Brewing Buddy", 75],
-      ["Community Regular", 100],
-      ["Welcoming Presence", 150],
-      ["Forum Veteran", 250],
-      ["Community Guide", 400],
-      ["Community Pillar", 600],
-      ["Community Champion", 1000],
-    ],
+    tiers: COMMUNITY_ACHIEVEMENT_TIERS,
+  },
+  {
+    name: "Ratings",
+    stat: "totalRatings",
+    tiers: RATING_ACHIEVEMENT_TIERS,
   },
 ];
 
@@ -137,6 +155,7 @@ const HOW_TO: Record<keyof ProfileStats, (goal: number) => string> = {
   totalRecipes: (n) => `Create ${n} ${n === 1 ? "recipe" : "recipes"} in your recipe library.`,
   publicRecipes: (n) => `Make ${n} of your ${n === 1 ? "recipe" : "recipes"} public so others can see ${n === 1 ? "it" : "them"}.`,
   forumPosts: (n) => `Write ${n} ${n === 1 ? "post" : "posts"} in the community forum.`,
+  totalRatings: (n) => `Rate and review ${n} ${n === 1 ? "brewery product" : "brewery products"}.`,
 };
 
 function ProgressionIcon({
@@ -287,6 +306,9 @@ function ProgressionIcon({
           subject = <><path d="M11 25v-4a2 2 0 0 1 4 0v5-7a2 2 0 0 1 4 0v7-5a2 2 0 0 1 4 0v5-3a2 2 0 0 1 4 0v9a7 7 0 0 1-7 7h-2c-3 0-5-1-7-4l-4-6a2 2 0 0 1 3-3l2 2" /><path d="m32 15 2 2 4-5" /></>;
       }
       break;
+    case "totalRatings":
+      subject = <><path d="m24 8 4.9 10 11 1.6-8 7.8 1.9 11-9.8-5.2-9.8 5.2 1.9-11-8-7.8 11-1.6L24 8Z" /><path d="M17 27h14m-12 5h10" /></>;
+      break;
   }
 
   return subject;
@@ -382,6 +404,7 @@ const CATEGORY_ICONS: Record<keyof ProfileStats, ImageProps["src"]> = {
   totalRecipes: recipesCategory,
   publicRecipes: recipesCategory,
   forumPosts: forumCategory,
+  totalRatings: ratingsCategory,
 };
 
 const ACHIEVEMENT_ACCENTS: Record<string, ImageProps["src"]> = {
@@ -439,6 +462,55 @@ const CUSTOM_ACHIEVEMENT_ACCENTS: Record<string, ReactNode> = {
   "Welcoming Presence": <><path d="M24 39s-13-8-13-18a7 7 0 0 1 13-4 7 7 0 0 1 13 4c0 10-13 18-13 18Z" /><path d="M18 25h12m-6-6v12" /></>,
   "Community Guide": <><path d="m24 8 4 11 12 1-9 8 3 12-10-6-10 6 3-12-9-8 12-1 4-11Z" /><path d="M24 19v11m-4-5h8" /></>,
   "The Great Recipe Exchange": <><path d="M7 13h8l4 4v21H7zM29 13h8l4 4v21h-8z" /><path fill="none" d="M10 21h6m-6 5h6m17-5h6m-6 5h6" /><path d="M19 17h8v-3l5 5-5 5v-3h-8zM29 29h-8v-3l-5 5 5 5v-3h8z" /></>,
+  "Batch Ten": <><path d="M14 14c2-3 4-4 7-5m6 0c3 1 5 2 7 5m-20 0c-3 3-4 6-4 10m26-10c3 3 4 6 4 10M10 24c0 8 6 14 14 14s14-6 14-14" /><text x="24" y="28" textAnchor="middle" fontSize="12" fontWeight="900" strokeWidth=".8">10</text></>,
+  "Master of the Mash": <><path d="m16 12 10 10m-2-13 7 7-8 8-7-7 8-8ZM22 23 12 37m-2 2 4-6 3 3-5 4Z" /><path d="m30 11 2-4m3 7 4-1" /></>,
+  "Brewery Builder": <><path d="M11 38V17l13-8 13 8v21H11Z" /><path d="M11 22h26M11 29h26M18 17v5m12-5v5m-6 7v7m-9-7v7m18-7v7" /></>,
+  "Keeper of the Kettle": <><path d="M13 20h22l-3 16H16l-3-16Zm-2 0h26m-5-5 4-4m-22 4-4-4m10 9v8m8-8v8" /><path d="M18 15a6 6 0 0 1 12 0" /></>,
+  "Mythic Brewmaster": <><path d="m14 18 3-8 7 5 7-5 3 8v4H14v-4Z" /><path d="M18 22h12v15H18zM21 28h6m-6 4h6" /><path d="m10 12 1-3m26 3-1-3m-12-2V5" /></>,
+  "Recipe Encyclopedia": <><path d="M10 13c5-2 10-1 14 2 4-3 9-4 14-2v24c-5-2-10-1-14 2-4-3-9-4-14-2V13Z" /><path d="M24 15v24m-10-19h6m-6 5h6m8-5h6m-6 5h6" /><circle cx="34" cy="31" r="4" /><path d="m37 34 3 3" /></>,
+  "Master Recipe Maker": <><path d="M12 15h20v23H12zM16 21h12m-12 5h8" /><path d="m29 30 8-8 3 3-8 8-5 2 2-5Z" /><path d="m15 11 2-3 2 3m-4 0v4" /></>,
+  "Recipe Innovator": <><path d="M17 29a9 9 0 1 1 14 0c-2 2-3 4-3 6h-8c0-2-1-4-3-6Z" /><path d="M20 39h8m-7-4h6m-3-27V5m-12 8-3-2m27 2 3-2m-25 8h-4m31 0h-4" /><path d="M24 16v8m-4-4h8" /></>,
+  "Recipe Authority": <><circle cx="24" cy="24" r="14" /><circle cx="24" cy="24" r="8" /><path d="m24 24 8-8m-8 8-1 9m1-9-8-3" /><path d="m12 35-2 5 6-2m16-25 3-4" /></>,
+  "Recipe Visionary": <><path d="M8 24s6-10 16-10 16 10 16 10-6 10-16 10S8 24 8 24Z" /><circle cx="24" cy="24" r="5" /><path d="m35 8 1 4 4 1-4 2-1 4-2-4-4-2 4-1 2-4Z" /></>,
+  "Recipe Grandmaster": <><path d="m10 18 14-9 14 9-14 8-14-8Z" /><path d="M16 22v9c5 5 11 5 16 0v-9m6-4v13" /><circle cx="38" cy="34" r="2" /></>,
+  "Recipe Legend": <><path d="M12 12h20l5 5v20H12zM32 12v7h5" /><path d="M17 26h9m-9 5h7" /><path d="m31 25 2 4 4 1-3 3 1 4-4-2-4 2 1-4-3-3 4-1 2-4Z" /></>,
+  "The Infinite Cookbook": <><path d="M11 15c5-3 9-2 13 1 4-3 8-4 13-1v22c-5-3-9-2-13 1-4-3-8-4-13-1V15Z" /><path d="M24 16v22m-9-16h5m8 0h5" /><path d="M14 27c2-5 6-5 10 0s8 5 10 0m-20 0c2 5 6 5 10 0s8-5 10 0" /></>,
+  "Community Recipe Shelf": <><path d="M10 14h28v25H10zM8 14h32m-26 7h7v7h-7zm11 0h8v7h-8zm12 0h5v7h-5zm-23 12h8v6h-8zm12 0h8v6h-8zm12 0h5v6h-5Z" /></>,
+  "Recipe Beacon": <><path d="M17 38h14l-2-19h-10l-2 19Zm-3 0h20m-16-5h12" /><path d="m17 19-5-7m19 7 5-7M24 7v6" /><path d="m11 8 2 2m24-2-2 2" /></>,
+  "A World of Recipes": <><circle cx="24" cy="24" r="15" /><path d="M9 24h30M24 9c5 5 7 10 7 15s-2 10-7 15c-5-5-7-10-7-15s2-10 7-15Z" /><path d="m13 15 4 2m18-2-4 2M13 33l4-2m18 2-4-2" /></>,
+  "Inspiration Without Borders": <><circle cx="14" cy="24" r="5" /><circle cx="34" cy="14" r="5" /><circle cx="34" cy="34" r="5" /><path d="m18 22 11-6m-11 10 11 6" /><path d="m30 11 4-4 4 4m-8 20 4 4 4-4" /></>,
+  "The Open Cookbook": <><path d="M10 15c5-2 10-1 14 2 4-3 9-4 14-2v23c-5-2-10-1-14 2-4-3-9-4-14-2V15Z" /><path d="M24 17v23m-10-19h5m10 0h5" /><path d="M24 8v4m-8-2 2 3m14-3-2 3" /></>,
+  "Recipe Philanthropist": <><path d="M11 21h26l-3 16H14l-3-16Zm-2 0h30m-22-4h14" /><path d="M24 32s-6-3-6-7a3 3 0 0 1 6-1 3 3 0 0 1 6 1c0 4-6 7-6 7Z" /><path d="m14 14 3 3m17-3-3 3" /></>,
+  "Legendary Recipe Exchange": <><path d="M12 13h9v24h-9zM27 13h9v24h-9z" /><path d="M15 19h3m-3 5h3m12-5h3m-3 5h3" /><path d="M21 19h7l-3-3m3 3-3 3m-1 8h-7l3-3m-3 3 3 3" /><path d="m24 10 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Z" /></>,
+  "A Gift to Every Brewer": <><path d="M11 20h26v18H11zM9 16h30v6H9z" /><path d="M24 16v22m0-22c-8 0-10-7-5-7 3 0 5 7 5 7Zm0 0c8 0 10-7 5-7-3 0-5 7-5 7Z" /><path d="M17 28h4m6 0h4" /></>,
+  "Community Mentor": <><circle cx="19" cy="18" r="5" /><circle cx="31" cy="20" r="4" /><path d="M9 37c0-7 4-11 10-11 5 0 9 4 9 11m0-8c5-2 10 2 10 8" /><path d="m19 12 1-3 2 3m-3 3 2 2 2-2" /></>,
+  "Community Luminary": <><path d="M18 28a9 9 0 1 1 12 0c-2 2-3 4-3 6h-6c0-2-1-4-3-6Z" /><path d="M21 38h6m-5-4h4m-2-27V4m-12 9-3-2m27 2 3-2m-25 8H9m30 0h-4" /><path d="m24 15 1 4 4 1-4 2-1 4-2-4-4-2 4-1 2-4Z" /></>,
+  "The Welcoming Table": <><path d="M9 22h30m-27 0 2 15h20l2-15M17 37v3m14-3v3" /><path d="M18 17a6 6 0 0 1 12 0v5H18v-5Zm6-8V6m-9 4-2-2m19 2 2-2" /></>,
+  "Forum Steward": <><path d="M24 9 36 14v9c0 8-5 13-12 17-7-4-12-9-12-17v-9l12-5Z" /><path d="m18 25 4 4 9-10m-7-5v7" /></>,
+  "Community Legend": <><path d="m11 19 4-9 9 6 9-6 4 9v4H11v-4Z" /><path d="M14 23h20v15H14zM19 29h10m-10 5h10" /><path d="m9 13-3-3m33 3 3-3" /></>,
+  "Voice of the Community": <><path d="M10 21h7l17-8v22l-17-8h-7zM17 27l3 11h7l-4-9" /><path d="M38 19c3 3 3 9 0 12m-4-8 3 2-3 2" /></>,
+  "Brewing Community Icon": <><circle cx="17" cy="19" r="5" /><circle cx="31" cy="19" r="5" /><path d="M8 38c0-7 3-11 9-11 3 0 5 1 7 3 2-2 4-3 7-3 6 0 9 4 9 11" /><path d="m24 11 2 3 4 .5-3 3 .7 4-3.7-2-3.7 2 .7-4-3-3 4-.5 2-3Z" /></>,
+  "The Heart of Batchlogg": <><path d="M24 39S10 31 10 20a7 7 0 0 1 14-3 7 7 0 0 1 14 3c0 11-14 19-14 19Z" /><path d="M18 25h4l2-4 3 8 2-4h3m-8-18v3" /></>,
+  "First Rating": <><path d="M12 11h24v27H12zM17 18h7m-7 6h5m-5 6h4" /><path d="m31 22 1.7 3.5 3.8.6-2.8 2.7.7 3.8-3.4-1.8-3.4 1.8.7-3.8-2.8-2.7 3.8-.6L31 22Z" /></>,
+  "Thoughtful Taster": <><path d="M18 10h12l-1 9 7 14a3 3 0 0 1-3 5H15a3 3 0 0 1-3-5l7-14-1-9Z" /><path d="M17 29h14m-9-14h4m-2 0v7" /><circle cx="22" cy="33" r="1" /><circle cx="27" cy="35" r="1" /></>,
+  "Tasting Notes": <><path d="M13 10h22v29H13zM18 17h12m-12 6h8" /><path d="m19 34 3-7 4 4 7-8m-14 11h14" /></>,
+  "Reliable Reviewer": <><path d="M14 12h20v27H14zM19 19h10m-10 5h10m-10 5h5" /><path d="m20 34 3 3 7-8" /><path d="M19 9h10" /></>,
+  "Rating Regular": <><circle cx="24" cy="24" r="15" /><path d="M24 14v11l8 5m-8-21v3m11 12h3M10 24h3" /><path d="m17 11 2 3m12-3-2 3" /></>,
+  "Taster in Training": <><path d="M12 14h24v23H12zM17 20h14m-14 5h9" /><path d="m27 31 4 4 7-9" /><path d="M18 10h12" /></>,
+  "Trusted Taster": <><path d="M24 9 36 14v9c0 8-5 13-12 17-7-4-12-9-12-17v-9l12-5Z" /><path d="m18 25 4 4 8-9m-6-6v5" /></>,
+  "Local Guide": <><path d="M24 39s-11-9-11-19a11 11 0 1 1 22 0c0 10-11 19-11 19Z" /><circle cx="24" cy="20" r="4" /><path d="M17 31h14" /></>,
+  "Tasting Trail": <><path d="m11 34 8-9 6 4 12-15" /><path d="M30 14h7v7" /><circle cx="12" cy="34" r="2" /><circle cx="19" cy="25" r="2" /><circle cx="25" cy="29" r="2" /><path d="M12 12h10v6H12z" /></>,
+  "Product Scout": <><circle cx="21" cy="21" r="10" /><path d="m28 28 9 9M21 16v10m-5-5h10" /><path d="M12 10h8" /></>,
+  "Tasting Authority": <><path d="m24 8 4 9 10 1-7 7 2 10-9-5-9 5 2-10-7-7 10-1 4-9Z" /><path d="M20 25h8m-4-4v8" /></>,
+  "Valued Recommendations": <><path d="M10 13h28v22H10zM15 19h10m-10 5h8" /><path d="m30 20 1.5 3 3.5.5-2.5 2.5.6 3.5-3.1-1.7-3.1 1.7.6-3.5-2.5-2.5 3.5-.5L30 20Z" /></>,
+  "Community Critic": <><path d="M11 13h26v20H22l-8 6v-6h-3V13Z" /><path d="m18 19 1.5 3 3.5.5-2.5 2.5.6 3.5-3.1-1.7-3.1 1.7.6-3.5-2.5-2.5 3.5-.5L18 19Zm12 3h4m-4 5h4" /></>,
+  "Fifty Impressions": <><path d="M12 14h24v22H12zM9 14h30m-24 8h18m-18 6h12" /><text x="24" y="33" textAnchor="middle" fontSize="9" fontWeight="900" strokeWidth=".6">50</text></>,
+  "Expert Palate": <><path d="M12 11h24v27H12zM17 18h14m-14 5h10" /><path d="m24 28 2 4 4 .5-3 3 .7 4.5-3.7-2-3.7 2 .7-4.5-3-3 4-.5 2-4Z" /></>,
+  "Seasoned Reviewer": <><path d="M17 10h14l-1 9 7 14a3 3 0 0 1-3 5H14a3 3 0 0 1-3-5l7-14-1-9Z" /><path d="M15 30h18m-12-7h6" /><path d="m24 14 1 2 2 .3-1.5 1.5.4 2.2-1.9-1-1.9 1 .4-2.2-1.5-1.5 2-.3 1-2Z" /></>,
+  "Master Taster": <><path d="m24 9 4 9 10 1-7 7 2 10-9-5-9 5 2-10-7-7 10-1 4-9Z" /><path d="M24 19v13m-5-7h10" /><circle cx="24" cy="26" r="2" /></>,
+  "The People's Palate": <><circle cx="18" cy="17" r="5" /><circle cx="30" cy="17" r="5" /><path d="M8 37c0-7 3-11 10-11 3 0 5 1 6 3 2-2 4-3 6-3 7 0 10 4 10 11" /><path d="m24 10 1 3 3 .5-2.5 2.5.5 3.5-2.5-1.5-2.5 1.5.5-3.5-2.5-2.5 3-.5 1-3Z" /></>,
+  "Tasting Legend": <><path d="m11 18 4-8 9 6 9-6 4 8v4H11v-4Z" /><path d="M14 22h20v16H14zM19 28h10m-10 5h10" /><path d="m24 8 1 3" /></>,
+  "The Ultimate Reviewer": <><path d="M12 12h24v26H12zM17 18h10m-10 5h8" /><path d="m30 24 2 4 5 .7-3.5 3.4.8 5-4.3-2.3-4.3 2.3.8-5-3.5-3.4 5-.7 2-4Z" /><path d="M17 32h5" /></>,
 };
 
 function ProgressRing({
@@ -486,12 +558,13 @@ export default function ProfileOverview({ stats }: { stats: ProfileStats }) {
       <h2 className="mb-3 text-center text-2xl font-semibold text-green-300">
         Brewing overview
       </h2>
-      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {[
           ["Batches brewed", stats.totalBatches],
           ["Recipes created", stats.totalRecipes],
           ["Public recipes", stats.publicRecipes],
           ["Forum posts", stats.forumPosts],
+          ["Ratings given", stats.totalRatings],
         ].map(([label, value]) => (
           <div
             key={label}
@@ -521,11 +594,12 @@ export function ProfileAchievements({
 }) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].name);
   const accentStyle: CSSProperties = isAccentColor(accentColor)
     ? getAccessibleAccentStyle(accentColor)
     : {};
   const achievements = CATEGORIES.flatMap(({ name: category, stat, tiers }) =>
-    tiers.map(([name, goal], tierIndex): Achievement => {
+    tiers.map(([name, goal]): Achievement => {
       const progress = Math.max(0, stats[stat]);
       return {
         name,
@@ -533,7 +607,6 @@ export function ProfileAchievements({
         progress,
         stat,
         category,
-        tierIndex,
         unlocked: progress >= goal,
         ratio: Math.min(progress / goal, 1),
       };
@@ -550,6 +623,18 @@ export function ProfileAchievements({
   const visibleAchievements = showProgress
     ? achievements
     : achievements.filter((achievement) => achievement.unlocked);
+  const visibleCategories = CATEGORIES.map((category) => ({
+    ...category,
+    achievements: visibleAchievements.filter(
+      (achievement) => achievement.category === category.name
+    ),
+    earned: achievements.filter(
+      (achievement) => achievement.category === category.name && achievement.unlocked
+    ).length,
+  })).filter((category) => showProgress || category.earned > 0);
+  const currentCategory =
+    visibleCategories.find((category) => category.name === activeCategory) ??
+    visibleCategories[0];
   const active =
     visibleAchievements.find((achievement) => achievement.name === selected) ?? null;
 
@@ -616,34 +701,78 @@ export function ProfileAchievements({
         }`}
       >
         <div className="min-h-0 overflow-hidden">
-          <div className="mt-5 space-y-5">
-          {CATEGORIES.map((category) => {
-            const categoryAchievements = visibleAchievements.filter(
-              (achievement) => achievement.category === category.name
-            );
-            if (!categoryAchievements.length) return null;
-            const categoryEarned = categoryAchievements.filter(
-              (achievement) => achievement.unlocked
-            ).length;
-
-            return (
-              <div key={category.name}>
+          <div className="mt-5 space-y-4">
+            {!!visibleCategories.length && (
+              <div
+                role="group"
+                aria-label="Achievement categories"
+                className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5"
+              >
+                {visibleCategories.map((category) => {
+                  const isCurrent = currentCategory?.name === category.name;
+                  const total = category.tiers.length;
+                  const ratio = total ? category.earned / total : 0;
+                  return (
+                    <button
+                      key={category.name}
+                      type="button"
+                      aria-pressed={isCurrent}
+                      aria-controls="achievement-category-list"
+                      tabIndex={open ? 0 : -1}
+                      onClick={() => setActiveCategory(category.name)}
+                      className={`rounded-lg border p-3 text-left transition ${
+                        isCurrent
+                          ? "border-green-300/40 bg-green-300/10"
+                          : "border-white/10 bg-black/10 hover:bg-white/5"
+                      }`}
+                    >
+                      <span className="block truncate text-xs font-semibold text-white/90">
+                        {category.name}
+                      </span>
+                      <span className="mt-1 block text-[11px] text-white/50">
+                        {showProgress
+                          ? `${category.earned} / ${total} earned`
+                          : `${category.earned} earned`}
+                      </span>
+                      <span
+                        className="mt-2 block h-1 overflow-hidden rounded-full bg-white/10"
+                        role="progressbar"
+                        aria-label={`${category.name} achievements`}
+                        aria-valuemin={0}
+                        aria-valuemax={total}
+                        aria-valuenow={category.earned}
+                      >
+                        <span
+                          className="block h-full rounded-full bg-green-300"
+                          style={{ width: `${ratio * 100}%` }}
+                        />
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {currentCategory && (
+              <div id="achievement-category-list">
                 <div className="mb-2 flex items-baseline justify-between gap-2">
-                  <h4 className="text-sm font-semibold text-white/85">{category.name}</h4>
+                  <h4 className="text-sm font-semibold text-white/85">
+                    {currentCategory.name}
+                  </h4>
                   <span className="text-xs text-white/45">
                     {showProgress
-                      ? `${categoryEarned} / ${categoryAchievements.length}`
-                      : `${categoryEarned} earned`}
+                      ? `${currentCategory.earned} / ${currentCategory.tiers.length} earned`
+                      : `${currentCategory.earned} earned`}
                   </span>
                 </div>
-                <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {categoryAchievements.map((achievement) => (
+                <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
+                  {currentCategory.achievements.map((achievement) => (
                     <li key={achievement.name}>
                       <button
                         type="button"
                         onClick={() => setSelected(achievement.name)}
                         tabIndex={open ? 0 : -1}
-                        className={`flex w-full items-center gap-3 rounded-lg border p-3 text-left transition hover:bg-white/10 ${
+                        title={`${achievement.name} · ${achievement.progress} / ${achievement.goal}`}
+                        className={`flex h-full w-full flex-col items-center justify-start gap-2 rounded-lg border p-2 text-center transition hover:bg-white/10 sm:p-3 ${
                           achievement.unlocked
                             ? "border-green-300/15 bg-green-300/5"
                             : "border-white/10 bg-black/10 opacity-75"
@@ -653,14 +782,14 @@ export function ProfileAchievements({
                           name={achievement.name}
                           stat={achievement.stat}
                           unlocked={achievement.unlocked}
-                          className="h-14 w-14"
+                          className="h-11 w-11 sm:h-12 sm:w-12"
                         />
                         <span className="min-w-0">
-                          <span className="block text-xs font-semibold text-white/90">
+                          <span className="line-clamp-2 block text-[10px] font-semibold leading-tight text-white/90 sm:text-xs">
                             {achievement.name}
                           </span>
                           {showProgress && !achievement.unlocked && (
-                            <span className="mt-1 block text-[11px] text-white/50">
+                            <span className="mt-1 block text-[10px] text-white/50">
                               {achievement.progress} / {achievement.goal}
                             </span>
                           )}
@@ -670,11 +799,10 @@ export function ProfileAchievements({
                   ))}
                 </ul>
               </div>
-            );
-          })}
+            )}
           {!visibleAchievements.length && (
             <p className="text-sm text-white/55">
-              No achievements earned yet. The first one starts with your first batch.
+              No achievements earned yet. Start brewing, sharing recipes, posting, or rating products.
             </p>
           )}
           </div>

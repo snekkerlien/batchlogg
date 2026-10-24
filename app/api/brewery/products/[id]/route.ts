@@ -4,9 +4,17 @@ import {
   hasBreweryAccess,
   canManageBreweryProducts,
 } from "@/lib/brewery/access";
-import { validateBreweryProduct } from "@/lib/brewery/products";
+import {
+  isBeerKitProductCategory,
+  validateBreweryProduct,
+} from "@/lib/brewery/products";
 import { readProductRequest } from "@/lib/brewery/product-request";
-import { removeOwnedProductImage, uploadProductImage, validateProductImage } from "@/lib/brewery/product-images";
+import {
+  ProductImageProcessingError,
+  removeOwnedProductImage,
+  uploadProductImage,
+  validateProductImage,
+} from "@/lib/brewery/product-images";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -44,6 +52,12 @@ export async function PATCH(
     if (!account) return NextResponse.json({ error: "Brewery account not found." }, { status: 404 });
     if (!hasBreweryAccess(account)) return NextResponse.json({ error: "An active business account is required." }, { status: 403 });
     if (!canManageBreweryProducts(role)) return NextResponse.json({ error: "Only owners, managers, and editors can manage products." }, { status: 403 });
+    if (account.business_type === "homebrew_shop" && !isBeerKitProductCategory(product.category)) {
+      return NextResponse.json(
+        { error: "Homebrew shops can only list beer kits." },
+        { status: 400 }
+      );
+    }
     const { data: currentProduct, error: currentProductError } = await serviceRole
       .from("brewery_products")
       .select("image_url")
@@ -106,7 +120,17 @@ export async function PATCH(
     }
     console.error("Could not update brewery product", error);
     const unauthorized = error instanceof Error && error.message === "Authentication required";
-    return NextResponse.json({ error: unauthorized ? error.message : "Could not update product." }, { status: unauthorized ? 401 : 500 });
+    const imageProcessingError = error instanceof ProductImageProcessingError;
+    return NextResponse.json(
+      {
+        error: unauthorized
+          ? error.message
+          : imageProcessingError
+            ? error.message
+            : "Could not update product.",
+      },
+      { status: unauthorized ? 401 : imageProcessingError ? 400 : 500 }
+    );
   }
 }
 

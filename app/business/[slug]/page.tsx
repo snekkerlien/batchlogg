@@ -6,6 +6,8 @@ import { businessTypeLabel } from "@/lib/brewery/business";
 import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
+import ProductCardTitle from "../ProductCardTitle";
+import { isBeerKitProductCategory } from "@/lib/brewery/products";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +40,7 @@ export default async function BreweryPublicPage({
 
   const { data: products, error: productsError } = await serviceRole
     .from("brewery_products")
-    .select("id, slug, name, category, description, product_url, image_url, style, abv, batch_size_l, ebc, ibu, package_size, availability, created_at")
+    .select("id, slug, name, category, description, product_url, image_url, style, abv, batch_size_l, ebc, ibu, package_size, price, price_currency, availability, created_at")
     .eq("brewery_id", brewery.id)
     .eq("is_published", true);
   if (productsError) {
@@ -124,20 +126,26 @@ export default async function BreweryPublicPage({
                   product.ibu != null ? `${Number(product.ibu).toLocaleString()} IBU` : null,
                 ].filter(Boolean).join(" · ");
                 return (
-                  <li key={product.id}>
-                    <Link href={`/business/${brewery.slug}/${product.slug}`} className="block h-full overflow-hidden rounded-xl border border-white/10 bg-white/5 transition hover:border-green-400/40 hover:bg-white/10">
+                  <li key={product.id} className="min-w-0">
+                    <Link href={`/business/${brewery.slug}/${product.slug}`} className="product-card block h-full min-w-0 overflow-hidden rounded-xl border border-white/10 bg-white/5 transition hover:border-green-400/40 hover:bg-white/10">
                       {product.image_url && <img src={product.image_url} alt="" className="h-48 w-full bg-black/20 object-contain" />}
-                      <div className="p-4">
-                        <p className="text-xs uppercase tracking-wider text-green-300">{product.category.replace("-", " ")}</p>
-                        <h3 className="mt-1 text-lg font-semibold">{product.name}</h3>
+                      <div className="min-w-0 p-4">
+                        <p className="text-xs uppercase tracking-wider text-green-300">{product.category.replace(/-/g, " ")}</p>
+                        <ProductCardTitle name={product.name} />
+                        {product.price != null && product.price_currency && (
+                          <p className="mt-2 text-lg font-semibold text-green-100">
+                            {product.price_currency} {Number(product.price).toFixed(2)}
+                            <span className="ml-2 text-xs font-normal text-white/50">listed price</span>
+                          </p>
+                        )}
                         {product.style && <p className="mt-1 text-sm text-white/55">{product.style}</p>}
-                        {product.abv != null && <p className="mt-2 text-sm text-white/70">{product.category === "all-grain-kit" ? "Target " : ""}{Number(product.abv).toFixed(1)}% ABV</p>}
-                        {product.category === "all-grain-kit" && product.batch_size_l != null && (
+                        {product.abv != null && <p className="mt-2 text-sm text-white/70">{isBeerKitProductCategory(product.category) ? "Target " : ""}{Number(product.abv).toFixed(1)}% ABV</p>}
+                        {isBeerKitProductCategory(product.category) && product.batch_size_l != null && (
                           <p className="mt-1 text-sm text-white/60">
                             Batch size · {Number(product.batch_size_l).toLocaleString()} L
                           </p>
                         )}
-                        {product.category === "all-grain-kit" && kitSpecs && (
+                        {isBeerKitProductCategory(product.category) && kitSpecs && (
                           <p className="mt-1 text-sm text-white/60">
                             {kitSpecs}
                           </p>

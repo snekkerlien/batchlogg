@@ -11,7 +11,7 @@ import BackButton from "./BackButton";
 import PageHeading from "../components/PageHeading";
 import ExpandArrowButton from "@/app/components/ExpandArrowButton";
 import BatchOutcomeSharing from "@/app/components/BatchOutcomeSharing";
-import { Qty } from "@/app/components/Units";
+import { Qty, UnitAwareText } from "@/app/components/Units";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
 import { formatSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
 
@@ -855,7 +855,7 @@ function BatchHistoryContent() {
                     {batch.finished_notes && (
                       <p className="text-sm whitespace-pre-line">
                         <strong>Finished notes:</strong>{"\n"}
-                        {batch.finished_notes}
+                        <UnitAwareText text={batch.finished_notes} />
                       </p>
                     )}
 
@@ -908,7 +908,7 @@ function BatchHistoryContent() {
                         {batch.tasting_notes && (
                           <p className="whitespace-pre-line text-sm">
                             <strong>Tasting notes:</strong>{" "}
-                            {batch.tasting_notes}
+                            <UnitAwareText text={batch.tasting_notes} />
                           </p>
                         )}
                       </section>
@@ -1057,13 +1057,13 @@ function BatchHistoryContent() {
                         )}
 
                         {batch.additives && (
-                          <p className="whitespace-pre-line"><strong>Additives:</strong><br />{batch.additives}</p>
+                          <p className="whitespace-pre-line"><strong>Additives:</strong><br /><UnitAwareText text={batch.additives} /></p>
                         )}
                         {batch.full_process && (
-                          <p><strong>Full process:</strong><br />{batch.full_process}</p>
+                          <p className="whitespace-pre-line"><strong>Full process:</strong><br /><UnitAwareText text={batch.full_process} /></p>
                         )}
                         {batch.notes && typeof batch.notes === "string" && (
-                          <p><strong>Recipe notes:</strong><br />{batch.notes}</p>
+                          <p className="whitespace-pre-line"><strong>Recipe notes:</strong><br /><UnitAwareText text={batch.notes} /></p>
                         )}
 
                         {batch.oppskrift && !hasTypeSpecificRecipe(batch) && (
@@ -1122,7 +1122,7 @@ function BatchHistoryContent() {
                             )}
 
                             {n.note && (
-                              <p className="mt-3 whitespace-pre-line">{n.note}</p>
+                              <p className="mt-3 whitespace-pre-line"><UnitAwareText text={n.note} /></p>
                             )}
                           </div>
                         ))

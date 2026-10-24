@@ -223,13 +223,17 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
     }
 
     async function handleDesktopLink(event: MouseEvent) {
-      if (event.defaultPrevented || event.button !== 0) return;
+      if (
+        event.defaultPrevented ||
+        (event.button !== 0 && !(event.type === "auxclick" && event.button === 1))
+      ) return;
       if (!(event.target instanceof Element)) return;
 
       const anchor = event.target.closest("a");
       if (!(anchor instanceof HTMLAnchorElement)) return;
 
       if (anchor.hasAttribute("download")) {
+        if (event.type !== "click") return;
         event.preventDefault();
         setDesktopActionError("");
         try {
@@ -270,10 +274,12 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
       }
     }
 
-    document.addEventListener("click", handleDesktopLink);
+    document.addEventListener("click", handleDesktopLink, true);
+    document.addEventListener("auxclick", handleDesktopLink, true);
     document.addEventListener("keydown", handleDesktopKeydown);
     return () => {
-      document.removeEventListener("click", handleDesktopLink);
+      document.removeEventListener("click", handleDesktopLink, true);
+      document.removeEventListener("auxclick", handleDesktopLink, true);
       document.removeEventListener("keydown", handleDesktopKeydown);
     };
   }, []);

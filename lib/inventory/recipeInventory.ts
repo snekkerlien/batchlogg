@@ -17,6 +17,7 @@ export type InventoryItem = {
   alpha_acid?: number | null;
   ebc?: number | null;
   hop_year?: number | null;
+  bottle_type?: string | null;
 };
 
 export type RecipeInventoryRequirement = {

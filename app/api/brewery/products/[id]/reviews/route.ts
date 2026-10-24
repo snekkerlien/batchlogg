@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { hasBreweryAccess } from "@/lib/brewery/access";
+import { ensureCommunityAndRatingAchievementNotifications } from "@/lib/community/achievementNotifications";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -207,6 +208,11 @@ export async function POST(
       .select("id")
       .single();
     if (error) throw error;
+    try {
+      await ensureCommunityAndRatingAchievementNotifications(serviceRole, user.id);
+    } catch (notificationError) {
+      console.error("Could not create achievement notifications after product review", notificationError);
+    }
     return NextResponse.json({ success: true, reviewId: data.id });
   } catch (error) {
     console.error("Could not save brewery product review", error);

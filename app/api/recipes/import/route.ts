@@ -5,6 +5,15 @@ import {
   parseBeerXml,
   type ImportedRecipe,
 } from "@/lib/recipes/beerFileFormats";
+import {
+  parseRecipeCsv,
+  recipeCsvRowToInsert,
+} from "@/lib/recipes/recipeCsv";
+import {
+  FREE_RECIPE_LIMIT,
+  getRecipeLimitStatus,
+  recipeLimitError,
+} from "@/lib/recipes/limits";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,15 +49,21 @@ export async function POST(request: NextRequest) {
   try {
     formData = await request.formData();
   } catch {
-    return NextResponse.json({ error: "Upload a BeerXML or BeerJSON file." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Upload a CSV, BeerXML, or BeerJSON file." },
+      { status: 400 }
+    );
   }
   const file = formData.get("file");
   if (!(file instanceof File)) {
-    return NextResponse.json({ error: "Choose a BeerXML or BeerJSON file." }, { status: 400 });
-  }
-  if (!/\.(xml|json|beerjson)$/i.test(file.name)) {
     return NextResponse.json(
-      { error: "Choose a file with an .xml, .json, or .beerjson extension." },
+      { error: "Choose a CSV, BeerXML, or BeerJSON file." },
+      { status: 400 }
+    );
+  }
+  if (!/\.(csv|xml|json|beerjson)$/i.test(file.name)) {
+    return NextResponse.json(
+      { error: "Choose a file with a .csv, .xml, .json, or .beerjson extension." },
       { status: 400 }
     );
   }
@@ -59,19 +74,58 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let importedRecipes: ImportedRecipe[];
+  let rows: Record<string, unknown>[];
   try {
     const content = await file.text();
-    importedRecipes = /\.xml$/i.test(file.name)
-      ? parseBeerXml(content)
-      : parseBeerJson(content);
-    if (importedRecipes.length > MAX_RECIPES_PER_FILE) {
-      return NextResponse.json(
-        { error: `A file can contain at most ${MAX_RECIPES_PER_FILE} recipes.` },
-        { status: 400 }
-      );
+    if (/\.csv$/i.test(file.name)) {
+      const csvRecipes = parseRecipeCsv(content);
+      if (csvRecipes.length > MAX_RECIPES_PER_FILE) {
+        return NextResponse.json(
+          { error: `A file can contain at most ${MAX_RECIPES_PER_FILE} recipes.` },
+          { status: 400 }
+        );
+      }
+      rows = csvRecipes.map((recipe) => recipeCsvRowToInsert(recipe, user.id));
+    } else {
+      const importedRecipes: ImportedRecipe[] = /\.xml$/i.test(file.name)
+        ? parseBeerXml(content)
+        : parseBeerJson(content);
+      if (importedRecipes.length > MAX_RECIPES_PER_FILE) {
+        return NextResponse.json(
+          { error: `A file can contain at most ${MAX_RECIPES_PER_FILE} recipes.` },
+          { status: 400 }
+        );
+      }
+      importedRecipes.forEach(validateRecipe);
+      rows = importedRecipes.map((recipe) => ({
+        user_id: user.id,
+        type: recipe.type,
+        name: recipe.name.trim(),
+        volume: recipe.volume,
+        og: recipe.og,
+        fg: recipe.fg,
+        abv: recipe.abv,
+        ingredients:
+          recipe.type === "Beer"
+            ? {
+                beer_subtype: recipe.beer_subtype,
+                beer_style: recipe.beer_style,
+                kit_url: null,
+              }
+            : recipe.ingredients,
+        malts: recipe.malts,
+        hops: recipe.hops,
+        dry_hops: recipe.dry_hops,
+        yeast: recipe.yeast,
+        additives: recipe.additives,
+        full_process: recipe.full_process,
+        notes: recipe.notes,
+        boil_time: recipe.boil_time,
+        boil_volume: recipe.boil_volume,
+        steps: recipe.steps,
+        is_public: false,
+      }));
     }
-    importedRecipes.forEach(validateRecipe);
   } catch (error) {
     return NextResponse.json(
       {
@@ -84,40 +138,39 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const rows = importedRecipes.map((recipe) => ({
-    user_id: user.id,
-    type: recipe.type,
-    name: recipe.name.trim(),
-    volume: recipe.volume,
-    og: recipe.og,
-    fg: recipe.fg,
-    abv: recipe.abv,
-    ingredients:
-      recipe.type === "Beer"
-        ? {
-            beer_subtype: recipe.beer_subtype,
-            beer_style: recipe.beer_style,
-            kit_url: null,
-          }
-        : recipe.ingredients,
-    malts: recipe.malts,
-    hops: recipe.hops,
-    dry_hops: recipe.dry_hops,
-    yeast: recipe.yeast,
-    additives: recipe.additives,
-    full_process: recipe.full_process,
-    notes: recipe.notes,
-    boil_time: recipe.boil_time,
-    boil_volume: recipe.boil_volume,
-    steps: recipe.steps,
-    is_public: false,
-  }));
+  const { serviceRole } = supabaseServer();
+  let recipeLimitStatus: Awaited<ReturnType<typeof getRecipeLimitStatus>>;
+  try {
+    recipeLimitStatus = await getRecipeLimitStatus(serviceRole, user.id);
+  } catch (error) {
+    console.error("Could not verify recipe import limit", error);
+    return NextResponse.json(
+      { error: "Could not verify your recipe limit. Please try again." },
+      { status: 500 }
+    );
+  }
+  if (!recipeLimitStatus.isPremium) {
+    const limitError = recipeLimitError(recipeLimitStatus.count, rows.length);
+    if (limitError) {
+      return NextResponse.json(
+        { error: limitError, upgradeUrl: "/premium", recipeLimit: FREE_RECIPE_LIMIT, recipeCount: recipeLimitStatus.count },
+        { status: 403 }
+      );
+    }
+  }
+
   const { data, error } = await supabase
     .from("recipes")
     .insert(rows)
     .select("*");
   if (error) {
     console.error("Could not save imported recipes", error);
+    if (error.code === "23514" && error.message.includes("Free accounts can save")) {
+      return NextResponse.json(
+        { error: error.message, upgradeUrl: "/premium", recipeLimit: FREE_RECIPE_LIMIT },
+        { status: 403 }
+      );
+    }
     return NextResponse.json(
       { error: "Recipes were parsed but could not be saved." },
       { status: 500 }

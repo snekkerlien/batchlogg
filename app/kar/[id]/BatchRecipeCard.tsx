@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import type { Batch } from "@/app/types/batchTypes";
-import { Qty } from "@/app/components/Units";
+import { Qty, UnitAwareText } from "@/app/components/Units";
 
 function brewTypeLabel(batch: Batch): string {
   if (batch.type !== "Beer") return batch.type;
@@ -214,13 +214,13 @@ export default function BatchRecipeCard({ batch }: { batch: Batch }) {
         )}
 
         {hasText(batch.additives) && (
-          <RecipeSection title="Additives"><p className="whitespace-pre-line">{batch.additives}</p></RecipeSection>
+          <RecipeSection title="Additives"><p className="whitespace-pre-line"><UnitAwareText text={batch.additives} /></p></RecipeSection>
         )}
         {hasText(batch.full_process) && (
-          <RecipeSection title="Brewing method"><p className="whitespace-pre-line">{batch.full_process}</p></RecipeSection>
+          <RecipeSection title="Brewing method"><p className="whitespace-pre-line"><UnitAwareText text={batch.full_process} /></p></RecipeSection>
         )}
         {hasText(batch.notes) && (
-          <RecipeSection title="Brewer’s notes"><p className="whitespace-pre-line">{batch.notes}</p></RecipeSection>
+          <RecipeSection title="Brewer’s notes"><p className="whitespace-pre-line"><UnitAwareText text={batch.notes} /></p></RecipeSection>
         )}
       </div>
     </div>

@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import RecipePresentation from "@/app/components/RecipePresentation";
+import { UnitAwareText } from "@/app/components/Units";
 
 export default function RecipeDetailsContent({ recipe }: { recipe: any }) {
   const notes = recipe.notes_log || [];
@@ -32,7 +33,7 @@ export default function RecipeDetailsContent({ recipe }: { recipe: any }) {
                     className="mt-3 rounded-lg"
                   />
                 )}
-                {note.note && <p className="mt-3 whitespace-pre-line">{note.note}</p>}
+                {note.note && <p className="mt-3 whitespace-pre-line"><UnitAwareText text={note.note} /></p>}
               </article>
             ))}
           </div>

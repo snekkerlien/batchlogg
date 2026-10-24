@@ -5,6 +5,7 @@ import {
   hasForumContent,
   isForumCategory,
 } from "@/lib/community/forumContent";
+import { ensureCommunityAndRatingAchievementNotifications } from "@/lib/community/achievementNotifications";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,16 +14,16 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 async function getContext() {
-  const { supabase } = supabaseServer();
+  const { supabase, serviceRole } = supabaseServer();
   const {
     data: { user },
     error,
   } = await supabase.auth.getUser();
-  return { supabase, user, error };
+  return { supabase, serviceRole, user, error };
 }
 
 export async function POST(request: NextRequest) {
-  const { supabase, user, error: authError } = await getContext();
+  const { supabase, serviceRole, user, error: authError } = await getContext();
   if (authError || !user) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
@@ -123,6 +124,11 @@ export async function POST(request: NextRequest) {
       }
       return NextResponse.json({ error: "Could not create discussion" }, { status: 500 });
     }
+    try {
+      await ensureCommunityAndRatingAchievementNotifications(serviceRole, user.id);
+    } catch (notificationError) {
+      console.error("Could not create achievement notifications after forum topic", notificationError);
+    }
     return NextResponse.json({ success: true });
   }
 
@@ -145,6 +151,11 @@ export async function POST(request: NextRequest) {
   if (error) {
     console.error("Could not create forum reply", error);
     return NextResponse.json({ error: "Could not create reply" }, { status: 500 });
+  }
+  try {
+    await ensureCommunityAndRatingAchievementNotifications(serviceRole, user.id);
+  } catch (notificationError) {
+    console.error("Could not create achievement notifications after forum reply", notificationError);
   }
   return NextResponse.json({ success: true });
 }

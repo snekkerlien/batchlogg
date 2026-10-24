@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
+import {
+  COMMUNITY_ACHIEVEMENT_TIERS,
+  RATING_ACHIEVEMENT_TIERS,
+} from "@/lib/community/achievementTiers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -96,6 +100,7 @@ export async function GET() {
       recipeCountsByType,
       topicCounts,
       replyCounts,
+      ratingCounts,
     ] = await Promise.all([
       serviceRole.from("profiles").select("id", { count: "exact", head: true }),
       loadUserCounts(
@@ -133,6 +138,16 @@ export async function GET() {
             .range(from, to),
         (row) => row.author_id
       ),
+      loadUserCounts(
+        (from, to) =>
+          serviceRole
+            .from("brewery_product_reviews")
+            .select("id, user_id")
+            .eq("status", "published")
+            .order("id", { ascending: true })
+            .range(from, to),
+        (row) => row.user_id
+      ),
     ]);
 
     if (profilesError || totalUsers === null || totalUsers < 1) {
@@ -152,26 +167,32 @@ export async function GET() {
     const categoryPercentiles = {
       Brewing: percentileForTier(
         batchCounts.get(user.id) ?? 0,
-        [1, 5, 10, 20, 35, 50, 75, 100, 150, 200, 300, 500, 750, 1000, 2000],
+        [1, 2, 3, 5, 8, 10, 15, 20, 25, 35, 50, 75, 100, 150, 200, 250, 300, 400, 450, 500],
         batchCounts,
         totalUsers
       ),
       "Recipe craft": percentileForTier(
         recipeCounts.get(user.id) ?? 0,
-        [1, 5, 10, 20, 35, 50, 75, 100, 150, 200, 300, 500],
+        [1, 2, 3, 5, 7, 10, 15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 85, 90, 95, 100],
         recipeCounts,
         totalUsers
       ),
       Sharing: percentileForTier(
         publicRecipeCounts.get(user.id) ?? 0,
-        [1, 5, 10, 20, 35, 50, 75, 100, 150, 200, 300, 500],
+        [1, 2, 3, 5, 7, 10, 15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 85, 90, 95, 100],
         publicRecipeCounts,
         totalUsers
       ),
       Community: percentileForTier(
         (topicCounts.get(user.id) ?? 0) + (replyCounts.get(user.id) ?? 0),
-        [1, 5, 10, 25, 50, 75, 100, 150, 250, 400, 600, 1000],
+        COMMUNITY_ACHIEVEMENT_TIERS.map(([, goal]) => goal),
         allForumCounts,
+        totalUsers
+      ),
+      Ratings: percentileForTier(
+        ratingCounts.get(user.id) ?? 0,
+        RATING_ACHIEVEMENT_TIERS.map(([, goal]) => goal),
+        ratingCounts,
         totalUsers
       ),
     };

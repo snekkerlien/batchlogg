@@ -13,6 +13,7 @@ import {
 import {
   UNIT_STORAGE_KEY,
   formatQuantity,
+  formatMetricText,
   fromDisplay,
   isUnitSystem,
   roundForDisplay,
@@ -146,6 +147,12 @@ export function Qty({
 export function UnitSymbol({ kind }: { kind: UnitKind }) {
   const { label } = useUnits();
   return <>{label(kind)}</>;
+}
+
+export function UnitAwareText({ text }: { text: string | null | undefined }) {
+  const { system } = useUnits();
+  if (text == null) return null;
+  return <>{formatMetricText(text, system)}</>;
 }
 
 type UnitInputProps = Omit<

@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 import BottleAging from "./BottleAging";
+import { UnitAwareText } from "@/app/components/Units";
 
 type BatchInsight = {
   id: string;
@@ -63,7 +64,9 @@ function Metric({
 
 export default function BatchInsightsPage() {
   const params = useParams<{ batchId: string }>();
+  const searchParams = useSearchParams();
   const batchId = params.batchId;
+  const recipeLimitReached = searchParams.get("recipeLimit") === "reached";
   const [batch, setBatch] = useState<BatchInsight | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -173,6 +176,14 @@ export default function BatchInsightsPage() {
           title="Batch insights"
           subtitle="A closer look at how this batch turned out."
         />
+
+        {recipeLimitReached && (
+          <p role="status" className="mb-4 rounded-lg border border-amber-400/30 bg-amber-950/40 p-3 text-sm text-amber-100">
+            Your batch was finished, but it wasn&apos;t saved as a recipe because free accounts can save up to 20 recipes.
+            {" "}<Link href="/my-recipes" className="font-semibold underline">Manage recipes</Link>
+            {" "}or{" "}<Link href="/premium" className="font-semibold underline">view Premium</Link>.
+          </p>
+        )}
 
         {loading ? (
           <p role="status" className="py-12 text-center text-white/60">
@@ -470,7 +481,7 @@ function NoteCard({ title, note }: { title: string; note: string }) {
     <section className="rounded-xl border border-white/10 bg-white/5 p-4">
       <h2 className="font-semibold text-green-200">{title}</h2>
       <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-white/75">
-        {note}
+        <UnitAwareText text={note} />
       </p>
     </section>
   );

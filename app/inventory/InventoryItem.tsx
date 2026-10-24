@@ -7,6 +7,7 @@ import {
   INVENTORY_CATEGORIES,
   getInventoryItemCategory,
   getInventorySubcategoryOptions,
+  INVENTORY_BOTTLE_TYPES,
   LEGACY_CATEGORY_ALIASES,
   SNUS_CATEGORIES,
 } from "@/lib/inventory/categories";
@@ -25,7 +26,8 @@ export default function InventoryItem({
     category: string,
     subcategory: string,
     amount: number,
-    minimumAmount: number
+    minimumAmount: number,
+    bottleType: string
   ) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
 }) {
@@ -43,6 +45,7 @@ export default function InventoryItem({
   );
   const [amount, setAmount] = useState(item.amount);
   const [minimumAmount, setMinimumAmount] = useState(item.minimum_amount ?? "");
+  const [bottleType, setBottleType] = useState(item.bottle_type ?? "");
   const snusCategories = ["snus", "snusessens"];
   const visibleCategories: {
     id: string;
@@ -93,6 +96,7 @@ export default function InventoryItem({
     setSubcategory(itemCategory.subcategory);
     setAmount(item.amount);
     setMinimumAmount(item.minimum_amount ?? "");
+    setBottleType(item.bottle_type ?? "");
     setEditError("");
     setEditMode(true);
   }
@@ -104,6 +108,7 @@ export default function InventoryItem({
     setSubcategory(itemCategory.subcategory);
     setAmount(item.amount);
     setMinimumAmount(item.minimum_amount ?? "");
+    setBottleType(item.bottle_type ?? "");
     setEditError("");
   }
 
@@ -117,7 +122,8 @@ export default function InventoryItem({
         category,
         subcategory,
         Number(amount),
-        Number(minimumAmount)
+        Number(minimumAmount),
+        bottleType
       );
       setEditMode(false);
     } catch (error) {
@@ -178,6 +184,13 @@ export default function InventoryItem({
             </span>
           </div>
         )}
+        {item.bottle_type && (
+          <div className="mt-2">
+            <span className="rounded-md border border-blue-300/20 bg-blue-300/10 px-2 py-1 text-xs text-blue-100">
+              {item.bottle_type}
+            </span>
+          </div>
+        )}
       </div>
 
       {!editMode && (
@@ -210,6 +223,7 @@ export default function InventoryItem({
               onChange={(event) => {
                 setCategory(event.target.value);
                 setSubcategory("");
+                setBottleType("");
               }}
             >
               {visibleCategories.map((itemCategory) => (
@@ -226,13 +240,33 @@ export default function InventoryItem({
                 disabled={saving}
                 className="w-full rounded border border-white/20 bg-black/40 p-2 text-base focus:border-green-400 focus:outline-none"
                 value={subcategory}
-                onChange={(event) => setSubcategory(event.target.value)}
+                onChange={(event) => {
+                  setSubcategory(event.target.value);
+                  setBottleType("");
+                }}
               >
                 <option value="">Choose a subcategory</option>
                 {getInventorySubcategoryOptions(selectedCategory.id).map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
+                ))}
+              </select>
+            </FormField>
+          )}
+          {category === "packaging" && subcategory === "Bottles" && (
+            <FormField id={`inventory-edit-${item.id}-bottle-type`} label="Bottle type" required>
+              <select
+                id={`inventory-edit-${item.id}-bottle-type`}
+                required
+                disabled={saving}
+                className="w-full rounded border border-white/20 bg-black/40 p-2 text-base focus:border-green-400 focus:outline-none"
+                value={bottleType}
+                onChange={(event) => setBottleType(event.target.value)}
+              >
+                <option value="">Choose a bottle type</option>
+                {INVENTORY_BOTTLE_TYPES.map((type) => (
+                  <option key={type} value={type}>{type}</option>
                 ))}
               </select>
             </FormField>

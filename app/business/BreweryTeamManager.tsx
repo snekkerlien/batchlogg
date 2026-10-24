@@ -169,34 +169,38 @@ export default function BreweryTeamManager() {
         {loading ? (
           <p className="mt-3 text-sm text-white/55">Loading team…</p>
         ) : members.length ? (
-          <ul className="mt-3 divide-y divide-white/10">
+          <ul className="mt-2 divide-y divide-white/10">
             {members.map((member) => (
-              <li key={member.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{member.username ? `@${member.username}` : member.email ?? "Batchlogg member"}</p>
-                  {member.username && member.email && <p className="truncate text-sm text-white/55">{member.email}</p>}
-                  <label className="mt-2 flex items-center gap-2 text-xs text-white/55">
+              <li key={member.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 py-2">
+                <div className="flex min-w-0 flex-1 items-baseline gap-x-2">
+                  <p className="truncate text-sm font-medium">{member.username ? `@${member.username}` : member.email ?? "Batchlogg member"}</p>
+                  {member.username && member.email && <p className="truncate text-xs text-white/45">{member.email}</p>}
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <label className="flex items-center gap-1.5 text-xs text-white/55">
                     Role
                     <select
                       value={member.role}
                       disabled={updatingRoleId === member.id}
                       onChange={(event) => void updateRole(member, event.target.value)}
-                      className="rounded-md border border-white/15 bg-black/40 px-2 py-1 text-white disabled:opacity-50"
+                      className="rounded-md border border-white/15 bg-black/40 px-2 py-1 text-xs text-white disabled:opacity-50"
                     >
                       <option value="manager" className="bg-zinc-900">Manager</option>
                       <option value="editor" className="bg-zinc-900">Editor</option>
                     </select>
-                    {updatingRoleId === member.id && <span aria-live="polite">Saving…</span>}
                   </label>
+                  {updatingRoleId === member.id && (
+                    <span aria-live="polite" className="text-xs text-white/50">Saving…</span>
+                  )}
+                  <button
+                    type="button"
+                    disabled={removingId === member.id}
+                    onClick={() => void removeMember(member)}
+                    className="rounded-md border border-red-300/20 px-2.5 py-1 text-xs text-red-200 hover:bg-red-950/40 disabled:opacity-50"
+                  >
+                    {removingId === member.id ? "Removing…" : "Remove"}
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  disabled={removingId === member.id}
-                  onClick={() => void removeMember(member)}
-                  className="rounded-lg border border-red-300/20 px-3 py-1.5 text-sm text-red-200 hover:bg-red-950/40 disabled:opacity-50"
-                >
-                  {removingId === member.id ? "Removing…" : "Remove"}
-                </button>
               </li>
             ))}
           </ul>

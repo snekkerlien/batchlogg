@@ -108,6 +108,9 @@ export default function AccountPage() {
       throw new Error(`Profile request failed (${res.status})`);
     }
     const data = await res.json();
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+      throw new Error("Profile response was empty or invalid");
+    }
 
     // ⭐ VIKTIG: dette var feilen
     setProfile(data);
@@ -220,7 +223,7 @@ export default function AccountPage() {
       setSavingShowcase(false);
     }
   }
-  if (loading) {
+  if (loading || (!profile && !loadError)) {
   return (
     <main className="min-h-screen flex items-center justify-center text-white">
       <div className="bg-black/60 backdrop-blur-md px-6 py-4 rounded-xl border border-white/10">

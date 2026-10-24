@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
+import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
 import PublicPageNavigation from "@/app/components/PublicPageNavigation";
 import PublicRecipeList from "./PublicRecipeList";
 import type { RecipePresentationData } from "@/app/components/RecipePresentation";
@@ -25,7 +26,17 @@ type PublicRecipe = RecipePresentationData & {
 };
 
 export default async function PublicRecipesPage() {
-  const { serviceRole } = supabaseServer();
+  const { supabase, serviceRole } = supabaseServer();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError && authError.name !== "AuthSessionMissingError") {
+    throw new Error(`Could not verify recipe moderation permissions: ${authError.message}`);
+  }
+  const canModerateRecipes = user
+    ? hasPermission(await getMembershipRole(supabase, user), "manage_users")
+    : false;
   const authors: { id: string; username: string }[] = [];
   const chunkSize = 500;
   for (let offset = 0; ; offset += chunkSize) {
@@ -156,7 +167,7 @@ export default async function PublicRecipesPage() {
           </p>
         </header>
 
-        <PublicRecipeList recipes={summaries} />
+        <PublicRecipeList recipes={summaries} canModerateRecipes={canModerateRecipes} />
       </div>
     </main>
   );

@@ -14,6 +14,7 @@ import { addInventoryItem } from "@/app/actions/inventoryActions";
 import {
   getInventorySubcategoryOptions,
   isBatchAdditiveInventoryCategory,
+  INVENTORY_BOTTLE_TYPES,
   INVENTORY_CATEGORIES,
 } from "@/lib/inventory/categories";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
@@ -108,7 +109,7 @@ export function BatchInventoryProvider({
 
         const { data, error: itemsError } = await supabaseBrowser
           .from("inventory_items")
-          .select("id, name, amount, unit, minimum_amount, category, subcategory, alpha_acid, ebc, hop_year")
+          .select("id, name, amount, unit, minimum_amount, category, subcategory, alpha_acid, ebc, hop_year, bottle_type")
           .eq("user_id", user.id)
           .order("name");
         if (itemsError) throw itemsError;
@@ -618,10 +619,12 @@ function InventoryItemCreator({
   const [alphaAcid, setAlphaAcid] = useState("");
   const [ebc, setEbc] = useState("");
   const [hopYear, setHopYear] = useState("");
+  const [bottleType, setBottleType] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const isHop = itemCategory === "hops";
   const isMalt = itemCategory === "malts";
+  const isBottle = itemCategory === "packaging" && itemSubcategory === "Bottles";
   const selectedCategory = INVENTORY_CATEGORIES.find(
     (item) => item.id === itemCategory
   );
@@ -643,6 +646,10 @@ function InventoryItemCreator({
       setError("Enter the EBC color value for this malt.");
       return;
     }
+    if (isBottle && !bottleType) {
+      setError("Choose a bottle type.");
+      return;
+    }
     const startingAmount = Number(stockAmount);
     const minimumStock = Number(minimumAmount);
     if (
@@ -658,6 +665,7 @@ function InventoryItemCreator({
     formData.set("name", itemName.trim());
     formData.set("category", itemCategory);
     formData.set("subcategory", itemSubcategory);
+    if (isBottle) formData.set("bottle_type", bottleType);
     formData.set("amount", String(startingAmount));
     formData.set("unit", unit.trim());
     formData.set("minimum_amount", String(minimumStock));
@@ -715,6 +723,7 @@ function InventoryItemCreator({
           onChange={(event) => {
             setItemCategory(event.target.value);
             setItemSubcategory("");
+            setBottleType("");
           }}
           className="rounded border border-white/20 bg-zinc-900 p-3"
         >
@@ -737,7 +746,10 @@ function InventoryItemCreator({
           <select
             aria-label="Inventory subcategory"
             value={itemSubcategory}
-            onChange={(event) => setItemSubcategory(event.target.value)}
+            onChange={(event) => {
+              setItemSubcategory(event.target.value);
+              setBottleType("");
+            }}
             className="rounded border border-white/20 bg-zinc-900 p-3"
           >
             <option value="">Choose a subcategory (optional)</option>
@@ -748,6 +760,20 @@ function InventoryItemCreator({
             ))}
           </select>
         )
+      )}
+      {itemCategory === "packaging" && itemSubcategory === "Bottles" && (
+        <select
+          aria-label="Bottle type"
+          required
+          value={bottleType}
+          onChange={(event) => setBottleType(event.target.value)}
+          className="rounded border border-white/20 bg-zinc-900 p-3"
+        >
+          <option value="">Choose a bottle type</option>
+          {INVENTORY_BOTTLE_TYPES.map((type) => (
+            <option key={type} value={type}>{type}</option>
+          ))}
+        </select>
       )}
       <p className="text-xs text-white/60 sm:col-span-2">
         Enter the amount you currently have; you can then select how much this batch uses.

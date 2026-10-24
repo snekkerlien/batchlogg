@@ -4,6 +4,7 @@ import { useState } from "react";
 import FormField from "@/app/components/FormField";
 import {
   getInventorySubcategoryOptions,
+  INVENTORY_BOTTLE_TYPES,
   INVENTORY_CATEGORIES,
   SNUS_CATEGORIES,
 } from "@/lib/inventory/categories";
@@ -25,6 +26,7 @@ export default function AddItemForm({
     name: "",
     category: fixedCategory ?? "fermentables",
     subcategory: "",
+    bottle_type: "",
     amount: "",
     unit: "kg",
     minimum_amount: "",
@@ -36,6 +38,7 @@ export default function AddItemForm({
   const [error, setError] = useState("");
   const isHop = form.category === "hops";
   const isMalt = form.category === "malts";
+  const isBottle = form.category === "packaging" && form.subcategory === "Bottles";
   const itemType =
     form.category === "malts"
       ? "malt"
@@ -60,9 +63,11 @@ export default function AddItemForm({
 
     try {
       const fd = new FormData();
-      Object.entries(form).forEach(([key, value]) =>
-        fd.set(key, value.toString())
-      );
+      Object.entries(form).forEach(([key, value]) => {
+        if (key !== "bottle_type" || isBottle) {
+          fd.set(key, value.toString());
+        }
+      });
 
       await onAddItem(fd);
 
@@ -98,7 +103,12 @@ export default function AddItemForm({
             className="w-full rounded border border-white/20 bg-black/40 p-3 focus:border-green-400 focus:outline-none"
             value={form.category}
             onChange={(e) =>
-              setForm({ ...form, category: e.target.value, subcategory: "" })
+              setForm({
+                ...form,
+                category: e.target.value,
+                subcategory: "",
+                bottle_type: "",
+              })
             }
           >
             {visibleCategories.map((cat) => (
@@ -118,13 +128,40 @@ export default function AddItemForm({
             className="w-full rounded border border-white/20 bg-black/40 p-3 focus:border-green-400 focus:outline-none"
             value={form.subcategory}
             onChange={(event) =>
-              setForm({ ...form, subcategory: event.target.value })
+              setForm({
+                ...form,
+                subcategory: event.target.value,
+                bottle_type: "",
+                unit: event.target.value === "Bottles" ? "pcs" : form.unit,
+              })
             }
           >
             <option value="">Choose a subcategory</option>
             {getInventorySubcategoryOptions(selectedCategory.id).map((subcategory) => (
               <option key={subcategory.value} value={subcategory.value}>
                 {subcategory.label}
+              </option>
+            ))}
+          </select>
+        </FormField>
+      )}
+
+      {isBottle && (
+        <FormField id="inventory-add-bottle-type" label="Bottle type" required>
+          <select
+            id="inventory-add-bottle-type"
+            required
+            disabled={saving}
+            className="w-full rounded border border-white/20 bg-black/40 p-3 focus:border-green-400 focus:outline-none"
+            value={form.bottle_type}
+            onChange={(event) =>
+              setForm({ ...form, bottle_type: event.target.value })
+            }
+          >
+            <option value="">Choose a bottle type</option>
+            {INVENTORY_BOTTLE_TYPES.map((bottleType) => (
+              <option key={bottleType} value={bottleType}>
+                {bottleType}
               </option>
             ))}
           </select>

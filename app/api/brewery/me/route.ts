@@ -23,7 +23,7 @@ export async function GET() {
         await Promise.all([
           serviceRole
             .from("brewery_products")
-            .select("id, brewery_id, slug, name, category, description, product_url, image_url, style, abv, batch_size_l, ebc, ibu, package_size, availability, details, is_published, created_at")
+            .select("id, brewery_id, slug, name, category, description, product_url, image_url, style, abv, batch_size_l, ebc, ibu, package_size, price, price_currency, availability, details, is_published, created_at")
             .eq("brewery_id", account.id)
             .order("created_at", { ascending: false }),
           serviceRole

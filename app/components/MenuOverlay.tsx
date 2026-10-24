@@ -260,7 +260,7 @@ function MenuOverlayContent({ current }: { current: string }) {
           id="navigation-menu"
           className="
             menu-overlay-dropdown
-            absolute -right-12 top-full mt-2
+            absolute right-0 top-full mt-2
             bg-black/90 backdrop-blur-md
             border border-white/20
             rounded-lg shadow-xl
@@ -270,7 +270,6 @@ function MenuOverlayContent({ current }: { current: string }) {
             w-[min(20rem,calc(100vw-1rem))]
             max-h-[calc(100dvh-5rem)]
             overflow-y-auto
-            sm:right-0
             sm:max-h-[calc(100dvh-5rem)]
           "
           data-menu-dropdown

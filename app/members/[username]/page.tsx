@@ -16,6 +16,7 @@ import RecipePresentation from "@/app/components/RecipePresentation";
 import MemberAdminActions, { type MemberAdminDetails } from "./MemberAdminActions";
 import FermentationBubbles from "@/app/components/FermentationBubbles";
 import ExpandArrowButton from "@/app/components/ExpandArrowButton";
+import BeerColorGlass from "@/app/components/BeerColorGlass";
 
 function ProfilePreviewNotice() {
   return (
@@ -73,6 +74,7 @@ export default function ProfileDetailPage({ params, searchParams }: {
     totalRecipes: number;
     publicRecipes: number;
     forumPosts: number;
+    totalRatings: number;
   } | null>(null);
 
 
@@ -647,7 +649,67 @@ const secondary = batchesRaw
             onClick={() => toggle(r.id)}
           />
         </div>
-
+        {expanded !== r.id && (
+          <div
+            aria-label={`${r.name} recipe summary`}
+            className="mt-3 grid grid-cols-3 gap-x-2 gap-y-1.5 text-sm sm:flex sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-1"
+          >
+            {([
+              ["OG", r.og, 3],
+              ["FG", r.fg, 3],
+              ["ABV", r.abv, 1],
+            ] as const).map(([label, value, decimals]) => {
+              const numeric = value == null || value === "" ? null : Number(value);
+              const display =
+                numeric !== null && Number.isFinite(numeric)
+                  ? numeric.toFixed(decimals)
+                  : "—";
+              return (
+                <span
+                  key={label}
+                  className="inline-flex min-w-0 items-center gap-1 whitespace-nowrap rounded-md border border-white/10 bg-black/20 px-2 py-1 sm:gap-1.5 sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:py-0"
+                >
+                  <strong className="text-[10px] text-white/55 sm:text-sm sm:text-white">
+                    {label}:
+                  </strong>
+                  <span className="text-xs sm:text-sm">
+                    {display}{label === "ABV" ? "%" : ""}
+                  </span>
+                </span>
+              );
+            })}
+            {(r.type === "Beer" || r.type === "Braggot") && (
+              <>
+                {([
+                  ["IBU", r.ibu, 0],
+                  ["EBC", r.ebc, 0],
+                ] as const).map(([label, value, decimals]) => {
+                  const numeric = value == null || value === "" ? null : Number(value);
+                  const display =
+                    numeric !== null && Number.isFinite(numeric)
+                      ? numeric.toFixed(decimals)
+                      : "—";
+                  return (
+                    <span
+                      key={label}
+                      className="inline-flex min-w-0 items-center gap-1 whitespace-nowrap rounded-md border border-white/10 bg-black/20 px-2 py-1 sm:gap-1.5 sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:py-0"
+                    >
+                      <strong className="text-[10px] text-white/55 sm:text-sm sm:text-white">
+                        {label}:
+                      </strong>
+                      <span className="inline-flex items-center gap-0.5 text-xs sm:gap-1 sm:text-sm">
+                        {display}
+                        {label === "EBC" && numeric !== null && Number.isFinite(numeric) && (
+                          <BeerColorGlass ebc={numeric} compact />
+                        )}
+                      </span>
+                    </span>
+                  );
+                })}
+              </>
+            )}
+          </div>
+        )}
         {/* Slide-down content */}
         <div
           id={`member-recipe-${r.id}`}
@@ -700,7 +762,6 @@ const secondary = batchesRaw
   <ProfileAchievements
     stats={profileStats}
     showProgress={isOwner}
-    accentColor={profile?.theme_accent_color}
   />
 )}
 

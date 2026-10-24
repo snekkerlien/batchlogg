@@ -63,12 +63,12 @@ export default function RecipeBuilder() {
       }),
     });
 
+    const result = await res.json();
     if (res.ok) {
-      const data = await res.json();
-      setRecipeId(data.recipe.id);
+      setRecipeId(result.recipe.id);
       setStatusMsg("Recipe saved!");
     } else {
-      setStatusMsg("Could not save recipe.");
+      setStatusMsg(result.error || "Could not save recipe.");
     }
   }
 

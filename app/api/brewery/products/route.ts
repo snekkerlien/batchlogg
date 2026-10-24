@@ -4,9 +4,16 @@ import {
   hasBreweryAccess,
   canManageBreweryProducts,
 } from "@/lib/brewery/access";
-import { validateBreweryProduct } from "@/lib/brewery/products";
+import {
+  isBeerKitProductCategory,
+  validateBreweryProduct,
+} from "@/lib/brewery/products";
 import { readProductRequest } from "@/lib/brewery/product-request";
-import { uploadProductImage, validateProductImage } from "@/lib/brewery/product-images";
+import {
+  ProductImageProcessingError,
+  uploadProductImage,
+  validateProductImage,
+} from "@/lib/brewery/product-images";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,6 +43,12 @@ export async function POST(request: NextRequest) {
     if (!account) return NextResponse.json({ error: "Brewery account not found." }, { status: 404 });
     if (!hasBreweryAccess(account)) return NextResponse.json({ error: "An active business account is required." }, { status: 403 });
     if (!canManageBreweryProducts(role)) return NextResponse.json({ error: "Only owners, managers, and editors can manage products." }, { status: 403 });
+    if (account.business_type === "homebrew_shop" && !isBeerKitProductCategory(product.category)) {
+      return NextResponse.json(
+        { error: "Homebrew shops can only list beer kits." },
+        { status: 400 }
+      );
+    }
 
     if (image) {
       const uploadedImage = await uploadProductImage(serviceRole, account.id, image);
@@ -46,7 +59,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await serviceRole
       .from("brewery_products")
       .insert({ ...product, brewery_id: account.id })
-      .select("id, slug, name, category, description, product_url, image_url, style, abv, batch_size_l, ebc, ibu, package_size, availability, details, is_published")
+      .select("id, slug, name, category, description, product_url, image_url, style, abv, batch_size_l, ebc, ibu, package_size, price, price_currency, availability, details, is_published")
       .single();
     if (error?.code === "23505") {
       if (uploadedPath) {
@@ -68,9 +81,16 @@ export async function POST(request: NextRequest) {
     }
     console.error("Could not add brewery product", error);
     const unauthorized = error instanceof Error && error.message === "Authentication required";
+    const imageProcessingError = error instanceof ProductImageProcessingError;
     return NextResponse.json(
-      { error: unauthorized ? error.message : "Could not add product." },
-      { status: unauthorized ? 401 : 500 }
+      {
+        error: unauthorized
+          ? error.message
+          : imageProcessingError
+            ? error.message
+            : "Could not add product.",
+      },
+      { status: unauthorized ? 401 : imageProcessingError ? 400 : 500 }
     );
   }
 }

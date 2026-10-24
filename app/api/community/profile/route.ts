@@ -154,6 +154,7 @@ export async function GET(request: NextRequest) {
       { data: recipeRows, error: recipesError },
       { count: topicCount, error: topicsError },
       { count: replyCount, error: repliesError },
+      { count: ratingCount, error: ratingsError },
     ] = await Promise.all([
       isOwner
         ? serviceRole
@@ -183,8 +184,14 @@ export async function GET(request: NextRequest) {
         .from("forum_replies")
         .select("id", { count: "exact", head: true })
         .eq("author_id", profile.id),
+      serviceRole
+        .from("brewery_product_reviews")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", profile.id)
+        .eq("status", "published"),
     ]);
-    const statsError = batchesError || recipesError || topicsError || repliesError;
+    const statsError =
+      batchesError || recipesError || topicsError || repliesError || ratingsError;
     if (statsError) {
       console.error("Could not load community profile statistics", statsError);
       return NextResponse.json({ error: "Could not load profile statistics" }, { status: 500 });
@@ -197,6 +204,7 @@ export async function GET(request: NextRequest) {
       totalRecipes: recipes.length,
       publicRecipes: recipes.filter((recipe) => recipe.is_public).length,
       forumPosts: (topicCount ?? 0) + (replyCount ?? 0),
+      totalRatings: ratingCount ?? 0,
     };
   }
 
