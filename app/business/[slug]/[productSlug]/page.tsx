@@ -35,7 +35,7 @@ export default async function BreweryProductPage({
 
   const { data: product, error } = await serviceRole
     .from("brewery_products")
-    .select("id, slug, name, category, description, product_url, image_url, style, abv, batch_size_l, ebc, ibu, package_size, price, price_currency, availability, details")
+    .select("id, slug, name, category, description, product_url, image_url, style, abv, batch_size_l, ebc, ibu, package_size, price, price_currency, details")
     .eq("brewery_id", brewery.id)
     .eq("slug", params.productSlug)
     .eq("is_published", true)
@@ -105,8 +105,12 @@ export default async function BreweryProductPage({
               </dd>
             </div>
           )}
-          <div><dt className="text-white/50">Availability</dt><dd className="mt-1 capitalize">{product.availability}</dd></div>
         </dl>
+        {product.product_url && (
+          <p className="mb-6 text-center text-xs text-white/50">
+            Check the product page for current availability.
+          </p>
+        )}
         {product.price != null && (
           <p className="mb-6 text-center text-xs text-white/50">
             Price supplied by the business; check the product page for the latest price.
