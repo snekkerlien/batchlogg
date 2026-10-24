@@ -72,11 +72,16 @@ export default function ChangelogNotice() {
 
   useEffect(() => {
     if (!visible) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     function handleEscape(event: KeyboardEvent) {
       if (event.key === "Escape") void closeNotice();
     }
     document.addEventListener("keydown", handleEscape);
-    return () => document.removeEventListener("keydown", handleEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleEscape);
+    };
   }, [visible, changelog, user?.id]);
 
   async function closeNotice(): Promise<boolean> {
@@ -117,14 +122,14 @@ export default function ChangelogNotice() {
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 p-3 backdrop-blur-sm sm:items-center sm:p-6">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-black/70 p-3 backdrop-blur-sm sm:p-6">
       <section
         role="dialog"
         aria-modal="true"
         aria-labelledby="site-updates-title"
-        className="max-h-[min(85vh,48rem)] w-full max-w-xl overflow-y-auto rounded-2xl border border-white/15 bg-zinc-950 p-5 text-white shadow-2xl sm:p-7"
+        className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-white/15 bg-zinc-950 p-5 text-white shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:p-7"
       >
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex shrink-0 items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-green-300">
               What’s new · {changelog?.version}
@@ -147,11 +152,17 @@ export default function ChangelogNotice() {
           </button>
         </div>
 
-        {error && <p role="alert" className="mt-4 text-sm text-amber-300">{error}</p>}
-        <div className="mt-5 space-y-5 text-sm leading-6 text-white/80 [&_a]:text-green-300 [&_a]:underline [&_h1]:mt-5 [&_h1]:text-xl [&_h1]:font-bold [&_h2]:mt-5 [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:font-semibold [&_li]:ml-5 [&_li]:list-disc [&_ol_li]:list-decimal [&_p]:mt-3 [&_strong]:font-semibold [&_ul]:space-y-1">
-          {changelog && <ReactMarkdown>{changelog.body}</ReactMarkdown>}
+        <div
+          tabIndex={0}
+          aria-label="Site updates details"
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-2"
+        >
+          {error && <p role="alert" className="mt-4 text-sm text-amber-300">{error}</p>}
+          <div className="mt-5 space-y-5 text-sm leading-6 text-white/80 [&_a]:text-green-300 [&_a]:underline [&_h1]:mt-5 [&_h1]:text-xl [&_h1]:font-bold [&_h2]:mt-5 [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:font-semibold [&_li]:ml-5 [&_li]:list-disc [&_ol_li]:list-decimal [&_p]:mt-3 [&_strong]:font-semibold [&_ul]:space-y-1">
+            {changelog && <ReactMarkdown>{changelog.body}</ReactMarkdown>}
+          </div>
         </div>
-        <div className="mt-6 flex justify-center">
+        <div className="mt-6 flex shrink-0 justify-center">
           <button
             type="button"
             onClick={() => void openFullChangelog()}

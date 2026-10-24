@@ -21,6 +21,7 @@ function MenuOverlayContent({ current }: { current: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const [canManageKegs, setCanManageKegs] = useState(false);
+  const [gamesEnabled, setGamesEnabled] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isModerator, setIsModerator] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -46,6 +47,7 @@ function MenuOverlayContent({ current }: { current: string }) {
         "brew-insights": "More tools",
         abvtools: "More tools",
         breweries: "More tools",
+        games: "More tools",
         profiles: "Community",
         friends: "Community",
         messages: "Community",
@@ -84,6 +86,7 @@ function MenuOverlayContent({ current }: { current: string }) {
         if (!session) {
           if (active) {
             setCanManageKegs(false);
+            setGamesEnabled(false);
             setIsAdmin(false);
             setIsModerator(false);
           }
@@ -116,13 +119,15 @@ function MenuOverlayContent({ current }: { current: string }) {
           setCanManageKegs(
             profile.can_manage_kegs === true || sessionData.role === "admin"
           );
+          setGamesEnabled(profile.games_enabled === true);
         }
       } catch (error) {
-        console.error("Could not load keg management permission", error);
+        console.error("Could not load navigation preferences", error);
       }
     }
 
     loadKegPermission();
+    window.addEventListener("batchlogg-preferences-saved", loadKegPermission);
 
     function handleClickOutside(e: MouseEvent) {
       if (
@@ -135,6 +140,7 @@ function MenuOverlayContent({ current }: { current: string }) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       active = false;
+      window.removeEventListener("batchlogg-preferences-saved", loadKegPermission);
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
@@ -175,6 +181,9 @@ function MenuOverlayContent({ current }: { current: string }) {
         { href: "/brew-insights", label: "Brewing insights", key: "brew-insights" },
         { href: "/abv-tools", label: "Brewing calculators", key: "abvtools" },
         { href: "/business", label: "Beer & Brewing Reviews", key: "breweries" },
+        ...(gamesEnabled
+          ? [{ href: "/games", label: "Brewing Academy", key: "games" }]
+          : []),
       ],
     },
     {
@@ -370,16 +379,6 @@ function MenuOverlayContent({ current }: { current: string }) {
               className="hidden min-h-10 items-center rounded-md px-3 py-2 text-sm text-white/80 hover:bg-white/5 hover:text-green-300 sm:flex"
             >
               Download desktop app
-            </Link>
-            <Link
-              href="/games"
-              onClick={() => setMenuOpen(false)}
-              aria-label="Open brewing games"
-              className="group relative hidden h-10 w-10 shrink-0 items-center justify-center rounded-md opacity-0 focus-visible:opacity-100 sm:flex"
-            >
-              <span className="absolute rounded-md bg-zinc-900 px-2 py-1 text-xs text-white opacity-0 group-focus-visible:opacity-100">
-                Brewing games
-              </span>
             </Link>
             <button
               type="button"

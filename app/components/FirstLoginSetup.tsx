@@ -35,6 +35,7 @@ export default function FirstLoginSetup() {
   const [useInventory, setUseInventory] = useState(false);
   const [publicProfile, setPublicProfile] = useState(true);
   const [remindersEnabled, setRemindersEnabled] = useState(true);
+  const [gamesEnabled, setGamesEnabled] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
@@ -85,6 +86,7 @@ export default function FirstLoginSetup() {
         setUseInventory(profile.use_inventory_for_batches === true);
         setPublicProfile(profile.is_public !== false);
         setRemindersEnabled(profile.batch_reminders_enabled !== false);
+        setGamesEnabled(profile.games_enabled === true);
         setReducedMotion(getReducedMotionPreference());
         if (profile.onboarding_completed === false) setStage("welcome");
       } catch (loadError) {
@@ -127,6 +129,7 @@ export default function FirstLoginSetup() {
         preferred_unit_system: unitSystem,
         use_inventory_for_batches: useInventory,
         batch_reminders_enabled: remindersEnabled,
+        games_enabled: gamesEnabled,
         is_public: publicProfile,
         onboarding_completed: true,
       });
@@ -379,6 +382,21 @@ export default function FirstLoginSetup() {
                   <span className="block font-medium">Enable brew reminders</span>
                   <span className="text-sm text-white/60">
                     Allow scheduled reminders and gravity-check reminders.
+                  </span>
+                </span>
+              </label>
+
+              <label className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={gamesEnabled}
+                  onChange={(event) => setGamesEnabled(event.target.checked)}
+                  className={`${checkboxClass} mt-1`}
+                />
+                <span>
+                  <span className="block font-medium">Enable Brewing Academy</span>
+                  <span className="text-sm text-white/60">
+                    Add brewing learning challenges under More tools in the navigation menu.
                   </span>
                 </span>
               </label>

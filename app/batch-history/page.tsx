@@ -9,6 +9,7 @@ import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import PageHeading from "../components/PageHeading";
+import PageGuide from "@/app/components/PageGuide";
 import ExpandArrowButton from "@/app/components/ExpandArrowButton";
 import BatchOutcomeSharing from "@/app/components/BatchOutcomeSharing";
 import { Qty, UnitAwareText } from "@/app/components/Units";
@@ -327,7 +328,29 @@ function BatchHistoryContent() {
           title="Batch history"
           subtitle="Review your batches, fermentation details, and SG readings."
         />
-
+        <PageGuide
+          buttonLabel="Batch history guide"
+          eyebrow="Learn from every batch"
+          title="Find the details behind each brew."
+          description="Batch history keeps your finished and active batches together, with readings, notes, and results recorded along the way."
+          sectionHeading="Finding your way around"
+          sections={[
+            {
+              title: "Search and narrow the list",
+              description: "Search by batch details, or filter by batch type, stage, and whether it is linked to a recipe. The count shows how many batches match.",
+            },
+            {
+              title: "Change the sort order",
+              description: "Use the sort menu to find recent batches, browse by name, or compare finished batches by ABV.",
+            },
+            {
+              title: "Open a batch record",
+              description: "Each card brings together its fermentation status, gravity readings, notes, recipe, and finishing details when available.",
+            },
+          ]}
+          illustration="history"
+          footer="Clear the filters to return to your full brewing history."
+        />
         {batchLoadError && (
           <p role="alert" className="mb-6 text-center text-sm text-red-300">
             {batchLoadError}

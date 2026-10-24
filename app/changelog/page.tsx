@@ -18,6 +18,17 @@ export default function ChangelogClient() {
   const [logs, setLogs] = useState<ChangelogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showBackToTop, setShowBackToTop] = useState(false);
+
+  useEffect(() => {
+    function updateScrollPosition() {
+      setShowBackToTop(window.scrollY > 400);
+    }
+
+    updateScrollPosition();
+    window.addEventListener("scroll", updateScrollPosition, { passive: true });
+    return () => window.removeEventListener("scroll", updateScrollPosition);
+  }, []);
 
   useEffect(() => {
     async function load() {
@@ -80,7 +91,7 @@ export default function ChangelogClient() {
         )}
 
         <section className="overflow-hidden rounded-xl border border-white/10 bg-white/5">
-          <ol className="flex max-h-[65vh] min-h-72 flex-col gap-4 overflow-y-auto p-6">
+          <ol className="space-y-4 p-6">
             {logs.length ? (
               logs.map((log) => (
                 <li
@@ -111,6 +122,23 @@ export default function ChangelogClient() {
           </ol>
         </section>
       </div>
+      {showBackToTop && (
+        <button
+          type="button"
+          onClick={() =>
+            window.scrollTo({
+              top: 0,
+              behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+                ? "auto"
+                : "smooth",
+            })
+          }
+          className="fixed bottom-5 right-5 z-50 inline-flex min-h-11 items-center gap-2 rounded-full border border-white/20 bg-zinc-900/95 px-4 py-2 text-sm font-semibold text-white shadow-lg hover:border-green-300/40 hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-300"
+        >
+          <span aria-hidden="true">↑</span>
+          Back to top
+        </button>
+      )}
     </main>
   );
 }

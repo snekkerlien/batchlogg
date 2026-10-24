@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import VisibilitySwitch from "../components/VisibilitySwitch";
 import RecipeFilters, { type RecipeSort } from "./RecipeFilters";
+import RecipesGuide from "./RecipesGuide";
 import RecipeImport from "./RecipeImport";
 import RecipeAdditiveFields from "./new/RecipeAdditiveFields";
 import RecipeSecondaryFields from "./new/RecipeSecondaryFields";
@@ -681,9 +682,9 @@ function removeDryHop(index: number) {
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
         <div className="bg-black/60 backdrop-blur-md px-6 py-4 rounded-xl border border-white/10">
-          Loading recipes…
-        </div>
-      </main>
+            Loading recipes…
+          </div>
+        </main>
     );
   }
 
@@ -1914,6 +1915,7 @@ function removeDryHop(index: number) {
         )}
 
       </div>
+      <RecipesGuide />
     </main>
   );
 }

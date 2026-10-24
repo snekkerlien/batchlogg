@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   createDefaultChecklistState,
   getBrewDaySteps,
@@ -17,6 +17,8 @@ type BrewDayChecklistProps = {
   beerSubtype?: string | null;
   batchName: string;
   boilMinutes?: number | null;
+  originalGravity?: number | string | null;
+  volumeLiters?: number | string | null;
   isSecondary?: boolean;
 };
 
@@ -40,13 +42,19 @@ export default function BrewDayChecklist({
   beerSubtype,
   batchName,
   boilMinutes,
+  originalGravity,
+  volumeLiters,
   isSecondary = false,
 }: BrewDayChecklistProps) {
   const steps = getBrewDaySteps(batchType, beerSubtype);
-  const visibleSteps = isSecondary
-    ? [...steps, ...SECONDARY_FERMENTATION_STEPS]
-    : steps;
-  const stepIds = new Set(visibleSteps.map((step) => step.id));
+  const visibleSteps = useMemo(
+    () => isSecondary ? [...steps, ...SECONDARY_FERMENTATION_STEPS] : steps,
+    [isSecondary, steps]
+  );
+  const stepIds = useMemo(
+    () => new Set(visibleSteps.map((step) => step.id)),
+    [visibleSteps]
+  );
   const [checklist, setChecklist] = useState<ChecklistState>(() =>
     createDefaultChecklistState(boilMinutes ?? undefined)
   );
@@ -57,6 +65,10 @@ export default function BrewDayChecklist({
   const [now, setNow] = useState(0);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [checklistOpen, setChecklistOpen] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
+  const focusButtonRef = useRef<HTMLButtonElement>(null);
+  const exitFocusButtonRef = useRef<HTMLButtonElement>(null);
+  const focusWasOpenRef = useRef(false);
   const saveRevisionRef = useRef(0);
   const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
 
@@ -104,7 +116,7 @@ export default function BrewDayChecklist({
     return () => {
       active = false;
     };
-  }, [batchId, batchType, beerSubtype, boilMinutes, loadAttempt]);
+  }, [batchId, batchType, beerSubtype, boilMinutes, loadAttempt, stepIds]);
 
   useEffect(() => {
     if (loadStatus !== "ready" || loadedBatchId !== batchId) return;
@@ -167,6 +179,28 @@ export default function BrewDayChecklist({
     }, 1000);
     return () => window.clearInterval(interval);
   }, [checklist.timer]);
+
+  useEffect(() => {
+    if (!focusMode) {
+      if (focusWasOpenRef.current) {
+        focusWasOpenRef.current = false;
+        focusButtonRef.current?.focus();
+      }
+      return;
+    }
+    focusWasOpenRef.current = true;
+    exitFocusButtonRef.current?.focus();
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setFocusMode(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [focusMode]);
 
   function toggleStep(stepId: string) {
     setChecklist((current) => ({
@@ -266,6 +300,7 @@ export default function BrewDayChecklist({
           {errorMessage}
         </p>
         <button
+          ref={exitFocusButtonRef}
           type="button"
           onClick={() => setLoadAttempt((attempt) => attempt + 1)}
           className="mt-3 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/20"
@@ -280,30 +315,90 @@ export default function BrewDayChecklist({
     <section
       id="brew-day-checklist"
       aria-labelledby={`brew-day-checklist-title-${batchId}`}
-      className="mt-6 rounded-xl border border-white/10 bg-white/5 p-4 sm:p-5"
+      role={focusMode ? "dialog" : undefined}
+      aria-modal={focusMode ? true : undefined}
+      className={
+        focusMode
+          ? "fixed inset-0 z-[100] m-0 h-dvh overflow-y-auto rounded-none border-0 bg-zinc-950 p-4 text-white sm:p-8"
+          : "mt-6 rounded-xl border border-white/10 bg-white/5 p-4 sm:p-5"
+      }
     >
-      <div className="flex items-center justify-between gap-3">
+      <div className={`mx-auto flex max-w-4xl items-center justify-between gap-3 ${focusMode ? "sticky top-0 z-10 -mx-4 mb-5 border-b border-white/10 bg-zinc-950/95 px-4 py-3 backdrop-blur sm:-mx-8 sm:px-8" : ""}`}>
         <div className="min-w-0">
           <h3
             id={`brew-day-checklist-title-${batchId}`}
-            className="text-lg font-bold text-green-300"
+            className={`font-bold text-green-300 ${focusMode ? "text-xl sm:text-2xl" : "text-lg"}`}
           >
-            Brew-day checklist
+            {focusMode ? "Brew-day mode" : "Brew-day checklist"}
           </h3>
           <p className="mt-1 text-sm text-white/60">
             {batchName} · {completedCount} of {visibleSteps.length} steps complete
           </p>
         </div>
-        <ExpandArrowButton
-          expanded={checklistOpen}
-          label="brew-day checklist"
-          controls={`brew-day-checklist-content-${batchId}`}
-          onClick={() => setChecklistOpen((open) => !open)}
-        />
+        <div className="flex shrink-0 items-center gap-2">
+          {focusMode ? (
+            <button
+              type="button"
+              onClick={() => setFocusMode(false)}
+              className="min-h-11 rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20"
+            >
+              Exit focus
+            </button>
+          ) : (
+            <>
+              <button
+                ref={focusButtonRef}
+                type="button"
+                onClick={() => {
+                  setChecklistOpen(true);
+                  setFocusMode(true);
+                }}
+                className="min-h-11 rounded-lg border border-green-500/60 bg-green-700/30 px-3 py-2 text-sm font-semibold text-green-100 hover:bg-green-700/50"
+              >
+                Focus mode
+              </button>
+              <ExpandArrowButton
+                expanded={checklistOpen}
+                label="brew-day checklist"
+                controls={`brew-day-checklist-content-${batchId}`}
+                onClick={() => setChecklistOpen((open) => !open)}
+              />
+            </>
+          )}
+        </div>
       </div>
 
       {checklistOpen && (
-        <div id={`brew-day-checklist-content-${batchId}`} className="mt-4">
+        <div
+          id={`brew-day-checklist-content-${batchId}`}
+          className={`mx-auto mt-4 max-w-4xl ${focusMode ? "pb-10" : ""}`}
+        >
+          {focusMode && (
+            <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-white/50">Batch</p>
+                <p className="mt-1 font-semibold">{batchType}</p>
+              </div>
+              {originalGravity != null && (
+                <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+                  <p className="text-xs font-medium uppercase tracking-wide text-white/50">Original gravity</p>
+                  <p className="mt-1 font-semibold">{Number(originalGravity).toFixed(3)}</p>
+                </div>
+              )}
+              {volumeLiters != null && (
+                <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+                  <p className="text-xs font-medium uppercase tracking-wide text-white/50">Batch volume</p>
+                  <p className="mt-1 font-semibold">{volumeLiters} L</p>
+                </div>
+              )}
+              {boilMinutes != null && (
+                <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+                  <p className="text-xs font-medium uppercase tracking-wide text-white/50">Boil time</p>
+                  <p className="mt-1 font-semibold">{boilMinutes} min</p>
+                </div>
+              )}
+            </div>
+          )}
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-sm">
             <p role="status" className="text-white/70">
               {completedCount} of {visibleSteps.length} steps complete

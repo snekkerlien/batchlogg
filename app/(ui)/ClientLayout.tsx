@@ -183,7 +183,7 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
     const focusNewPage = () => {
       const mainContent = mainContentRef.current;
       if (mainContent?.dataset.routePath === pathname) {
-        mainContent.focus();
+        mainContent.focus({ preventScroll: true });
         return;
       }
       if (attempts < 300) {
@@ -298,7 +298,7 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
             <BatchGuide />
           </Suspense>
         )}
-        <div className="relative z-[80] mx-auto -mb-8 max-w-3xl space-y-2 px-3 pt-12 empty:hidden">
+        <div className="relative z-[80] mx-auto max-w-3xl space-y-2 px-3 pt-12 empty:hidden">
           {!isBannedPage && <SiteAnnouncementBanner />}
           {!isBannedPage && pathname !== "/" && <SiteStatusBanner />}
           {!isBannedPage && <MuteCountdownBanner />}

@@ -24,6 +24,9 @@ export default function PublicNavigationLinks({
       <Link href="/abv-tools" className="hover:text-white hover:underline">
         ABV tools
       </Link>
+      <Link href="/games" className="hover:text-white hover:underline">
+        Brewing Academy
+      </Link>
       {showAuthLinks && (
         <>
           <Link href="/auth/login" className="hover:text-white hover:underline">

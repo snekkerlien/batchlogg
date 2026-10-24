@@ -7,6 +7,7 @@ import BrewDayWaterCalculator from "./BrewDayWaterCalculator";
 import RefractometerCorrectionCalculator from "./RefractometerCorrectionCalculator";
 import WaterChemistryCalculator from "./WaterChemistryCalculator";
 import CalculatorResult from "./CalculatorResult";
+import PageGuide from "@/app/components/PageGuide";
 import { getCalculatorInputError, parseCalculatorNumber } from "@/lib/brewing/calculatorValidation";
 import { Qty, UnitInput, UnitSymbol } from "@/app/components/Units";
 import {
@@ -560,6 +561,45 @@ const gravityScales: { value: GravityScale; label: string }[] = [
           </div>
         </section>
       </div>
+      <PageGuide
+        buttonLabel="Brewing calculators guide"
+        eyebrow="Choose the right tool for the question"
+        title="Your brewing calculators, explained."
+        description="Use these calculators to estimate strength, adjust a batch, plan water, and make sense of brewing measurements."
+        sectionHeading="Find a calculator"
+        illustration="calculators"
+        footer="Calculator results are estimates; check the assumptions shown with each result."
+        sections={[
+          {
+            title: "ABV from gravity",
+            description: "Enter original and final gravity, choosing the scale used by your measuring tool.",
+          },
+          {
+            title: "Dilution and target strength",
+            description: "Estimate the effect of adding water or alcohol, or calculate an addition to reach a target ABV.",
+          },
+          {
+            title: "OG dilution",
+            description: "Estimate the new original gravity after adding water to wort or must.",
+          },
+          {
+            title: "Sugar or honey",
+            description: "Estimate a fermentable amount for a target batch volume and ABV.",
+          },
+          {
+            title: "Brew-day water",
+            description: "Plan mash and sparge water volumes using a saved equipment profile or your entered values.",
+          },
+          {
+            title: "Water chemistry",
+            description: "Review a water profile and calculate mineral additions for a brewing target.",
+          },
+          {
+            title: "Refractometer correction",
+            description: "Correct a refractometer reading during fermentation using your original gravity and calibration data.",
+          },
+        ]}
+      />
     </main>
   );
 }

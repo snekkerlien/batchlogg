@@ -25,6 +25,7 @@ import {
   getReducedMotionPreference,
   setReducedMotionPreference,
 } from "@/lib/accessibility/reducedMotion";
+import { PAGE_GUIDES_PREFERENCE_EVENT } from "@/lib/accessibility/usePageGuidesEnabled";
 
 type RestorePreview = {
   formatVersion: number;
@@ -82,6 +83,8 @@ export default function SettingsPage() {
   const [savingPrivacy, setSavingPrivacy] = useState(false);
   const [privacyMessage, setPrivacyMessage] = useState("");
   const [remindersEnabled, setRemindersEnabled] = useState(true);
+  const [gamesEnabled, setGamesEnabled] = useState(false);
+  const [guidesEnabled, setGuidesEnabled] = useState(true);
   const [savingPreferences, setSavingPreferences] = useState(false);
   const [preferencesMessage, setPreferencesMessage] = useState("");
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -148,6 +151,8 @@ export default function SettingsPage() {
       setUseInventory(profile.use_inventory_for_batches === true);
       setPublicProfile(profile.is_public !== false);
       setRemindersEnabled(profile.batch_reminders_enabled !== false);
+      setGamesEnabled(profile.games_enabled === true);
+      setGuidesEnabled(profile.guides_enabled !== false);
       setReducedMotion(getReducedMotionPreference());
       setLoading(false);
     }
@@ -184,6 +189,8 @@ export default function SettingsPage() {
     preference: Partial<{
       use_inventory_for_batches: boolean;
       batch_reminders_enabled: boolean;
+      games_enabled: boolean;
+      guides_enabled: boolean;
       is_public: boolean;
     }>
   ) {
@@ -195,9 +202,24 @@ export default function SettingsPage() {
       async () => {
         try {
           await saveBrewingPreferences(preference);
+          window.dispatchEvent(new Event("batchlogg-preferences-saved"));
+          if (typeof preference.guides_enabled === "boolean") {
+            window.dispatchEvent(
+              new CustomEvent(PAGE_GUIDES_PREFERENCE_EVENT, {
+                detail: preference.guides_enabled,
+              })
+            );
+          }
           setPreferencesMessage("Preferences saved.");
         } catch (error) {
           console.error("Could not save brewing preferences", error);
+          if (typeof preference.guides_enabled === "boolean") {
+            setGuidesEnabled((current) =>
+              current === preference.guides_enabled
+                ? !preference.guides_enabled
+                : current
+            );
+          }
           setPreferencesMessage("Could not save preferences. Please try again.");
         } finally {
           pendingPreferencesSavesRef.current -= 1;
@@ -627,6 +649,25 @@ export default function SettingsPage() {
                 </span>
               </span>
             </label>
+            <label className="mt-4 flex items-start gap-3">
+              <input
+                type="checkbox"
+                checked={guidesEnabled}
+                disabled={loading}
+                onChange={(event) => {
+                  const value = event.target.checked;
+                  setGuidesEnabled(value);
+                  saveBrewingPreference({ guides_enabled: value });
+                }}
+                className="mt-1 h-4 w-4 accent-green-500"
+              />
+              <span>
+                <span className="block font-medium">Show page guides</span>
+                <span className="text-sm text-white/60">
+                  Show the Dashboard, Batch, Inventory, My recipes, and tool guides.
+                </span>
+              </span>
+            </label>
             {motionPreferenceMessage && (
               <p role="alert" className="mt-3 text-sm text-red-300">
                 {motionPreferenceMessage}
@@ -639,7 +680,7 @@ export default function SettingsPage() {
             Notifications &amp; brewing preferences
           </h2>
           <p className="text-sm text-zinc-400 text-center mb-5">
-            Choose how Batchlogg handles inventory and reminders.
+            Choose which optional tools and reminders you want to use.
           </p>
           <div className="mx-auto max-w-xl space-y-4">
             <label className="flex items-start gap-3">
@@ -675,6 +716,24 @@ export default function SettingsPage() {
                 <span className="block font-medium">Enable brew reminders</span>
                 <span className="text-sm text-white/60">
                   Allow scheduled reminders and gravity-check reminders.
+                </span>
+              </span>
+            </label>
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                checked={gamesEnabled}
+                onChange={(event) => {
+                  const value = event.target.checked;
+                  setGamesEnabled(value);
+                  saveBrewingPreference({ games_enabled: value });
+                }}
+                className="mt-1 h-4 w-4 accent-green-500"
+              />
+              <span>
+                <span className="block font-medium">Enable Brewing Academy</span>
+                <span className="text-sm text-white/60">
+                  Show the brewing learning challenges under More tools in the navigation menu.
                 </span>
               </span>
             </label>

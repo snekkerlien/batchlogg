@@ -842,6 +842,8 @@ const sharingSection = isOwner ? (
         beerSubtype={activeBatch.beer_subtype}
         batchName={activeBatch.name}
         boilMinutes={activeBatch.boil_time}
+        originalGravity={activeBatch.og}
+        volumeLiters={activeBatch.volume_l}
         isSecondary
       />
       {activeBatch.recipe_id && (
@@ -1052,6 +1054,8 @@ const sharingSection = isOwner ? (
         beerSubtype={activeBatch.beer_subtype}
         batchName={activeBatch.name}
         boilMinutes={activeBatch.boil_time}
+        originalGravity={activeBatch.og}
+        volumeLiters={activeBatch.volume_l}
       />
       {activeBatch.recipe_id && (
         <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">

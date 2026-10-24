@@ -22,6 +22,8 @@ const PROFILE_FIELDS = [
   "preferred_unit_system",
   "use_inventory_for_batches",
   "batch_reminders_enabled",
+  "games_enabled",
+  "guides_enabled",
   "snus_is_true",
   "max_vessels",
 ] as const;

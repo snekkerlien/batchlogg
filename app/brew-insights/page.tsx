@@ -9,6 +9,7 @@ import PageHeading from "@/app/components/PageHeading";
 import { Qty } from "@/app/components/Units";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import { saveDownload } from "@/lib/desktopDownloads";
+import PageGuide from "@/app/components/PageGuide";
 
 type Batch = {
   id: string;
@@ -25,6 +26,7 @@ type Batch = {
   recipe_snapshot?: {
     og?: number | string | null;
     abv?: number | string | null;
+    volume_l?: number | string | null;
   } | null;
 };
 
@@ -32,6 +34,11 @@ function finiteNumber(value: number | string | null) {
   if (value === null || value === "") return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
+}
+
+function batchLabel(batch: Batch) {
+  const name = batch.name?.trim();
+  return name && name.toLowerCase() !== "null" ? name : "Unnamed batch";
 }
 
 function isFinished(batch: Batch) {
@@ -54,6 +61,10 @@ export default function BrewInsightsPage() {
   const [error, setError] = useState("");
   const [premiumRequired, setPremiumRequired] = useState(false);
   const [selectedType, setSelectedType] = useState("All");
+  const [comparisonBatchIds, setComparisonBatchIds] = useState<[string, string]>([
+    "",
+    "",
+  ]);
   const [lifecycleMigrationRequired, setLifecycleMigrationRequired] = useState(false);
 
   useEffect(() => {
@@ -106,6 +117,94 @@ export default function BrewInsightsPage() {
   const visibleBatches =
     selectedType === "All" ? batches : batches.filter((batch) => batch.type === selectedType);
   const completed = visibleBatches.filter(isFinished);
+  const comparisonBatches = comparisonBatchIds.map(
+    (batchId) => batches.find((batch) => batch.id === batchId) ?? null
+  );
+  const comparisonRows = [
+    {
+      label: "Brew type",
+      values: comparisonBatches.map((batch) => batch?.type || "—"),
+    },
+    {
+      label: "Status",
+      values: comparisonBatches.map((batch) => batch?.status || "—"),
+    },
+    {
+      label: "Started",
+      values: comparisonBatches.map((batch) =>
+        batch?.startdato ? new Date(batch.startdato).toLocaleDateString() : "—"
+      ),
+    },
+    {
+      label: "Finished",
+      values: comparisonBatches.map((batch) =>
+        batch?.finished_date
+          ? new Date(batch.finished_date).toLocaleDateString()
+          : "—"
+      ),
+    },
+    {
+      label: "Original gravity · target",
+      values: comparisonBatches.map((batch) => {
+        const value = finiteNumber(batch?.recipe_snapshot?.og ?? null);
+        return value === null ? "—" : value.toFixed(3);
+      }),
+    },
+    {
+      label: "Original gravity · actual",
+      values: comparisonBatches.map((batch) => {
+        const value = finiteNumber(batch?.og ?? null);
+        return value === null ? "—" : value.toFixed(3);
+      }),
+    },
+    {
+      label: "Final gravity",
+      values: comparisonBatches.map((batch) => {
+        const value = finiteNumber(batch?.fg ?? null);
+        return value === null ? "—" : value.toFixed(3);
+      }),
+    },
+    {
+      label: "ABV · target",
+      values: comparisonBatches.map((batch) => {
+        const value = finiteNumber(batch?.recipe_snapshot?.abv ?? null);
+        return value === null ? "—" : `${value.toFixed(1)}%`;
+      }),
+    },
+    {
+      label: "ABV · actual",
+      values: comparisonBatches.map((batch) => {
+        const storedAbv = finiteNumber(batch?.abv ?? null);
+        const og = finiteNumber(batch?.og ?? null);
+        const fg = finiteNumber(batch?.fg ?? null);
+        const value =
+          storedAbv ??
+          (og !== null && fg !== null && og >= fg ? (og - fg) * 131.25 : null);
+        return value === null ? "—" : `${value.toFixed(1)}%`;
+      }),
+    },
+    {
+      label: "Planned volume",
+      values: comparisonBatches.map((batch) => {
+        const value = finiteNumber(batch?.recipe_snapshot?.volume_l ?? null);
+        return value === null ? "—" : `${value.toFixed(1)} L`;
+      }),
+    },
+    {
+      label: "Batch volume",
+      values: comparisonBatches.map((batch) => {
+        const value = finiteNumber(batch?.volume_l ?? null);
+        return value === null ? "—" : `${value.toFixed(1)} L`;
+      }),
+    },
+    {
+      label: "Packaged volume",
+      values: comparisonBatches.map((batch) => {
+        const value = finiteNumber(batch?.packaged_volume_l ?? null);
+        return value === null ? "—" : `${value.toFixed(1)} L`;
+      }),
+    },
+  ];
   const durations = completed.flatMap((batch) => {
     if (!batch.startdato || !batch.finished_date) return [];
     const start = new Date(batch.startdato).getTime();
@@ -148,7 +247,7 @@ export default function BrewInsightsPage() {
       new Date(now.getFullYear(), now.getMonth() - 11 + index, 1)
     );
     const counts = new Map(months.map((month) => [monthKey(month), 0]));
-    for (const batch of completed) {
+    for (const batch of visibleBatches.filter(isFinished)) {
       const dateValue = batch.finished_date || batch.startdato;
       if (!dateValue) continue;
       const date = new Date(dateValue);
@@ -307,6 +406,113 @@ export default function BrewInsightsPage() {
               <Metric label="Average ABV vs recipe" value={averageAbvVariance === null ? "—" : `${averageAbvVariance >= 0 ? "+" : ""}${averageAbvVariance.toFixed(1)} pp`} />
             </section>
 
+            <section
+              aria-labelledby="compare-batches-title"
+              className="mt-8 rounded-xl border border-white/10 bg-white/5 p-4 sm:p-6"
+            >
+              <div>
+                <h2
+                  id="compare-batches-title"
+                  className="text-lg font-semibold text-green-300"
+                >
+                  Compare batches
+                </h2>
+                <p className="mt-1 text-sm text-white/55">
+                  Choose two batches to compare their recipe targets and recorded results.
+                </p>
+              </div>
+              {batches.length < 2 ? (
+                <p className="mt-4 rounded-lg bg-black/20 p-4 text-sm text-white/60">
+                  Log at least two batches to compare them here.
+                </p>
+              ) : (
+                <>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    {comparisonBatchIds.map((selectedId, index) => (
+                      <label
+                        key={index}
+                        className="block text-sm font-medium text-white/75"
+                      >
+                        Batch {index + 1}
+                        <select
+                          value={selectedId}
+                          onChange={(event) =>
+                            setComparisonBatchIds((current) => {
+                              const next: [string, string] = [...current];
+                              next[index] = event.target.value;
+                              return next;
+                            })
+                          }
+                          className="mt-2 w-full rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-white"
+                        >
+                          <option value="">Choose a batch</option>
+                          {batches.map((batch) => (
+                            <option
+                              key={batch.id}
+                              value={batch.id}
+                              disabled={
+                                comparisonBatchIds[1 - index] === batch.id
+                              }
+                            >
+                              {batchLabel(batch)}
+                              {batch.finished_date
+                                ? ` · ${new Date(batch.finished_date).toLocaleDateString()}`
+                                : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ))}
+                  </div>
+                  {comparisonBatches.every(Boolean) && (
+                    <div className="mt-5 overflow-x-auto rounded-lg border border-white/10">
+                      <table className="w-full min-w-[34rem] text-left text-sm">
+                        <thead className="bg-black/25">
+                          <tr>
+                            <th scope="col" className="px-3 py-3 font-medium text-white/55">
+                              Measurement
+                            </th>
+                            {comparisonBatches.map((batch) => (
+                              <th
+                                key={batch?.id}
+                                scope="col"
+                                className="px-3 py-3 font-semibold text-green-200"
+                              >
+                                {batch ? batchLabel(batch) : "Unnamed batch"}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {comparisonRows.map((row) => (
+                            <tr
+                              key={row.label}
+                              className="border-t border-white/10"
+                            >
+                              <th
+                                scope="row"
+                                className="px-3 py-2.5 font-medium text-white/65"
+                              >
+                                {row.label}
+                              </th>
+                              {row.values.map((value, index) => (
+                                <td
+                                  key={comparisonBatches[index]?.id}
+                                  className="px-3 py-2.5 text-white/85"
+                                >
+                                  {value}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
+              )}
+            </section>
+
             <section className="mt-8 rounded-xl border border-white/10 bg-white/5 p-4 sm:p-6">
               <h2 className="mb-1 text-lg font-semibold text-green-300">Finished batches by month</h2>
               <p className="mb-5 text-sm text-white/55">Last 12 months, based on finish date (or start date when no finish date was recorded).</p>
@@ -377,7 +583,7 @@ export default function BrewInsightsPage() {
                   return (
                     <li key={batch.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/5 p-3">
                       <div className="min-w-0">
-                        <span className="font-medium">{batch.name || "Unnamed batch"}</span>
+                        <span className="font-medium">{batchLabel(batch)}</span>
                         <span className="mt-1 block text-sm text-white/60">
                           {[batch.type, batch.finished_date ? new Date(batch.finished_date).toLocaleDateString() : null, abv === null ? null : `${abv.toFixed(1)}% ABV`]
                             .filter(Boolean)
@@ -398,6 +604,41 @@ export default function BrewInsightsPage() {
           </>
         ) : null}
       </div>
+      <PageGuide
+        buttonLabel="Brewing insights guide"
+        eyebrow="Learn from your brewing history"
+        title="Your brewing insights, explained."
+        description="Use your recorded batches to spot patterns, compare results with recipe targets, and see how your brewing changes over time."
+        sectionHeading="Explore your insights"
+        illustration="insights"
+        footer="Insights are based on the batch details you have recorded."
+        sections={[
+          {
+            title: "Filter by brew type",
+            description: "Focus the summary and monthly trends on one beverage type or view them all.",
+          },
+          {
+            title: "Read the summary",
+            description: "Review batch counts, average results, finish times, and recipe-target differences.",
+          },
+          {
+            title: "Compare two batches",
+            description: "Choose specific batches to compare their planned targets with recorded results.",
+          },
+          {
+            title: "Explore trends",
+            description: "Use the monthly chart and brew-type breakdown to see how your batches add up.",
+          },
+          {
+            title: "Review finished batches",
+            description: "Open a batch’s results to revisit its recorded measurements and outcome.",
+          },
+          {
+            title: "Export your data",
+            description: "Use Export CSV to save the brewing-insights batch summary.",
+          },
+        ]}
+      />
     </main>
   );
 }

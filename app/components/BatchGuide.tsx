@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { dismissBatchGuide, getGuideBatch, type GuideBatch } from "@/app/actions/batchGuide";
 import { Qty } from "@/app/components/Units";
 import { isBatchGuideMilestone, type BatchGuideMilestone } from "@/lib/brewing/batchGuide";
+import { usePageGuidesEnabled } from "@/lib/accessibility/usePageGuidesEnabled";
 
 type GuideStage = BatchGuideMilestone | "overview" | null;
 type GuideAction = { title: string; description: string; target: string };
@@ -105,6 +106,7 @@ export default function BatchGuide() {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const guidesEnabled = usePageGuidesEnabled();
   const [stage, setStage] = useState<GuideStage>(null);
   const [batch, setBatch] = useState<GuideBatch | null>(null);
   const [loading, setLoading] = useState(false);
@@ -119,6 +121,16 @@ export default function BatchGuide() {
 
   useEffect(() => {
     const requested = searchParams.get("guide");
+    if (!guidesEnabled) {
+      setStage(null);
+      if (requested) {
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete("guide");
+        const query = params.toString();
+        router.replace(`${pathname}${query ? `?${query}` : ""}${window.location.hash}`, { scroll: false });
+      }
+      return;
+    }
     if (requested !== "overview" && !isBatchGuideMilestone(requested)) return;
     loadedBatchTargetRef.current = null;
     setStage(requested);
@@ -127,7 +139,7 @@ export default function BatchGuide() {
     params.delete("guide");
     const query = params.toString();
     router.replace(`${pathname}${query ? `?${query}` : ""}${window.location.hash}`, { scroll: false });
-  }, [pathname, router, searchParams]);
+  }, [guidesEnabled, pathname, router, searchParams]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -250,13 +262,13 @@ export default function BatchGuide() {
 
   return (
     <>
-      {(vesselId || finishedBatchId) && (
+      {guidesEnabled && (vesselId || finishedBatchId) && (
         <button type="button" disabled={loading} onClick={() => void openCurrentStage()}
           className="fixed bottom-4 right-4 z-[90] rounded-full border border-white/15 bg-zinc-950/95 px-4 py-2 text-sm font-semibold text-white/75 shadow-lg hover:border-green-300/40 hover:text-white">
           Batch guide
         </button>
       )}
-      {stage && (
+      {guidesEnabled && stage && (
         <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/80 p-3 backdrop-blur-sm sm:p-6">
           <section ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="batch-guide-title"
             onKeyDown={(event) => {

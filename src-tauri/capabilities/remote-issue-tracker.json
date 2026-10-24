@@ -8,6 +8,7 @@
   "local": false,
   "windows": ["main"],
   "permissions": [
+    "opener:allow-open-url",
     "opener:allow-default-urls",
     "allow-save-download",
     "allow-toggle-fullscreen"

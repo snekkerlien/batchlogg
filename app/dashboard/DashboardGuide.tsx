@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { usePageGuidesEnabled } from "@/lib/accessibility/usePageGuidesEnabled";
 
 export type DashboardGuideVessel = {
   id: string;
@@ -28,16 +29,46 @@ function formatDateTime(value: string): string {
     : "Date unavailable";
 }
 
+function DashboardIllustration() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 120 120"
+      className="h-24 w-24 shrink-0 text-green-300 sm:h-32 sm:w-32"
+    >
+      <circle cx="60" cy="60" r="55" fill="currentColor" opacity=".07" />
+      <circle cx="60" cy="60" r="45" fill="none" stroke="currentColor" opacity=".15" />
+      <g fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="21" y="27" width="78" height="66" rx="8" />
+        <path d="M21 43h78M47 43v50" />
+        <rect x="29" y="51" width="10" height="10" rx="2" fill="currentColor" opacity=".2" />
+        <rect x="29" y="67" width="10" height="10" rx="2" fill="currentColor" opacity=".2" />
+        <rect x="55" y="51" width="16" height="13" rx="2" fill="currentColor" opacity=".16" />
+        <rect x="76" y="51" width="15" height="13" rx="2" fill="currentColor" opacity=".16" />
+        <path d="M56 74h34M56 82h24" />
+        <circle cx="30" cy="35" r="1.5" fill="currentColor" />
+        <circle cx="36" cy="35" r="1.5" fill="currentColor" />
+        <circle cx="42" cy="35" r="1.5" fill="currentColor" />
+      </g>
+    </svg>
+  );
+}
+
 export default function DashboardGuide({
   vessels,
 }: {
   vessels: DashboardGuideVessel[];
 }) {
   const [open, setOpen] = useState(false);
+  const guidesEnabled = usePageGuidesEnabled();
   const dialogRef = useRef<HTMLElement>(null);
   const activeVessels = vessels.filter(
     (vessel) => vessel.activeBatchId && vessel.status !== "Ledig"
   );
+
+  useEffect(() => {
+    if (!guidesEnabled) setOpen(false);
+  }, [guidesEnabled]);
 
   useEffect(() => {
     if (!open) return;
@@ -55,7 +86,8 @@ export default function DashboardGuide({
 
   return (
     <>
-      {typeof document !== "undefined" &&
+      {guidesEnabled &&
+        typeof document !== "undefined" &&
         createPortal(
           <button
             type="button"
@@ -66,7 +98,7 @@ export default function DashboardGuide({
           </button>,
           document.body
         )}
-      {open && typeof document !== "undefined" && createPortal(
+      {guidesEnabled && open && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/80 p-3 backdrop-blur-sm sm:p-6">
           <section
             ref={dialogRef}
@@ -110,7 +142,7 @@ export default function DashboardGuide({
           >
             <div className="flex items-center justify-between border-b border-white/10 px-5 py-4 sm:px-8">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-green-300">
-                Your brewing workspace
+                Dashboard guide
               </p>
               <button
                 type="button"
@@ -123,16 +155,26 @@ export default function DashboardGuide({
             </div>
 
             <div className="p-5 sm:p-8">
-              <h2
-                id="dashboard-guide-title"
-                className="text-2xl font-bold sm:text-3xl"
-              >
-                A clear view of what’s brewing.
-              </h2>
-              <p className="mt-3 text-sm leading-7 text-white/65">
-                Your vessels show what is fermenting and where. Open a batch
-                whenever you want to record a reading, add a note, or update its
-                stage.
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-widest text-green-300">
+                    Your brewing workspace
+                  </p>
+                  <h2
+                    id="dashboard-guide-title"
+                    className="mt-3 max-w-lg text-2xl font-bold leading-tight sm:text-3xl"
+                  >
+                    Your dashboard, explained.
+                  </h2>
+                </div>
+                <div className="hidden min-[400px]:block">
+                  <DashboardIllustration />
+                </div>
+              </div>
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-white/65 sm:text-base">
+                Use this guide to understand your dashboard: where to find your
+                vessels, how to manage shared equipment, and where to go next
+                with an active batch.
               </p>
 
               <div className="flex flex-col">
@@ -142,39 +184,37 @@ export default function DashboardGuide({
               >
                 <h3
                   id="dashboard-guide-tools"
-                  className="font-semibold text-white/90"
+                  className="mb-3 text-xs font-semibold uppercase tracking-widest text-white/45"
                 >
                   Your dashboard tools
                 </h3>
                 <ul className="mt-3 grid gap-3 text-sm leading-6 text-white/65 sm:grid-cols-2">
                   <li className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                    <strong className="text-white/85">Vessels</strong>
+                    <strong className="text-sm font-semibold text-green-200">Vessels</strong>
                     <p className="mt-1">
-                      Open a vessel to update its batch. Empty vessels are ready
-                      for a new brew.
+                      Open a vessel to view its batch, or start a brew in an
+                      empty one.
                     </p>
                   </li>
                   <li className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                    <strong className="text-white/85">Select vessels</strong>
+                    <strong className="text-sm font-semibold text-green-200">Select vessels</strong>
                     <p className="mt-1">
-                      Choose an occupied vessel to move a batch, or select
-                      vessels to delete. Deleting a vessel with an active batch
-                      also permanently deletes that batch and its notes. You
-                      will see a confirmation before deletion.
+                      Move a batch or delete vessels. Deleting an occupied
+                      vessel also deletes its batch and notes.
                     </p>
                   </li>
                   <li className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                    <strong className="text-white/85">Vessels shared with me</strong>
+                    <strong className="text-sm font-semibold text-green-200">Vessels shared with me</strong>
                     <p className="mt-1">
-                      Open a shared vessel to collaborate, or leave it when you
-                      no longer need access.
+                      Open a shared vessel to collaborate, or leave to remove
+                      your access.
                     </p>
                   </li>
                   <li className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                    <strong className="text-white/85">Shortcuts</strong>
+                    <strong className="text-sm font-semibold text-green-200">Shortcuts</strong>
                     <p className="mt-1">
-                      Plan a recipe, review past batches, or explore brewing
-                      insights from the links above your vessels.
+                      Use the links above your vessels to plan recipes, review
+                      batches, and explore brewing insights.
                     </p>
                   </li>
                 </ul>
@@ -186,7 +226,7 @@ export default function DashboardGuide({
               >
                 <h3
                   id="dashboard-guide-batches"
-                  className="font-semibold text-white/90"
+                  className="mb-3 text-xs font-semibold uppercase tracking-widest text-white/45"
                 >
                   Active batches
                 </h3>
@@ -196,7 +236,7 @@ export default function DashboardGuide({
                     get started, then register it in an empty vessel.
                   </p>
                 ) : (
-                  <ul className="mt-3 space-y-3">
+                  <ul className="space-y-3">
                     {activeVessels.map((vessel) => {
                       const reminder = vessel.nextReminder;
                       const due =
@@ -206,11 +246,11 @@ export default function DashboardGuide({
                       return (
                         <li
                           key={vessel.id}
-                          className="rounded-xl border border-white/10 bg-white/[0.03] p-4"
+                          className="rounded-xl border border-green-300/15 bg-green-950/20 p-4"
                         >
                           <div className="flex flex-wrap items-start justify-between gap-2">
                             <div>
-                              <h4 className="font-semibold">
+                              <h4 className="font-semibold text-green-200">
                                 {vessel.batchName || `Vessel ${vessel.nummer}`}
                               </h4>
                               <p className="mt-1 text-xs text-white/50">
@@ -284,9 +324,9 @@ export default function DashboardGuide({
 
                           <a
                             href={`/kar/${vessel.id}`}
-                            className="mt-4 inline-flex rounded-lg border border-green-500/40 bg-green-800/50 px-3 py-2 text-sm font-semibold hover:bg-green-700"
+                            className="mt-4 inline-flex rounded-xl border border-green-300/30 bg-green-400/10 px-4 py-3 text-sm font-semibold text-green-200 transition hover:bg-green-400/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-300"
                           >
-                            Open batch
+                            Open batch <span aria-hidden="true" className="ml-2">→</span>
                           </a>
                         </li>
                       );
@@ -295,6 +335,18 @@ export default function DashboardGuide({
                 )}
               </section>
 
+              </div>
+              <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-5">
+                <p className="text-xs text-white/40">
+                  Your brewing workspace, at a glance.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="rounded-lg border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-semibold hover:bg-white/10"
+                >
+                  Back to dashboard
+                </button>
               </div>
             </div>
           </section>

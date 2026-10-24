@@ -9,13 +9,19 @@ export type UserPreferences = {
   preferred_unit_system: UnitSystem;
   use_inventory_for_batches: boolean;
   batch_reminders_enabled: boolean;
+  games_enabled?: boolean;
+  guides_enabled?: boolean;
   is_public: boolean;
   onboarding_completed?: boolean;
 };
 
 type BrewingPreferences = Pick<
   UserPreferences,
-  "use_inventory_for_batches" | "batch_reminders_enabled" | "is_public"
+  | "use_inventory_for_batches"
+  | "batch_reminders_enabled"
+  | "games_enabled"
+  | "guides_enabled"
+  | "is_public"
 >;
 
 export async function saveBrewingPreferences(
@@ -25,6 +31,8 @@ export async function saveBrewingPreferences(
   const allowedPreferences = [
     "use_inventory_for_batches",
     "batch_reminders_enabled",
+    "games_enabled",
+    "guides_enabled",
     "is_public",
   ];
   if (
@@ -62,6 +70,10 @@ export async function saveUserPreferences(preferences: UserPreferences) {
     !isUnitSystem(preferences.preferred_unit_system) ||
     typeof preferences.use_inventory_for_batches !== "boolean" ||
     typeof preferences.batch_reminders_enabled !== "boolean" ||
+    (preferences.games_enabled !== undefined &&
+      typeof preferences.games_enabled !== "boolean") ||
+    (preferences.guides_enabled !== undefined &&
+      typeof preferences.guides_enabled !== "boolean") ||
     typeof preferences.is_public !== "boolean" ||
     (preferences.onboarding_completed !== undefined &&
       typeof preferences.onboarding_completed !== "boolean")
@@ -83,6 +95,12 @@ export async function saveUserPreferences(preferences: UserPreferences) {
       preferred_unit_system: preferences.preferred_unit_system,
       use_inventory_for_batches: preferences.use_inventory_for_batches,
       batch_reminders_enabled: preferences.batch_reminders_enabled,
+      ...(preferences.games_enabled === undefined
+        ? {}
+        : { games_enabled: preferences.games_enabled }),
+      ...(preferences.guides_enabled === undefined
+        ? {}
+        : { guides_enabled: preferences.guides_enabled }),
       is_public: preferences.is_public,
       ...(preferences.onboarding_completed === undefined
         ? {}

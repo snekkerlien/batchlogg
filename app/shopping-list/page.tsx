@@ -7,6 +7,7 @@ import BackButton from "@/app/components/BackButton";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
+import PageGuide from "@/app/components/PageGuide";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import {
   getSavedRecipeShoppingRequirements,
@@ -283,6 +284,29 @@ export default function ShoppingListPage() {
         <PageHeading
           title="Shopping list"
           subtitle="Add recipe ingredients you’re short on, then check them off as you shop."
+        />
+        <PageGuide
+          buttonLabel="Shopping list guide"
+          eyebrow="Get ready for your next brew"
+          title="Gather ingredients without losing track."
+          description="Build a list from a saved recipe or add items yourself, then check them off as you shop."
+          sectionHeading="Using your list"
+          sections={[
+            {
+              title: "Add recipe ingredients",
+              description: "Choose a recipe to add measured ingredients you are short on. Matching inventory is taken into account, and repeated ingredients are combined.",
+            },
+            {
+              title: "Add items manually",
+              description: "Enter an ingredient or supply, with an optional amount and unit, to keep other brewing needs on the list too.",
+            },
+            {
+              title: "Keep track while shopping",
+              description: "Check items off as you find them. Remove individual entries, or clear the whole list when you want to start over.",
+            },
+          ]}
+          illustration="shopping"
+          footer="Recipe quantities are compared with matching inventory items when adding missing ingredients."
         />
 
         {error && <p role="alert" className="mb-4 rounded-lg bg-red-950/50 p-3 text-center text-red-200">{error}</p>}

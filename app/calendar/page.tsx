@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
+import PageGuide from "@/app/components/PageGuide";
 import PremiumFeaturePrompt from "@/app/components/PremiumFeaturePrompt";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 
@@ -77,7 +78,7 @@ export default function CalendarPage() {
   const [viewOverride, setViewOverride] = useState<"agenda" | "month" | null>(null);
   const [agendaStart, setAgendaStart] = useState(() => dateKey(mondayOfWeek(new Date())));
   const [retry, setRetry] = useState(0);
-  const view = isNarrow ? "agenda" : viewOverride ?? "month";
+  const view = viewOverride ?? (isNarrow ? "agenda" : "month");
   const agendaDays = useMemo(() => {
     const start = new Date(`${agendaStart}T12:00:00`);
     return Array.from({ length: 7 }, (_, index) => shiftDays(start, index));
@@ -235,6 +236,29 @@ export default function CalendarPage() {
           title="Brew calendar"
           subtitle="See batch milestones and scheduled reminders in one place."
         />
+        <PageGuide
+          buttonLabel="Calendar guide"
+          eyebrow="Plan your brewing schedule"
+          title="Your batches and reminders, by date."
+          description="Use the calendar to see when batches started or finished and when you planned a reminder."
+          sectionHeading="Using the calendar"
+          sections={[
+            {
+              title: "Choose a view",
+              description: "Switch between the monthly calendar and a weekly agenda. On smaller screens, the agenda is used automatically.",
+            },
+            {
+              title: "Move through time",
+              description: "Use the arrows to change month or week, or choose Today to return to the current date.",
+            },
+            {
+              title: "Open an event",
+              description: "Select a batch milestone or reminder to jump to its batch details. Export the schedule as an .ics file to use it in another calendar app.",
+            },
+          ]}
+          illustration="calendar"
+          footer="Reminders appear here alongside batch milestones, so you can see what is coming up."
+        />
         {!premiumRequired && !loading && !error && (
           <div className="mb-5 text-center">
             <a
@@ -249,7 +273,7 @@ export default function CalendarPage() {
 
         <section aria-label="Calendar" className="mt-8">
           <div role="group" aria-label="Calendar view" className="mb-4 flex flex-wrap justify-center gap-2">
-            {(["agenda", "month"] as const).filter(option => option === "agenda" || !isNarrow).map(option => (
+            {(["agenda", "month"] as const).map(option => (
               <button
                 key={option}
                 type="button"

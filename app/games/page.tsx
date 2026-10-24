@@ -2,6 +2,8 @@ import Link from "next/link";
 import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
+import LearningProgress from "./LearningProgress";
+import PageGuide from "@/app/components/PageGuide";
 
 const GAMES = [
   {
@@ -28,6 +30,30 @@ const GAMES = [
     detail: "Troubleshooting",
     icon: "🔎",
   },
+  {
+    href: "/games/recipe-builder",
+    title: "Recipe Builder",
+    description:
+      "Make ingredient and process choices to shape a beer's flavor, body, bitterness, and finish.",
+    detail: "Recipe decisions",
+    icon: "🧪",
+  },
+  {
+    href: "/games/brew-math-lab",
+    title: "Brew Math Lab",
+    description:
+      "Practice ABV, gravity, dilution, and recipe-scaling calculations with worked explanations.",
+    detail: "Brewing calculations",
+    icon: "🧮",
+  },
+  {
+    href: "/games/flavor-aroma",
+    title: "Flavor & Aroma",
+    description:
+      "Match familiar sensory clues to the ingredients, fermentation, and handling choices that can cause them.",
+    detail: "Sensory skills",
+    icon: "👃",
+  },
 ];
 
 export default function BrewingGamesPage() {
@@ -42,8 +68,15 @@ export default function BrewingGamesPage() {
         </div>
 
         <PageHeading
-          title="Learn brewing"
+          title="Brewing Academy"
           subtitle="Short, interactive challenges to build your brewing knowledge one decision at a time."
+        />
+
+        <LearningProgress
+          games={GAMES.map((game) => ({
+            id: game.href.replace("/games/", ""),
+            title: game.title,
+          }))}
         />
 
         <section aria-label="Choose a learning game" className="grid gap-4 sm:grid-cols-2">
@@ -71,6 +104,33 @@ export default function BrewingGamesPage() {
           ))}
         </section>
       </div>
+      <PageGuide
+        buttonLabel="Brewing Academy guide"
+        eyebrow="Practice, learn, and build confidence"
+        title="Your Brewing Academy, explained."
+        description="Pick a short interactive challenge to practise brewing knowledge, process choices, troubleshooting, calculations, and sensory skills."
+        sectionHeading="Make the most of the Academy"
+        illustration="academy"
+        footer="Learn at your own pace; replay a challenge whenever you like."
+        sections={[
+          {
+            title: "Choose a challenge",
+            description: "Each card describes the topic and style of activity before you open it.",
+          },
+          {
+            title: "Learn from each answer",
+            description: "Challenges explain the reasoning so you can learn, not just score.",
+          },
+          {
+            title: "Try different skills",
+            description: "Explore brewing basics, brew-day order, fermentation, recipe decisions, math, and flavor.",
+          },
+          {
+            title: "Track your progress",
+            description: "The progress area summarizes your activity across the available challenges.",
+          },
+        ]}
+      />
     </main>
   );
 }

@@ -5,6 +5,7 @@ import BackButton from "./BackButton";
 import MenuOverlay from "../components/MenuOverlay";
 import InventoryList from "./InventoryList";
 import InventoryMovementHistory from "./InventoryMovementHistory";
+import InventoryGuide from "./InventoryGuide";
 import AddItemModal from "./AddItemModal";
 import { useInventory } from "./useInventory";
 import Link from "next/link";
@@ -427,6 +428,7 @@ useEffect(() => {
   profile={profile}
   onAddItem={addItem}
 />
+      <InventoryGuide />
     </main>
   );
 }
