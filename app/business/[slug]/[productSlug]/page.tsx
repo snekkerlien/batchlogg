@@ -64,6 +64,9 @@ export default async function BreweryProductPage({
     ? product.details as Record<string, unknown>
     : {};
   const brewedBy = typeof details.brewed_by === "string" ? details.brewed_by.trim() : "";
+  const qrSource = searchParams?.source === "qr";
+  const productPath = `/business/${encodeURIComponent(params.slug)}/${encodeURIComponent(params.productSlug)}${qrSource ? "?source=qr" : ""}#product-reviews-heading`;
+  const loginHref = `/auth/login?redirect=${encodeURIComponent(productPath)}`;
 
   return (
     <main className="min-h-screen px-4 py-10 text-white sm:px-6">
@@ -114,7 +117,11 @@ export default async function BreweryProductPage({
           ibu={product.ibu}
         />
         {product.description && <p className="mx-auto max-w-3xl whitespace-pre-line text-center leading-7 text-white/75">{product.description}</p>}
-        <BreweryProductReviews productId={product.id} qrSource={searchParams?.source === "qr"} />
+        <BreweryProductReviews
+          productId={product.id}
+          qrSource={qrSource}
+          loginHref={loginHref}
+        />
       </div>
     </main>
   );

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
+import { useAuthContext } from "@/app/providers/AuthProvider";
 
 type Review = {
   id: string;
@@ -23,10 +24,13 @@ type ReviewSort = "newest" | "highest" | "lowest";
 export default function BreweryProductReviews({
   productId,
   qrSource,
+  loginHref,
 }: {
   productId: string;
   qrSource: boolean;
+  loginHref: string;
 }) {
+  const { user, loading: authLoading } = useAuthContext();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [average, setAverage] = useState<number | null>(null);
   const [ratingBreakdown, setRatingBreakdown] = useState<RatingBreakdown[]>([]);
@@ -230,7 +234,12 @@ export default function BreweryProductReviews({
         </section>
       )}
 
-      <form onSubmit={submitReview} className="mt-5 grid gap-5 rounded-xl border border-white/10 bg-white/5 p-4 sm:p-5">
+      {authLoading ? (
+        <p role="status" className="mt-5 text-sm text-white/55">
+          Checking sign-in status…
+        </p>
+      ) : user ? (
+        <form onSubmit={submitReview} className="mt-5 grid gap-5 rounded-xl border border-white/10 bg-white/5 p-4 sm:p-5">
         <div>
           <h3 className="font-semibold">How was it?</h3>
           <p className="mt-1 text-sm text-white/55">Leave a quick rating, or add a few details for the community.</p>
@@ -278,9 +287,24 @@ export default function BreweryProductReviews({
         </label>
         <div className="flex flex-wrap items-center gap-3">
           <button disabled={busy} className="rounded-lg border border-green-400/30 bg-green-700 px-4 py-2 font-semibold disabled:opacity-50">{busy ? "Submitting…" : "Share review"}</button>
-          <p className="text-xs text-white/50">Sign in to review. You can update your review by submitting another one.</p>
+          <p className="text-xs text-white/50">You can update your review by submitting another one.</p>
         </div>
       </form>
+      ) : (
+        <div className="mt-5 rounded-xl border border-white/10 bg-white/5 p-4 sm:p-5">
+          <p className="font-semibold">Want to leave a review?</p>
+          <p className="mt-1 text-sm text-white/60">
+            Sign in to share a rating and review. Product details and existing
+            community reviews are available without an account.
+          </p>
+          <Link
+            href={loginHref}
+            className="mt-4 inline-flex min-h-11 items-center rounded-lg border border-green-400/30 bg-green-700 px-4 py-2 font-semibold hover:bg-green-600"
+          >
+            Sign in to review
+          </Link>
+        </div>
+      )}
 
       {!loading && reviews.length > 0 && (
         <div className="mt-5 flex justify-end">
