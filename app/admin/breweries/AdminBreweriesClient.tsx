@@ -16,6 +16,8 @@ type Account = {
   business_type_other: string | null;
   application_contact_name: string | null;
   application_business_email: string | null;
+  application_business_registration_number: string | null;
+  application_verification_url: string | null;
   application_offerings: string | null;
   application_referral_source: string | null;
   slug: string;
@@ -111,6 +113,13 @@ export default function AdminBreweriesClient() {
                   <p className="text-sm text-green-200">{businessTypeLabel(account.business_type, account.business_type_other)}</p>
                   <p className="text-sm text-white/50">Owner: {account.owner_username} · {account.location || "No location"} · Applied {new Date(account.created_at).toLocaleDateString()}</p>
                   {account.application_contact_name && <p className="mt-2 text-sm text-white/70">Contact: {account.application_contact_name}{account.application_business_email ? <> · <a href={`mailto:${account.application_business_email}`} className="text-green-200 underline">{account.application_business_email}</a></> : null}</p>}
+                  <div className="mt-3 rounded-lg border border-white/10 bg-black/20 p-3">
+                    <p className="text-sm font-semibold text-white">Business verification</p>
+                    <p className="mt-1 text-sm text-white/70">Registration number: {account.application_business_registration_number || "Not provided"}</p>
+                    {account.application_verification_url
+                      ? <a href={account.application_verification_url} target="_blank" rel="noreferrer" className="mt-1 inline-block break-all text-sm text-green-200 underline">Review public proof</a>
+                      : <p className="mt-1 text-sm text-amber-200">No proof link provided. Verify the business before approving.</p>}
+                  </div>
                   {account.application_offerings && <p className="mt-3 whitespace-pre-line text-sm leading-6 text-white/75"><span className="font-semibold text-white">What they make or sell: </span>{account.application_offerings}</p>}
                   <p className="mt-3 whitespace-pre-line text-sm leading-6 text-white/75">{account.description || "No description provided."}</p>
                   {account.application_referral_source && <p className="mt-2 text-xs text-white/50">Heard about Batchlogg via: {account.application_referral_source}</p>}

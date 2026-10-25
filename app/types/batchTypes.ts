@@ -90,6 +90,7 @@ export interface Batch {
   sugar_amount?: number;
 
   // Other fields
+  other_style?: string | null;
   ingredients?: Ingredient[];
   steps?: string[];
 

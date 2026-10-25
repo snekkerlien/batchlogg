@@ -22,6 +22,7 @@ export default function ReportContentButton({
   const [evidence, setEvidence] = useState<File[]>([]);
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [notificationWarning, setNotificationWarning] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -43,6 +44,7 @@ export default function ReportContentButton({
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Could not submit report");
+      setNotificationWarning(result.notificationWarning === true);
       setSubmitted(true);
       setOpen(false);
       setReason("");
@@ -60,7 +62,16 @@ export default function ReportContentButton({
   }
 
   if (submitted) {
-    return <span className="text-xs text-green-300">Reported</span>;
+    return (
+      <span className="text-xs text-green-300">
+        Reported
+        {notificationWarning && (
+          <span role="status" className="ml-2 text-amber-300">
+            Staff email notification could not be sent.
+          </span>
+        )}
+      </span>
+    );
   }
 
   return (

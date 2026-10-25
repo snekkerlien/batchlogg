@@ -13,7 +13,10 @@ import {
   InventoryAdditiveFields,
   InventoryIngredientSelect,
 } from "@/app/components/InventoryUsageFields";
-import { getOtherRecipeIngredients } from "@/lib/recipes/otherRecipe";
+import {
+  getOtherRecipeIngredients,
+  getOtherRecipeStyle,
+} from "@/lib/recipes/otherRecipe";
 
 
 export default function NewOtherPage({
@@ -99,6 +102,20 @@ export default function NewOtherPage({
               placeholder="Example: Experimental Blend #1"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="other-style" className="block mb-1 font-semibold">
+              Style or type (optional)
+            </label>
+            <input
+              id="other-style"
+              name="other_style"
+              maxLength={80}
+              defaultValue={getOtherRecipeStyle(recipe?.ingredients)}
+              placeholder="Example: Kombucha"
+              className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
 

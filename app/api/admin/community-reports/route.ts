@@ -67,7 +67,7 @@ async function checkReportAssignment(
   userId: string,
   reportId: string
 ) {
-  if (role === "admin") return null;
+  if (role === "admin" || role === "developer") return null;
   const { data: report, error } = await serviceRole
     .from("community_reports")
     .select("id, assigned_to")
@@ -178,7 +178,7 @@ export async function GET() {
       context.serviceRole
         .from("profiles")
         .select("id, username")
-        .in("membership_status", ["moderator", "admin"])
+        .in("membership_status", ["moderator", "admin", "developer", "owner"])
         .order("username"),
     ]);
   if (
@@ -485,7 +485,7 @@ export async function PATCH(request: NextRequest) {
         .from("profiles")
         .select("id, username")
         .eq("id", assignedTo)
-        .in("membership_status", ["moderator", "admin"])
+        .in("membership_status", ["moderator", "admin", "developer", "owner"])
         .maybeSingle();
       if (assigneeError) {
         console.error("Could not verify report assignee", assigneeError);
@@ -779,6 +779,7 @@ export async function POST(request: NextRequest) {
   if (!report) return NextResponse.json({ error: "Report not found" }, { status: 404 });
   if (
     context.role !== "admin" &&
+    context.role !== "developer" &&
     report.assigned_to &&
     report.assigned_to !== context.user.id
   ) {

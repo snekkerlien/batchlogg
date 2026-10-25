@@ -69,10 +69,14 @@ export default function BanNotice({
         credentials: "include",
         body: JSON.stringify({ message: appeal }),
       });
-      const result: { error?: string } = await response.json();
+      const result: { error?: string; notificationWarning?: boolean } = await response.json();
       if (!response.ok) throw new Error(result.error || "Could not send your appeal.");
       setAppeal("");
-      setSuccess("Your appeal has been sent to the administrators.");
+      setSuccess(
+        result.notificationWarning
+          ? "Your appeal was saved, but the admin email notification could not be sent."
+          : "Your appeal has been sent to the administrators."
+      );
     } catch (submitError) {
       setError(
         submitError instanceof Error

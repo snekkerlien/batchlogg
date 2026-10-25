@@ -299,6 +299,9 @@ batch = translateOldRecipe(batch);
     {/* ⭐ OTHER */}
     {batch.type === "Other" && (
       <>
+        {batch.other_style && (
+          <p><strong>Style or type:</strong> {batch.other_style}</p>
+        )}
         {batch.ingredients?.length > 0 && (
           <div>
             <strong>Ingredients:</strong>

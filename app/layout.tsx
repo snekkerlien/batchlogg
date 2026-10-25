@@ -8,8 +8,11 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://batchlogg.vercel.app"),
   applicationName: "Batchlogg",
   title: {
-    default: "Batchlogg — Brewing workspace",
+    default: "Batchlogg",
     template: "%s | Batchlogg",
+  },
+  icons: {
+    icon: "/favicon.ico?v=20261025",
   },
   description:
     "Track brewing batches, refine recipes, manage inventory, calculate ABV, and connect with other brewers using Batchlogg.",

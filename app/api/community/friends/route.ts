@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
+import { sendStaffNotification } from "@/lib/notifications/email";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -444,7 +445,18 @@ export async function POST(request: NextRequest) {
       console.error("Could not submit community report", error);
       return NextResponse.json({ error: "Could not submit report" }, { status: 500 });
     }
-    return NextResponse.json({ success: true });
+    let notificationWarning = false;
+    try {
+      await sendStaffNotification(serviceRole, {
+        subject: "New community report",
+        text: `A member submitted a report about a community member.\nReporter ID: ${user.id}\nReported member ID: ${otherId}\n\nReason: ${reason}`,
+        path: "/admin/community-reports",
+      });
+    } catch (notificationError) {
+      notificationWarning = true;
+      console.error("Community report was saved but its email notification failed", notificationError);
+    }
+    return NextResponse.json({ success: true, notificationWarning });
   }
 
   return NextResponse.json({ error: "Unknown action" }, { status: 400 });

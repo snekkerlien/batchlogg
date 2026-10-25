@@ -51,13 +51,15 @@ export default function BreweryManageClient() {
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [switchingBusiness, setSwitchingBusiness] = useState(false);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
+  const [notice, setNotice] = useState<{ text: string; warning: boolean } | null>(null);
   const [application, setApplication] = useState({
     name: "",
     businessType: "brewery",
     businessTypeOther: "",
     contactName: "",
     businessEmail: "",
+    registrationNumber: "",
+    verificationUrl: "",
     offerings: "",
     referralSource: "",
     description: "",
@@ -103,6 +105,8 @@ export default function BreweryManageClient() {
               businessTypeOther: data.account.business_type_other ?? "",
               contactName: data.account.application_contact_name ?? "",
               businessEmail: data.account.application_business_email ?? "",
+              registrationNumber: data.account.application_business_registration_number ?? "",
+              verificationUrl: data.account.application_verification_url ?? "",
               offerings: data.account.application_offerings ?? "",
               referralSource: data.account.application_referral_source ?? "",
               description: data.account.description,
@@ -140,9 +144,14 @@ export default function BreweryManageClient() {
     setSaving(true);
     setError("");
     try {
-      await sendJson("/api/brewery/apply", "POST", application);
+      const result = await sendJson("/api/brewery/apply", "POST", application);
       await load();
-      setNotice("Your business application has been submitted for review.");
+      setNotice({
+        text: result.notificationWarning
+          ? "Your business application was submitted, but the admin email notification could not be sent."
+          : "Your business application has been submitted for review.",
+        warning: result.notificationWarning === true,
+      });
     } catch (applyError) {
       console.error("Could not submit business application", applyError);
       setError(applyError instanceof Error ? applyError.message : "Could not submit application.");
@@ -157,7 +166,7 @@ export default function BreweryManageClient() {
     setError("");
     try {
       await sendJson("/api/brewery/me", "PATCH", page);
-      setNotice("Business account details updated.");
+      setNotice({ text: "Business account details updated.", warning: false });
     } catch (saveError) {
       console.error("Could not save business page", saveError);
       setError(saveError instanceof Error ? saveError.message : "Could not save your page.");
@@ -170,7 +179,7 @@ export default function BreweryManageClient() {
     if (!businessId || businessId === account?.id) return;
     setSwitchingBusiness(true);
     setError("");
-    setNotice("");
+    setNotice(null);
     try {
       const response = await fetch("/api/brewery/context", {
         method: "POST",
@@ -181,7 +190,7 @@ export default function BreweryManageClient() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Could not switch business accounts.");
       await load();
-      setNotice("Active business account changed.");
+      setNotice({ text: "Active business account changed.", warning: false });
     } catch (switchError) {
       console.error("Could not switch business account", switchError);
       setError(switchError instanceof Error ? switchError.message : "Could not switch business accounts.");
@@ -217,7 +226,7 @@ export default function BreweryManageClient() {
     if (deleteConfirmation !== "DELETE") return;
     setDeletingAccount(true);
     setError("");
-    setNotice("");
+    setNotice(null);
     try {
       const response = await fetch("/api/brewery/account", {
         method: "DELETE",
@@ -226,7 +235,10 @@ export default function BreweryManageClient() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Could not delete the business account.");
       setDeleteConfirmation("");
-      setNotice("The business account and its associated data have been deleted.");
+      setNotice({
+        text: "The business account and its associated data have been deleted.",
+        warning: false,
+      });
       if (result.cleanupWarning) {
         setError(result.cleanupWarning);
       }
@@ -251,7 +263,18 @@ export default function BreweryManageClient() {
       <div className="absolute left-4 top-3 z-40"><BackButton /></div>
         <PageHeading title="Business workspace" subtitle="Manage your business page, product catalogue, team, and subscription separately from your personal brewing account." />
         {error && <p role="alert" className="mb-4 rounded-lg border border-red-400/30 bg-red-950/40 p-3 text-red-200">{error}</p>}
-        {notice && <p role="status" className="mb-4 rounded-lg border border-green-400/30 bg-green-950/40 p-3 text-green-200">{notice}</p>}
+        {notice && (
+          <p
+            role="status"
+            className={`mb-4 rounded-lg border p-3 ${
+              notice.warning
+                ? "border-amber-400/30 bg-amber-950/40 text-amber-200"
+                : "border-green-400/30 bg-green-950/40 text-green-200"
+            }`}
+          >
+            {notice.text}
+          </p>
+        )}
         {!loading && businesses.length > 1 && account && (
           <label className="mb-5 block max-w-md text-sm">
             Active business
@@ -301,6 +324,13 @@ export default function BreweryManageClient() {
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block text-sm">Contact name<input required minLength={2} maxLength={120} autoComplete="name" className={inputClass} value={application.contactName} onChange={(event) => setApplication({ ...application, contactName: event.target.value })} /></label>
               <label className="block text-sm">Business email<input required type="email" maxLength={254} autoComplete="email" className={inputClass} value={application.businessEmail} onChange={(event) => setApplication({ ...application, businessEmail: event.target.value })} /></label>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+              <h3 className="font-semibold text-green-200">Verify your business</h3>
+              <p className="mt-1 text-sm leading-5 text-white/65">We review these details before approving applications. Provide the business registration number and a public link to an official registry entry or other reliable listing. We don’t ask you to upload identity documents.</p>
+              <label className="mt-3 block text-sm">Business registration number or official identifier<input required maxLength={120} className={inputClass} value={application.registrationNumber} onChange={(event) => setApplication({ ...application, registrationNumber: event.target.value })} /></label>
+              <label className="mt-3 block text-sm">Public business proof link<input required type="url" maxLength={2048} inputMode="url" placeholder="https://" className={inputClass} value={application.verificationUrl} onChange={(event) => setApplication({ ...application, verificationUrl: event.target.value })} /></label>
+              <p className="mt-2 text-xs text-white/50">Use a public webpage that helps us confirm the business and your connection to it. Don’t link to private or sensitive documents.</p>
             </div>
             <label className="block text-sm">What do you make or sell?<textarea required minLength={10} maxLength={2000} rows={3} className={inputClass} value={application.offerings} onChange={(event) => setApplication({ ...application, offerings: event.target.value })} placeholder="Tell us about your drinks, products, or services." /></label>
             <label className="block text-sm">About your business<textarea maxLength={5000} rows={4} className={inputClass} value={application.description} onChange={(event) => setApplication({ ...application, description: event.target.value })} /></label>

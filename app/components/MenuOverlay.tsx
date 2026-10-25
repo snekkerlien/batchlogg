@@ -102,7 +102,7 @@ function MenuOverlayContent({ current }: { current: string }) {
         }
         const sessionData: { role: string } = await sessionResponse.json();
         if (active) {
-          setIsAdmin(sessionData.role === "admin");
+          setIsAdmin(sessionData.role === "admin" || sessionData.role === "developer");
           setIsModerator(sessionData.role === "moderator");
         }
 
@@ -117,7 +117,9 @@ function MenuOverlayContent({ current }: { current: string }) {
         const profile = await response.json();
         if (active) {
           setCanManageKegs(
-            profile.can_manage_kegs === true || sessionData.role === "admin"
+            profile.can_manage_kegs === true ||
+            sessionData.role === "admin" ||
+            sessionData.role === "developer"
           );
           setGamesEnabled(profile.games_enabled === true);
         }
@@ -169,7 +171,6 @@ function MenuOverlayContent({ current }: { current: string }) {
     { href: "/inventory", label: "Inventory", key: "inventory" },
     { href: "/calendar", label: "Brew calendar", key: "calendar" },
   ];
-
   const groups: {
     label: string;
     labelHref?: string;
@@ -204,7 +205,9 @@ function MenuOverlayContent({ current }: { current: string }) {
             ...(isModerator && !isAdmin ? { labelHref: "/admin/moderation" } : {}),
             items: [
               ...(isAdmin
-                ? [{ href: "/admin", label: "Admin panel", key: "admin" }]
+                ? [
+                    { href: "/admin", label: "Admin panel", key: "admin" },
+                  ]
                 : isModerator
                   ? [
                       { href: "/admin/community-reports", label: "Community reports", key: "community-reports" },

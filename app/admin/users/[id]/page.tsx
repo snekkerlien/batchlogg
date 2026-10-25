@@ -401,6 +401,9 @@ export default async function UserAdminPage({
 
             <label className="block">
               <span className="text-sm font-medium text-white/80">Membership role</span>
+              <span className="mt-1 block text-xs text-white/55">
+                Developers receive submission email notifications and automatic Premium access.
+              </span>
               <select
                 name="membership_status"
                 defaultValue={profile?.membership_status ?? "member"}

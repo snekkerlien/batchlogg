@@ -768,9 +768,31 @@ const sharingSection = isOwner ? (
             <input type="hidden" name="kar_id" value={kar.id} />
 
             {/* Common fields */}
-            <label className="font-semibold">Batch name</label>
+            <label className="font-semibold">
+              {activeBatch.type === "Beer" &&
+              activeBatch.beer_subtype !== "all_grain"
+                ? "Batch / kit name"
+                : "Batch name"}
+            </label>
             <input name="name" defaultValue={activeBatch.name}
+              required
               className="p-3 rounded bg-black/40 border border-white/20" />
+
+            {activeBatch.type === "Other" && (
+              <div>
+                <label htmlFor="edit-other-style" className="font-semibold">
+                  Style or type (optional)
+                </label>
+                <input
+                  id="edit-other-style"
+                  name="other_style"
+                  defaultValue={activeBatch.other_style ?? ""}
+                  maxLength={80}
+                  placeholder="Example: Kombucha"
+                  className="mt-1 w-full rounded border border-white/20 bg-black/40 p-3"
+                />
+              </div>
+            )}
 
             <label className="font-semibold">
               Volume (<UnitSymbol kind="volume" />)
@@ -779,17 +801,20 @@ const sharingSection = isOwner ? (
               kind="volume"
               name="volume_l"
               defaultValue={String(activeBatch.volume_l ?? "")}
+              required
               className="p-3 rounded bg-black/40 border border-white/20"
             />
 
             <label className="font-semibold">Start date</label>
             <input name="startdato" type="date"
               defaultValue={activeBatch.startdato.split("T")[0]}
+              required
               className="p-3 rounded bg-black/40 border border-white/20" />
 
             <label className="font-semibold">Original Gravity (OG)</label>
             <input name="og" type="number" step="0.001"
               defaultValue={activeBatch.og}
+              required
               className="p-3 rounded bg-black/40 border border-white/20" />
 
             <BatchEditTypeFields batch={activeBatch} />
@@ -898,16 +923,36 @@ const sharingSection = isOwner ? (
           <form action={saveBatchChanges} className="flex flex-col gap-4">
             <input type="hidden" name="batch_id" value={activeBatch.id} />
             <input type="hidden" name="kar_id" value={kar.id} />
-            <label className="font-semibold">Batch name</label>
-            <input name="name" defaultValue={activeBatch.name} className="rounded border border-white/20 bg-black/40 p-3" />
+            <label className="font-semibold">
+              {activeBatch.type === "Beer" &&
+              activeBatch.beer_subtype !== "all_grain"
+                ? "Batch / kit name"
+                : "Batch name"}
+            </label>
+            <input name="name" defaultValue={activeBatch.name} required className="rounded border border-white/20 bg-black/40 p-3" />
+            {activeBatch.type === "Other" && (
+              <div>
+                <label htmlFor="edit-other-style" className="font-semibold">
+                  Style or type (optional)
+                </label>
+                <input
+                  id="edit-other-style"
+                  name="other_style"
+                  defaultValue={activeBatch.other_style ?? ""}
+                  maxLength={80}
+                  placeholder="Example: Kombucha"
+                  className="mt-1 w-full rounded border border-white/20 bg-black/40 p-3"
+                />
+              </div>
+            )}
             <label className="font-semibold">
               Volume (<UnitSymbol kind="volume" />)
             </label>
-            <UnitInput kind="volume" name="volume_l" defaultValue={String(activeBatch.volume_l ?? "")} className="rounded border border-white/20 bg-black/40 p-3" />
+            <UnitInput kind="volume" name="volume_l" defaultValue={String(activeBatch.volume_l ?? "")} required className="rounded border border-white/20 bg-black/40 p-3" />
             <label className="font-semibold">Start date</label>
-            <input name="startdato" type="date" defaultValue={activeBatch.startdato.split("T")[0]} className="rounded border border-white/20 bg-black/40 p-3" />
+            <input name="startdato" type="date" defaultValue={activeBatch.startdato.split("T")[0]} required className="rounded border border-white/20 bg-black/40 p-3" />
             <label className="font-semibold">Original Gravity (OG)</label>
-            <input name="og" type="number" step="0.001" defaultValue={activeBatch.og} className="rounded border border-white/20 bg-black/40 p-3" />
+            <input name="og" type="number" step="0.001" defaultValue={activeBatch.og} required className="rounded border border-white/20 bg-black/40 p-3" />
             <BatchEditTypeFields batch={activeBatch} />
             <RecipeSecondaryFields defaultValue={activeBatch.secondary_additions} defaultNotes={activeBatch.secondary_notes} defaultEnabled showToggle={false} includeHadSecondaryField={false} />
             {editBatchError && <p role="alert" className="text-sm text-amber-300">{editBatchError}</p>}
@@ -1003,12 +1048,34 @@ const sharingSection = isOwner ? (
             <input type="hidden" name="kar_id" value={kar.id} />
       
             {/* COMMON FIELDS */}
-            <label className="font-semibold">Batch name</label>
+            <label className="font-semibold">
+              {activeBatch.type === "Beer" &&
+              activeBatch.beer_subtype !== "all_grain"
+                ? "Batch / kit name"
+                : "Batch name"}
+            </label>
             <input
               name="name"
               defaultValue={activeBatch.name}
+              required
               className="p-3 rounded bg-black/40 border border-white/20"
             />
+
+            {activeBatch.type === "Other" && (
+              <div>
+                <label htmlFor="edit-other-style" className="font-semibold">
+                  Style or type (optional)
+                </label>
+                <input
+                  id="edit-other-style"
+                  name="other_style"
+                  defaultValue={activeBatch.other_style ?? ""}
+                  maxLength={80}
+                  placeholder="Example: Kombucha"
+                  className="mt-1 w-full rounded border border-white/20 bg-black/40 p-3"
+                />
+              </div>
+            )}
       
             <label className="font-semibold">
               Volume (<UnitSymbol kind="volume" />)
@@ -1017,6 +1084,7 @@ const sharingSection = isOwner ? (
               kind="volume"
               name="volume_l"
               defaultValue={String(activeBatch.volume_l ?? "")}
+              required
               className="p-3 rounded bg-black/40 border border-white/20"
             />
       
@@ -1025,6 +1093,7 @@ const sharingSection = isOwner ? (
               name="startdato"
               type="date"
               defaultValue={activeBatch.startdato.split("T")[0]}
+              required
               className="p-3 rounded bg-black/40 border border-white/20"
             />
       
@@ -1034,6 +1103,7 @@ const sharingSection = isOwner ? (
               type="number"
               step="0.001"
               defaultValue={activeBatch.og}
+              required
               className="p-3 rounded bg-black/40 border border-white/20"
             />
 

@@ -102,7 +102,11 @@ export async function GET(request: NextRequest) {
           originalActor: actor?.username || "Moderator",
           canReview:
             action?.actor_id !== context.user.id &&
-            (context.role === "admin" || actor?.membership_status === "member"),
+            (
+              context.role === "admin" ||
+              context.role === "developer" ||
+              actor?.membership_status === "member"
+            ),
         };
       }),
     });

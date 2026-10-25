@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getBreweryContext, normalizeOptionalUrl, slugifyBreweryValue } from "@/lib/brewery/access";
 import { isBusinessType } from "@/lib/brewery/business";
+import { sendStaffNotification } from "@/lib/notifications/email";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,6 +25,9 @@ export async function POST(request: NextRequest) {
     typeof body.contactName === "string" ? body.contactName.trim() : "";
   const businessEmail =
     typeof body.businessEmail === "string" ? body.businessEmail.trim().toLowerCase() : "";
+  const registrationNumber =
+    typeof body.registrationNumber === "string" ? body.registrationNumber.trim() : "";
+  const verificationUrl = normalizeOptionalUrl(body.verificationUrl);
   const offerings =
     typeof body.offerings === "string" ? body.offerings.trim() : "";
   const referralSource =
@@ -40,6 +44,9 @@ export async function POST(request: NextRequest) {
     contactName.length > 120 ||
     businessEmail.length > 254 ||
     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(businessEmail) ||
+    registrationNumber.length < 1 ||
+    registrationNumber.length > 120 ||
+    !verificationUrl ||
     offerings.length < 10 ||
     offerings.length > 2000 ||
     referralSource.length > 500
@@ -73,6 +80,8 @@ export async function POST(request: NextRequest) {
         business_type_other: businessType === "other" ? businessTypeOther : null,
         application_contact_name: contactName,
         application_business_email: businessEmail,
+        application_business_registration_number: registrationNumber,
+        application_verification_url: verificationUrl,
         application_offerings: offerings,
         application_referral_source: referralSource || null,
         slug,
@@ -88,7 +97,22 @@ export async function POST(request: NextRequest) {
     }
     if (error) throw error;
 
-    const response = NextResponse.json({ account: data }, { status: 201 });
+    let notificationWarning = false;
+    try {
+      await sendStaffNotification(serviceRole, {
+        subject: "New business account application",
+        text: `Business: ${name}\nType: ${businessType === "other" ? businessTypeOther : businessType}\nContact: ${contactName}\nBusiness email: ${businessEmail}\nRegistration number: ${registrationNumber}\nBusiness proof: ${verificationUrl}\nAccount ID: ${data.id}`,
+        path: "/admin/breweries",
+      });
+    } catch (notificationError) {
+      notificationWarning = true;
+      console.error("Business application was saved but its email notification failed", notificationError);
+    }
+
+    const response = NextResponse.json(
+      { account: data, notificationWarning },
+      { status: 201 }
+    );
     response.cookies.set("active_brewery_id", data.id, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

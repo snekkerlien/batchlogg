@@ -300,7 +300,11 @@ export default function MessagesPage() {
       if (!response.ok) throw new Error(data.error || "Could not submit report");
       setReportReason("");
       setShowReport(false);
-      setStatus("Report submitted. Thank you for helping keep the community safe.");
+      setStatus(
+        data.notificationWarning
+          ? "Report submitted, but staff email notification could not be sent."
+          : "Report submitted. Thank you for helping keep the community safe."
+      );
     } catch (reportError) {
       console.error("Could not submit community report", reportError);
       setError(reportError instanceof Error ? reportError.message : "Could not submit report.");

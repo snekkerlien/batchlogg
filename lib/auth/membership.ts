@@ -12,6 +12,7 @@ export const MEMBERSHIP_STATUSES = [
   "sponsor",
   "moderator",
   "admin",
+  "developer",
 ] as const;
 
 export type MembershipStatusValue = (typeof MEMBERSHIP_STATUSES)[number];
@@ -30,6 +31,7 @@ const LABELS: Record<MembershipStatusValue, string> = {
   sponsor: "Sponsor",
   moderator: "Moderator",
   admin: "Admin",
+  developer: "Developer",
 };
 
 export function isMembershipStatus(value: unknown): value is MembershipStatusValue {
@@ -38,5 +40,6 @@ export function isMembershipStatus(value: unknown): value is MembershipStatusVal
 
 export function membershipLabel(value: string | null | undefined) {
   const trimmed = value?.trim();
+  if (trimmed === "owner" || trimmed === "developer") return "Developer";
   return trimmed && isMembershipStatus(trimmed) ? LABELS[trimmed] : "Member";
 }

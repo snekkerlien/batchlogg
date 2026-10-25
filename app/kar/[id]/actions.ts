@@ -455,6 +455,14 @@ if (type === "Beer" && beerSubtype === "fresh_wort_kit") {
   // Other fields
   const ingredients_json = formData.get("ingredients_json") as string;
   const ingredients: Ingredient[] = ingredients_json ? JSON.parse(ingredients_json) : [];
+  const otherStyleValue = formData.get("other_style");
+  const other_style =
+    type === "Other" && typeof otherStyleValue === "string"
+      ? otherStyleValue.trim()
+      : "";
+  if (other_style.length > 80) {
+    throw new Error("Style or type must be 80 characters or fewer.");
+  }
 
   if (useInventory) {
     let measuredUsage: unknown[];
@@ -1095,6 +1103,7 @@ ${notes}
       
 
       // Other
+      other_style,
       ingredients,
       steps,
 
@@ -2345,7 +2354,11 @@ export async function updateBatch(formData: FormData) {
       "ingredients_json",
       parseIngredientRow
     );
-    typeUpdates.steps = parseJsonStrings(formData, "steps_json");
+    const otherStyleValue = formData.get("other_style");
+    if (typeof otherStyleValue !== "string" || otherStyleValue.length > 80) {
+      throw new Error("Style or type must be 80 characters or fewer.");
+    }
+    typeUpdates.other_style = otherStyleValue.trim() || null;
   }
 
   const additives = formData.get("additives");

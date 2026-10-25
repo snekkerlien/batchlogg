@@ -60,7 +60,10 @@ export default function BatchRecipeCard({
   );
   const hasOtherDetails = Boolean(
     batch.type === "Other" &&
-    (batch.ingredients?.length || batch.steps?.length || hasText(batch.yeast))
+    (batch.other_style ||
+      batch.ingredients?.length ||
+      batch.steps?.length ||
+      hasText(batch.yeast))
   );
 
   return (
@@ -74,6 +77,11 @@ export default function BatchRecipeCard({
           {batch.type === "Beer" && batch.beer_style && (
             <span className="rounded-full border border-green-300/30 bg-green-300/10 px-3 py-1 text-sm text-green-100">
               {batch.beer_style}
+            </span>
+          )}
+          {batch.type === "Other" && hasText(batch.other_style) && (
+            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-white/70">
+              {batch.other_style}
             </span>
           )}
         </div>

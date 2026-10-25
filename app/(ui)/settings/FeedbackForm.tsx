@@ -24,11 +24,16 @@ export default function FeedbackForm({
       formData.set("category", category);
       formData.set("message", message);
 
-      await submitFeedback(formData);
+      const result = await submitFeedback(formData);
 
       setMessage("");
       setOpen(false);
-      setStatus({ ok: true, text: "Thanks! Your message was sent." });
+      setStatus({
+        ok: true,
+        text: result.notificationSent
+          ? "Thanks! Your message was sent."
+          : "Your message was saved, but the admin email notification could not be sent.",
+      });
     } catch (error) {
       console.error("Could not send feedback", error);
       setStatus({ ok: false, text: "Could not send your message. Please try again." });

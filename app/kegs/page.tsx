@@ -94,7 +94,9 @@ export default function KegTrackerPage() {
         setIsLoggedIn(true);
         setCanManageKegs(
           profile.can_manage_kegs === true ||
-          profile.membership_status === "admin"
+          profile.membership_status === "admin" ||
+          profile.membership_status === "owner" ||
+          profile.membership_status === "developer"
         );
         setAccessLoaded(true);
       }

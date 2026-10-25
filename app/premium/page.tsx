@@ -128,10 +128,13 @@ export default function PremiumPage() {
                   (profile.premium_grant_source === "manual" ||
                     profile.account_tier !== "premium") && (
                     <p className="mx-auto mt-2 max-w-xl text-sm text-white/65">
-                      {profile.premium_grant_source === "manual" ||
-                      ["sponsor", "partner", "founder"].includes(profile.membership_status)
+                      {profile.membership_status === "developer" ||
+                      profile.membership_status === "owner"
+                        ? "Your Premium access is included with the Developer role."
+                        : profile.premium_grant_source === "manual" ||
+                          ["sponsor", "partner", "founder"].includes(profile.membership_status)
                         ? "Your Premium access has been sponsored by Batchlogg!"
-                        : ["admin", "moderator"].includes(profile.membership_status)
+                        : ["admin", "moderator", "developer", "owner"].includes(profile.membership_status)
                         ? `You’ve been granted Premium access because you’re a ${profile.membership_status}.`
                         : "Your Premium access has been granted to your account."}
                     </p>

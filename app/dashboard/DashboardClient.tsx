@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { motion, useAnimationControls, useReducedMotion } from "framer-motion";
+import { motion, useAnimationControls } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
 import { getNextMotd } from "../../lib/motd/motdList";
@@ -11,6 +11,10 @@ import PageHeading from "@/app/components/PageHeading";
 import FermentationBubbles from "@/app/components/FermentationBubbles";
 import DashboardGuide from "./DashboardGuide";
 import { PREMIUM_MAX_VESSELS } from "@/lib/vessels/limits";
+import {
+  getReducedMotionPreference,
+  REDUCED_MOTION_EVENT,
+} from "@/lib/accessibility/reducedMotion";
 
 
 interface KarType {
@@ -58,17 +62,14 @@ function vesselStageLabel(status: KarType["status"]): string {
   return "Empty vessel";
 }
 
-const sharedVesselCardStyle = {
-  borderColor: "var(--user-accent)",
-  boxShadow:
-    "0 0 0 1px var(--user-accent), 0 0 8px color-mix(in srgb, var(--user-accent) 30%, transparent)",
+const sharedVesselTextureStyle = {
+  backgroundImage:
+    "radial-gradient(rgb(255 255 255 / 3%) 0.65px, transparent 0.65px)",
+  backgroundSize: "7px 7px",
 };
 
 const sharedVesselIconStyle = {
-  borderColor: "var(--user-accent)",
-  backgroundColor: "#09090b",
   color: "var(--user-accent)",
-  boxShadow: "0 0 4px color-mix(in srgb, var(--user-accent) 45%, transparent)",
 };
 
 function isCreatedKar(
@@ -92,7 +93,7 @@ export default function DashboardClient() {
   const addVesselAnimation = useAnimationControls();
   const addVesselPlusAnimation = useAnimationControls();
   const addVesselSparkleAnimation = useAnimationControls();
-  const prefersReducedMotion = useReducedMotion();
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(true);
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -128,6 +129,20 @@ export default function DashboardClient() {
 // ⭐ Hent MOTD ved mount
 useEffect(() => {
   setMotd(getNextMotd());
+}, []);
+
+useEffect(() => {
+  const updateMotionPreference = () =>
+    setPrefersReducedMotion(getReducedMotionPreference());
+  const motionMedia = window.matchMedia("(prefers-reduced-motion: reduce)");
+  updateMotionPreference();
+  window.addEventListener(REDUCED_MOTION_EVENT, updateMotionPreference);
+  motionMedia.addEventListener("change", updateMotionPreference);
+
+  return () => {
+    window.removeEventListener(REDUCED_MOTION_EVENT, updateMotionPreference);
+    motionMedia.removeEventListener("change", updateMotionPreference);
+  };
 }, []);
 
 // ⭐ Last dashboard-data når router endres
@@ -513,13 +528,9 @@ useEffect(() => {
         </div>
       )}
 
-      <h2 className="text-2xl font-semibold mb-2 text-center text-green-300">
+      <h2 className="mb-6 text-center text-2xl font-semibold text-green-300">
         Your vessels
       </h2>
-      <p className="mb-4 text-center text-sm text-white/55">
-        Open a vessel to view its batch, or choose an empty vessel to start one.
-      </p>
-
       {selectMode && moveSourceVesselId && (
         <p className="mb-4 rounded-lg border border-green-400/30 bg-green-950/30 px-4 py-3 text-center text-sm text-green-100">
           Choose an empty vessel to move “
@@ -580,9 +591,7 @@ useEffect(() => {
                 toggleKarSelection(k.id);
               }
             }}
-            style={k.isShared ? sharedVesselCardStyle : undefined}
-            className={`relative border rounded-xl p-4 bg-white/5 w-32 h-32 flex flex-col items-center justify-center shadow-md shadow-black/20 transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-black/30 overflow-hidden motion-reduce:transition-none motion-reduce:hover:translate-y-0
-              ${k.isShared ? "" : "border-white/10"}
+            className={`relative rounded-xl border-0 p-4 bg-white/5 w-32 h-32 flex flex-col items-center justify-center shadow-md shadow-black/20 transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-black/30 overflow-hidden motion-reduce:transition-none motion-reduce:hover:translate-y-0
               ${
                 selectMode && selectedKars.includes(k.id)
                   ? "ring-4 ring-red-500"
@@ -607,10 +616,17 @@ useEffect(() => {
           >
             {k.isShared && (
               <span
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 z-0"
+                style={sharedVesselTextureStyle}
+              />
+            )}
+            {k.isShared && (
+              <span
                 title="Shared with others"
                 aria-label="Shared with others"
                 style={sharedVesselIconStyle}
-                className="absolute right-2 top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full border bg-black/80"
+                className="absolute right-2 top-2 z-20 flex h-6 w-6 items-center justify-center"
               >
                 <svg
                   aria-hidden="true"
@@ -636,7 +652,7 @@ useEffect(() => {
 
 
             <div
-              className="text-lg font-bold text-green-300 text-center leading-tight line-clamp-2"
+              className="relative z-10 text-lg font-bold text-green-300 text-center leading-tight line-clamp-2"
             >
               {displayBatchName(k.batchName, `Vessel ${k.nummer}`)}
             </div>
@@ -709,7 +725,7 @@ useEffect(() => {
                 ? `Vessel limit reached (${maxVessels})`
                 : "Create vessel"
             }
-            className="flex h-32 w-32 items-center justify-center rounded-xl border border-white/10 bg-white/5 p-4 text-3xl font-bold text-white shadow-md shadow-black/20 transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-1 hover:bg-white/10 hover:shadow-lg hover:shadow-black/30 active:translate-y-0 active:scale-[0.98] active:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-wait disabled:opacity-60 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
+            className="flex h-32 w-32 items-center justify-center rounded-xl border-0 bg-white/5 p-4 text-3xl font-bold text-white shadow-md shadow-black/20 transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-1 hover:bg-white/10 hover:shadow-lg hover:shadow-black/30 active:translate-y-0 active:scale-[0.98] active:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-wait disabled:opacity-60 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
           >
             <motion.span
               aria-hidden="true"
@@ -801,14 +817,18 @@ useEffect(() => {
               <div key={vessel.id} className="flex w-36 flex-col items-center gap-2">
                 <a
                   href={`/kar/${vessel.id}`}
-                  style={sharedVesselCardStyle}
-                  className="relative flex h-36 w-36 flex-col items-center justify-center overflow-hidden rounded-xl border bg-white/5 p-3 text-center transition hover:bg-white/10"
+                  className="relative flex h-36 w-36 flex-col items-center justify-center overflow-hidden rounded-xl border-0 bg-white/5 p-3 text-center transition hover:bg-white/10"
                 >
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 z-0"
+                  style={sharedVesselTextureStyle}
+                />
                 <span
                   title="Shared with you"
                   aria-label="Shared with you"
                   style={sharedVesselIconStyle}
-                  className="absolute right-2 top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full border bg-black/80"
+                  className="absolute right-2 top-2 z-20 flex h-6 w-6 items-center justify-center"
                 >
                   <svg
                     aria-hidden="true"

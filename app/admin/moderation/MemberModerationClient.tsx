@@ -182,7 +182,7 @@ export default function MemberModerationClient() {
               {loadingMembers ? "Searching…" : "Search members"}
             </button>
           </form>
-          <p className="mt-2 text-xs text-white/50">Search returns regular member accounts only. Moderator and admin accounts are not listed.</p>
+          <p className="mt-2 text-xs text-white/50">Search returns regular member accounts only. Moderator, admin, and Developer accounts are not listed.</p>
 
           {members.length > 0 && (
             <ul className="mt-4 space-y-3">

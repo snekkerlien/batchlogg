@@ -1,10 +1,13 @@
 import type { User } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export type MembershipRole = "member" | "moderator" | "admin";
+export type MembershipRole = "member" | "moderator" | "admin" | "developer";
 export const PREMIUM_ROLE_STATUSES = [
   "admin",
   "moderator",
+  "developer",
+  "owner",
+  "owner",
   "sponsor",
   "partner",
   "founder",
@@ -23,6 +26,21 @@ export type Permission =
   | "broadcast_announcements"
   | "manage_maintenance";
 
+const adminPermissions: ReadonlySet<Permission> = new Set([
+  "manage_users",
+  "manage_memberships",
+  "assign_roles",
+  "review_reports",
+  "moderate_community_members",
+  "delete_reported_content",
+  "lock_threads",
+  "feature_content",
+  "view_analytics",
+  "manage_changelog",
+  "broadcast_announcements",
+  "manage_maintenance",
+]);
+
 const rolePermissions: Record<MembershipRole, ReadonlySet<Permission>> = {
   member: new Set(),
   moderator: new Set([
@@ -32,24 +50,15 @@ const rolePermissions: Record<MembershipRole, ReadonlySet<Permission>> = {
     "lock_threads",
     "feature_content",
   ]),
-  admin: new Set([
-    "manage_users",
-    "manage_memberships",
-    "assign_roles",
-    "review_reports",
-    "moderate_community_members",
-    "delete_reported_content",
-    "lock_threads",
-    "feature_content",
-    "view_analytics",
-    "manage_changelog",
-    "broadcast_announcements",
-    "manage_maintenance",
-  ]),
+  admin: adminPermissions,
+  developer: adminPermissions,
 };
 
 export function normalizeMembershipRole(value: unknown): MembershipRole {
-  return value === "admin" || value === "moderator" ? value : "member";
+  if (value === "owner") return "developer";
+  return value === "developer" || value === "admin" || value === "moderator"
+    ? value
+    : "member";
 }
 
 export function hasPremiumEntitlement(accountTier: unknown, membershipStatus: unknown) {

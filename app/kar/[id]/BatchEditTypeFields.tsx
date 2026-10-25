@@ -44,6 +44,7 @@ type IngredientRow = {
 
 type BatchEditRecord = {
   type: string;
+  other_style?: string | null;
   beer_subtype?: string | null;
   beer_style?: string | null;
   kit_url?: string | null;
@@ -66,7 +67,6 @@ type BatchEditRecord = {
   sugar_amount?: number | string | null;
   yeast?: string | null;
   ingredients?: IngredientRow[] | null;
-  steps?: string[] | null;
   additives?: string | null;
   full_process?: string | null;
   notes?: string | null;
@@ -126,7 +126,6 @@ export default function BatchEditTypeFields({
         unit: ingredient.unit ?? "",
       })) ?? []
   );
-  const [steps, setSteps] = useState<string[]>(() => batch.steps ?? []);
   const [beerSubtype, setBeerSubtype] = useState(
     batch.beer_subtype ?? "all_grain"
   );
@@ -167,6 +166,22 @@ export default function BatchEditTypeFields({
   const isBeer = batch.type === "Beer";
   const isBraggot = batch.type === "Braggot";
   const isAllGrain = isBeer && beerSubtype === "all_grain";
+  const juiceTypeLabel =
+    batch.type === "Wine" ? "Grape / Juice type" : "Juice type";
+  const sugarAmountLabel =
+    batch.type === "Wine" || batch.type === "Cider"
+      ? "Sugar added (optional)"
+      : "Sugar amount";
+  const fullProcessPlaceholder = {
+    Beer: "Mash schedule, hop schedule, fermentation plan...",
+    Braggot: "Mash schedule, honey addition, fermentation plan...",
+    Mead: "Rehydration, pitching, degassing schedule, fermentation notes...",
+    Wine: "Crushing, maceration, punch-downs, temperature...",
+    Cider: "Describe the fermentation process, rehydration, temperature, etc.",
+    Seltzer:
+      "Describe the fermentation process, nutrient schedule, temperature...",
+    Other: "Describe the full process...",
+  }[batch.type] ?? "Describe the full process...";
 
   return (
     <>
@@ -178,6 +193,7 @@ export default function BatchEditTypeFields({
               name="beer_subtype"
               value={beerSubtype}
               onChange={(event) => setBeerSubtype(event.target.value)}
+              required
               className={inputClass}
             >
               <option value="all_grain">All-grain</option>
@@ -274,6 +290,7 @@ export default function BatchEditTypeFields({
                     defaultValue={valueOrEmpty(
                       batch.boil_volume_l ?? batch.volume_l
                     )}
+                    required
                     className={inputClass}
                   />
                 </div>
@@ -644,7 +661,7 @@ export default function BatchEditTypeFields({
 
       {(batch.type === "Wine" || batch.type === "Cider") && (
         <div>
-          <label className="mb-1 block font-semibold">Juice type</label>
+          <label className="mb-1 block font-semibold">{juiceTypeLabel}</label>
           <input
             name="juice_type"
             defaultValue={batch.juice_type ?? ""}
@@ -658,7 +675,7 @@ export default function BatchEditTypeFields({
         batch.type === "Seltzer") && (
         <div>
           <label className="mb-1 block font-semibold">
-            Sugar amount (<UnitSymbol kind="kg" />)
+            {sugarAmountLabel} (<UnitSymbol kind="kg" />)
           </label>
           <UnitInput
             name="sugar_amount"
@@ -683,7 +700,7 @@ export default function BatchEditTypeFields({
                 <div key={index} className={rowClass}>
                   <input
                     aria-label={`Ingredient ${index + 1} name`}
-                    placeholder="Ingredient"
+                    placeholder="Ingredient name"
                     value={ingredient.name}
                     onChange={(event) =>
                       updateIngredient(index, { name: event.target.value })
@@ -736,51 +753,6 @@ export default function BatchEditTypeFields({
             </button>
           </div>
 
-          <input
-            type="hidden"
-            name="steps_json"
-            value={JSON.stringify(steps)}
-          />
-          <div>
-            <label className="mb-2 block font-semibold">Process steps</label>
-            <div className="space-y-2">
-              {steps.map((step, index) => (
-                <div key={index} className="flex gap-2">
-                  <textarea
-                    aria-label={`Process step ${index + 1}`}
-                    placeholder={`Step ${index + 1}`}
-                    value={step}
-                    onChange={(event) =>
-                      setSteps((current) =>
-                        current.map((value, rowIndex) =>
-                          rowIndex === index ? event.target.value : value
-                        )
-                      )
-                    }
-                    className={`${inputClass} min-h-20`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setSteps((current) =>
-                        current.filter((_, rowIndex) => rowIndex !== index)
-                      )
-                    }
-                    className="rounded border border-white/20 bg-white/10 px-3 py-2"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={() => setSteps((current) => [...current, ""])}
-              className="mt-2 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm"
-            >
-              + Add step
-            </button>
-          </div>
         </>
       )}
 
@@ -795,24 +767,24 @@ export default function BatchEditTypeFields({
         </div>
       )}
       <BatchEditAdditiveFields defaultValue={batch.additives ?? ""} />
-      {batch.type !== "Other" && (
-        <div>
-          <label className="mb-1 block font-semibold">Full process</label>
-          <PublicMentionTextarea
-            name="full_process"
-            defaultValue={batch.full_process ?? ""}
-            rows={8}
-            className={`${inputClass} min-h-40 resize-y`}
-          />
-        </div>
-      )}
+      <div>
+        <label className="mb-1 block font-semibold">Full process</label>
+        <PublicMentionTextarea
+          name="full_process"
+          defaultValue={batch.full_process ?? ""}
+          placeholder={fullProcessPlaceholder}
+          rows={8}
+          className={`${inputClass} h-40 resize-y`}
+        />
+      </div>
       <div>
         <label className="mb-1 block font-semibold">Notes</label>
         <PublicMentionTextarea
           name="notes"
           defaultValue={batch.notes ?? ""}
+          placeholder="Any additional notes about the batch..."
           rows={6}
-          className={`${inputClass} min-h-32 resize-y`}
+          className={`${inputClass} h-32 resize-y`}
         />
       </div>
     </>

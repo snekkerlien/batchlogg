@@ -36,29 +36,6 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-body:has([data-dashboard-page]) .app-background-image {
-  background-size: cover !important;
-  background-position: center 42% !important;
-}
-
-body:has([data-dashboard-page]) .app-background-fade {
-  display: none;
-}
-
-.app-background-dashboard-scrim {
-  opacity: 0;
-  background: radial-gradient(
-    ellipse at center 42%,
-    transparent 16%,
-    rgb(0 0 0 / 8%) 44%,
-    rgb(0 0 0 / 32%) 100%
-  );
-}
-
-body:has([data-dashboard-page]) .app-background-dashboard-scrim {
-  opacity: 1;
-}
-
 :is(
   input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="hidden"]),
   textarea,
@@ -76,6 +53,21 @@ body:has([data-dashboard-page]) .app-background-dashboard-scrim {
 #main-content:focus-visible {
   outline: none;
   box-shadow: none;
+}
+
+.download-release-notice {
+  border-color: rgb(255 255 255 / 25%);
+  background: rgb(255 255 255 / 5%);
+}
+
+.download-release-notice h2 {
+  color: #f4f4f5;
+}
+
+.download-release-notice__icon {
+  border-color: rgb(255 255 255 / 25%);
+  background: rgb(255 255 255 / 8%);
+  color: #e4e4e7;
 }
 
 .premium-feature-card {

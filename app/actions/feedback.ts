@@ -1,6 +1,7 @@
 "use server";
 
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
+import { sendStaffNotification } from "@/lib/notifications/email";
 
 const FEEDBACK_CATEGORIES = ["feedback", "suggestion", "bug"] as const;
 
@@ -45,5 +46,17 @@ export async function submitFeedback(formData: FormData) {
 
   if (error) throw new Error(`Could not send feedback: ${error.message}`);
 
-  // ⭐ Removed automatic roadmap insertion
+  let notificationSent = true;
+  try {
+    await sendStaffNotification(serviceRole, {
+      subject: `New ${category} submission`,
+      text: `From: ${profile?.username ?? user.email ?? "A member"}\nEmail: ${user.email ?? "Not provided"}\n\n${message}`,
+      path: "/admin/feedback",
+    });
+  } catch (notificationError) {
+    notificationSent = false;
+    console.error("Feedback was saved but its email notification failed", notificationError);
+  }
+
+  return { notificationSent };
 }

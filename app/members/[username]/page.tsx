@@ -574,7 +574,7 @@ const secondary = batchesRaw
               <Link
                 key={k.id}
                 href={`/members/${encodeURIComponent(profile.username)}/${k.id}`}
-                className="relative border border-white/10 rounded-xl p-4 bg-white/5 w-32 h-32 flex flex-col items-center justify-center transition overflow-hidden hover:bg-white/10"
+                className="relative rounded-xl border-0 p-4 bg-white/5 w-32 h-32 flex flex-col items-center justify-center shadow-md shadow-black/20 transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-black/30 overflow-hidden motion-reduce:transition-none motion-reduce:hover:translate-y-0 hover:bg-white/10"
               >
                 {(k.status === "Primary" || k.status === "Secondary") && (
                   <FermentationBubbles count={12} />

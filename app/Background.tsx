@@ -34,11 +34,6 @@ export default function Background({
         }}
       />
 
-      <div
-        aria-hidden="true"
-        className="app-background-dashboard-scrim fixed inset-0 -z-0 pointer-events-none"
-      />
-
       <FermentationBubbles variant="viewport" count={14} />
 
       {/* Innhold */}
