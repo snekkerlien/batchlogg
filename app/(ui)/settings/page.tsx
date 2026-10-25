@@ -69,6 +69,7 @@ export default function SettingsPage() {
   const pendingPreferencesSavesRef = useRef(0);
   const [user, setUser] = useState<any>(null);
   const [accountTier, setAccountTier] = useState<"free" | "premium">("free");
+  const [hasPremiumAccess, setHasPremiumAccess] = useState(false);
   const [username, setUsername] = useState("account");
   const [savedUsername, setSavedUsername] = useState("account");
   const [savingUsername, setSavingUsername] = useState(false);
@@ -144,6 +145,7 @@ export default function SettingsPage() {
       setUsername(profile.username || "account");
       setSavedUsername(profile.username || "account");
       setAccountTier(profile.account_tier === "premium" ? "premium" : "free");
+      setHasPremiumAccess(profile.has_premium_access === true);
       setThemeAccentColor(
         isAccentColor(profile.theme_accent_color)
           ? profile.theme_accent_color
@@ -550,7 +552,7 @@ export default function SettingsPage() {
           >
             Revisit the Batchlogg tour
           </button>
-          {accountTier === "premium" && (
+          {hasPremiumAccess && (
             <button
               type="button"
               onClick={() => window.dispatchEvent(new Event("batchlogg-open-premium-welcome"))}
