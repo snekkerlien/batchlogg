@@ -41,6 +41,10 @@ body:has([data-dashboard-page]) .app-background-image {
   background-position: center 42% !important;
 }
 
+body:has([data-dashboard-page]) .app-background-fade {
+  display: none;
+}
+
 .app-background-dashboard-scrim {
   opacity: 0;
   background: radial-gradient(
