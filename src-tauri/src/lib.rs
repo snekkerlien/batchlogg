@@ -5,6 +5,13 @@ pub fn run() {
     .plugin(tauri_plugin_opener::init())
     .plugin(tauri_plugin_updater::Builder::new().build())
     .setup(|app| {
+      use tauri::Manager;
+
+      let window = app
+        .get_webview_window("main")
+        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "Main window not found"))?;
+      window.set_zoom(1.0)?;
+
       let handle = app.handle().clone();
       tauri::async_runtime::spawn(async move {
         if let Err(error) = check_for_updates(handle).await {

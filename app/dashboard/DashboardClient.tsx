@@ -36,9 +36,19 @@ interface DashboardResponse {
   sharedKar: (KarType & { ownerUsername: string })[];
 }
 
+function displayBatchName(
+  batchName: string | null | undefined,
+  fallback: string
+): string {
+  const name = batchName?.trim();
+  const normalizedName = name?.toLowerCase();
+  return name && normalizedName !== "null" && normalizedName !== "undefined"
+    ? name
+    : fallback;
+}
+
 function sharedVesselName(vessel: KarType & { ownerUsername: string }): string {
-  if (vessel.batchName) return vessel.batchName;
-  return `Vessel ${vessel.nummer}`;
+  return displayBatchName(vessel.batchName, `Vessel ${vessel.nummer}`);
 }
 
 function vesselStageLabel(status: KarType["status"]): string {
@@ -233,9 +243,9 @@ useEffect(() => {
     selectedActiveBatches.length > 0
       ? `Deleting these vessels will also cancel and permanently delete ${
           selectedActiveBatches.length === 1
-            ? `the active batch “${selectedActiveBatches[0].batchName || "Unnamed batch"}” and its notes`
+            ? `the active batch “${displayBatchName(selectedActiveBatches[0].batchName, "Unnamed batch")}” and its notes`
             : `${selectedActiveBatches.length} active batches (${selectedActiveBatches
-                .map((vessel) => vessel.batchName || "Unnamed batch")
+                .map((vessel) => displayBatchName(vessel.batchName, "Unnamed batch"))
                 .join(", ")}) and their notes`
         }. Delete ${selectedKars.length} selected vessel${
           selectedKars.length === 1 ? "" : "s"
@@ -513,8 +523,10 @@ useEffect(() => {
       {selectMode && moveSourceVesselId && (
         <p className="mb-4 rounded-lg border border-green-400/30 bg-green-950/30 px-4 py-3 text-center text-sm text-green-100">
           Choose an empty vessel to move “
-          {kar.find((vessel) => vessel.id === moveSourceVesselId)?.batchName ||
-            "active batch"}
+          {displayBatchName(
+            kar.find((vessel) => vessel.id === moveSourceVesselId)?.batchName,
+            "active batch"
+          )}
           ” from Vessel{" "}
           {kar.find((vessel) => vessel.id === moveSourceVesselId)?.nummer}.
         </p>
@@ -626,7 +638,7 @@ useEffect(() => {
             <div
               className="text-lg font-bold text-green-300 text-center leading-tight line-clamp-2"
             >
-              {k.batchName || `Vessel ${k.nummer}`}
+              {displayBatchName(k.batchName, `Vessel ${k.nummer}`)}
             </div>
 
 
@@ -874,9 +886,12 @@ useEffect(() => {
         message={
           pendingMove
             ? `Move “${
-                kar.find(
-                  (vessel) => vessel.id === pendingMove.sourceVesselId
-                )?.batchName || "active batch"
+                displayBatchName(
+                  kar.find(
+                    (vessel) => vessel.id === pendingMove.sourceVesselId
+                  )?.batchName,
+                  "active batch"
+                )
               }” from Vessel ${
                 kar.find(
                   (vessel) => vessel.id === pendingMove.sourceVesselId
