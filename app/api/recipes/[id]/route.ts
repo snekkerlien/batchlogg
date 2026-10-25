@@ -161,6 +161,31 @@ export async function PATCH(
       );
     }
 
+    if (body.copyright_free !== undefined) {
+      const { data: recipe, error: recipeError } = await supabase
+        .from("recipes")
+        .select("source_recipe_id")
+        .eq("id", recipeId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (recipeError) {
+        console.error("Could not check recipe copyright ownership", recipeError);
+        return NextResponse.json(
+          { error: "Could not verify who owns this recipe's copyright status." },
+          { status: 500 }
+        );
+      }
+      if (!recipe) {
+        return NextResponse.json({ error: "Recipe not found." }, { status: 404 });
+      }
+      if (recipe.source_recipe_id) {
+        return NextResponse.json(
+          { error: "A copied recipe inherits the copyright status of its source." },
+          { status: 403 }
+        );
+      }
+    }
+
     // Body kan inneholde alle eller noen av disse:
     // name, ingredients, method, notes, og, fg, abv, volume, batch_id, is_public
     const updateData: any = {};

@@ -4,6 +4,7 @@ import { Qty, UnitAwareText } from "@/app/components/Units";
 import BeerColorGlass from "@/app/components/BeerColorGlass";
 import BitternessMeter from "@/app/components/BitternessMeter";
 import { formatSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
+import PublicMentionText from "@/app/components/PublicMentionText";
 import {
   getOtherRecipeIngredients,
   getOtherRecipeStyle,
@@ -355,7 +356,7 @@ export default function RecipePresentation({
           </RecipeSection>
         )}
 
-        {recipe.full_process && <RecipeSection title="Brewing method"><p className="whitespace-pre-line"><UnitAwareText text={recipe.full_process} /></p></RecipeSection>}
+        {recipe.full_process && <RecipeSection title="Brewing method"><p className="whitespace-pre-line"><PublicMentionText text={recipe.full_process} unitAware /></p></RecipeSection>}
         {recipe.additives && <RecipeSection title="Additives"><p className="whitespace-pre-line"><UnitAwareText text={recipe.additives} /></p></RecipeSection>}
 
         {hasSecondaryDetails && (
@@ -365,11 +366,11 @@ export default function RecipePresentation({
             ) : recipe.had_secondary ? (
               <p>This recipe includes a secondary fermentation.</p>
             ) : null}
-            {recipe.secondary_notes?.trim() && <p className="whitespace-pre-line text-white/65"><UnitAwareText text={recipe.secondary_notes} /></p>}
+            {recipe.secondary_notes?.trim() && <p className="whitespace-pre-line text-white/65"><PublicMentionText text={recipe.secondary_notes} unitAware /></p>}
           </RecipeSection>
         )}
 
-        {recipe.notes && <RecipeSection title="Brewer’s notes"><p className="whitespace-pre-line"><UnitAwareText text={recipe.notes} /></p></RecipeSection>}
+        {recipe.notes && <RecipeSection title="Brewer’s notes"><p className="whitespace-pre-line"><PublicMentionText text={recipe.notes} unitAware /></p></RecipeSection>}
       </div>
     </div>
   );

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import BaseLiquidField from "@/app/components/BaseLiquidField";
 import BeerStyleSelect from "@/app/components/BeerStyleSelect";
+import PublicMentionTextarea from "@/app/components/PublicMentionTextarea";
 import { UnitInput, UnitSymbol, useUnits } from "@/app/components/Units";
 import {
   BatchEditAdditiveFields,
@@ -797,7 +798,7 @@ export default function BatchEditTypeFields({
       {batch.type !== "Other" && (
         <div>
           <label className="mb-1 block font-semibold">Full process</label>
-          <textarea
+          <PublicMentionTextarea
             name="full_process"
             defaultValue={batch.full_process ?? ""}
             className={`${inputClass} min-h-32`}
@@ -806,7 +807,7 @@ export default function BatchEditTypeFields({
       )}
       <div>
         <label className="mb-1 block font-semibold">Notes</label>
-        <textarea
+        <PublicMentionTextarea
           name="notes"
           defaultValue={batch.notes ?? ""}
           className={`${inputClass} min-h-24`}

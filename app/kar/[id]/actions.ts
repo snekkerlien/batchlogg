@@ -18,6 +18,7 @@ import { parseSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
 import { isBeerStyle } from "@/lib/brewing/beerStyles";
 import { isBatchGuideDismissed } from "@/lib/brewing/batchGuide";
 import { getRecipeLimitStatus, recipeLimitError } from "@/lib/recipes/limits";
+import { validatePublicMentions } from "@/lib/community/mentions";
 
 
 
@@ -874,6 +875,15 @@ if (type === "Beer" && beerSubtype === "fresh_wort_kit") {
   const additives = (formData.get("additives") as string) || "";
   const full_process = (formData.get("full_process") as string) || "";
   const notes = (formData.get("notes") as string) || "";
+  if (
+    !(await validatePublicMentions(
+      serviceRole,
+      userId,
+      `${full_process}\n${notes}\n${secondary_notes}`
+    ))
+  ) {
+    throw new Error("Only your own currently public recipes and batches can be tagged.");
+  }
 
   // ---------------------------------------------------------
   // Build recipe text (oppskrift)
@@ -1273,7 +1283,7 @@ export async function cancelBatch(formData: FormData) {
 // 2. OVERFØR TIL SEKUNDÆR
 // ---------------------------------------------------------
 export async function moveToSecondary(formData: FormData) {
-  const { supabase } = supabaseServer();
+  const { supabase, serviceRole } = supabaseServer();
 
   const batchId = formData.get("batch_id") as string;
   const karId = formData.get("kar_id") as string;
@@ -1287,6 +1297,9 @@ export async function moveToSecondary(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Authentication required");
+  if (!(await validatePublicMentions(serviceRole, user.id, notes))) {
+    throw new Error("Only your own currently public recipes and batches can be tagged.");
+  }
 
   const { data: batch, error: batchError } = await supabase
     .from("batches")
@@ -1334,7 +1347,7 @@ export async function moveToSecondary(formData: FormData) {
 }
 
 export async function rackToConditioning(formData: FormData) {
-  const { supabase } = supabaseServer();
+  const { supabase, serviceRole } = supabaseServer();
 
   const batchId = String(formData.get("batch_id") ?? "");
   const karId = String(formData.get("kar_id") ?? "");
@@ -1346,6 +1359,9 @@ export async function rackToConditioning(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Authentication required");
+  if (!(await validatePublicMentions(serviceRole, user.id, notes))) {
+    throw new Error("Only your own currently public recipes and batches can be tagged.");
+  }
 
   const { data: batch, error: batchError } = await supabase
     .from("batches")
@@ -1462,6 +1478,9 @@ export async function addConditioningEntry(
   const occurredDate = new Date(selectedTime.getTime() + timezoneOffset * 60_000);
   const notes = String(formData.get("notes") ?? "").trim();
   if (notes.length > 3000) throw new Error("Notes must be 3000 characters or fewer");
+  if (!(await validatePublicMentions(serviceRole, user.id, notes))) {
+    throw new Error("Only your own currently public recipes and batches can be tagged.");
+  }
 
   const details: Record<string, string> = {};
   for (const field of conditioningEntryFields[entryType]) {
@@ -1663,11 +1682,13 @@ export async function finishBatch(formData: FormData) {
   if (!batchId || !karId) {
     throw new Error("Batch ID and vessel ID are required");
   }
-
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Authentication required");
+  if (!(await validatePublicMentions(serviceRole, user.id, `${finished_notes}\n${tasting_notes}`))) {
+    throw new Error("Only your own currently public recipes and batches can be tagged.");
+  }
 
   if (saveRecipe) {
     const limitStatus = await getRecipeLimitStatus(serviceRole, user.id);
@@ -2309,6 +2330,13 @@ export async function updateBatch(formData: FormData) {
   const notes = formData.get("notes");
   const secondary_additions = formData.get("secondary_additions");
   const secondary_notes = formData.get("secondary_notes");
+  const mentionText = ["full_process", "notes", "secondary_notes"]
+    .map((field) => formData.get(field))
+    .filter((value): value is string => typeof value === "string")
+    .join("\n");
+  if (!(await validatePublicMentions(serviceRole, user.id, mentionText))) {
+    throw new Error("Only your own currently public recipes and batches can be tagged.");
+  }
 
   const { data: firstReading, error: readingLookupError } = await serviceRole
     .from("sg_readings")

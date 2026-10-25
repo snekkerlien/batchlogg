@@ -10,6 +10,7 @@ import {
 import { isBeerStyle } from "@/lib/brewing/beerStyles";
 import { withOtherRecipeStyle } from "@/lib/recipes/otherRecipe";
 import { getRecipeLimitStatus, recipeLimitError } from "@/lib/recipes/limits";
+import { validatePublicMentions } from "@/lib/community/mentions";
 
 // -----------------------------
 // MAIN FUNCTION
@@ -265,6 +266,26 @@ export async function createRecipe(formData: FormData) {
   const had_secondary = formData.get("had_secondary") === "true";
   const secondary_additions = formData.get("secondary_additions") as string;
   const secondary_notes = formData.get("secondary_notes") as string;
+  try {
+    if (
+      !(await validatePublicMentions(
+        serviceRole,
+        user_id,
+        [full_process, notes, secondary_notes].filter(Boolean).join("\n")
+      ))
+    ) {
+      return {
+        success: false,
+        error: "Only your own currently public recipes and batches can be tagged.",
+      };
+    }
+  } catch (mentionError) {
+    console.error("Could not verify public recipe mentions", mentionError);
+    return {
+      success: false,
+      error: "Could not verify tagged items. Please try again.",
+    };
+  }
 
   const { error } = await supabase.from("recipes").insert({
     user_id,

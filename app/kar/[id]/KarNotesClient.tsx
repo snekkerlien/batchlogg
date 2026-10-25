@@ -6,7 +6,8 @@ import { deleteNoteServer } from "./deleteNoteServer";
 import { deleteImageServer } from "./deleteImage";
 import { addNote } from "@/app/actions/addNote";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
-import { UnitAwareText } from "@/app/components/Units";
+import PublicMentionTextarea from "@/app/components/PublicMentionTextarea";
+import PublicMentionText from "@/app/components/PublicMentionText";
 
 type NoteType = {
   id: string;
@@ -101,10 +102,10 @@ export function KarNotesClient({
         <input type="hidden" name="kar_id" value={karId} />
         <input type="hidden" name="user_id" value={userId} />
 
-        <textarea
+        <PublicMentionTextarea
           name="note"
           value={noteText}
-          onChange={(e) => setNoteText(e.target.value)}
+          onChange={setNoteText}
           placeholder="Make a note..."
           className="p-3 rounded bg-black/40 border border-white/20"
         />
@@ -151,7 +152,9 @@ export function KarNotesClient({
             </p>
 
             {note.note && (
-              <p className="mb-2 whitespace-pre-wrap"><UnitAwareText text={note.note} /></p>
+              <p className="mb-2 whitespace-pre-wrap">
+                <PublicMentionText text={note.note} unitAware />
+              </p>
             )}
 
             {note.image_url && (

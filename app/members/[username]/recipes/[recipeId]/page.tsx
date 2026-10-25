@@ -10,7 +10,7 @@ import PageHeading from "@/app/components/PageHeading";
 import PublicPageNavigation from "@/app/components/PublicPageNavigation";
 import RecipePresentation from "@/app/components/RecipePresentation";
 import StartPublicRecipeButton from "@/app/components/StartPublicRecipeButton";
-import { UnitAwareText } from "@/app/components/Units";
+import PublicMentionText from "@/app/components/PublicMentionText";
 
 export default async function RecipeNotesPage({
   params,
@@ -278,7 +278,7 @@ export default async function RecipeNotesPage({
                       )}
                       {outcome.share_tasting_notes_publicly && outcome.tasting_notes && (
                         <blockquote className="mt-3 border-l-2 border-green-500/50 pl-3 text-sm italic text-white/75">
-                          <UnitAwareText text={outcome.tasting_notes} />
+                          <PublicMentionText text={outcome.tasting_notes} unitAware />
                         </blockquote>
                       )}
                     </article>
@@ -347,7 +347,7 @@ export default async function RecipeNotesPage({
                         className="mt-3 rounded-lg"
                       />
                     )}
-                    {note.note && <p className="mt-3 whitespace-pre-line"><UnitAwareText text={note.note} /></p>}
+                    {note.note && <p className="mt-3 whitespace-pre-line"><PublicMentionText text={note.note} unitAware /></p>}
                   </article>
                 ))}
               </div>

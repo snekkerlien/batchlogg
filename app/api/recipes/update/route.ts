@@ -6,12 +6,14 @@
     import { hasPremiumAccess } from "@/lib/auth/plan";
     import { isBeerStyle } from "@/lib/brewing/beerStyles";
     import { withOtherRecipeStyle } from "@/lib/recipes/otherRecipe";
+    import { validatePublicMentions } from "@/lib/community/mentions";
 
 
     export const runtime = "nodejs";
 
     export async function POST(req: Request) {
     try {
+        const { serviceRole } = supabaseServer();
         const cookieStore = cookies();
 
         const supabase = createServerClient(
@@ -55,6 +57,26 @@
         const { id, ...fields } = body;
         if (!fields || typeof fields !== "object" || Array.isArray(fields)) {
             return NextResponse.json({ error: "Invalid recipe details." }, { status: 400 });
+        }
+        try {
+            if (
+                !(await validatePublicMentions(
+                    serviceRole,
+                    user.id,
+                    ["notes", "full_process", "secondary_notes"]
+                        .map((key) => fields[key])
+                        .filter((value) => typeof value === "string")
+                        .join("\n")
+                ))
+            ) {
+                return NextResponse.json(
+                    { error: "Only your own currently public recipes and batches can be tagged." },
+                    { status: 400 }
+                );
+            }
+        } catch (mentionError) {
+            console.error("Could not verify public recipe mentions", mentionError);
+            return NextResponse.json({ error: "Could not verify tagged items." }, { status: 500 });
         }
         const changeNote =
             typeof fields.changeNote === "string" ? fields.changeNote.trim() : null;
@@ -346,7 +368,6 @@
             return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
         }
 
-        const { serviceRole } = supabaseServer();
         if (await hasPremiumAccess(serviceRole, user.id)) {
             const { data: latestVersion, error: versionLookupError } = await serviceRole
                 .from("recipe_versions")

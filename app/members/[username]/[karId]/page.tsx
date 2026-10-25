@@ -9,6 +9,7 @@ import { translateOldRecipe } from "@/lib/translateOldRecipe";
 import PageHeading from "@/app/components/PageHeading";
 import ReportContentButton from "@/app/components/ReportContentButton";
 import { Qty, UnitAwareText } from "@/app/components/Units";
+import PublicMentionText from "@/app/components/PublicMentionText";
 import { formatSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
 
 type KarDetailParams = {
@@ -189,7 +190,7 @@ batch = translateOldRecipe(batch);
 
             {batch.secondary_notes && (
               <p className="opacity-80 mt-2 whitespace-pre-wrap">
-                Notes:<br /><UnitAwareText text={batch.secondary_notes} />
+                Notes:<br /><PublicMentionText text={batch.secondary_notes} unitAware />
               </p>
             )}
 
@@ -219,8 +220,8 @@ batch = translateOldRecipe(batch);
         )}
 
         <p className="whitespace-pre-line"><strong>Additives:</strong><br /><UnitAwareText text={batch.additives || "None"} /></p>
-        <p className="whitespace-pre-line"><strong>Full process:</strong><br /><UnitAwareText text={batch.full_process || "No process described"} /></p>
-        <p className="whitespace-pre-line"><strong>Notes:</strong><br /><UnitAwareText text={batch.notes || "No notes"} /></p>
+        <p className="whitespace-pre-line"><strong>Full process:</strong><br /><PublicMentionText text={batch.full_process || "No process described"} unitAware /></p>
+        <p className="whitespace-pre-line"><strong>Notes:</strong><br /><PublicMentionText text={batch.notes || "No notes"} unitAware /></p>
       </>
     )}
 
@@ -257,8 +258,8 @@ batch = translateOldRecipe(batch);
 
         <p><strong>Total boil time:</strong> {batch.boil_time || "Unknown"} min</p>
         <p className="whitespace-pre-line"><strong>Additives:</strong><br /><UnitAwareText text={batch.additives || "None"} /></p>
-        <p className="whitespace-pre-line"><strong>Full process:</strong><br /><UnitAwareText text={batch.full_process || "No process described"} /></p>
-        <p className="whitespace-pre-line"><strong>Notes:</strong><br /><UnitAwareText text={batch.notes || "No notes"} /></p>
+        <p className="whitespace-pre-line"><strong>Full process:</strong><br /><PublicMentionText text={batch.full_process || "No process described"} unitAware /></p>
+        <p className="whitespace-pre-line"><strong>Notes:</strong><br /><PublicMentionText text={batch.notes || "No notes"} unitAware /></p>
       </>
     )}
 
@@ -277,8 +278,8 @@ batch = translateOldRecipe(batch);
         <p><strong>Boil time:</strong> {batch.boil_time || "Unknown"} min</p>
         <p><strong>Honey:</strong> <Qty kind="kg" value={batch.honey_amount} fallback="?" /></p>
         <p className="whitespace-pre-line"><strong>Additives:</strong><br /><UnitAwareText text={batch.additives || "None"} /></p>
-        <p className="whitespace-pre-line"><strong>Full process:</strong><br /><UnitAwareText text={batch.full_process || "No process described"} /></p>
-        <p className="whitespace-pre-line"><strong>Notes:</strong><br /><UnitAwareText text={batch.notes || "No notes"} /></p>
+        <p className="whitespace-pre-line"><strong>Full process:</strong><br /><PublicMentionText text={batch.full_process || "No process described"} unitAware /></p>
+        <p className="whitespace-pre-line"><strong>Notes:</strong><br /><PublicMentionText text={batch.notes || "No notes"} unitAware /></p>
       </>
     )}
 
@@ -290,8 +291,8 @@ batch = translateOldRecipe(batch);
         <p><strong>Juice type:</strong> {batch.juice_type || "Unknown"}</p>
         <p><strong>Sugar added:</strong> <Qty kind="kg" value={batch.sugar_amount} fallback="?" /></p>
         <p className="whitespace-pre-line"><strong>Additives:</strong><br /><UnitAwareText text={batch.additives || "None"} /></p>
-        <p className="whitespace-pre-line"><strong>Full process:</strong><br /><UnitAwareText text={batch.full_process || "No process described"} /></p>
-        <p className="whitespace-pre-line"><strong>Notes:</strong><br /><UnitAwareText text={batch.notes || "No notes"} /></p>
+        <p className="whitespace-pre-line"><strong>Full process:</strong><br /><PublicMentionText text={batch.full_process || "No process described"} unitAware /></p>
+        <p className="whitespace-pre-line"><strong>Notes:</strong><br /><PublicMentionText text={batch.notes || "No notes"} unitAware /></p>
       </>
     )}
 
@@ -317,7 +318,7 @@ batch = translateOldRecipe(batch);
         )}
 
         <p className="whitespace-pre-line"><strong>Additives:</strong><br /><UnitAwareText text={batch.additives || "None"} /></p>
-        <p className="whitespace-pre-line"><strong>Notes:</strong><br /><UnitAwareText text={batch.notes || "No notes"} /></p>
+        <p className="whitespace-pre-line"><strong>Notes:</strong><br /><PublicMentionText text={batch.notes || "No notes"} unitAware /></p>
       </>
     )}
 

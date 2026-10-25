@@ -5,6 +5,7 @@ import * as Actions from "../../actions";
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import BatchEntryGuide from "@/app/components/BatchEntryGuide";
+import PublicMentionTextarea from "@/app/components/PublicMentionTextarea";
 import { useRecipePrefill } from "../../../../../lib/recipes/useRecipePrefill";
 import { UnitInput, UnitSymbol } from "../../../../components/Units";
 import {
@@ -171,7 +172,7 @@ export default function NewCiderPage({
           {/* Full process */}
           <div>
             <label className="block mb-1 font-semibold">Full process</label>
-            <textarea
+            <PublicMentionTextarea
               name="full_process"
               defaultValue={recipe?.full_process ?? ""}
               placeholder="Describe the fermentation process, rehydration, temperature, etc."
@@ -182,7 +183,7 @@ export default function NewCiderPage({
           {/* Notes */}
           <div>
             <label className="block mb-1 font-semibold">Notes</label>
-            <textarea
+            <PublicMentionTextarea
               name="notes"
               defaultValue={recipe?.notes ?? ""}
               placeholder="Any additional notes about the batch..."

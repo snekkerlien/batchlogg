@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
+import { validatePublicMentions } from "@/lib/community/mentions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -249,6 +250,18 @@ export async function POST(request: NextRequest) {
       { error: "Enter a message up to 2000 characters and choose a valid friend" },
       { status: 400 }
     );
+  }
+
+  try {
+    if (!(await validatePublicMentions(serviceRole, user.id, message))) {
+      return NextResponse.json(
+        { error: "Only your own currently public recipes and batches can be tagged." },
+        { status: 400 }
+      );
+    }
+  } catch (mentionError) {
+    console.error("Could not verify public message mentions", mentionError);
+    return NextResponse.json({ error: "Could not verify tagged items." }, { status: 500 });
   }
 
   try {

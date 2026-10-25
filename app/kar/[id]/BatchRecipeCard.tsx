@@ -3,8 +3,11 @@
 import type { ReactNode } from "react";
 import type { Batch } from "@/app/types/batchTypes";
 import { Qty, UnitAwareText } from "@/app/components/Units";
+import PublicMentionText from "@/app/components/PublicMentionText";
 
-function brewTypeLabel(batch: Batch): string {
+function brewTypeLabel(
+  batch: Pick<Batch, "type"> & Partial<Pick<Batch, "beer_subtype">>
+): string {
   if (batch.type !== "Beer") return batch.type;
 
   const subtypeLabels: Record<string, string> = {
@@ -19,6 +22,8 @@ function hasText(value: string | null | undefined): value is string {
   return Boolean(value?.trim());
 }
 
+type BatchRecipeDetails = Pick<Batch, "type"> & Partial<Omit<Batch, "type">>;
+
 function RecipeSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="rounded-lg border border-white/10 bg-black/15 p-4">
@@ -28,7 +33,13 @@ function RecipeSection({ title, children }: { title: string; children: ReactNode
   );
 }
 
-export default function BatchRecipeCard({ batch }: { batch: Batch }) {
+export default function BatchRecipeCard({
+  batch,
+  showNotes = true,
+}: {
+  batch: BatchRecipeDetails;
+  showNotes?: boolean;
+}) {
   const isBeerOrBraggot = batch.type === "Beer" || batch.type === "Braggot";
   const isWineCiderOrSeltzer =
     batch.type === "Wine" || batch.type === "Cider" || batch.type === "Seltzer";
@@ -217,10 +228,10 @@ export default function BatchRecipeCard({ batch }: { batch: Batch }) {
           <RecipeSection title="Additives"><p className="whitespace-pre-line"><UnitAwareText text={batch.additives} /></p></RecipeSection>
         )}
         {hasText(batch.full_process) && (
-          <RecipeSection title="Brewing method"><p className="whitespace-pre-line"><UnitAwareText text={batch.full_process} /></p></RecipeSection>
+          <RecipeSection title="Brewing method"><p className="whitespace-pre-line"><PublicMentionText text={batch.full_process} unitAware /></p></RecipeSection>
         )}
-        {hasText(batch.notes) && (
-          <RecipeSection title="Brewer’s notes"><p className="whitespace-pre-line"><UnitAwareText text={batch.notes} /></p></RecipeSection>
+        {showNotes && hasText(batch.notes) && (
+          <RecipeSection title="Brewer’s notes"><p className="whitespace-pre-line"><PublicMentionText text={batch.notes} unitAware /></p></RecipeSection>
         )}
       </div>
     </div>

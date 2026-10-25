@@ -20,6 +20,8 @@ import BeerColorGlass from "@/app/components/BeerColorGlass";
 import BeerStyleSelect from "@/app/components/BeerStyleSelect";
 import ExpandArrowButton from "@/app/components/ExpandArrowButton";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
+import PublicMentionTextarea from "@/app/components/PublicMentionTextarea";
+import PublicMentionText from "@/app/components/PublicMentionText";
 import {
   getOtherRecipeIngredients,
   getOtherRecipeStyle,
@@ -235,10 +237,26 @@ export default function RecipesPage() {
         }
       }
 
+      const sourceIds = [...new Set(sourceRecipeIds.values())];
+      let sourceCopyrightStatus = new Map<string, boolean | null>();
+      if (sourceIds.length > 0) {
+        const { data: sourceRecipes, error: sourceRecipesError } = await supabaseBrowser
+          .from("recipes")
+          .select("id, copyright_free")
+          .in("id", sourceIds);
+        if (sourceRecipesError) throw sourceRecipesError;
+        sourceCopyrightStatus = new Map(
+          (sourceRecipes ?? []).map((recipe) => [recipe.id, recipe.copyright_free === true])
+        );
+      }
+
       // ⭐ LEGG has_notes INN I RECIPES
       const recipesWithNotes = (recipesRaw ?? []).map((r) => ({
         ...r,
         source_recipe_id: sourceRecipeIds.get(r.id) ?? null,
+        source_copyright_free: sourceRecipeIds.has(r.id)
+          ? sourceCopyrightStatus.get(sourceRecipeIds.get(r.id)!) ?? null
+          : null,
         has_notes: notesMap[r.batch_id] || false,
       }));
 
@@ -961,6 +979,20 @@ function removeDryHop(index: number) {
                           </div>
                         }
                       />
+                      {r.source_recipe_id ? (
+                        <section className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+                          <p className="text-sm text-white/70">
+                            {r.source_copyright_free === true
+                              ? "The original author marked this recipe as copyright-free."
+                              : r.source_copyright_free === false
+                                ? "Copyright belongs to the original recipe author."
+                                : "Copyright status belongs to the original recipe author."}
+                          </p>
+                          <p className="mt-2 text-xs text-white/55">
+                            This private brewing copy does not transfer ownership or change the source recipe’s copyright.
+                          </p>
+                        </section>
+                      ) : (
                       <section className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
                         <p className="text-sm text-white/70">
                           Copyright belongs to you as the recipe uploader by
@@ -993,13 +1025,14 @@ function removeDryHop(index: number) {
                           </p>
                         )}
                       </section>
+                      )}
                       {r.notes_log?.length > 0 && (
                         <div className="rounded-xl border border-white/10 bg-white/[0.04] p-5">
                           <h3 className="mb-3 text-lg font-semibold text-green-300">Recipe note log</h3>
                           <ul className="space-y-2">
                             {r.notes_log.map((note: any, index: number) => (
                               <li key={note.id ?? index} className="whitespace-pre-line text-sm text-white/80">
-                                <UnitAwareText text={note.note} />
+                                <PublicMentionText text={note.note} unitAware />
                               </li>
                             ))}
                           </ul>
@@ -1072,9 +1105,13 @@ function removeDryHop(index: number) {
                         ? new Date(r.created_at).toLocaleDateString("en-GB")
                         : "date unavailable"}
                       {" · "}
-                      {r.copyright_free === true
-                        ? "Marked copyright-free by you"
-                        : `Copyright © ${r.created_at ? new Date(r.created_at).getFullYear() : new Date().getFullYear()} you. All rights reserved.`}
+                      {r.source_recipe_id
+                        ? r.source_copyright_free === true
+                          ? "Marked copyright-free by the original author"
+                          : "Copyright belongs to the original author"
+                        : r.copyright_free === true
+                          ? "Marked copyright-free by you"
+                          : `Copyright © ${r.created_at ? new Date(r.created_at).getFullYear() : new Date().getFullYear()} you. All rights reserved.`}
                     </p>
                   </div>
                 </div>
@@ -1754,14 +1791,14 @@ function removeDryHop(index: number) {
         </div>
 
         <label className="font-semibold">Full process</label>
-        <textarea
+        <PublicMentionTextarea
           name="full_process"
           defaultValue={editRecipe.full_process}
           className="p-3 rounded bg-black/40 border border-white/20"
         />
 
         <label className="font-semibold">Notes</label>
-        <textarea
+        <PublicMentionTextarea
           name="notes"
           defaultValue={editRecipe.notes}
           className="p-3 rounded bg-black/40 border border-white/20"

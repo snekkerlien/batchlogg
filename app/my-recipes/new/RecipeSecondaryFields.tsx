@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import FormField from "@/app/components/FormField";
+import PublicMentionTextarea from "@/app/components/PublicMentionTextarea";
 import {
   parseSecondaryAdditions,
   type SecondaryAdditionItem,
@@ -135,13 +136,13 @@ export default function RecipeSecondaryFields({
             />
           </div>
           <FormField id="recipe-secondary-notes" label="Secondary notes">
-            <textarea
+            <PublicMentionTextarea
               id="recipe-secondary-notes"
               name="secondary_notes"
               placeholder="Notes about the secondary fermentation..."
               className="h-28 w-full rounded border border-white/20 bg-black/40 p-3"
               value={notes}
-              onChange={(event) => setNotes(event.target.value)}
+              onChange={setNotes}
             />
           </FormField>
         </>

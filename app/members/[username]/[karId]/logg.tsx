@@ -1,5 +1,5 @@
 import { supabaseServer } from "../../../../lib/supabase/supabaseServerFinal";
-import { UnitAwareText } from "@/app/components/Units";
+import PublicMentionText from "@/app/components/PublicMentionText";
 
 export default async function Logg({ batchId }: { batchId: string }) {
   // ⭐ Bruk riktig serverklient med cookies
@@ -35,7 +35,7 @@ export default async function Logg({ batchId }: { batchId: string }) {
           ) : null}
 
           {n.note && (
-            <p className="mt-2 whitespace-pre-line"><UnitAwareText text={n.note} /></p>
+            <p className="mt-2 whitespace-pre-line"><PublicMentionText text={n.note} unitAware /></p>
           )}
         </div>
       ))}

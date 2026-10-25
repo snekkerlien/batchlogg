@@ -5,6 +5,7 @@ import * as Actions from "../../actions";
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import BatchEntryGuide from "@/app/components/BatchEntryGuide";
+import PublicMentionTextarea from "@/app/components/PublicMentionTextarea";
 import { useRecipePrefill } from "../../../../../lib/recipes/useRecipePrefill";
 import { UnitInput, UnitSymbol, useUnits } from "../../../../components/Units";
 import {
@@ -470,7 +471,7 @@ useEffect(() => {
           {/* Full process */}
           <div>
             <label className="block mb-1 font-semibold">Full process</label>
-            <textarea
+            <PublicMentionTextarea
               name="full_process"
               defaultValue={recipe?.full_process ?? ""}
               placeholder="Mash schedule, honey addition, fermentation plan..."
@@ -481,7 +482,7 @@ useEffect(() => {
           {/* Notes */}
           <div>
             <label className="block mb-1 font-semibold">Notes</label>
-            <textarea
+            <PublicMentionTextarea
               name="notes"
               defaultValue={recipe?.notes ?? ""}
               placeholder="Any additional notes about the batch..."

@@ -28,6 +28,7 @@ import VesselActivity from "./VesselActivity";
 import ExpandArrowButton from "@/app/components/ExpandArrowButton";
 import SplitBatchPanel from "./SplitBatchPanel";
 import ConditioningLog from "./ConditioningLog";
+import PublicMentionTextarea from "@/app/components/PublicMentionTextarea";
 
 const BatchSGChart = dynamic(
   () => import("@/app/components/BatchSGChart"),
@@ -1146,7 +1147,7 @@ const sharingSection = isOwner ? (
             </p>
             <label className="flex flex-col gap-2 text-sm font-medium">
               Conditioning notes (optional)
-              <textarea
+              <PublicMentionTextarea
                 name="conditioning_notes"
                 maxLength={3000}
                 rows={3}
@@ -1424,7 +1425,7 @@ const sharingSection = isOwner ? (
             </div>
           </fieldset>
 
-          <textarea
+          <PublicMentionTextarea
             name="finished_notes"
             placeholder="Finishing notes"
             className="p-3 rounded bg-black/40 border border-white/20"
@@ -1432,7 +1433,7 @@ const sharingSection = isOwner ? (
 
           <label className="flex flex-col gap-2 text-sm font-medium">
             Tasting notes (optional; you can add these later)
-            <textarea
+            <PublicMentionTextarea
               name="tasting_notes"
               rows={3}
               className="p-3 rounded bg-black/40 border border-white/20"

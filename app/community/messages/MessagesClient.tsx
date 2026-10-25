@@ -9,6 +9,8 @@ import PageHeading from "@/app/components/PageHeading";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import ReportContentButton from "@/app/components/ReportContentButton";
+import PublicMentionTextarea from "@/app/components/PublicMentionTextarea";
+import PublicMentionText from "@/app/components/PublicMentionText";
 
 interface Conversation {
   id: string;
@@ -338,8 +340,8 @@ export default function MessagesPage() {
         {status && <p role="status" className="mb-4 text-sm text-green-300">{status}</p>}
 
         {peerId ? (
-          <section className="overflow-hidden rounded-xl border border-white/10">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-white/5 p-4">
+          <section className="rounded-xl border border-white/10">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-t-xl border-b border-white/10 bg-white/5 p-4">
               <div className="flex items-center gap-3">
                 <button
                   type="button"
@@ -398,7 +400,7 @@ export default function MessagesPage() {
                 </button>
               </form>
             )}
-            {peer && <ol className="flex max-h-[55vh] min-h-72 flex-col gap-3 overflow-y-auto p-4">
+            {peer && <ol className="flex min-h-72 flex-col gap-3 p-4">
               {hasOlderMessages && (
                 <li className="self-center">
                   <button
@@ -415,7 +417,9 @@ export default function MessagesPage() {
                 const ownMessage = message.sender_id === userId;
                 return (
                   <li key={message.id} className={`max-w-[85%] rounded-xl p-3 ${ownMessage ? "self-end bg-green-800/70" : "self-start bg-white/10"}`}>
-                    <p className="whitespace-pre-wrap break-words">{message.body}</p>
+                    <p className="whitespace-pre-wrap break-words">
+                      <PublicMentionText text={message.body} />
+                    </p>
                     <time className="mt-2 block text-right text-xs text-white/55">
                       {new Date(message.created_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}
                     </time>
@@ -438,10 +442,10 @@ export default function MessagesPage() {
               }) : <li className="m-auto text-sm text-white/55">Start the conversation.</li>}
             </ol>}
             {peer && <form onSubmit={sendMessage} className="flex gap-2 border-t border-white/10 p-4">
-              <textarea
+              <PublicMentionTextarea
                 aria-label="Write a message"
                 value={messageText}
-                onChange={(event) => setMessageText(event.target.value)}
+                onChange={setMessageText}
                 onKeyDown={(event) => {
                   if (
                     event.key !== "Enter" ||
@@ -457,7 +461,10 @@ export default function MessagesPage() {
                 required
                 rows={2}
                 placeholder="Write a message…"
-                className="min-w-0 flex-1 resize-y rounded-lg border border-white/20 bg-black/40 p-3"
+                containerClassName="min-w-0 flex-1"
+                suggestionPlacement="above"
+                showReadableMentions
+                className="w-full resize-y rounded-lg border border-white/20 bg-black/40 p-3"
               />
               <button
                 type="submit"
@@ -536,7 +543,9 @@ export default function MessagesPage() {
                           )}
                         </span>
                         <span className={`block truncate text-sm ${conversation.unreadCount > 0 ? "font-medium text-white/85" : "text-white/60"}`}>
-                          {conversation.latest?.body || "No messages yet"}
+                          {conversation.latest?.body ? (
+                            <PublicMentionText text={conversation.latest.body} />
+                          ) : "No messages yet"}
                         </span>
                       </span>
                       {conversation.unreadCount > 0 && (

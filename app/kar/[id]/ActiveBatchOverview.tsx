@@ -7,7 +7,10 @@ import BeerColorGlass from "@/app/components/BeerColorGlass";
 import BitternessMeter from "@/app/components/BitternessMeter";
 
 type ActiveBatchOverviewProps = {
-  batch: Batch & { batchnummer?: string | number };
+  batch: Pick<Batch, "startdato" | "volume_l" | "og" | "type" | "status"> &
+    Partial<Pick<Batch, "beer_style" | "ibu" | "ebc">> & {
+      batchnummer?: string | number;
+    };
   secondary?: boolean;
 };
 
@@ -30,6 +33,10 @@ export default function ActiveBatchOverview({
 }: ActiveBatchOverviewProps) {
   const startDate = new Date(batch.startdato);
   const age = daysSince(batch.startdato);
+  const status = batch.status.toLocaleLowerCase();
+  const isFinished = ["ferdig", "finished", "avsluttet"].includes(status);
+  const isConditioning = status === "conditioning";
+  const isSecondary = secondary || ["sekundær", "secondary"].includes(status);
 
   return (
     <section aria-label="Batch overview" className="mb-5">
@@ -48,11 +55,13 @@ export default function ActiveBatchOverview({
           <Metric label="Beer style">{batch.beer_style}</Metric>
         )}
         <Metric label="Fermentation stage">
-          {batch.status === "Conditioning"
+          {isFinished
+            ? "Finished"
+            : isConditioning
             ? "Conditioning"
-            : secondary
-              ? "Secondary fermentation"
-              : "Primary fermentation"}
+              : isSecondary
+                ? "Secondary fermentation"
+                : "Primary fermentation"}
         </Metric>
         {(batch.type === "Beer" || batch.type === "Braggot") && batch.ibu != null && (
           <Metric label="Bitterness"><BitternessMeter ibu={Number(batch.ibu)} /></Metric>

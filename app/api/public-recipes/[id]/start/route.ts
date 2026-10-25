@@ -40,7 +40,21 @@ export async function POST(_request: Request, { params }: { params: { id: string
     console.error("Could not check saved recipe version", existingError);
     return NextResponse.json({ error: "Could not check your saved recipes." }, { status: 500 });
   }
-  if (existing) return NextResponse.json({ recipeId: existing.id });
+  if (existing) {
+    const { error: syncError } = await supabase
+      .from("recipes")
+      .update({ copyright_free: source.copyright_free === true })
+      .eq("id", existing.id)
+      .eq("user_id", user.id);
+    if (syncError) {
+      console.error("Could not sync saved recipe copyright status", syncError);
+      return NextResponse.json(
+        { error: "Could not sync the recipe's copyright status." },
+        { status: 500 }
+      );
+    }
+    return NextResponse.json({ recipeId: existing.id });
+  }
 
   let limitStatus: Awaited<ReturnType<typeof getRecipeLimitStatus>>;
   try {
@@ -63,14 +77,14 @@ export async function POST(_request: Request, { params }: { params: { id: string
   }
 
   const fields = Object.fromEntries(Object.entries(source).filter(([key]) =>
-    !["id", "user_id", "source_recipe_id", "created_at", "copyright_free"].includes(key)
+    !["id", "user_id", "source_recipe_id", "created_at"].includes(key)
   ));
   const { data: saved, error: saveError } = await supabase.from("recipes").insert({
     ...fields,
     user_id: user.id,
     source_recipe_id: source.id,
     is_public: false,
-    copyright_free: false,
+    copyright_free: source.copyright_free === true,
     batch_id: null,
   }).select("id").single();
   if (saveError) {

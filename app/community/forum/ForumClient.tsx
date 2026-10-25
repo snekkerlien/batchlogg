@@ -8,6 +8,8 @@ import ConfirmDialog from "@/app/components/ConfirmDialog";
 import PageHeading from "@/app/components/PageHeading";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import ReportContentButton from "@/app/components/ReportContentButton";
+import PublicMentionTextarea from "@/app/components/PublicMentionTextarea";
+import PublicMentionText from "@/app/components/PublicMentionText";
 import { forumDraftKey, forumTopicHref, parseForumReplyDraft } from "@/lib/community/forumDraft";
 import {
   encodeForumContent,
@@ -1391,10 +1393,11 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                       >
                         Message
                       </label>
-                      <textarea
+                      <PublicMentionTextarea
                         id={`edit-topic-body-${topic.id}`}
                         value={editBody}
-                        onChange={(event) => setEditBody(event.target.value)}
+                        onChange={setEditBody}
+                        showReadableMentions
                         maxLength={5000}
                         rows={4}
                         className="w-full rounded-lg border border-white/20 bg-black/40 p-3"
@@ -1499,7 +1502,11 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                 </div>
                 {editingTopic !== topic.id && (
                   <div className="mt-3">
-                    {topic.body && <p className="whitespace-pre-wrap">{topic.body}</p>}
+                    {topic.body && (
+                      <p className="whitespace-pre-wrap">
+                        <PublicMentionText text={topic.body} />
+                      </p>
+                    )}
                     <ForumImages images={topic.images} />
                     <ForumAttachmentCards
                       attachments={topic.attachments}
@@ -1551,9 +1558,10 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                             onSubmit={(event) => saveReplyEdit(event, reply)}
                             className="space-y-3"
                           >
-                            <textarea
+                            <PublicMentionTextarea
                               value={editBody}
-                              onChange={(event) => setEditBody(event.target.value)}
+                              onChange={setEditBody}
+                              showReadableMentions
                               maxLength={2000}
                               rows={3}
                               aria-label="Edit reply"
@@ -1580,7 +1588,11 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                         ) : (
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0 flex-1">
-                              {reply.body && <p className="whitespace-pre-wrap">{reply.body}</p>}
+                              {reply.body && (
+                                <p className="whitespace-pre-wrap">
+                                  <PublicMentionText text={reply.body} />
+                                </p>
+                              )}
                               <ForumImages images={reply.images} />
                               <ForumAttachmentCards attachments={reply.attachments} />
                             </div>
@@ -1647,12 +1659,13 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                         onSubmit={(event) => createReply(event, topic.id)}
                         className="space-y-3"
                       >
-                        <textarea
+                        <PublicMentionTextarea
                           value={replyBody}
-                          onChange={(event) => {
-                            setReplyBody(event.target.value);
-                            saveReplyDraft(topic.id, event.target.value, replyAttachments, replyImages);
+                          onChange={(value) => {
+                            setReplyBody(value);
+                            saveReplyDraft(topic.id, value, replyAttachments, replyImages);
                           }}
+                          showReadableMentions
                           maxLength={2000}
                           rows={3}
                           placeholder="Write a reply…"
@@ -1666,15 +1679,6 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                             saveReplyDraft(topic.id, replyBody, replyAttachments, files);
                           }}
                           setError={setError}
-                          disabled={submitting}
-                        />}
-                        {userId && !replyNeedsSignIn && <ForumAttachmentPicker
-                          choices={attachmentChoices}
-                          value={replyAttachments}
-                          onChange={attachments => {
-                            setReplyAttachments(attachments);
-                            saveReplyDraft(topic.id, replyBody, attachments, replyImages);
-                          }}
                           disabled={submitting}
                         />}
                         {draftMessage && <p role="status" className="text-xs text-white/60">{draftMessage}</p>}
@@ -1908,10 +1912,11 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
               <label className="block text-sm font-medium" htmlFor="forum-body">
                 Message
               </label>
-              <textarea
+              <PublicMentionTextarea
                 id="forum-body"
                 value={body}
-                onChange={(event) => setBody(event.target.value)}
+                onChange={setBody}
+                showReadableMentions
                 maxLength={5000}
                 rows={5}
                 placeholder="Share some details…"
@@ -2051,10 +2056,11 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
               <label className="block text-sm font-medium" htmlFor="community-recipe-message">
                 Message (optional)
               </label>
-              <textarea
+              <PublicMentionTextarea
                 id="community-recipe-message"
                 value={communityRecipeBody}
-                onChange={(event) => setCommunityRecipeBody(event.target.value)}
+                onChange={setCommunityRecipeBody}
+                showReadableMentions
                 maxLength={5000}
                 rows={4}
                 placeholder="Tell the community what makes this recipe special…"

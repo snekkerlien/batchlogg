@@ -7,7 +7,7 @@ import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 import BottleAging from "./BottleAging";
-import { UnitAwareText } from "@/app/components/Units";
+import PublicMentionText from "@/app/components/PublicMentionText";
 
 type BatchInsight = {
   id: string;
@@ -481,7 +481,7 @@ function NoteCard({ title, note }: { title: string; note: string }) {
     <section className="rounded-xl border border-white/10 bg-white/5 p-4">
       <h2 className="font-semibold text-green-200">{title}</h2>
       <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-white/75">
-        <UnitAwareText text={note} />
+        <PublicMentionText text={note} unitAware />
       </p>
     </section>
   );

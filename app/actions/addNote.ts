@@ -3,11 +3,12 @@
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { uploadNoteImage } from "@/lib/supabase/uploadNoteImage";
 import { revalidatePath } from "next/cache";
+import { validatePublicMentions } from "@/lib/community/mentions";
 
 export async function addNote(formData: FormData) {
   console.log("=== addNote START ===");
 
-  const { supabase } = await supabaseServer();
+  const { supabase, serviceRole } = await supabaseServer();
 
   const batchId = formData.get("batch_id")?.toString();
   const karId = formData.get("kar_id")?.toString();
@@ -30,6 +31,9 @@ export async function addNote(formData: FormData) {
 
   if (!user) throw new Error("Authentication required");
   if (!batchId || !karId) throw new Error("Batch and vessel IDs are required.");
+  if (!(await validatePublicMentions(serviceRole, user.id, note))) {
+    throw new Error("Only your own currently public recipes and batches can be tagged.");
+  }
 
   const { data: batch, error: batchError } = await supabase
     .from("batches")

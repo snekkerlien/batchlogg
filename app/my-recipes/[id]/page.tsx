@@ -13,6 +13,7 @@ import RecipeBatchResults from "./RecipeBatchResults";
 export default function RecipeNotesPage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(true);
   const [recipe, setRecipe] = useState<any>(null);
+  const [sourceCopyrightFree, setSourceCopyrightFree] = useState<boolean | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -32,6 +33,21 @@ export default function RecipeNotesPage({ params }: { params: { id: string } }) 
         .eq("id", params.id)
         .eq("user_id", session.user.id)
         .single();
+
+      if (recipeData?.source_recipe_id) {
+        const { data: sourceRecipe, error: sourceError } = await supabaseBrowser
+          .from("recipes")
+          .select("copyright_free")
+          .eq("id", recipeData.source_recipe_id)
+          .maybeSingle();
+        if (sourceError) {
+          console.error("Could not load source recipe copyright status", sourceError);
+        } else {
+          setSourceCopyrightFree(
+            sourceRecipe ? sourceRecipe.copyright_free === true : null
+          );
+        }
+      }
 
       setRecipe(recipeData ?? null);
       setLoading(false);
@@ -122,9 +138,15 @@ export default function RecipeNotesPage({ params }: { params: { id: string } }) 
             ? new Date(recipe.created_at).toLocaleDateString("en-GB")
             : "date unavailable"}{" "}
           ·{" "}
-          {recipe.copyright_free === true
-            ? "Marked copyright-free by you."
-            : "Copyright belongs to you as the recipe uploader."}
+          {recipe.source_recipe_id
+            ? sourceCopyrightFree === true
+              ? "Marked copyright-free by the original author."
+              : sourceCopyrightFree === false
+                ? "Copyright belongs to the original recipe author."
+                : "Copyright status belongs to the original recipe author."
+            : recipe.copyright_free === true
+              ? "Marked copyright-free by you."
+              : "Copyright belongs to you as the recipe uploader."}
         </p>
       </div>
     </main>

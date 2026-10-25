@@ -6,6 +6,7 @@ import {
   isForumCategory,
 } from "@/lib/community/forumContent";
 import { ensureCommunityAndRatingAchievementNotifications } from "@/lib/community/achievementNotifications";
+import { validatePublicMentions } from "@/lib/community/mentions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -53,6 +54,18 @@ export async function POST(request: NextRequest) {
       !hasForumContent(body.content)
     ) {
       return NextResponse.json({ error: "Invalid discussion details" }, { status: 400 });
+    }
+
+    try {
+      if (!(await validatePublicMentions(serviceRole, user.id, decodeForumContent(body.content).body))) {
+        return NextResponse.json(
+          { error: "Only your own currently public recipes and batches can be tagged." },
+          { status: 400 }
+        );
+      }
+    } catch (mentionError) {
+      console.error("Could not verify public forum mentions", mentionError);
+      return NextResponse.json({ error: "Could not verify tagged items." }, { status: 500 });
     }
 
     if (body.isCommunityRecipe === true) {
@@ -143,6 +156,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid reply details" }, { status: 400 });
   }
 
+  try {
+    if (!(await validatePublicMentions(serviceRole, user.id, decodeForumContent(body.content).body))) {
+      return NextResponse.json(
+        { error: "Only your own currently public recipes and batches can be tagged." },
+        { status: 400 }
+      );
+    }
+  } catch (mentionError) {
+    console.error("Could not verify public forum mentions", mentionError);
+    return NextResponse.json({ error: "Could not verify tagged items." }, { status: 500 });
+  }
+
   const { error } = await supabase.from("forum_replies").insert({
     topic_id: body.topicId,
     author_id: user.id,
@@ -161,7 +186,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const { supabase, user, error: authError } = await getContext();
+  const { supabase, serviceRole, user, error: authError } = await getContext();
   if (authError || !user) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
@@ -180,6 +205,18 @@ export async function PATCH(request: NextRequest) {
     body.content.length > 20_000
   ) {
     return NextResponse.json({ error: "Invalid forum content" }, { status: 400 });
+  }
+
+  try {
+    if (!(await validatePublicMentions(serviceRole, user.id, decodeForumContent(body.content).body))) {
+      return NextResponse.json(
+        { error: "Only your own currently public recipes and batches can be tagged." },
+        { status: 400 }
+      );
+    }
+  } catch (mentionError) {
+    console.error("Could not verify edited public forum mentions", mentionError);
+    return NextResponse.json({ error: "Could not verify tagged items." }, { status: 500 });
   }
 
   const table = body.type === "topic" ? "forum_topics" : "forum_replies";

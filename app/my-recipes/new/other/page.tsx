@@ -6,6 +6,7 @@ import * as Actions from "../../actions/createRecipe";
 import MenuOverlay from "../../MenuOverlay";
 import BackButton from "../../BackButton";
 import FormField from "@/app/components/FormField";
+import PublicMentionTextarea from "@/app/components/PublicMentionTextarea";
 import { UnitInput, UnitSymbol } from "../../../components/Units";
 import RecipeAdditiveFields from "../RecipeAdditiveFields";
 import RecipeSecondaryFields from "../RecipeSecondaryFields";
@@ -272,7 +273,7 @@ export default function NewOtherRecipePage() {
             <RecipeAdditiveFields />
           </div>
           <FormField id="recipe-process" label="Full process">
-            <textarea
+            <PublicMentionTextarea
               id="recipe-process"
               name="full_process"
               placeholder="Describe the overall preparation and fermentation process..."
@@ -281,7 +282,7 @@ export default function NewOtherRecipePage() {
           </FormField>
           {/* Notes */}
           <FormField id="recipe-notes" label="Notes">
-            <textarea
+            <PublicMentionTextarea
               id="recipe-notes"
               name="notes"
               placeholder="Any additional notes about the recipe..."

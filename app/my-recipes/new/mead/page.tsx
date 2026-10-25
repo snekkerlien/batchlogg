@@ -6,6 +6,7 @@ import * as Actions from "../../actions/createRecipe";
 import MenuOverlay from "../../MenuOverlay";
 import BackButton from "../../BackButton";
 import FormField from "@/app/components/FormField";
+import PublicMentionTextarea from "@/app/components/PublicMentionTextarea";
 import { UnitInput, UnitSymbol } from "../../../components/Units";
 import BaseLiquidField from "../../../components/BaseLiquidField";
 import RecipeAdditiveFields from "../RecipeAdditiveFields";
@@ -247,7 +248,7 @@ export default function NewMeadRecipePage() {
           </div>
           {/* Full process */}
           <FormField id="recipe-process" label="Full process">
-            <textarea
+            <PublicMentionTextarea
               id="recipe-process"
               name="full_process"
               placeholder="Rehydration, pitching, degassing schedule, fermentation notes..."
@@ -257,7 +258,7 @@ export default function NewMeadRecipePage() {
 
           {/* Notes */}
           <FormField id="recipe-notes" label="Notes">
-            <textarea
+            <PublicMentionTextarea
               id="recipe-notes"
               name="notes"
               placeholder="Any additional notes about the recipe..."

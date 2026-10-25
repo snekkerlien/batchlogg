@@ -6,6 +6,7 @@ import * as Actions from "../../actions/createRecipe";
 import MenuOverlay from "../../MenuOverlay";
 import BackButton from "../../BackButton";
 import FormField from "@/app/components/FormField";
+import PublicMentionTextarea from "@/app/components/PublicMentionTextarea";
 import { UnitInput, UnitSymbol, useUnits } from "../../../components/Units";
 import BeerStyleSelect from "@/app/components/BeerStyleSelect";
 import RecipeAdditiveFields from "../RecipeAdditiveFields";
@@ -665,7 +666,7 @@ function removeDryHop(index: number) {
           </div>
           {/* Full process */}
           <FormField id="recipe-process" label="Full process">
-            <textarea
+            <PublicMentionTextarea
               id="recipe-process"
               name="full_process"
               placeholder="Mash schedule, hop schedule..."
@@ -675,7 +676,7 @@ function removeDryHop(index: number) {
 
           {/* Notes */}
           <FormField id="recipe-notes" label="Notes">
-            <textarea
+            <PublicMentionTextarea
               id="recipe-notes"
               name="notes"
               placeholder="Any additional notes..."

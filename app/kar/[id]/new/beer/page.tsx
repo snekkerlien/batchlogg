@@ -5,6 +5,7 @@ import * as Actions from "../../actions";
 import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import BatchEntryGuide from "@/app/components/BatchEntryGuide";
+import PublicMentionTextarea from "@/app/components/PublicMentionTextarea";
 import { useRecipePrefill } from "../../../../../lib/recipes/useRecipePrefill";
 import { UnitInput, UnitSymbol, useUnits } from "../../../../components/Units";
 import BeerStyleSelect from "@/app/components/BeerStyleSelect";
@@ -760,7 +761,7 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
           {/* Full process */}
           <div>
             <label className="mb-2 block font-semibold">Full process</label>
-            <textarea
+            <PublicMentionTextarea
               name="full_process"
               defaultValue={recipe?.full_process ?? ""}
               placeholder="Mash schedule, hop schedule, fermentation plan..."
@@ -771,7 +772,7 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
           {/* Notes */}
           <div>
             <label className="mb-2 block font-semibold">Notes</label>
-            <textarea
+            <PublicMentionTextarea
               name="notes"
               defaultValue={recipe?.notes ?? ""}
               placeholder="Any additional notes about the batch..."

@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { createClient } from "@supabase/supabase-js";
 import * as Actions from "./actions";
+import PublicMentionTextarea from "@/app/components/PublicMentionTextarea";
+import PublicMentionText from "@/app/components/PublicMentionText";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -294,7 +296,7 @@ export default function ConditioningLog({
           </div>
           <label className="mt-4 flex flex-col gap-1.5 text-sm">
             <span>Notes (optional)</span>
-            <textarea
+            <PublicMentionTextarea
               name="notes"
               maxLength={3000}
               rows={3}
@@ -351,7 +353,11 @@ export default function ConditioningLog({
                     ))}
                   </dl>
                 )}
-                {entry.notes && <p className="mt-3 whitespace-pre-wrap text-sm text-white/75">{entry.notes}</p>}
+                {entry.notes && (
+                  <p className="mt-3 whitespace-pre-wrap text-sm text-white/75">
+                    <PublicMentionText text={entry.notes} />
+                  </p>
+                )}
               </li>
             );
           })}
