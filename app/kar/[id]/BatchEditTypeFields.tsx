@@ -801,7 +801,8 @@ export default function BatchEditTypeFields({
           <PublicMentionTextarea
             name="full_process"
             defaultValue={batch.full_process ?? ""}
-            className={`${inputClass} min-h-32`}
+            rows={8}
+            className={`${inputClass} min-h-40 resize-y`}
           />
         </div>
       )}
@@ -810,7 +811,8 @@ export default function BatchEditTypeFields({
         <PublicMentionTextarea
           name="notes"
           defaultValue={batch.notes ?? ""}
-          className={`${inputClass} min-h-24`}
+          rows={6}
+          className={`${inputClass} min-h-32 resize-y`}
         />
       </div>
     </>

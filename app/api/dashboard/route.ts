@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
   const [profileResult, karResult, sharesResult] = await Promise.all([
     serviceRole
       .from("profiles")
-      .select("username, account_tier, batch_reminders_enabled")
+      .select("username, account_tier, membership_status, batch_reminders_enabled")
       .eq("id", user.id)
       .maybeSingle(),
     serviceRole
@@ -243,7 +243,10 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(
     {
       username: profileResult.data?.username ?? "Unknown",
-      maxVessels: getMaxVessels(profileResult.data?.account_tier),
+      maxVessels: getMaxVessels(
+        profileResult.data?.account_tier,
+        profileResult.data?.membership_status
+      ),
       kar: vessels.map((vessel, index) => {
         const batch = batchByVessel.get(vessel.id);
         return {

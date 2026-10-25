@@ -140,7 +140,8 @@ export default function RecipeSecondaryFields({
               id="recipe-secondary-notes"
               name="secondary_notes"
               placeholder="Notes about the secondary fermentation..."
-              className="h-28 w-full rounded border border-white/20 bg-black/40 p-3"
+              rows={6}
+              className="min-h-32 w-full resize-y rounded border border-white/20 bg-black/40 p-3"
               value={notes}
               onChange={setNotes}
             />

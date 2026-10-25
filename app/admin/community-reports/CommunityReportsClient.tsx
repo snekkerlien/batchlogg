@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
@@ -19,6 +20,42 @@ interface Report {
   content_type: string;
   category: string | null;
   context_url: string | null;
+  assignedTo: string | null;
+  assignedToId: string | null;
+  moderator_notes: string | null;
+  escalated_at: string | null;
+  escalation_note: string | null;
+  contentHidden: boolean;
+  moderationActions: {
+    id: string;
+    action_type:
+      | "warning"
+      | "mute"
+      | "content_hidden"
+      | "content_restored"
+      | "escalation"
+      | "note"
+      | "assigned"
+      | "unassigned"
+      | "appeal_upheld"
+      | "appeal_overturned";
+    reason: string;
+    restriction_ends_at: string | null;
+    actor: string;
+    created_at: string;
+  }[];
+  appeals: {
+    id: string;
+    action_id: string;
+    appellant: string;
+    appeal_text: string;
+    status: "pending" | "upheld" | "overturned";
+    reviewed_by: string | null;
+    reviewer: string | null;
+    reviewed_at: string | null;
+    resolution_note: string | null;
+    created_at: string;
+  }[];
   history: {
     id: string;
     previous_status: string;
@@ -78,13 +115,24 @@ const REPORT_OUTCOMES: {
 
 export function CommunityReportsClient() {
   const [reports, setReports] = useState<Report[]>([]);
+  const [moderators, setModerators] = useState<{ id: string; username: string }[]>([]);
+  const [currentUserId, setCurrentUserId] = useState("");
+  const [canDeletePermanently, setCanDeletePermanently] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [contentTypeFilter, setContentTypeFilter] = useState("all");
+  const [ageFilter, setAgeFilter] = useState("all");
+  const [priorityFilter, setPriorityFilter] = useState("all");
+  const [assignmentFilter, setAssignmentFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [updatingReportId, setUpdatingReportId] = useState<string | null>(null);
   const [removingReportId, setRemovingReportId] = useState<string | null>(null);
   const [reportToRemove, setReportToRemove] = useState<Report | null>(null);
+  const [actionReason, setActionReason] = useState<Record<string, string>>({});
+  const [muteDurationDays, setMuteDurationDays] = useState(3);
+  const [appealResolution, setAppealResolution] = useState<Record<string, string>>({});
+  const [savingReportId, setSavingReportId] = useState<string | null>(null);
 
   const loadReports = useCallback(async () => {
     const response = await fetch("/api/admin/community-reports", {
@@ -94,6 +142,9 @@ export function CommunityReportsClient() {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Could not load reports");
     setReports(data.reports);
+    setModerators(data.moderators ?? []);
+    setCurrentUserId(data.currentUserId ?? "");
+    setCanDeletePermanently(data.canDeletePermanently === true);
   }, []);
 
   useEffect(() => {
@@ -134,6 +185,86 @@ export function CommunityReportsClient() {
     }
   }
 
+  async function updateReport(report: Report, body: Record<string, unknown>) {
+    setError("");
+    setSavingReportId(report.id);
+    try {
+      const response = await fetch("/api/admin/community-reports", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ id: report.id, ...body }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not update report");
+      try {
+        await loadReports();
+      } catch (refreshError) {
+        console.error("Report was updated but the queue could not refresh", refreshError);
+        setError("The report was updated, but the queue could not refresh.");
+      }
+      return true;
+    } catch (updateError) {
+      console.error("Could not update moderation report", updateError);
+      setError(updateError instanceof Error ? updateError.message : "Could not update report.");
+      return false;
+    } finally {
+      setSavingReportId(null);
+    }
+  }
+
+  async function applyModerationAction(
+    report: Report,
+    action: "warning" | "mute" | "hide" | "restore" | "escalate"
+  ) {
+    setError("");
+    setSavingReportId(report.id);
+    try {
+      const response = await fetch("/api/admin/community-reports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          id: report.id,
+          action,
+          reason: actionReason[report.id]?.trim(),
+          ...(action === "mute" ? { durationDays: muteDurationDays } : {}),
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not apply moderation action");
+      setActionReason((current) => ({ ...current, [report.id]: "" }));
+      try {
+        await loadReports();
+      } catch (refreshError) {
+        console.error("Moderation action succeeded but the queue could not refresh", refreshError);
+        setError("The moderation action succeeded, but the queue could not refresh.");
+      }
+    } catch (actionError) {
+      console.error("Could not apply moderation action", actionError);
+      setError(actionError instanceof Error ? actionError.message : "Could not apply moderation action.");
+    } finally {
+      setSavingReportId(null);
+    }
+  }
+
+  async function resolveAppeal(report: Report, appealId: string, status: "upheld" | "overturned") {
+    const resolutionNote = appealResolution[appealId]?.trim();
+    if (!resolutionNote) {
+      setError("Add a short decision note before resolving an appeal.");
+      return;
+    }
+    const success = await updateReport(report, {
+      action: "resolve_appeal",
+      appealId,
+      appealStatus: status,
+      resolutionNote,
+    });
+    if (success) {
+      setAppealResolution((current) => ({ ...current, [appealId]: "" }));
+    }
+  }
+
   async function removeReportedContent(report: Report) {
     setError("");
     setRemovingReportId(report.id);
@@ -159,39 +290,37 @@ export function CommunityReportsClient() {
 
   const filteredReports = reports.filter((report) => {
     const matchesStatus = statusFilter === "all" || report.status === statusFilter;
+    const matchesContentType =
+      contentTypeFilter === "all" || report.content_type === contentTypeFilter;
+    const ageDays = (Date.now() - new Date(report.created_at).getTime()) / (24 * 60 * 60 * 1000);
+    const matchesAge =
+      ageFilter === "all" ||
+      (ageFilter === "today" && ageDays < 1) ||
+      (ageFilter === "week" && ageDays < 7) ||
+      (ageFilter === "older" && ageDays >= 7);
+    const matchesPriority =
+      priorityFilter === "all" ||
+      (priorityFilter === "escalated" && Boolean(report.escalated_at)) ||
+      (priorityFilter === "multiple" && report.totalReportsAgainstUser >= 3);
+    const matchesAssignment =
+      assignmentFilter === "all" ||
+      (assignmentFilter === "unassigned" && !report.assignedToId) ||
+      (assignmentFilter === "mine" && report.assignedToId === currentUserId) ||
+      (assignmentFilter === "assigned" && Boolean(report.assignedToId));
     const query = search.trim().toLowerCase();
     const matchesSearch =
       !query ||
       [report.reporter, report.reported, report.reason, report.content_type, report.reportedMessage ?? ""]
         .some((value) => value.toLowerCase().includes(query));
-    return matchesStatus && matchesSearch;
+    return matchesStatus && matchesContentType && matchesAge && matchesPriority &&
+      matchesAssignment && matchesSearch;
   });
 
   return (
     <main className="min-h-screen px-2 py-12 text-white sm:px-6">
       <div className="relative mx-auto mt-12 max-w-4xl rounded-xl border border-white/10 bg-black/60 p-3 pt-16 backdrop-blur-md sm:p-10 sm:pt-16">
         <div className="absolute left-4 top-2 z-40 sm:top-4">
-          <Link
-            href="/admin"
-            aria-label="Back to Admin Dashboard"
-            className="flex items-center justify-center rounded-lg border border-white/20 bg-white/10 px-3 py-2 transition hover:bg-white/20"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="white"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M12 19l-7-7 7-7" />
-              <path d="M19 12H5" />
-            </svg>
-          </Link>
+          <BackButton />
         </div>
         <div className="absolute right-4 top-2 z-40 sm:top-4">
           <MenuOverlay current="admin" />
@@ -202,7 +331,7 @@ export function CommunityReportsClient() {
           subtitle="Review member reports and moderate reported content."
         />
 
-        <div className="mb-6 grid gap-3 sm:grid-cols-2">
+        <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <label className="block">
             <span className="sr-only">Search reports</span>
             <input
@@ -227,6 +356,57 @@ export function CommunityReportsClient() {
               <option value="closed">Closed</option>
             </select>
           </label>
+          <label className="block">
+            <span className="sr-only">Filter report content type</span>
+            <select
+              value={contentTypeFilter}
+              onChange={(event) => setContentTypeFilter(event.target.value)}
+              className="w-full rounded-lg border border-white/20 bg-black/40 p-3"
+            >
+              <option value="all">All content types</option>
+              {[...new Set(reports.map((report) => report.content_type))].sort().map((type) => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="sr-only">Filter report age</span>
+            <select
+              value={ageFilter}
+              onChange={(event) => setAgeFilter(event.target.value)}
+              className="w-full rounded-lg border border-white/20 bg-black/40 p-3"
+            >
+              <option value="all">Any age</option>
+              <option value="today">Received today</option>
+              <option value="week">Last 7 days</option>
+              <option value="older">Older than 7 days</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className="sr-only">Filter report priority</span>
+            <select
+              value={priorityFilter}
+              onChange={(event) => setPriorityFilter(event.target.value)}
+              className="w-full rounded-lg border border-white/20 bg-black/40 p-3"
+            >
+              <option value="all">All priorities</option>
+              <option value="escalated">Escalated</option>
+              <option value="multiple">3+ reports against member</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className="sr-only">Filter report assignment</span>
+            <select
+              value={assignmentFilter}
+              onChange={(event) => setAssignmentFilter(event.target.value)}
+              className="w-full rounded-lg border border-white/20 bg-black/40 p-3"
+            >
+              <option value="all">All assignments</option>
+              <option value="unassigned">Unassigned</option>
+              <option value="mine">Assigned to me</option>
+              <option value="assigned">Assigned to a moderator</option>
+            </select>
+          </label>
         </div>
 
         {error && (
@@ -247,7 +427,13 @@ export function CommunityReportsClient() {
           </div>
         ) : (
           <ul className="space-y-4">
-            {filteredReports.map((report) => (
+            {filteredReports.map((report) => {
+              const reportLocked = Boolean(
+                report.assignedToId &&
+                report.assignedToId !== currentUserId &&
+                !canDeletePermanently
+              );
+              return (
               <li
                 key={report.id}
                 className="rounded-xl border border-white/10 bg-white/5 p-5 transition hover:border-green-400/30 hover:bg-white/10"
@@ -263,8 +449,63 @@ export function CommunityReportsClient() {
                     <time className="mt-1 block text-xs text-zinc-400">
                       {new Date(report.created_at).toLocaleString()}
                     </time>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      {report.assignedToId ? (
+                        <>
+                          <span className="text-xs text-white/60">
+                            Assigned to {report.assignedTo}
+                          </span>
+                          {report.assignedToId === currentUserId && (
+                            <button
+                              type="button"
+                              disabled={savingReportId === report.id}
+                              onClick={() => void updateReport(report, { action: "unassign" })}
+                              className="rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/10 disabled:opacity-50"
+                            >
+                              Release
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        <label className="flex items-center gap-2 text-xs text-white/60">
+                          Assign to
+                          <select
+                            defaultValue=""
+                            disabled={savingReportId === report.id}
+                            onChange={(event) => {
+                              if (event.target.value) {
+                                void updateReport(report, {
+                                  action: "assign",
+                                  assignedToId: event.target.value,
+                                });
+                                event.target.value = "";
+                              }
+                            }}
+                            className="rounded border border-white/20 bg-black/50 px-2 py-1 text-white"
+                          >
+                            <option value="">Choose moderator</option>
+                            {moderators.map((moderator) => (
+                              <option key={moderator.id} value={moderator.id}>
+                                {moderator.username}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      )}
+                      {report.totalReportsAgainstUser >= 3 && (
+                        <span className="rounded-full border border-amber-300/25 bg-amber-300/10 px-2 py-1 text-xs text-amber-100">
+                          Multiple reports
+                        </span>
+                      )}
+                      {report.escalated_at && (
+                        <span className="rounded-full border border-red-300/25 bg-red-300/10 px-2 py-1 text-xs text-red-100">
+                          Escalated to admin
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  {["post", "reply", "message", "recipe"].includes(report.content_type) && (
+                  {canDeletePermanently &&
+                    ["post", "reply", "message", "recipe"].includes(report.content_type) && (
                     <button
                       type="button"
                       disabled={removingReportId === report.id || updatingReportId === report.id}
@@ -278,6 +519,11 @@ export function CommunityReportsClient() {
                 <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-white/80">
                   {report.reason}
                 </p>
+                {reportLocked && (
+                  <p className="mt-2 text-xs text-amber-100/70">
+                    Another moderator owns this review. Only they or an administrator can take action.
+                  </p>
+                )}
                 <p className="mt-2 text-xs text-white/50">
                   Reports against this member: {report.totalReportsAgainstUser}
                 </p>
@@ -339,6 +585,27 @@ export function CommunityReportsClient() {
                     >
                       Open reported content
                     </a>
+                )}
+                {report.moderationActions.length > 0 && (
+                  <details className="mt-4 border-t border-white/10 pt-3 text-sm">
+                    <summary className="cursor-pointer font-semibold text-white/75">
+                      Actions on this report ({report.moderationActions.length})
+                    </summary>
+                    <ul className="mt-2 space-y-2 text-xs text-white/65">
+                      {report.moderationActions.map((action) => (
+                        <li key={action.id} className="rounded border border-white/10 p-2">
+                          <p className="font-medium capitalize">{action.action_type}</p>
+                          <p className="mt-1">{action.reason}</p>
+                          {action.restriction_ends_at && (
+                            <p className="mt-1">Restriction ends {new Date(action.restriction_ends_at).toLocaleString()}</p>
+                          )}
+                          <p className="mt-1 text-white/45">
+                            {action.actor} · {new Date(action.created_at).toLocaleString()}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
                 )}
                 {report.history.length > 0 && (
                     <details className="mt-4 border-t border-white/10 pt-3 text-xs text-white/60">
@@ -430,6 +697,170 @@ export function CommunityReportsClient() {
                     </section>
                   </div>
                 </details>
+                <section className="mt-4 space-y-4 border-t border-white/10 pt-4">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wide text-white/55">
+                      Private moderator notes
+                      <textarea
+                        maxLength={2000}
+                        defaultValue={report.moderator_notes ?? ""}
+                        disabled={reportLocked}
+                        onChange={(event) => {
+                          setReports((current) =>
+                            current.map((item) =>
+                              item.id === report.id
+                                ? { ...item, moderator_notes: event.target.value }
+                                : item
+                            )
+                          );
+                        }}
+                        id={`report-notes-${report.id}`}
+                        className="mt-2 min-h-20 w-full resize-y rounded-lg border border-white/15 bg-black/40 p-3 text-sm normal-case"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      disabled={savingReportId === report.id || reportLocked}
+                      onClick={() => {
+                        const note = document.getElementById(`report-notes-${report.id}`);
+                        if (note instanceof HTMLTextAreaElement) {
+                          void updateReport(report, { action: "save_note", note: note.value });
+                        }
+                      }}
+                      className="mt-2 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold hover:bg-white/20 disabled:opacity-50"
+                    >
+                      Save private note
+                    </button>
+                  </div>
+
+                  <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                    <label className="block text-xs font-semibold uppercase tracking-wide text-white/55">
+                      Action reason
+                      <textarea
+                        value={actionReason[report.id] ?? ""}
+                        disabled={reportLocked}
+                        onChange={(event) =>
+                          setActionReason((current) => ({
+                            ...current,
+                            [report.id]: event.target.value,
+                          }))
+                        }
+                        maxLength={500}
+                        placeholder="Add a reason for the moderation action"
+                        className="mt-2 min-h-16 w-full resize-y rounded-lg border border-white/15 bg-black/40 p-3 text-sm normal-case"
+                      />
+                    </label>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={savingReportId === report.id || reportLocked || !actionReason[report.id]?.trim()}
+                        onClick={() => void applyModerationAction(report, "warning")}
+                        className="rounded-lg border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-xs font-semibold text-amber-100 hover:bg-amber-300/20 disabled:opacity-40"
+                      >
+                        Send warning
+                      </button>
+                      <label className="flex items-center gap-2 text-xs text-white/70">
+                        <span>Mute for</span>
+                        <select
+                          value={muteDurationDays}
+                          onChange={(event) => setMuteDurationDays(Number(event.target.value))}
+                          className="rounded border border-white/20 bg-black/50 px-2 py-2 text-white"
+                        >
+                          {[1, 3, 7, 14].map((days) => (
+                            <option key={days} value={days}>{days} days</option>
+                          ))}
+                        </select>
+                      </label>
+                      <button
+                        type="button"
+                        disabled={savingReportId === report.id || reportLocked || !actionReason[report.id]?.trim()}
+                        onClick={() => void applyModerationAction(report, "mute")}
+                        className="rounded-lg border border-orange-300/25 bg-orange-300/10 px-3 py-2 text-xs font-semibold text-orange-100 hover:bg-orange-300/20 disabled:opacity-40"
+                      >
+                        Apply posting mute
+                      </button>
+                      {(report.content_type === "post" || report.content_type === "reply") && (
+                        <button
+                          type="button"
+                          disabled={savingReportId === report.id || reportLocked || !actionReason[report.id]?.trim()}
+                          onClick={() =>
+                            void applyModerationAction(report, report.contentHidden ? "restore" : "hide")
+                          }
+                          className="rounded-lg border border-blue-300/25 bg-blue-300/10 px-3 py-2 text-xs font-semibold text-blue-100 hover:bg-blue-300/20 disabled:opacity-40"
+                        >
+                          {report.contentHidden ? "Restore forum content" : "Hide forum content"}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        disabled={savingReportId === report.id || reportLocked || !actionReason[report.id]?.trim()}
+                        onClick={() => void applyModerationAction(report, "escalate")}
+                        className="rounded-lg border border-red-300/25 bg-red-300/10 px-3 py-2 text-xs font-semibold text-red-100 hover:bg-red-300/20 disabled:opacity-40"
+                      >
+                        {report.escalated_at ? "Update admin escalation" : "Escalate to admin"}
+                      </button>
+                    </div>
+                    {report.escalation_note && (
+                      <p className="mt-2 text-xs text-white/55">
+                        Admin escalation note: {report.escalation_note}
+                      </p>
+                    )}
+                  </div>
+                </section>
+                {report.appeals.length > 0 && (
+                  <section className="mt-4 border-t border-white/10 pt-4">
+                    <h3 className="font-semibold text-white/80">Member appeals</h3>
+                    <ul className="mt-2 space-y-3">
+                      {report.appeals.map((appeal) => (
+                        <li key={appeal.id} className="rounded-lg border border-white/10 bg-black/20 p-3">
+                          <p className="text-xs text-white/50">
+                            {appeal.appellant} · {new Date(appeal.created_at).toLocaleString()} · {appeal.status}
+                          </p>
+                          <p className="mt-2 whitespace-pre-wrap text-sm text-white/80">{appeal.appeal_text}</p>
+                          {appeal.status === "pending" ? (
+                            <>
+                              <textarea
+                                value={appealResolution[appeal.id] ?? ""}
+                                disabled={reportLocked}
+                                onChange={(event) =>
+                                  setAppealResolution((current) => ({
+                                    ...current,
+                                    [appeal.id]: event.target.value,
+                                  }))
+                                }
+                                maxLength={1000}
+                                placeholder="Decision note for the member"
+                                className="mt-3 min-h-16 w-full resize-y rounded-lg border border-white/15 bg-black/40 p-3 text-sm"
+                              />
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  disabled={savingReportId === report.id || reportLocked}
+                                  onClick={() => void resolveAppeal(report, appeal.id, "upheld")}
+                                  className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold hover:bg-white/20 disabled:opacity-50"
+                                >
+                                  Uphold action
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={savingReportId === report.id || reportLocked}
+                                  onClick={() => void resolveAppeal(report, appeal.id, "overturned")}
+                                  className="rounded-lg border border-green-300/25 bg-green-300/10 px-3 py-2 text-xs font-semibold text-green-100 hover:bg-green-300/20 disabled:opacity-50"
+                                >
+                                  Overturn action
+                                </button>
+                              </div>
+                            </>
+                          ) : (
+                            <p className="mt-2 text-xs text-white/60">
+                              {appeal.resolution_note} · {appeal.reviewer ?? "Moderator"}
+                            </p>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
                 <div className="mt-4 border-t border-white/10 pt-3">
                   <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/50">
                     Available outcomes
@@ -439,7 +870,7 @@ export function CommunityReportsClient() {
                       <button
                         key={outcome.status}
                         type="button"
-                        disabled={updatingReportId === report.id}
+                        disabled={updatingReportId === report.id || reportLocked}
                         onClick={() => void updateStatus(report, outcome.status)}
                         className={`rounded-lg border px-3 py-2 text-xs font-semibold disabled:cursor-wait disabled:opacity-50 ${outcome.className}`}
                       >
@@ -449,7 +880,8 @@ export function CommunityReportsClient() {
                   </div>
                 </div>
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </div>

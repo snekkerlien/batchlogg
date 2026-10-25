@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
+import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
 import {
   decodeForumContent,
   hasForumContent,
@@ -27,6 +28,40 @@ export async function POST(request: NextRequest) {
   const { supabase, serviceRole, user, error: authError } = await getContext();
   if (authError || !user) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
+  let role;
+  try {
+    role = await getMembershipRole(supabase, user);
+  } catch (permissionError) {
+    console.error("Could not verify forum posting permissions", permissionError);
+    return NextResponse.json({ error: "Could not verify forum posting permissions" }, { status: 503 });
+  }
+  if (!hasPermission(role, "manage_users")) {
+    const now = new Date().toISOString();
+    const { data: mute, error: muteError } = await serviceRole
+      .from("user_restrictions")
+      .select("ends_at, reason")
+      .eq("user_id", user.id)
+      .eq("restriction_type", "mute")
+      .is("revoked_at", null)
+      .lte("starts_at", now)
+      .or(`ends_at.is.null,ends_at.gt.${now}`)
+      .maybeSingle();
+    if (muteError) {
+      console.error("Could not check forum posting restriction", muteError);
+      return NextResponse.json({ error: "Could not check forum posting permission" }, { status: 503 });
+    }
+    if (mute) {
+      return NextResponse.json(
+        {
+          error: mute.reason
+            ? `Forum posting is restricted: ${mute.reason}`
+            : "Forum posting is temporarily restricted.",
+          endsAt: mute.ends_at,
+        },
+        { status: 403 }
+      );
+    }
   }
 
   let body: {

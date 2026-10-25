@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import BackButton from "@/app/components/BackButton";
 import Link from "next/link";
 import Image from "next/image";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
@@ -260,31 +261,21 @@ export default function AccountPage() {
 
         {/* BACK BUTTON */}
         <div className="absolute top-2 sm:top-4 left-4 z-40">
-          <button
-            onClick={() => window.history.back()}
-            className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg flex items-center justify-center"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="white"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M12 19l-7-7 7-7" />
-              <path d="M19 12H5" />
-            </svg>
-          </button>
+          <BackButton />
         </div>
 
         <PageHeading
           title="My Account"
           subtitle="Manage your profile and visibility."
         />
+        <div className="mb-6 flex justify-center">
+          <Link
+            href="/my-account/moderation"
+            className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white/75 transition hover:bg-white/10"
+          >
+            Moderation history &amp; appeals
+          </Link>
+        </div>
         {loadError && (
           <div role="alert" className="mb-6 rounded-lg border border-amber-400/30 bg-amber-950/30 p-4 text-center text-sm text-amber-200">
             <p>{loadError}</p>
@@ -325,6 +316,7 @@ export default function AccountPage() {
         <MembershipStatus
           status={profile.membership_status}
           tier={profile.account_tier}
+          hasPremiumAccess={profile.has_premium_access}
         />
         <div className="mb-8 text-center">
           <Link
@@ -383,7 +375,7 @@ export default function AccountPage() {
                 <select
                   value={featuredRecipeId}
                   onChange={(event) => setFeaturedRecipeId(event.target.value)}
-                  disabled={!showcaseOpen || profile.account_tier !== "premium"}
+                  disabled={!showcaseOpen || !profile.has_premium_access}
                   className="mt-1 w-full rounded-lg border border-white/20 bg-black/40 p-3"
                 >
                   <option value="">No featured recipe</option>
@@ -392,7 +384,7 @@ export default function AccountPage() {
                   ))}
                 </select>
               </label>
-              {profile.account_tier !== "premium" && (
+              {!profile.has_premium_access && (
                 <p className="text-sm text-amber-200">
                   Upgrade to Premium to feature a public recipe on your profile.{" "}
                   <a

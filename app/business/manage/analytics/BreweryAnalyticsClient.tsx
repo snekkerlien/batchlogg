@@ -99,7 +99,7 @@ export default function BreweryAnalyticsClient() {
   return (
     <main className="min-h-screen px-4 py-10 text-white sm:px-6">
       <div className="relative mx-auto mt-8 max-w-5xl rounded-xl border border-white/10 bg-black/60 p-5 pt-16 backdrop-blur-md sm:p-9 sm:pt-16">
-        <div className="absolute left-4 top-3 z-40"><BackButton href="/business/manage" /></div>
+        <div className="absolute left-4 top-3 z-40"><BackButton /></div>
         <div className="absolute right-4 top-3 z-40"><MenuOverlay current="brewery" /></div>
         <PageHeading title="Business analytics" subtitle="Understand how customers discover and rate your products." />
 

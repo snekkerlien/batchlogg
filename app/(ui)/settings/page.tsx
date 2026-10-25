@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import BackButton from "@/app/components/BackButton";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import JSZip from "jszip";
@@ -534,13 +535,7 @@ export default function SettingsPage() {
           <MenuOverlay current="settings" />
         </div>
         <div className="absolute top-2 sm:top-4 left-4 z-40">
-          <button
-            onClick={() => router.back()}
-            className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg"
-            aria-label="Go back"
-          >
-            ←
-          </button>
+          <BackButton />
         </div>
 
         <PageHeading

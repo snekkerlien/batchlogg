@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 import { SponsorAnalyticsLinks } from "./SponsorAnalyticsLinks";
@@ -224,7 +224,9 @@ export function AdminAnalyticsClient({ sponsorToken }: { sponsorToken?: string }
       <div className="relative mx-auto mt-12 max-w-5xl rounded-xl border border-white/20 bg-zinc-950/95 p-6 pt-16 shadow-2xl backdrop-blur-xl sm:p-10">
         {!sponsorToken && (
           <>
-            <Link href="/admin" className="absolute left-4 top-4 rounded border border-white/25 bg-black/70 px-3 py-2 text-sm text-white hover:bg-black">Back to admin</Link>
+            <div className="absolute left-4 top-4">
+              <BackButton />
+            </div>
             <div className="absolute right-4 top-4"><MenuOverlay current="admin" /></div>
           </>
         )}

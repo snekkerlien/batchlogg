@@ -45,9 +45,13 @@ export default async function AdminPage() {
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-green-300">
             Batchlogg
           </p>
-          <h1 className="mt-3 text-4xl font-bold">Admin panel</h1>
+          <h1 className="mt-3 text-4xl font-bold">
+            {role === "moderator" ? "Moderator panel" : "Admin panel"}
+          </h1>
           <p className="mt-3 text-white/70">
-            Manage accounts, access, and community reports.
+            {role === "moderator"
+            ? "Review community reports, member actions, and moderation appeals."
+              : "Manage accounts, access, and community reports."}
           </p>
         </header>
 
@@ -77,6 +81,31 @@ export default async function AdminPage() {
               </div>
               <p className="mt-4 leading-relaxed text-white/70">
                 Review accounts and update user details.
+              </p>
+            </Link>
+          )}
+
+          {hasPermission(role, "manage_users") && (
+            <Link
+              href="/admin/premium-access"
+              className="group rounded-xl border border-white/10 bg-white/5 p-6 transition hover:border-green-400/40 hover:bg-white/10"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-wider text-green-300">
+                    Accounts
+                  </p>
+                  <h2 className="mt-2 text-2xl font-bold">Premium access</h2>
+                </div>
+                <span
+                  aria-hidden="true"
+                  className="text-2xl text-green-300 transition group-hover:translate-x-1"
+                >
+                  →
+                </span>
+              </div>
+              <p className="mt-4 leading-relaxed text-white/70">
+                Review Premium accounts and filter by manual, subscription, or role-based access.
               </p>
             </Link>
           )}
@@ -148,6 +177,31 @@ export default async function AdminPage() {
               <p className="mt-4 leading-relaxed text-white/70">
                 Review member reports, inspect reported content, and track
                 moderation history.
+              </p>
+            </Link>
+          )}
+
+          {hasPermission(role, "moderate_community_members") && (
+            <Link
+              href="/admin/moderation"
+              className="group rounded-xl border border-white/10 bg-white/5 p-6 transition hover:border-green-400/40 hover:bg-white/10"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-wider text-green-300">
+                    Moderation
+                  </p>
+                  <h2 className="mt-2 text-2xl font-bold">Member moderation</h2>
+                </div>
+                <span
+                  aria-hidden="true"
+                  className="text-2xl text-green-300 transition group-hover:translate-x-1"
+                >
+                  →
+                </span>
+              </div>
+              <p className="mt-4 leading-relaxed text-white/70">
+                Search members, issue warnings or temporary posting mutes, and review appeals.
               </p>
             </Link>
           )}

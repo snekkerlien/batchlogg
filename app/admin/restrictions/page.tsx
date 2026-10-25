@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
+import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 import RestrictionList from "./RestrictionList";
@@ -68,13 +69,7 @@ export default async function RestrictionsPage() {
     <main className="min-h-screen px-2 py-12 text-white sm:px-6">
       <div className="relative mx-auto mt-12 max-w-4xl rounded-xl border border-white/10 bg-black/60 p-3 pt-16 backdrop-blur-md sm:p-10 sm:pt-16">
         <div className="absolute left-4 top-2 z-40 sm:top-4">
-          <Link
-            href="/admin"
-            aria-label="Back to admin"
-            className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 hover:bg-white/20"
-          >
-            ←
-          </Link>
+          <BackButton />
         </div>
         <div className="absolute right-4 top-2 z-40 sm:top-4">
           <MenuOverlay current="admin" />

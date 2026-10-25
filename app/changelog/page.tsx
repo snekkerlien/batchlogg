@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
+import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 
@@ -14,7 +14,6 @@ interface ChangelogEntry {
 }
 
 export default function ChangelogClient() {
-  const router = useRouter();
   const [logs, setLogs] = useState<ChangelogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -70,13 +69,7 @@ export default function ChangelogClient() {
         </div>
 
         <div className="absolute top-2 sm:top-4 left-4 z-40">
-          <button
-            onClick={() => router.back()}
-            className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg"
-            aria-label="Go back"
-          >
-            ←
-          </button>
+          <BackButton />
         </div>
 
         <PageHeading

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 import { businessTypeLabel } from "@/lib/brewery/business";
@@ -95,7 +96,7 @@ export default function AdminBreweriesClient() {
   return (
     <main className="min-h-screen px-4 py-10 text-white sm:px-6">
       <div className="relative mx-auto mt-8 max-w-5xl rounded-xl border border-white/10 bg-black/60 p-5 pt-16 backdrop-blur-md sm:p-9 sm:pt-16">
-        <div className="absolute left-4 top-3 z-40"><Link href="/admin" className={buttonClass}>← Admin</Link></div>
+        <div className="absolute left-4 top-3 z-40"><BackButton /></div>
         <div className="absolute right-4 top-3 z-40"><MenuOverlay current="admin" /></div>
         <PageHeading title="Business accounts" subtitle="Review applications, grants, subscriptions, and reported product reviews." />
         {error && <p role="alert" className="mb-4 rounded-lg border border-red-400/30 bg-red-950/40 p-3 text-red-200">{error}</p>}

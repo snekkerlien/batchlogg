@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
+import PublicMentionText from "@/app/components/PublicMentionText";
 import { forumTopicHref } from "@/lib/community/forumDraft";
 
 interface ForumReplyNotification {
@@ -52,6 +53,9 @@ interface SocialNotification {
   read_at: string | null;
   actor_name: string;
   body: string;
+  notificationIds?: string[];
+  messageCount?: number;
+  unreadMessageCount?: number;
 }
 
 interface AchievementNotification {
@@ -198,7 +202,37 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
       return new Date(bDate).getTime() - new Date(aDate).getTime();
     });
 
-    setNotifications(combined);
+    const consolidated: Notification[] = [];
+    const messageGroups = new Map<string, SocialNotification>();
+    for (const notification of combined) {
+      if (notification.kind !== "social" || notification.type !== "message") {
+        consolidated.push(notification);
+        continue;
+      }
+
+      const group = messageGroups.get(notification.actor_id);
+      if (group) {
+        group.notificationIds?.push(notification.id);
+        group.messageCount = (group.messageCount ?? 1) + 1;
+        if (!notification.read_at) {
+          group.unreadMessageCount = (group.unreadMessageCount ?? 0) + 1;
+          group.read_at = null;
+        }
+        continue;
+      }
+
+      const groupedNotification: SocialNotification = {
+        ...notification,
+        id: `message-thread:${notification.actor_id}`,
+        notificationIds: [notification.id],
+        messageCount: 1,
+        unreadMessageCount: notification.read_at ? 0 : 1,
+      };
+      messageGroups.set(notification.actor_id, groupedNotification);
+      consolidated.push(groupedNotification);
+    }
+
+    setNotifications(consolidated);
     setUnreadCount(
       forumData.unreadCount +
         batchData.unreadCount +
@@ -371,7 +405,10 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          ids: [notification.id],
+          ids:
+            notification.kind === "social" && notification.type === "message"
+              ? notification.notificationIds ?? [notification.id]
+              : [notification.id],
           ...(notification.kind !== "achievement" &&
             notification.kind !== "social" &&
             notification.kind !== "batch_reminder" && {
@@ -393,7 +430,11 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
             : item
         )
       );
-      setUnreadCount((count) => Math.max(0, count - 1));
+      const unreadNotifications =
+        notification.kind === "social" && notification.type === "message"
+          ? notification.unreadMessageCount ?? 1
+          : 1;
+      setUnreadCount((count) => Math.max(0, count - unreadNotifications));
     }
 
     setOpen(false);
@@ -654,8 +695,8 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
                         <span className="mt-1 block truncate text-sm font-medium">
                           {notification.topic_title}
                         </span>
-                        <span className="mt-1 block text-sm text-white/70">
-                          {notification.reply_body}
+                        <span className="mt-1 line-clamp-3 block break-words text-sm text-white/70">
+                          <PublicMentionText text={notification.reply_body} compactMentions />
                         </span>
                         <span className="mt-2 block text-xs text-white/45">
                           {new Date(notification.created_at).toLocaleString(
@@ -723,14 +764,22 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
                         <span className="block text-sm font-semibold text-green-300">
                           {notification.type === "friend_request"
                             ? "Friend request"
-                            : "New message"}
+                            : (notification.messageCount ?? 1) > 1
+                              ? "New messages"
+                              : "New message"}
                         </span>
-                        <span className="mt-1 block truncate text-sm font-medium">
-                          {notification.actor_name}
+                        <span className="mt-1 flex items-center gap-2 text-sm font-medium">
+                          <span className="min-w-0 flex-1 truncate">{notification.actor_name}</span>
+                          {notification.type === "message" &&
+                            (notification.unreadMessageCount ?? 0) > 1 && (
+                              <span className="shrink-0 rounded-full border border-green-300/25 bg-green-300/10 px-1.5 py-0.5 text-[10px] font-semibold text-green-100">
+                                {notification.unreadMessageCount} unread
+                              </span>
+                            )}
                         </span>
                         {notification.body && (
-                          <span className="mt-1 block truncate text-sm text-white/70">
-                            {notification.body}
+                          <span className="mt-1 line-clamp-3 block break-words text-sm text-white/70">
+                            <PublicMentionText text={notification.body} compactMentions />
                           </span>
                         )}
                         <span className="mt-2 block text-xs text-white/45">

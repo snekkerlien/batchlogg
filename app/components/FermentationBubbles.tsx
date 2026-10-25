@@ -39,7 +39,7 @@ export default function FermentationBubbles({
           left: 4 + Math.random() * 92,
           duration,
           delay: -(duration * Math.random()),
-          size: 3 + Math.random() * 4,
+          size: (variant === "vessel" ? 4 : 3) + Math.random() * 4,
           drift: -8 + Math.random() * 16,
         };
       })
@@ -49,7 +49,7 @@ export default function FermentationBubbles({
       window.removeEventListener(REDUCED_MOTION_EVENT, updateMotionPreference);
       motionMedia.removeEventListener("change", updateMotionPreference);
     };
-  }, [count]);
+  }, [count, variant]);
 
   if (reducedMotion) return null;
 

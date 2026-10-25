@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import Link from "next/link";
+import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
@@ -173,9 +173,9 @@ export function AdminContentClient() {
   return (
     <main className="min-h-screen px-5 py-12 text-white">
       <div className="relative mx-auto mt-12 max-w-5xl rounded-xl border border-white/10 bg-black/60 p-6 pt-16 backdrop-blur-md sm:p-10">
-        <Link href="/admin" className="absolute left-4 top-4 rounded border border-white/20 px-3 py-2 text-sm">
-          Back to admin
-        </Link>
+        <div className="absolute left-4 top-4">
+          <BackButton />
+        </div>
         <div className="absolute right-4 top-4"><MenuOverlay current="admin" /></div>
         <PageHeading title="Site content" subtitle="Manage update notes and member announcements." />
         {error && <p role="alert" className="my-4 rounded border border-red-400/40 bg-red-900/30 p-3">{error}</p>}

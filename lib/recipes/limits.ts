@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { normalizePlanTier } from "@/lib/auth/plan";
+import { hasPremiumEntitlement } from "@/lib/auth/plan";
 import { FREE_RECIPE_LIMIT } from "@/lib/recipes/constants";
 
 export { FREE_RECIPE_LIMIT } from "@/lib/recipes/constants";
@@ -12,7 +12,7 @@ export async function getRecipeLimitStatus(
     await Promise.all([
       serviceRole
         .from("profiles")
-        .select("account_tier")
+        .select("account_tier, membership_status")
         .eq("id", userId)
         .maybeSingle(),
       serviceRole
@@ -35,7 +35,7 @@ export async function getRecipeLimitStatus(
 
   return {
     count: count ?? 0,
-    isPremium: normalizePlanTier(profile.account_tier) === "premium",
+    isPremium: hasPremiumEntitlement(profile.account_tier, profile.membership_status),
   };
 }
 

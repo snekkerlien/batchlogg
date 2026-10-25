@@ -1352,8 +1352,24 @@ export async function rackToConditioning(formData: FormData) {
   const batchId = String(formData.get("batch_id") ?? "");
   const karId = String(formData.get("kar_id") ?? "");
   const notes = String(formData.get("conditioning_notes") ?? "").trim();
+  const startDate = String(formData.get("conditioning_startdate") ?? "");
+  const timezoneOffset = Number(formData.get("timezone_offset_minutes"));
   if (!batchId || !karId) throw new Error("Batch ID and vessel ID are required");
   if (notes.length > 3000) throw new Error("Conditioning notes must be 3000 characters or fewer");
+  if (!Number.isInteger(timezoneOffset) || Math.abs(timezoneOffset) > 14 * 60) {
+    throw new Error("Could not determine the time zone for the conditioning date");
+  }
+  const calendarDate = new Date(`${startDate}T00:00:00.000Z`);
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(startDate) ||
+    Number.isNaN(calendarDate.getTime()) ||
+    calendarDate.toISOString().slice(0, 10) !== startDate
+  ) {
+    throw new Error("Enter a valid conditioning start date");
+  }
+  const conditioningStartedAt = new Date(
+    calendarDate.getTime() + timezoneOffset * 60_000
+  );
 
   const {
     data: { user },
@@ -1368,7 +1384,7 @@ export async function rackToConditioning(formData: FormData) {
     .select("id")
     .eq("id", batchId)
     .eq("aktivt_kar", karId)
-    .in("status", ["Sekundær", "secondary"])
+    .in("status", ["Aktiv", "Sekundær", "secondary"])
     .maybeSingle();
   if (batchError) throw new Error(`Could not verify batch: ${batchError.message}`);
   if (!batch) throw new Error("Batch not found or access denied");
@@ -1377,7 +1393,7 @@ export async function rackToConditioning(formData: FormData) {
     .from("batches")
     .update({
       status: "Conditioning",
-      conditioning_startdate: new Date().toISOString(),
+      conditioning_startdate: conditioningStartedAt.toISOString(),
       conditioning_notes: notes || null,
     })
     .eq("id", batchId)
@@ -1424,7 +1440,7 @@ const conditioningEntryTypes = [
 type ConditioningEntryType = (typeof conditioningEntryTypes)[number];
 
 const conditioningEntryFields: Record<ConditioningEntryType, string[]> = {
-  rack: ["from_vessel", "to_vessel", "volume", "gravity"],
+  rack: ["volume", "volume_loss_l", "gravity"],
   clarify: ["agent", "amount", "unit", "contact_time"],
   mature: ["vessel", "temperature", "target_date"],
   stabilize: ["product", "amount", "unit", "wait_hours"],
@@ -1437,7 +1453,6 @@ const conditioningEntryFields: Record<ConditioningEntryType, string[]> = {
 const requiredConditioningEntryFields: Partial<
   Record<ConditioningEntryType, string[]>
 > = {
-  rack: ["to_vessel"],
   clarify: ["agent"],
   stabilize: ["product"],
   backsweeten: ["sweetener"],
@@ -1492,14 +1507,21 @@ export async function addConditioningEntry(
     if (!details[field]) throw new Error(`Enter ${field.replace(/_/g, " ")}`);
   }
 
-  for (const field of ["amount", "volume", "gravity", "temperature", "wait_hours"]) {
+  for (const field of [
+    "amount",
+    "volume",
+    "volume_loss_l",
+    "gravity",
+    "temperature",
+    "wait_hours",
+  ]) {
     const value = details[field];
     if (value === undefined) continue;
     const number = Number(value);
     if (
       !Number.isFinite(number) ||
       (field !== "temperature" && number < 0) ||
-      (field !== "wait_hours" && field !== "temperature" && number === 0)
+      (!["wait_hours", "temperature", "volume_loss_l"].includes(field) && number === 0)
     ) {
       throw new Error(`Enter a valid ${field.replace("_", " ")}`);
     }

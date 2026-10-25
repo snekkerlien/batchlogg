@@ -20,7 +20,7 @@ async function syncSubscription(
 
   let query = serviceRole
     .from("profiles")
-    .select("id, account_tier, premium_grant_source")
+    .select("id, account_tier, premium_grant_source, membership_status")
     .limit(1);
   query = userId
     ? query.eq("id", userId)
@@ -51,7 +51,7 @@ async function syncSubscription(
     update.account_tier = accountTier;
     update.premium_grant_source = active ? "stripe" : null;
   }
-  update.max_vessels = getMaxVessels(accountTier);
+  update.max_vessels = getMaxVessels(accountTier, profile.membership_status);
 
   const { error: updateError } = await serviceRole
     .from("profiles")

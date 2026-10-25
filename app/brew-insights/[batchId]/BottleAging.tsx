@@ -268,15 +268,15 @@ export default function BottleAging({ batchId }: { batchId: string }) {
                     className="rounded-lg border border-white/20 bg-black/40 p-3 text-white sm:max-w-xs"
                   />
                 </label>
-                <label className="flex flex-col gap-2 text-sm">
+                <label className="flex w-full flex-col gap-2 text-sm">
                   Tasting notes
                   <textarea
                     required
                     maxLength={2000}
-                    rows={3}
+                    rows={6}
                     value={notes}
                     onChange={(event) => setNotes(event.target.value)}
-                    className="rounded-lg border border-white/20 bg-black/40 p-3 text-white"
+                    className="min-h-32 w-full resize-y rounded-lg border border-white/20 bg-black/40 p-3 text-white"
                     placeholder="How has the flavor, aroma, or carbonation changed?"
                   />
                 </label>

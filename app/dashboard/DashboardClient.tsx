@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
+import { motion, useAnimationControls, useReducedMotion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
 import { getNextMotd } from "../../lib/motd/motdList";
@@ -10,6 +10,7 @@ import ConfirmDialog from "@/app/components/ConfirmDialog";
 import PageHeading from "@/app/components/PageHeading";
 import FermentationBubbles from "@/app/components/FermentationBubbles";
 import DashboardGuide from "./DashboardGuide";
+import { PREMIUM_MAX_VESSELS } from "@/lib/vessels/limits";
 
 
 interface KarType {
@@ -78,6 +79,10 @@ function isCreatedKar(
 export default function DashboardClient() {
  
   const router = useRouter();
+  const addVesselAnimation = useAnimationControls();
+  const addVesselPlusAnimation = useAnimationControls();
+  const addVesselSparkleAnimation = useAnimationControls();
+  const prefersReducedMotion = useReducedMotion();
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -216,6 +221,12 @@ useEffect(() => {
       selectedKars.includes(vessel.id) &&
       vessel.activeBatchId &&
       (vessel.status === "Aktiv" || vessel.status === "Sekundær" || vessel.status === "Conditioning")
+  );
+  const vesselGridItemCount = kar.length + (kar.length < maxVessels ? 1 : 0);
+  const maxGridColumns = maxVessels >= PREMIUM_MAX_VESSELS ? 5 : 3;
+  const vesselGridColumns = Math.min(
+    maxGridColumns,
+    Math.max(1, Math.ceil(Math.sqrt(vesselGridItemCount)))
   );
 
   const deleteConfirmationMessage =
@@ -427,7 +438,15 @@ useEffect(() => {
   
 
   return (
-    <div className="bg-black/60 backdrop-blur-md p-6 pt-16 sm:p-8 sm:pt-16 rounded-xl border border-white/10 max-w-3xl mx-auto mt-20 sm:mt-24 relative">
+    <div
+      className={`relative mx-auto mt-20 rounded-xl border border-white/10 bg-black/60 p-6 pt-16 backdrop-blur-md sm:mt-24 sm:p-8 sm:pt-16 ${
+        vesselGridColumns >= 5
+          ? "max-w-5xl"
+          : vesselGridColumns === 4
+            ? "max-w-4xl"
+            : "max-w-3xl"
+      }`}
+    >
       {fadeMessage && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-600/80 text-white px-4 py-2 rounded-lg animate-fadeOut z-50">
           {fadeMessage}
@@ -451,19 +470,19 @@ useEffect(() => {
       <nav aria-label="Brewing workflow shortcuts" className="mb-8 flex flex-wrap justify-center gap-3">
         <a
           href="/my-recipes"
-          className="rounded-lg border border-green-500/50 bg-green-800/60 px-4 py-2 text-sm font-semibold hover:bg-green-700"
+          className="rounded-lg border border-green-500/50 bg-green-800/60 px-4 py-2 text-sm font-semibold shadow-md shadow-black/20 transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-1 hover:bg-green-700 hover:shadow-lg hover:shadow-black/30 active:translate-y-0 active:scale-[0.98] active:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
         >
           Plan a recipe
         </a>
         <a
           href="/batch-history"
-          className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20"
+          className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold shadow-md shadow-black/20 transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-1 hover:bg-white/20 hover:shadow-lg hover:shadow-black/30 active:translate-y-0 active:scale-[0.98] active:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
         >
           Review batches
         </a>
         <a
           href="/brew-insights"
-          className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20"
+          className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold shadow-md shadow-black/20 transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-1 hover:bg-white/20 hover:shadow-lg hover:shadow-black/30 active:translate-y-0 active:scale-[0.98] active:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
         >
           Learn from results
         </a>
@@ -501,13 +520,6 @@ useEffect(() => {
         </p>
       )}
 
-      {selectMode && !moveSourceVesselId && (
-        <p className="mb-4 rounded-lg border border-amber-300/20 bg-amber-300/5 px-4 py-3 text-center text-sm text-amber-100/80">
-          Select vessels to delete. Deleting a vessel with an active batch also
-          permanently deletes that batch and its notes.
-        </p>
-      )}
-
       {moveNotice && (
         <p
           role={moveNotice.isError ? "alert" : "status"}
@@ -521,7 +533,12 @@ useEffect(() => {
         </p>
       )}
 
-      <div className="flex flex-wrap items-start justify-center gap-6">
+      <div
+        className="mx-auto flex w-full flex-wrap items-start justify-center gap-4 sm:gap-6"
+        style={{
+          maxWidth: `calc(${vesselGridColumns} * 8rem + ${vesselGridColumns - 1} * 1.5rem)`,
+        }}
+      >
         {kar.map((k) => (
           <div key={k.id} className="flex w-32 flex-col items-center gap-3">
           <motion.a
@@ -552,7 +569,7 @@ useEffect(() => {
               }
             }}
             style={k.isShared ? sharedVesselCardStyle : undefined}
-            className={`relative border rounded-xl p-4 bg-white/5 w-32 h-32 flex flex-col items-center justify-center transition-colors overflow-hidden
+            className={`relative border rounded-xl p-4 bg-white/5 w-32 h-32 flex flex-col items-center justify-center shadow-md shadow-black/20 transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-black/30 overflow-hidden motion-reduce:transition-none motion-reduce:hover:translate-y-0
               ${k.isShared ? "" : "border-white/10"}
               ${
                 selectMode && selectedKars.includes(k.id)
@@ -634,7 +651,7 @@ useEffect(() => {
                     setSelectedKars([]);
                     setMoveNotice(null);
                   }}
-                  className="w-full rounded-lg border border-white/15 bg-white/5 px-2 py-1.5 text-xs font-semibold text-white/75 transition hover:bg-white/10"
+                  className="w-full rounded-lg border border-white/15 bg-white/5 px-2 py-1.5 text-xs font-semibold text-white/75 shadow-md shadow-black/20 transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-1 hover:bg-white/10 hover:shadow-lg hover:shadow-black/30 active:translate-y-0 active:scale-[0.98] active:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
                 >
                   {moveSourceVesselId === k.id ? "Cancel move" : "Move batch"}
                 </button>
@@ -643,14 +660,36 @@ useEffect(() => {
           </div>
         ))}
 
-        {(selectMode || kar.length < maxVessels) && (
+        {kar.length < maxVessels && (
           <motion.button
             layout
             transition={{ layout: { duration: 0.22, ease: "easeOut" } }}
             onClick={() => {
+              if (!prefersReducedMotion) {
+                void Promise.all([
+                  addVesselAnimation.start({
+                    y: [0, -8, 0, -3, 0],
+                    rotate: [0, -3, 3, -2, 0],
+                    scale: [1, 1.06, 0.98, 1.02, 1],
+                    transition: { duration: 0.62, ease: "easeOut" },
+                  }),
+                  addVesselPlusAnimation.start({
+                    scale: [1, 1.45, 0.8, 1.15, 1],
+                    rotate: [0, 90, 180, 270, 360],
+                    transition: { duration: 0.62, ease: "easeOut" },
+                  }),
+                  addVesselSparkleAnimation.start({
+                    opacity: [0, 1, 0],
+                    scale: [0.4, 1, 0.3],
+                    y: [4, -10, -18],
+                    transition: { duration: 0.52, ease: "easeOut" },
+                  }),
+                ]);
+              }
               if (selectMode) toggleSelectMode();
               void createKar();
             }}
+            animate={addVesselAnimation}
             disabled={creatingKar || kar.length >= maxVessels}
             aria-label={creatingKar ? "Creating vessel" : "Create vessel"}
             title={
@@ -658,9 +697,49 @@ useEffect(() => {
                 ? `Vessel limit reached (${maxVessels})`
                 : "Create vessel"
             }
-            className="border border-white/10 bg-white/5 hover:bg-white/10 disabled:opacity-60 disabled:cursor-wait rounded-xl p-4 w-32 h-32 flex items-center justify-center text-white text-3xl font-bold"
+            className="flex h-32 w-32 items-center justify-center rounded-xl border border-white/10 bg-white/5 p-4 text-3xl font-bold text-white shadow-md shadow-black/20 transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-1 hover:bg-white/10 hover:shadow-lg hover:shadow-black/30 active:translate-y-0 active:scale-[0.98] active:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-wait disabled:opacity-60 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
           >
-            {creatingKar ? "…" : "+"}
+            <motion.span
+              aria-hidden="true"
+              animate={addVesselPlusAnimation}
+              className="relative z-10"
+            >
+              {creatingKar ? "…" : "+"}
+            </motion.span>
+            <motion.span
+              aria-hidden="true"
+              animate={addVesselSparkleAnimation}
+              initial={{ opacity: 0, scale: 0.3 }}
+              className="pointer-events-none absolute left-7 top-7 text-sm text-green-200"
+            >
+              ✦
+            </motion.span>
+            <motion.span
+              aria-hidden="true"
+              animate={addVesselSparkleAnimation}
+              initial={{ opacity: 0, scale: 0.3 }}
+              className="pointer-events-none absolute right-7 top-7 text-xs text-white/80"
+              style={{ y: 2 }}
+            >
+              ✦
+            </motion.span>
+            <motion.span
+              aria-hidden="true"
+              animate={addVesselSparkleAnimation}
+              initial={{ opacity: 0, scale: 0.3 }}
+              className="pointer-events-none absolute bottom-7 left-8 text-xs text-white/80"
+              style={{ y: 2 }}
+            >
+              ✦
+            </motion.span>
+            <motion.span
+              aria-hidden="true"
+              animate={addVesselSparkleAnimation}
+              initial={{ opacity: 0, scale: 0.3 }}
+              className="pointer-events-none absolute bottom-7 right-8 text-sm text-green-200"
+            >
+              ✦
+            </motion.span>
           </motion.button>
         )}
       </div>
@@ -673,7 +752,7 @@ useEffect(() => {
         {!selectMode && (
           <button
             onClick={toggleSelectMode}
-            className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
+            className="rounded-lg border border-white/20 bg-white/10 px-6 py-3 font-semibold shadow-md shadow-black/20 transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-1 hover:bg-white/20 hover:shadow-lg hover:shadow-black/30 active:translate-y-0 active:scale-[0.98] active:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
           >
             Select vessels
           </button>
@@ -685,14 +764,14 @@ useEffect(() => {
               onClick={() => setConfirmDeleteVessels(true)}
               type="button"
               disabled={selectedKars.length === 0}
-              className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold disabled:opacity-40"
+              className="rounded-lg border border-white/20 bg-white/10 px-6 py-3 font-semibold shadow-md shadow-black/20 transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-1 hover:bg-white/20 hover:shadow-lg hover:shadow-black/30 active:translate-y-0 active:scale-[0.98] active:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
             >
               Delete selected
             </button>
 
             <button
               onClick={toggleSelectMode}
-              className="px-6 py-3 bg-zinc-700 hover:bg-zinc-600 border border-zinc-500 rounded-lg font-semibold"
+              className="rounded-lg border border-zinc-500 bg-zinc-700 px-6 py-3 font-semibold shadow-md shadow-black/20 transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-1 hover:bg-zinc-600 hover:shadow-lg hover:shadow-black/30 active:translate-y-0 active:scale-[0.98] active:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
             >
               Cancel
             </button>

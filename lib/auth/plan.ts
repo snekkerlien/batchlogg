@@ -1,5 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { hasPremiumEntitlement } from "@/lib/auth/permissions";
+
+export { hasPremiumEntitlement } from "@/lib/auth/permissions";
 
 export const PLAN_TIERS = ["free", "premium"] as const;
 
@@ -19,7 +22,7 @@ export async function hasPremiumAccess(
 ): Promise<boolean> {
   const { data, error } = await serviceRole
     .from("profiles")
-    .select("account_tier")
+    .select("account_tier, membership_status")
     .eq("id", userId)
     .maybeSingle();
 
@@ -32,7 +35,7 @@ export async function hasPremiumAccess(
     throw new Error("Could not verify Premium access: profile not found");
   }
 
-  return normalizePlanTier(data.account_tier) === "premium";
+  return hasPremiumEntitlement(data.account_tier, data.membership_status);
 }
 
 export async function premiumGateResponse(

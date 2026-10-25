@@ -365,7 +365,7 @@ useEffect(() => {
 
         <h2 className="text-2xl font-bold mb-4 text-center">Low stock</h2>
 
-        {profile?.account_tier === "premium" ? (
+        {profile?.has_premium_access === true ? (
           <div className="mb-4 text-center">
             <button
               type="button"

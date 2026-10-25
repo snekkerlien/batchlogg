@@ -34,7 +34,7 @@ function MenuOverlayContent({ current }: { current: string }) {
     if (!menuOpen) return;
     let activeGroup: string | null = null;
     if (current === "admin" || current === "kegs") {
-      activeGroup = isModerator && !isAdmin ? "Moderation" : "Admin";
+      activeGroup = isModerator && !isAdmin ? null : "Admin";
     } else if (current === "recipes") {
       activeGroup = pathname.startsWith("/my-recipes")
         ? null
@@ -172,6 +172,7 @@ function MenuOverlayContent({ current }: { current: string }) {
 
   const groups: {
     label: string;
+    labelHref?: string;
     items: { href: string; label: string; key: string }[];
   }[] = [
     {
@@ -200,14 +201,16 @@ function MenuOverlayContent({ current }: { current: string }) {
       ? [
           {
             label: isModerator && !isAdmin ? "Moderation" : "Admin",
+            ...(isModerator && !isAdmin ? { labelHref: "/admin/moderation" } : {}),
             items: [
-              ...(isAdmin || isModerator
-                ? [{
-                    href: isModerator && !isAdmin ? "/admin/community-reports" : "/admin",
-                    label: isAdmin ? "Admin panel" : "Community reports",
-                    key: "admin",
-                  }]
-                : []),
+              ...(isAdmin
+                ? [{ href: "/admin", label: "Admin panel", key: "admin" }]
+                : isModerator
+                  ? [
+                      { href: "/admin/community-reports", label: "Community reports", key: "community-reports" },
+                      { href: "/admin/moderation", label: "Member moderation", key: "member-moderation" },
+                    ]
+                  : []),
               ...(canManageKegs
                 ? [{ href: "/kegs", label: "Kegs", key: "kegs" }]
                 : []),
@@ -226,6 +229,9 @@ function MenuOverlayContent({ current }: { current: string }) {
   ];
 
   function isActiveItem(item: { href: string; key: string }) {
+    if (current === "admin" && isModerator && !isAdmin) {
+      return pathname === item.href || pathname.startsWith(`${item.href}/`);
+    }
     if (current === "brewery" && pathname.startsWith("/business")) {
       return item.href === (pathname.startsWith("/business/manage") ? "/business/manage" : "/business");
     }
@@ -313,29 +319,59 @@ function MenuOverlayContent({ current }: { current: string }) {
           <div>
             {groups.map((group) => {
               const expanded = expandedGroups.includes(group.label);
-              const containsCurrentItem = group.items.some(isActiveItem);
+              const containsCurrentItem =
+                group.items.some(isActiveItem) ||
+                Boolean(group.labelHref && pathname.startsWith("/admin"));
               return (
                 <section
                   key={group.label}
                   className="border-b border-white/10 py-1 last:border-b-0"
                 >
-                  <button
-                    type="button"
-                    aria-expanded={expanded}
-                    onClick={() => setExpandedGroups((previous) =>
-                      expanded
-                        ? previous.filter((label) => label !== group.label)
-                        : [group.label]
-                    )}
-                    className={`flex min-h-10 w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-white/5 ${
-                      containsCurrentItem ? "text-green-300" : "text-white/80"
-                    }`}
-                  >
-                    {group.label}
-                    <span aria-hidden="true" className="ml-3 text-sm text-white/50">
-                      {expanded ? "−" : "+"}
-                    </span>
-                  </button>
+                  {group.labelHref ? (
+                    <div className="flex min-h-10 items-center rounded-md hover:bg-white/5">
+                      <Link
+                        href={group.labelHref}
+                        onClick={() => setMenuOpen(false)}
+                        aria-current={pathname.startsWith("/admin") ? "page" : undefined}
+                        className={`flex min-h-10 flex-1 items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:text-green-300 ${
+                          containsCurrentItem ? "text-green-300" : "text-white/80"
+                        }`}
+                      >
+                        {group.label}
+                      </Link>
+                      <button
+                        type="button"
+                        aria-label={`${expanded ? "Collapse" : "Expand"} ${group.label} menu`}
+                        aria-expanded={expanded}
+                        onClick={() => setExpandedGroups((previous) =>
+                          expanded
+                            ? previous.filter((label) => label !== group.label)
+                            : [group.label]
+                        )}
+                        className="flex min-h-10 min-w-11 items-center justify-center rounded-md px-3 text-sm text-white/50 transition-colors hover:text-white"
+                      >
+                        <span aria-hidden="true">{expanded ? "−" : "+"}</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      aria-expanded={expanded}
+                      onClick={() => setExpandedGroups((previous) =>
+                        expanded
+                          ? previous.filter((label) => label !== group.label)
+                          : [group.label]
+                      )}
+                      className={`flex min-h-10 w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-white/5 ${
+                        containsCurrentItem ? "text-green-300" : "text-white/80"
+                      }`}
+                    >
+                      {group.label}
+                      <span aria-hidden="true" className="ml-3 text-sm text-white/50">
+                        {expanded ? "−" : "+"}
+                      </span>
+                    </button>
+                  )}
                   {expanded && (
                     <nav aria-label={`${group.label} navigation`} className="pb-1 pl-3">
                       {group.items.map((item) => (

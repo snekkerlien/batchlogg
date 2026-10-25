@@ -40,6 +40,7 @@ const detailLabels: Record<string, string> = {
   from_vessel: "From",
   to_vessel: "To",
   volume: "Volume",
+  volume_loss_l: "Volume lost",
   gravity: "Gravity",
   agent: "Clarifying agent",
   amount: "Amount",
@@ -75,6 +76,7 @@ function Field({
   step,
   min,
   placeholder,
+  help,
 }: {
   label: string;
   name: string;
@@ -83,6 +85,7 @@ function Field({
   step?: string;
   min?: string;
   placeholder?: string;
+  help?: string;
 }) {
   return (
     <label className="flex flex-col gap-1.5 text-sm">
@@ -96,6 +99,7 @@ function Field({
         placeholder={placeholder}
         className="rounded border border-white/20 bg-black/40 p-3"
       />
+      {help && <span className="text-xs text-white/50">{help}</span>}
     </label>
   );
 }
@@ -105,9 +109,15 @@ function ActionFields({ type }: { type: EntryType }) {
     case "rack":
       return (
         <>
-          <Field label="From vessel" name="from_vessel" />
-          <Field label="To vessel" name="to_vessel" required />
           <Field label="Volume transferred (L)" name="volume" type="number" min="0.001" step="0.001" />
+          <Field
+            label="Volume lost (L)"
+            name="volume_loss_l"
+            type="number"
+            min="0"
+            step="0.001"
+            help="Enter what was left behind or otherwise lost, not the amount transferred."
+          />
           <Field label="Gravity (optional)" name="gravity" type="number" min="0.001" step="0.001" />
         </>
       );
@@ -172,6 +182,7 @@ function formatDetailValue(key: string, value: string, details: Record<string, s
     const unit = details.unit ? ` ${details.unit}` : key === "volume" ? " L" : "";
     return `${value}${unit}`;
   }
+  if (key === "volume_loss_l") return `${value} L`;
   if (key === "wait_hours") return `${value} hours`;
   if (key === "target_date") return new Date(`${value}T12:00:00`).toLocaleDateString();
   return value;
@@ -294,13 +305,13 @@ export default function ConditioningLog({
             />
             <ActionFields type={entryType} />
           </div>
-          <label className="mt-4 flex flex-col gap-1.5 text-sm">
+          <label className="mt-4 flex w-full flex-col gap-1.5 text-sm">
             <span>Notes (optional)</span>
             <PublicMentionTextarea
               name="notes"
               maxLength={3000}
-              rows={3}
-              className="rounded border border-white/20 bg-black/40 p-3"
+              rows={6}
+              className="min-h-32 w-full resize-y rounded border border-white/20 bg-black/40 p-3"
             />
           </label>
           {error && <p role="alert" className="mt-3 text-sm text-red-300">{error}</p>}

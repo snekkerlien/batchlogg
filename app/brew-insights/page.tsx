@@ -66,6 +66,8 @@ export default function BrewInsightsPage() {
     "",
   ]);
   const [lifecycleMigrationRequired, setLifecycleMigrationRequired] = useState(false);
+  const [conditioningRackLosses, setConditioningRackLosses] = useState<Record<string, number>>({});
+  const [conditioningActivityMigrationRequired, setConditioningActivityMigrationRequired] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -87,6 +89,8 @@ export default function BrewInsightsPage() {
       const result: {
         batches?: Batch[];
         lifecycleMigrationRequired?: boolean;
+        conditioningRackLosses?: Record<string, number>;
+        conditioningActivityMigrationRequired?: boolean;
         error?: string;
       } = await response.json();
       if (response.status === 403) {
@@ -97,6 +101,10 @@ export default function BrewInsightsPage() {
       if (active) {
         setBatches(result.batches ?? []);
         setLifecycleMigrationRequired(result.lifecycleMigrationRequired === true);
+        setConditioningRackLosses(result.conditioningRackLosses ?? {});
+        setConditioningActivityMigrationRequired(
+          result.conditioningActivityMigrationRequired === true
+        );
       }
 
     }
@@ -117,6 +125,13 @@ export default function BrewInsightsPage() {
   const visibleBatches =
     selectedType === "All" ? batches : batches.filter((batch) => batch.type === selectedType);
   const completed = visibleBatches.filter(isFinished);
+  const visibleRackLossRecorded = visibleBatches.some((batch) =>
+    Object.prototype.hasOwnProperty.call(conditioningRackLosses, batch.id)
+  );
+  const totalConditioningRackLoss = visibleBatches.reduce(
+    (total, batch) => total + (conditioningRackLosses[batch.id] ?? 0),
+    0
+  );
   const comparisonBatches = comparisonBatchIds.map(
     (batchId) => batches.find((batch) => batch.id === batchId) ?? null
   );
@@ -204,6 +219,14 @@ export default function BrewInsightsPage() {
         return value === null ? "—" : `${value.toFixed(1)} L`;
       }),
     },
+    {
+      label: "Recorded conditioning racking loss",
+      values: comparisonBatches.map((batch) =>
+        batch && Object.prototype.hasOwnProperty.call(conditioningRackLosses, batch.id)
+          ? `${conditioningRackLosses[batch.id].toFixed(2)} L`
+          : "—"
+      ),
+    },
   ];
   const durations = completed.flatMap((batch) => {
     if (!batch.startdato || !batch.finished_date) return [];
@@ -229,16 +252,38 @@ export default function BrewInsightsPage() {
     (total, batch) => total + (finiteNumber(batch.volume_l) ?? 0),
     0
   );
+  const totalPackagedVolume = visibleBatches.reduce(
+    (total, batch) => total + (finiteNumber(batch.packaged_volume_l ?? null) ?? 0),
+    0
+  );
 
   const typeStats = [...batches.reduce((stats, batch) => {
     const type = batch.type?.trim() || "Other";
-    const current = stats.get(type) ?? { type, count: 0, volume: 0, completed: 0 };
+    const current = stats.get(type) ?? {
+      type,
+      count: 0,
+      volume: 0,
+      completed: 0,
+      conditioningRackLoss: 0,
+      hasConditioningRackLoss: false,
+    };
     current.count += 1;
     current.volume += finiteNumber(batch.volume_l) ?? 0;
     current.completed += isFinished(batch) ? 1 : 0;
+    if (Object.prototype.hasOwnProperty.call(conditioningRackLosses, batch.id)) {
+      current.conditioningRackLoss += conditioningRackLosses[batch.id];
+      current.hasConditioningRackLoss = true;
+    }
     stats.set(type, current);
     return stats;
-  }, new Map<string, { type: string; count: number; volume: number; completed: number }>()).values()]
+  }, new Map<string, {
+    type: string;
+    count: number;
+    volume: number;
+    completed: number;
+    conditioningRackLoss: number;
+    hasConditioningRackLoss: boolean;
+  }>()).values()]
     .sort((a, b) => b.count - a.count || a.type.localeCompare(b.type));
 
   const monthlyFinished = useMemo(() => {
@@ -309,7 +354,7 @@ export default function BrewInsightsPage() {
 
   async function downloadCsv() {
     const rows = [
-      ["Batch", "Type", "Status", "Started", "Finished", "OG", "FG", "ABV", "Volume"],
+      ["Batch", "Type", "Status", "Started", "Finished", "OG", "FG", "ABV", "Planned volume (L)", "Packaged volume (L)", "Conditioning racking loss (L)"],
       ...visibleBatches.map((batch) => [
         batch.name ?? "",
         batch.type ?? "",
@@ -320,6 +365,10 @@ export default function BrewInsightsPage() {
         batch.fg ?? "",
         batch.abv ?? "",
         batch.volume_l ?? "",
+        batch.packaged_volume_l ?? "",
+        Object.prototype.hasOwnProperty.call(conditioningRackLosses, batch.id)
+          ? conditioningRackLosses[batch.id].toFixed(2)
+          : "",
       ]),
     ];
     const csv = rows
@@ -355,6 +404,11 @@ export default function BrewInsightsPage() {
           <p role="status" className="mb-5 rounded-lg border border-amber-400/30 bg-amber-950/30 p-3 text-sm text-amber-100">
             Packaging and recipe-result comparisons will appear after the batch
             lifecycle database migration is applied. Existing insights remain available.
+          </p>
+        )}
+        {!premiumRequired && conditioningActivityMigrationRequired && (
+          <p role="status" className="mb-5 rounded-lg border border-amber-400/30 bg-amber-950/30 p-3 text-sm text-amber-100">
+            Conditioning activity analytics will appear after the conditioning database migration is applied.
           </p>
         )}
         {!premiumRequired && loading ? (
@@ -395,9 +449,18 @@ export default function BrewInsightsPage() {
               </div>
             </section>
 
-            <section aria-label="Brewing summary" className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">
+            <section aria-label="Brewing summary" className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-10">
               <Metric label="Batches logged" value={visibleBatches.length.toString()} />
               <Metric label="Finished batches" value={completed.length.toString()} />
+              <Metric label="Total packaged volume" value={totalPackagedVolume > 0 ? `${totalPackagedVolume.toFixed(1)} L` : "—"} />
+              <Metric
+                label="Recorded conditioning racking loss"
+                value={
+                  conditioningActivityMigrationRequired || !visibleRackLossRecorded
+                    ? "—"
+                    : `${totalConditioningRackLoss.toFixed(2)} L`
+                }
+              />
               <Metric label="Average final ABV" value={avgAbv === null ? "—" : `${avgAbv.toFixed(1)}%`} />
               <Metric label="Average time to finish" value={avgDuration === null ? "—" : `${avgDuration.toFixed(0)} days`} />
               <Metric label="Average attenuation" value={averageAttenuation === null ? "—" : `${averageAttenuation.toFixed(1)}%`} />
@@ -405,6 +468,11 @@ export default function BrewInsightsPage() {
               <Metric label="Average OG vs recipe" value={averageOgVariance === null ? "—" : `${averageOgVariance >= 0 ? "+" : ""}${averageOgVariance.toFixed(3)}`} />
               <Metric label="Average ABV vs recipe" value={averageAbvVariance === null ? "—" : `${averageAbvVariance >= 0 ? "+" : ""}${averageAbvVariance.toFixed(1)} pp`} />
             </section>
+            {visibleRackLossRecorded && (
+              <p className="mt-2 text-xs text-white/50">
+                Racking loss totals include only loss amounts explicitly recorded for each transfer.
+              </p>
+            )}
 
             <section
               aria-labelledby="compare-batches-title"
@@ -554,6 +622,7 @@ export default function BrewInsightsPage() {
                       <th scope="col" className="py-2 px-3 text-right font-medium">Batches</th>
                       <th scope="col" className="py-2 px-3 text-right font-medium">Finished</th>
                       <th scope="col" className="py-2 pl-3 text-right font-medium">Volume</th>
+                      <th scope="col" className="py-2 pl-3 text-right font-medium">Rack loss</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -563,6 +632,11 @@ export default function BrewInsightsPage() {
                         <td className="py-3 px-3 text-right">{stat.count}</td>
                         <td className="py-3 px-3 text-right">{stat.completed}</td>
                         <td className="py-3 pl-3 text-right"><Qty kind="volume" value={stat.volume} /></td>
+                        <td className="py-3 pl-3 text-right">
+                          {conditioningActivityMigrationRequired || !stat.hasConditioningRackLoss
+                            ? "—"
+                            : <Qty kind="volume" value={stat.conditioningRackLoss} />}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

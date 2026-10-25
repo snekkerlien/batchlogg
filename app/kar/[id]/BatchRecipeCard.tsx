@@ -22,7 +22,7 @@ function hasText(value: string | null | undefined): value is string {
   return Boolean(value?.trim());
 }
 
-type BatchRecipeDetails = Pick<Batch, "type"> & Partial<Omit<Batch, "type">>;
+export type BatchRecipeDetails = Pick<Batch, "type"> & Partial<Omit<Batch, "type">>;
 
 function RecipeSection({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -45,7 +45,7 @@ export default function BatchRecipeCard({
     batch.type === "Wine" || batch.type === "Cider" || batch.type === "Seltzer";
   const hasBeerDetails = Boolean(
     batch.kit_url || batch.malts?.length || batch.hops?.length || batch.dry_hops?.length ||
-    batch.boil_time != null || batch.boil_volume_l != null || (batch.type === "Beer" && hasText(batch.yeast)) ||
+    batch.boil_time != null || batch.boil_volume_l != null || (isBeerOrBraggot && hasText(batch.yeast)) ||
     (batch.type === "Braggot" && (hasText(batch.honey_type) || batch.honey_amount != null))
   );
   const hasMeadDetails = Boolean(
@@ -156,7 +156,7 @@ export default function BatchRecipeCard({
               <p><strong>Boil volume:</strong> <Qty kind="volume" value={batch.boil_volume_l} /></p>
             )}
             {batch.boil_time != null && <p><strong>Total boil time:</strong> {batch.boil_time} min</p>}
-            {batch.type === "Beer" && hasText(batch.yeast) && <p><strong>Yeast:</strong> {batch.yeast}</p>}
+            {isBeerOrBraggot && hasText(batch.yeast) && <p><strong>Yeast:</strong> {batch.yeast}</p>}
           </RecipeSection>
         )}
 

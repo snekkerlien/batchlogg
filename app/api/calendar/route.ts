@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
-import { premiumGateResponse } from "@/lib/auth/plan";
+import { hasPremiumAccess } from "@/lib/auth/plan";
+import { isFreeCalendarRangeAllowed } from "@/lib/calendar/range";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,8 +24,16 @@ export async function GET(request: NextRequest) {
   if (authError || !user) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
-  const accessDenied = await premiumGateResponse(serviceRole, user.id);
-  if (accessDenied) return accessDenied;
+  let isPremium: boolean;
+  try {
+    isPremium = await hasPremiumAccess(serviceRole, user.id);
+  } catch (error) {
+    console.error("Could not verify calendar access", error);
+    return NextResponse.json(
+      { error: "Could not verify calendar access" },
+      { status: 500 }
+    );
+  }
 
   const from = request.nextUrl.searchParams.get("from");
   const to = request.nextUrl.searchParams.get("to");
@@ -36,6 +45,18 @@ export async function GET(request: NextRequest) {
   const toTime = new Date(`${to}T00:00:00`);
   if (toTime.getTime() - fromTime.getTime() > 63 * 24 * 60 * 60 * 1000) {
     return NextResponse.json({ error: "Calendar range cannot exceed 63 days" }, { status: 400 });
+  }
+  if (
+    !isPremium &&
+    !isFreeCalendarRangeAllowed(from, to, new Date().toISOString().slice(0, 10))
+  ) {
+    return NextResponse.json(
+      {
+        error: "Free calendar access is limited to the upcoming 7-day agenda.",
+        upgradeUrl: "/premium",
+      },
+      { status: 403 }
+    );
   }
 
   const [
@@ -101,6 +122,7 @@ export async function GET(request: NextRequest) {
 
   const reminderBatchById = new Map((reminderBatches ?? []).map((batch) => [batch.id, batch]));
   return NextResponse.json({
+    isPremium,
     batches: [...batchesById.values()],
     reminders: (reminders ?? []).flatMap((reminder) => {
       const batch = reminderBatchById.get(reminder.batch_id);

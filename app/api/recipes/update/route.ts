@@ -7,6 +7,7 @@
     import { isBeerStyle } from "@/lib/brewing/beerStyles";
     import { withOtherRecipeStyle } from "@/lib/recipes/otherRecipe";
     import { validatePublicMentions } from "@/lib/community/mentions";
+    import { recipeOwnerFilter } from "@/lib/recipes/ownership";
 
 
     export const runtime = "nodejs";
@@ -45,6 +46,7 @@
         return NextResponse.json({ error: "Ikke innlogget" }, { status: 401 });
         }
 
+        const [ownerColumn, ownerId] = recipeOwnerFilter(user.id);
         const body = await req.json();
         if (
             !body ||
@@ -356,7 +358,7 @@
         .from("recipes")
         .select("*")
         .eq("id", id)
-        .eq("user_id", user.id)
+        .eq(ownerColumn, ownerId)
         .maybeSingle();
         if (previousRecipeError) {
             return NextResponse.json(
@@ -394,7 +396,7 @@
         .from("recipes")
         .update(fields)
         .eq("id", id)
-        .eq("user_id", user.id); // ⭐ sikkerhet
+        .eq(ownerColumn, ownerId);
 
         if (error) {
         return NextResponse.json(

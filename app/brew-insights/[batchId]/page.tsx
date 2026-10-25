@@ -8,8 +8,12 @@ import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 import BottleAging from "./BottleAging";
 import PublicMentionText from "@/app/components/PublicMentionText";
+import BatchRecipeCard, {
+  type BatchRecipeDetails,
+} from "@/app/kar/[id]/BatchRecipeCard";
+import { formatSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
 
-type BatchInsight = {
+type BatchInsight = Omit<Partial<BatchRecipeDetails>, "type"> & {
   id: string;
   name: string | null;
   type: string | null;
@@ -32,6 +36,66 @@ type BatchInsight = {
   finished_notes: string | null;
   recipe_id: string | null;
   recipe_snapshot: Record<string, unknown> | null;
+  secondary_startdate: string | null;
+  secondary_additions: string | null;
+  secondary_notes: string | null;
+  conditioning_startdate: string | null;
+  conditioning_notes: string | null;
+  ibu: number | string | null;
+  ebc: number | string | null;
+};
+
+type GravityReading = {
+  id: string;
+  sg: number | string;
+  created_at: string;
+};
+
+type ConditioningEntry = {
+  id: string;
+  entry_type: string;
+  occurred_at: string;
+  details: Record<string, string> | null;
+  notes: string | null;
+};
+
+type BatchNote = {
+  id: string;
+  note: string | null;
+  image_url: string | null;
+  created_at: string;
+};
+
+const conditioningEntryLabels: Record<string, string> = {
+  rack: "Rack / transfer",
+  clarify: "Clarify",
+  mature: "Mature / age",
+  stabilize: "Stabilize",
+  backsweeten: "Backsweeten",
+  adjustment: "Add ingredient / adjust",
+  taste: "Taste",
+  other: "Other",
+};
+
+const conditioningDetailLabels: Record<string, string> = {
+  volume: "Volume transferred",
+  volume_loss_l: "Volume lost",
+  gravity: "Gravity",
+  agent: "Clarifying agent",
+  amount: "Amount",
+  unit: "Unit",
+  contact_time: "Contact time",
+  vessel: "Aging vessel / conditions",
+  temperature: "Temperature",
+  target_date: "Target tasting date",
+  product: "Product",
+  wait_hours: "Wait before next step",
+  sweetener: "Sweetener",
+  adjustment: "Ingredient / adjustment",
+  aroma: "Aroma",
+  flavor: "Flavor",
+  next_step: "Next step",
+  description: "Description",
 };
 
 function numberOrNull(value: unknown): number | null {
@@ -62,12 +126,27 @@ function Metric({
   );
 }
 
+function TimelineDate({ label, date }: { label: string; date?: string | null }) {
+  return (
+    <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+      <dt className="text-xs font-medium uppercase tracking-wide text-white/50">{label}</dt>
+      <dd className="mt-1 text-sm text-white/85">
+        {date ? new Date(date).toLocaleDateString() : "Not recorded"}
+      </dd>
+    </div>
+  );
+}
+
 export default function BatchInsightsPage() {
   const params = useParams<{ batchId: string }>();
   const searchParams = useSearchParams();
   const batchId = params.batchId;
   const recipeLimitReached = searchParams.get("recipeLimit") === "reached";
   const [batch, setBatch] = useState<BatchInsight | null>(null);
+  const [readings, setReadings] = useState<GravityReading[]>([]);
+  const [conditioningEntries, setConditioningEntries] = useState<ConditioningEntry[]>([]);
+  const [conditioningActivityAvailable, setConditioningActivityAvailable] = useState(true);
+  const [batchNotes, setBatchNotes] = useState<BatchNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -81,8 +160,14 @@ export default function BatchInsightsPage() {
       cache: "no-store",
     })
       .then(async (response) => {
-        const result: { batch?: BatchInsight; error?: string } =
-          await response.json();
+        const result: {
+          batch?: BatchInsight;
+          readings?: GravityReading[];
+          conditioningEntries?: ConditioningEntry[];
+          conditioningActivityAvailable?: boolean;
+          notes?: BatchNote[];
+          error?: string;
+        } = await response.json();
         if (!response.ok) {
           throw new Error(result.error || "Could not load batch insights.");
         }
@@ -90,6 +175,14 @@ export default function BatchInsightsPage() {
           throw new Error("Batch insights were missing from the response.");
         }
         if (active) setBatch(result.batch);
+        if (active) {
+          setReadings(result.readings ?? []);
+          setConditioningEntries(result.conditioningEntries ?? []);
+          setConditioningActivityAvailable(
+            result.conditioningActivityAvailable !== false
+          );
+          setBatchNotes(result.notes ?? []);
+        }
       })
       .catch((loadError: unknown) => {
         console.error("Could not load batch-specific insights", loadError);
@@ -123,6 +216,15 @@ export default function BatchInsightsPage() {
     packagedVolume !== null && plannedVolume !== null && plannedVolume > 0
       ? (packagedVolume / plannedVolume) * 100
       : null;
+  const rackEntries = conditioningEntries.filter((entry) => entry.entry_type === "rack");
+  const rackLossEntries = rackEntries.filter((entry) => {
+    const value = entry.details?.volume_loss_l;
+    return value !== undefined && value !== null && value !== "";
+  });
+  const conditioningRackLoss = rackLossEntries.reduce(
+    (total, entry) => total + (numberOrNull(entry.details?.volume_loss_l) ?? 0),
+    0
+  );
   const recipeSnapshot = batch?.recipe_snapshot ?? null;
   const plannedOg = numberOrNull(recipeSnapshot?.og);
   const plannedFg = numberOrNull(recipeSnapshot?.fg);
@@ -215,6 +317,10 @@ export default function BatchInsightsPage() {
               </p>
             </header>
 
+            <BatchRecipeCard
+              batch={{ ...batch, type: batch.type || "Other" } as BatchRecipeDetails}
+            />
+
             <section
               aria-label="Batch results"
               className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3"
@@ -244,6 +350,12 @@ export default function BatchInsightsPage() {
                 value={packagedYield === null ? "—" : `${packagedYield.toFixed(1)}%`}
               />
               <Metric
+                label="Recorded racking loss"
+                value={rackLossEntries.length > 0
+                  ? `${conditioningRackLoss.toFixed(2)} L`
+                  : "Not recorded"}
+              />
+              <Metric
                 label="Fermentation time"
                 value={
                   fermentationDays === null
@@ -251,7 +363,143 @@ export default function BatchInsightsPage() {
                     : `${fermentationDays} ${fermentationDays === 1 ? "day" : "days"}`
                 }
               />
+              {numberOrNull(batch.ibu) !== null && (
+                <Metric label="IBU" value={numberOrNull(batch.ibu)!.toFixed(1)} />
+              )}
+              {numberOrNull(batch.ebc) !== null && (
+                <Metric label="Color (EBC)" value={numberOrNull(batch.ebc)!.toFixed(1)} />
+              )}
             </section>
+            {rackLossEntries.length > 0 && rackLossEntries.length < rackEntries.length && (
+              <p className="mt-2 text-sm text-white/55">
+                Loss amounts are recorded for {rackLossEntries.length} of {rackEntries.length} rack/transfer entries.
+              </p>
+            )}
+
+            <section className="mt-6 rounded-xl border border-white/10 bg-white/5 p-5">
+              <h2 className="text-lg font-semibold text-green-200">Fermentation readings</h2>
+              {readings.length === 0 ? (
+                <p className="mt-3 text-sm text-white/60">No gravity readings recorded.</p>
+              ) : (
+                <ol className="mt-4 divide-y divide-white/10">
+                  {readings.map((reading) => (
+                    <li key={reading.id} className="flex flex-wrap justify-between gap-2 py-3 text-sm">
+                      <time dateTime={reading.created_at} className="text-white/65">
+                        {new Date(reading.created_at).toLocaleString()}
+                      </time>
+                      <span className="font-mono font-semibold text-white">
+                        {Number(reading.sg).toFixed(3)} SG
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </section>
+
+            <section className="mt-6 rounded-xl border border-white/10 bg-white/5 p-5">
+              <h2 className="text-lg font-semibold text-green-200">Fermentation and conditioning timeline</h2>
+              <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+                <TimelineDate label="Primary fermentation started" date={batch.startdato} />
+                <TimelineDate label="Secondary fermentation started" date={batch.secondary_startdate} />
+                <TimelineDate label="Conditioning started" date={batch.conditioning_startdate} />
+                <TimelineDate label="Packaged" date={batch.packaged_at} />
+                <TimelineDate label="Finished" date={batch.finished_date} />
+              </dl>
+              {(batch.secondary_additions || batch.secondary_notes) && (
+                <div className="mt-4 rounded-lg border border-white/10 bg-black/20 p-4">
+                  <h3 className="font-semibold text-white">Secondary fermentation</h3>
+                  {batch.secondary_additions && (
+                    <p className="mt-2 whitespace-pre-wrap text-sm text-white/80">
+                      <strong>Additions:</strong>{" "}
+                      {formatSecondaryAdditions(batch.secondary_additions)}
+                    </p>
+                  )}
+                  {batch.secondary_notes && (
+                    <p className="mt-2 whitespace-pre-wrap text-sm text-white/75">
+                      <strong>Notes:</strong> <PublicMentionText text={batch.secondary_notes} unitAware />
+                    </p>
+                  )}
+                </div>
+              )}
+              {batch.conditioning_notes && (
+                <div className="mt-4 rounded-lg border border-white/10 bg-black/20 p-4">
+                  <h3 className="font-semibold text-white">Initial conditioning notes</h3>
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-white/75">
+                    <PublicMentionText text={batch.conditioning_notes} unitAware />
+                  </p>
+                </div>
+              )}
+              {!conditioningActivityAvailable ? (
+                <p role="status" className="mt-4 text-sm text-amber-200">
+                  Conditioning activity details are unavailable until the conditioning database migration is applied.
+                </p>
+              ) : conditioningEntries.length > 0 ? (
+                <ol className="mt-4 space-y-3">
+                  {conditioningEntries.map((entry) => {
+                    const details = entry.details ?? {};
+                    return (
+                      <li key={entry.id} className="rounded-lg border border-white/10 bg-black/20 p-4">
+                        <div className="flex flex-wrap justify-between gap-2">
+                          <h3 className="font-semibold text-white">
+                            {conditioningEntryLabels[entry.entry_type] ?? "Conditioning action"}
+                          </h3>
+                          <time dateTime={entry.occurred_at} className="text-sm text-white/55">
+                            {new Date(entry.occurred_at).toLocaleString()}
+                          </time>
+                        </div>
+                        {Object.entries(details)
+                          .filter(([key, value]) => key !== "unit" && Boolean(value))
+                          .map(([key, value]) => (
+                            <p key={key} className="mt-2 text-sm text-white/75">
+                              <strong>{conditioningDetailLabels[key] ?? key}:</strong>{" "}
+                              {key === "amount" || key === "volume"
+                                ? `${value}${details.unit ? ` ${details.unit}` : key === "volume" ? " L" : ""}`
+                                : key === "volume_loss_l"
+                                  ? `${value} L`
+                                : key === "wait_hours"
+                                  ? `${value} hours`
+                                  : value}
+                            </p>
+                          ))}
+                        {entry.notes && (
+                          <p className="mt-3 whitespace-pre-wrap text-sm text-white/75">
+                            <PublicMentionText text={entry.notes} unitAware />
+                          </p>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ol>
+              ) : (
+                <p className="mt-4 text-sm text-white/60">No conditioning activity recorded.</p>
+              )}
+            </section>
+
+            {batchNotes.length > 0 && (
+              <section className="mt-6 rounded-xl border border-white/10 bg-white/5 p-5">
+                <h2 className="text-lg font-semibold text-green-200">Batch notes and attachments</h2>
+                <ol className="mt-4 space-y-3">
+                  {batchNotes.map((note) => (
+                    <li key={note.id} className="rounded-lg border border-white/10 bg-black/20 p-4">
+                      <time dateTime={note.created_at} className="text-xs text-white/50">
+                        {new Date(note.created_at).toLocaleString()}
+                      </time>
+                      {note.note && (
+                        <p className="mt-2 whitespace-pre-wrap text-sm text-white/80">
+                          <PublicMentionText text={note.note} unitAware />
+                        </p>
+                      )}
+                      {note.image_url && (
+                        <a href={note.image_url} target="_blank" rel="noreferrer" className="mt-3 inline-block">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={note.image_url} alt="Batch note attachment" className="max-h-80 rounded-lg object-contain" />
+                        </a>
+                      )}
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            )}
 
             <section className="mt-6 rounded-xl border border-white/10 bg-white/5 p-5">
               <h2 className="text-lg font-semibold text-green-200">

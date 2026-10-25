@@ -73,18 +73,22 @@ export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState(() => dateKey(new Date()));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [premiumRequired, setPremiumRequired] = useState(false);
+  const [isPremium, setIsPremium] = useState<boolean | null>(null);
   const [isNarrow, setIsNarrow] = useState(false);
   const [viewOverride, setViewOverride] = useState<"agenda" | "month" | null>(null);
   const [agendaStart, setAgendaStart] = useState(() => dateKey(mondayOfWeek(new Date())));
   const [retry, setRetry] = useState(0);
-  const view = viewOverride ?? (isNarrow ? "agenda" : "month");
+  const today = dateKey(new Date());
+  const view = isPremium
+    ? viewOverride ?? (isNarrow ? "agenda" : "month")
+    : "agenda";
+  const agendaBase = isPremium ? agendaStart : today;
   const agendaDays = useMemo(() => {
-    const start = new Date(`${agendaStart}T12:00:00`);
+    const start = new Date(`${agendaBase}T12:00:00`);
     return Array.from({ length: 7 }, (_, index) => shiftDays(start, index));
-  }, [agendaStart]);
+  }, [agendaBase]);
   const { from, to } = view === "agenda"
-    ? { from: agendaStart, to: dateKey(shiftDays(agendaDays[0], 7)) }
+    ? { from: agendaBase, to: dateKey(shiftDays(agendaDays[0], 7)) }
     : monthGridRange(month);
 
   useEffect(() => {
@@ -118,14 +122,14 @@ export default function CalendarPage() {
       batches?: CalendarBatch[];
       reminders?: CalendarReminder[];
       error?: string;
+      isPremium?: boolean;
     } = await response.json();
     if (signal.aborted) return;
-    if (response.status === 403) {
-      setPremiumRequired(true);
-      return;
-    }
     if (!response.ok) throw new Error(result.error || "Could not load calendar");
-    setPremiumRequired(false);
+    if (typeof result.isPremium !== "boolean") {
+      throw new Error("Calendar response did not include the account plan");
+    }
+    setIsPremium(result.isPremium);
     setBatches(result.batches ?? []);
     setReminders(result.reminders ?? []);
   }, [from, to, router]);
@@ -210,8 +214,6 @@ export default function CalendarPage() {
   }, [events]);
 
   const selectedEvents = eventsByDate.get(selectedDate) ?? [];
-  const today = dateKey(new Date());
-
   function changeMonth(offset: number) {
     const nextMonth = new Date(month.getFullYear(), month.getMonth() + offset, 1);
     setMonth(nextMonth);
@@ -245,21 +247,21 @@ export default function CalendarPage() {
           sections={[
             {
               title: "Choose a view",
-              description: "Switch between the monthly calendar and a weekly agenda. On smaller screens, the agenda is used automatically.",
+              description: "Free accounts can review the upcoming seven days in an agenda. Premium also includes a full monthly calendar.",
             },
             {
               title: "Move through time",
-              description: "Use the arrows to change month or week, or choose Today to return to the current date.",
+              description: "Premium members can navigate across weeks and months, or choose Today to return to the current date.",
             },
             {
               title: "Open an event",
-              description: "Select a batch milestone or reminder to jump to its batch details. Export the schedule as an .ics file to use it in another calendar app.",
+              description: "Select a batch milestone or reminder to jump to its batch details. Premium members can export the schedule as an .ics file.",
             },
           ]}
           illustration="calendar"
-          footer="Reminders appear here alongside batch milestones, so you can see what is coming up."
+          footer="Reminders appear alongside batch milestones, so you can see what is coming up."
         />
-        {!premiumRequired && !loading && !error && (
+        {isPremium && !loading && !error && (
           <div className="mb-5 text-center">
             <a
               href="/api/calendar/export"
@@ -272,70 +274,67 @@ export default function CalendarPage() {
         )}
 
         <section aria-label="Calendar" className="mt-8">
-          <div role="group" aria-label="Calendar view" className="mb-4 flex flex-wrap justify-center gap-2">
-            {(["agenda", "month"] as const).map(option => (
-              <button
-                key={option}
-                type="button"
-                aria-pressed={view === option}
-                onClick={() => setViewOverride(option)}
-                className={`min-h-11 rounded-lg border px-4 py-2 text-sm ${
-                  view === option ? "border-green-400 bg-green-700" : "border-white/20 bg-white/5 hover:bg-white/10"
-                }`}
-              >
-                {option === "agenda" ? "Agenda" : "Month"}
-              </button>
-            ))}
-          </div>
-          <div className="mb-4 flex flex-wrap items-center justify-center gap-3">
-            <div className="flex flex-wrap justify-center gap-2">
-              <button
-                type="button"
-                onClick={() => changePeriod(-1)}
-                aria-label={view === "agenda" ? "Previous week" : "Previous month"}
-                className="min-h-11 min-w-11 rounded-lg border border-white/20 bg-white/10 px-3 py-2 hover:bg-white/20"
-              >
-                ←
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const current = new Date();
-                  setMonth(new Date(current.getFullYear(), current.getMonth(), 1));
-                  setSelectedDate(dateKey(current));
-                  setAgendaStart(dateKey(mondayOfWeek(current)));
-                }}
-                className="min-h-11 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm hover:bg-white/20"
-              >
-                Today
-              </button>
-              <button
-                type="button"
-                onClick={() => changePeriod(1)}
-                aria-label={view === "agenda" ? "Next week" : "Next month"}
-                className="min-h-11 min-w-11 rounded-lg border border-white/20 bg-white/10 px-3 py-2 hover:bg-white/20"
-              >
-                →
-              </button>
-            </div>
-            <h2 aria-live="polite" className="w-full break-words text-center text-sm font-semibold text-green-300 sm:w-auto sm:text-xl">
-              {view === "agenda"
+          {isPremium && (
+            <>
+              <div role="group" aria-label="Calendar view" className="mb-4 flex flex-wrap justify-center gap-2">
+                {(["agenda", "month"] as const).map(option => (
+                  <button
+                    key={option}
+                    type="button"
+                    aria-pressed={view === option}
+                    onClick={() => setViewOverride(option)}
+                    className={`min-h-11 rounded-lg border px-4 py-2 text-sm ${
+                      view === option ? "border-green-400 bg-green-700" : "border-white/20 bg-white/5 hover:bg-white/10"
+                    }`}
+                  >
+                    {option === "agenda" ? "Agenda" : "Month"}
+                  </button>
+                ))}
+              </div>
+              <div className="mb-4 flex flex-wrap items-center justify-center gap-3">
+                <div className="flex flex-wrap justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => changePeriod(-1)}
+                    aria-label={view === "agenda" ? "Previous week" : "Previous month"}
+                    className="min-h-11 min-w-11 rounded-lg border border-white/20 bg-white/10 px-3 py-2 hover:bg-white/20"
+                  >
+                    ←
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const current = new Date();
+                      setMonth(new Date(current.getFullYear(), current.getMonth(), 1));
+                      setSelectedDate(dateKey(current));
+                      setAgendaStart(dateKey(mondayOfWeek(current)));
+                    }}
+                    className="min-h-11 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm hover:bg-white/20"
+                  >
+                    Today
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => changePeriod(1)}
+                    aria-label={view === "agenda" ? "Next week" : "Next month"}
+                    className="min-h-11 min-w-11 rounded-lg border border-white/20 bg-white/10 px-3 py-2 hover:bg-white/20"
+                  >
+                    →
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+          <h2 aria-live="polite" className="mb-4 w-full break-words text-center text-sm font-semibold text-green-300 sm:text-xl">
+            {isPremium !== true
+              ? "Upcoming 7 days"
+              : view === "agenda"
                 ? `${agendaDays[0].toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })} – ${agendaDays[6].toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`
-                : month.toLocaleDateString(undefined, { month: "long", year: "numeric" })}
-            </h2>
-          </div>
+                : month.toLocaleDateString(undefined, { month: "long", year: "numeric" })
+            }
+          </h2>
 
-          {premiumRequired ? (
-            <PremiumFeaturePrompt
-              feature="The brew calendar"
-              description="Keep your brewing schedule in one place and plan around upcoming fermentation and finishing dates."
-              benefits={[
-                "See batch start and finish dates alongside scheduled brew reminders.",
-                "Switch between a monthly calendar and a weekly agenda.",
-                "Export your schedule to calendar apps with an iCalendar (.ics) file.",
-              ]}
-            />
-          ) : error ? (
+          {error ? (
             <div role="alert" className="mb-4 rounded-lg border border-red-500/40 bg-red-950/40 p-4 text-center">
               <p>{error}</p>
               <button type="button" onClick={() => setRetry(value => value + 1)} className="mt-2 min-h-11 underline">
@@ -344,9 +343,9 @@ export default function CalendarPage() {
             </div>
           ) : null}
 
-          {!premiumRequired && loading ? (
+          {loading ? (
             <p role="status" className="py-6 text-center text-sm text-white/60">Loading calendar…</p>
-          ) : !premiumRequired && !error && view === "agenda" ? (
+          ) : !error && view === "agenda" ? (
             <section aria-label="Weekly agenda" className="space-y-3">
               {agendaDays.map(day => {
                 const key = dateKey(day);
@@ -380,7 +379,7 @@ export default function CalendarPage() {
             </section>
           ) : null}
 
-          {!premiumRequired && !error && !loading && view === "month" && <div className="grid grid-cols-7 overflow-hidden rounded-lg border border-white/10">
+          {!error && !loading && view === "month" && <div className="grid grid-cols-7 overflow-hidden rounded-lg border border-white/10">
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((weekday) => (
               <div key={weekday} className="border-b border-white/10 bg-white/5 p-2 text-center text-xs text-white/60">
                 <span className="hidden sm:inline">{weekday}</span>
@@ -432,9 +431,23 @@ export default function CalendarPage() {
               );
             })}
           </div>}
+
+          {isPremium === false && !loading && !error && (
+            <div className="mt-6">
+              <PremiumFeaturePrompt
+                feature="More calendar planning"
+                description="Your upcoming seven-day agenda is included with the free plan."
+                benefits={[
+                  "See the full month at a glance.",
+                  "Navigate across weeks and months.",
+                  "Export your schedule to calendar apps with an iCalendar (.ics) file.",
+                ]}
+              />
+            </div>
+          )}
         </section>
 
-        {!premiumRequired && !error && !loading && view === "month" && <section aria-live="polite" className="mt-6 rounded-lg border border-white/10 bg-white/5 p-4">
+        {!error && !loading && view === "month" && <section aria-live="polite" className="mt-6 rounded-lg border border-white/10 bg-white/5 p-4">
           <h2 className="text-lg font-semibold text-green-300">
             {new Date(`${selectedDate}T12:00:00`).toLocaleDateString(undefined, {
               weekday: "long",
@@ -443,11 +456,11 @@ export default function CalendarPage() {
               year: "numeric",
             })}
           </h2>
-          {!premiumRequired && loading ? (
+          {loading ? (
             <p className="mt-3 text-sm text-white/60">Loading calendar…</p>
-          ) : !premiumRequired && selectedEvents.length === 0 ? (
+          ) : selectedEvents.length === 0 ? (
             <p className="mt-3 text-sm text-white/60">No batch milestones or reminders scheduled.</p>
-          ) : !premiumRequired ? (
+          ) : (
             <ul className="mt-3 space-y-2">
               {selectedEvents.map((event) => (
                 <li key={event.id}>
@@ -461,14 +474,16 @@ export default function CalendarPage() {
                 </li>
               ))}
             </ul>
-          ) : null}
+          )}
         </section>}
 
+        {isPremium !== null && !loading && !error && (
         <div className="mt-4 flex flex-wrap justify-center gap-4 text-xs text-white/65">
           <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-green-300" />Batch started</span>
           <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-blue-300" />Batch finished</span>
           <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-amber-300" />Reminder</span>
         </div>
+        )}
       </div>
     </main>
   );

@@ -6,6 +6,7 @@ import Image from "next/image";
 import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
 import MenuOverlay from "./MenuOverlay";
 import { useRouter } from "next/navigation";
+import BackButton from "@/app/components/BackButton";
 import PageHeading from "@/app/components/PageHeading";
 import MembershipStatus from "@/app/components/MembershipStatus";
 import ReportContentButton from "@/app/components/ReportContentButton";
@@ -320,12 +321,9 @@ const secondary = batchesRaw
           <p className="max-w-xs text-sm text-white/50">
             {name} has chosen to keep their profile private. Only friends can view it.
           </p>
-          <button
-            onClick={() => history.back()}
-            className="mt-4 rounded-lg border border-white/20 px-4 py-2 text-sm hover:bg-white/10"
-          >
-            Go back
-          </button>
+          <div className="mt-4">
+            <BackButton />
+          </div>
         </div>
       </main>
     );
@@ -431,25 +429,7 @@ const secondary = batchesRaw
 
         {/* TOP BAR */}
         <div className="flex items-center justify-between mb-6">
-          <button
-            onClick={() => router.back()}
-            className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg flex items-center justify-center"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="white"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M12 19l-7-7 7-7" />
-              <path d="M19 12H5" />
-            </svg>
-          </button>
+          <BackButton />
 
           <MenuOverlay />
         </div>
@@ -568,7 +548,7 @@ const secondary = batchesRaw
 {profileStats && (
   <ProfileOverview stats={profileStats} />
 )}
-{canViewContent && profile.is_public && profile.account_tier === "premium" && profile.featured_recipe_id && (() => {
+{canViewContent && profile.is_public && profile.has_premium_access && profile.featured_recipe_id && (() => {
   const featuredRecipe = recipes.find((recipe) => recipe.id === profile.featured_recipe_id);
   if (!featuredRecipe) return null;
   return (

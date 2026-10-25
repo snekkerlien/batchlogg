@@ -1,5 +1,6 @@
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import Link from "next/link";
+import BackButton from "@/app/components/BackButton";
 import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
 import DeleteRoadmapEntryButton from "./DeleteRoadmapEntryButton";
 
@@ -66,12 +67,7 @@ export default async function RoadmapPage({
     <main className="min-h-screen px-6 py-12 text-white">
       <div className="flex items-center justify-between mb-10">
         <h1 className="text-3xl font-bold text-green-300">Roadmap</h1>
-        <Link
-          href="/admin"
-          className="px-3 py-2 rounded-lg bg-white/10 border border-white/20 hover:bg-white/20"
-        >
-          ← Back
-        </Link>
+        <BackButton />
       </div>
 
       {searchParams?.completed === "1" && (

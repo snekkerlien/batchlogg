@@ -1,10 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
 import Link from "next/link";
 import { supabaseServer } from "../../../lib/supabase/supabaseServerFinal";
-import { membershipLabel } from "@/lib/auth/membership";
 import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
+import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
+import AdminUsersList from "./AdminUsersList";
 
 export const runtime = "nodejs";
 
@@ -66,7 +67,7 @@ export default async function UsersPage() {
       avatar_url: profile?.avatar_url ?? null,
       is_public: profile?.is_public ?? false,
       membership_status: profile?.membership_status ?? "member",
-      account_tier: profile?.account_tier === "premium" ? "premium" : "free",
+      account_tier: profile?.account_tier === "premium" ? "premium" as const : "free" as const,
     };
   });
 
@@ -74,27 +75,7 @@ export default async function UsersPage() {
     <main className="min-h-screen px-6 py-12 text-white">
       <div className="relative mx-auto mt-12 max-w-4xl rounded-xl border border-white/10 bg-black/60 p-6 pt-16 backdrop-blur-md sm:p-10 sm:pt-16">
         <div className="absolute left-4 top-2 z-40 sm:top-4">
-          <Link
-            href="/admin"
-            aria-label="Back to Admin Dashboard"
-            className="flex items-center justify-center rounded-lg border border-white/20 bg-white/10 px-3 py-2 transition hover:bg-white/20"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="white"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M12 19l-7-7 7-7" />
-              <path d="M19 12H5" />
-            </svg>
-          </Link>
+          <BackButton />
         </div>
         <div className="absolute right-4 top-2 z-40 sm:top-4">
           <MenuOverlay current="admin" />
@@ -105,60 +86,7 @@ export default async function UsersPage() {
           subtitle="Review accounts and update user details."
         />
 
-        {merged.length === 0 ? (
-          <div className="rounded-xl border border-white/10 bg-white/5 p-6 text-center text-white/60">
-            No users found.
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {merged.map((u) => (
-              <Link
-                key={u.id}
-                href={`/admin/users/${u.id}`}
-                className="group block rounded-xl border border-white/10 bg-white/5 p-5 transition hover:border-green-400/30 hover:bg-white/10"
-              >
-                <div className="flex items-center gap-4">
-                  {u.avatar_url ? (
-                    <img
-                      src={u.avatar_url}
-                      alt=""
-                      className="h-12 w-12 rounded-full border border-white/20 object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60">
-                      ?
-                    </div>
-                  )}
-
-                  <div className="min-w-0">
-                    <p className="truncate text-lg font-semibold text-green-300">
-                      {u.username}
-                    </p>
-                    <p className="break-all text-sm text-white/80">{u.email}</p>
-                    <p className="mt-1 text-sm text-zinc-400">
-                      Created: {new Date(u.created_at).toLocaleString()}
-                    </p>
-                    <p className="mt-1 text-sm text-zinc-400">
-                      {u.is_public ? "Public profile" : "Private profile"}
-                    </p>
-                    <p className="mt-1 text-sm capitalize text-green-200/75">
-                      Role: {membershipLabel(u.membership_status)}
-                    </p>
-                    <p className="mt-1 text-sm text-green-200">
-                      Tier: {u.account_tier === "premium" ? "Premium" : "Free"}
-                    </p>
-                  </div>
-                  <span
-                    aria-hidden="true"
-                    className="ml-auto text-xl text-green-300 transition group-hover:translate-x-1"
-                  >
-                    →
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
+        <AdminUsersList users={merged} />
       </div>
     </main>
   );

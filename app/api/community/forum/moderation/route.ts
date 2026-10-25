@@ -10,6 +10,71 @@ export const dynamic = "force-dynamic";
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+export async function PATCH(request: NextRequest) {
+  const { supabase, serviceRole } = supabaseServer();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
+  if (!hasPermission(await getMembershipRole(supabase, user), "review_reports")) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  let body: { contentType?: unknown; contentId?: unknown; hidden?: unknown; reason?: unknown };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+  if (
+    (body.contentType !== "topic" && body.contentType !== "reply") ||
+    typeof body.contentId !== "string" ||
+    !UUID_PATTERN.test(body.contentId) ||
+    typeof body.hidden !== "boolean" ||
+    typeof body.reason !== "string" ||
+    body.reason.trim().length < 3 ||
+    body.reason.trim().length > 500
+  ) {
+    return NextResponse.json({ error: "Invalid forum moderation details" }, { status: 400 });
+  }
+
+  const table = body.contentType === "topic" ? "forum_topics" : "forum_replies";
+  const { data, error } = await serviceRole
+    .from(table)
+    .update({
+      moderation_hidden: body.hidden,
+      moderation_hidden_at: body.hidden ? new Date().toISOString() : null,
+      moderation_hidden_by: body.hidden ? user.id : null,
+      moderation_hidden_reason: body.hidden ? body.reason.trim() : null,
+    })
+    .eq("id", body.contentId)
+    .select("id")
+    .maybeSingle();
+  if (error) {
+    console.error("Could not update forum content visibility", error);
+    return NextResponse.json({ error: "Could not update forum content visibility" }, { status: 500 });
+  }
+  if (!data) return NextResponse.json({ error: "Forum content not found" }, { status: 404 });
+  if (
+    !(await writeAdminAuditEvent(serviceRole, {
+      actorId: user.id,
+      action: body.hidden ? "forum.content_hidden" : "forum.content_restored",
+      targetType: `forum_${body.contentType}`,
+      targetId: body.contentId,
+      details: { reason: body.reason.trim() },
+    }))
+  ) {
+    return NextResponse.json(
+      { error: "Content visibility changed, but the audit log could not be updated." },
+      { status: 500 }
+    );
+  }
+  return NextResponse.json({ success: true });
+}
+
 export async function DELETE(request: NextRequest) {
   const { supabase, serviceRole } = supabaseServer();
   const {
@@ -19,7 +84,7 @@ export async function DELETE(request: NextRequest) {
   if (authError || !user) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
-  if (!hasPermission(await getMembershipRole(supabase, user), "delete_reported_content")) {
+  if (!hasPermission(await getMembershipRole(supabase, user), "manage_users")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

@@ -4,12 +4,19 @@ import { normalizePlanTier } from "@/lib/auth/plan";
 type MembershipStatusProps = {
   status?: string | null;
   tier?: string | null;
+  hasPremiumAccess?: boolean;
 };
 
-export default function MembershipStatus({ status, tier }: MembershipStatusProps) {
+export default function MembershipStatus({
+  status,
+  tier,
+  hasPremiumAccess,
+}: MembershipStatusProps) {
   const label = membershipLabel(status);
   const planLabel =
-    normalizePlanTier(tier) === "premium" ? "Premium" : "Free";
+    hasPremiumAccess ?? normalizePlanTier(tier) === "premium"
+      ? "Premium"
+      : "Free";
 
   return (
     <div className="mb-8 text-center">

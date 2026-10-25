@@ -36,6 +36,25 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+body:has([data-dashboard-page]) .app-background-image {
+  background-size: cover !important;
+  background-position: center 42% !important;
+}
+
+.app-background-dashboard-scrim {
+  opacity: 0;
+  background: radial-gradient(
+    ellipse at center 42%,
+    transparent 16%,
+    rgb(0 0 0 / 8%) 44%,
+    rgb(0 0 0 / 32%) 100%
+  );
+}
+
+body:has([data-dashboard-page]) .app-background-dashboard-scrim {
+  opacity: 1;
+}
+
 :is(
   input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="hidden"]),
   textarea,
@@ -53,6 +72,35 @@ body {
 #main-content:focus-visible {
   outline: none;
   box-shadow: none;
+}
+
+.premium-feature-card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.premium-feature-card::after {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    115deg,
+    transparent 15%,
+    rgb(255 255 255 / 7%) 50%,
+    transparent 85%
+  );
+  opacity: 0;
+  content: "";
+  pointer-events: none;
+  transition: opacity 220ms ease;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .premium-feature-card:hover::after {
+    opacity: 1;
+  }
 }
 
 .product-card-title__text {
@@ -135,7 +183,10 @@ details[open] > summary .disclosure-arrow {
   inset: auto 0 0;
   height: clamp(10rem, 32vh, 22rem);
   --bubble-rise-distance: -360px;
-  background: linear-gradient(to top, rgb(255 255 255 / 3%), transparent 72%);
+}
+
+.fermentation-bubble-container--vessel {
+  --bubble-peak-opacity: 0.38;
 }
 
 .fermentation-bubble {
@@ -159,10 +210,10 @@ details[open] > summary .disclosure-arrow {
     opacity: 0;
   }
   12% {
-    opacity: 0.2;
+    opacity: calc(var(--bubble-peak-opacity, 0.28) * 0.7);
   }
   65% {
-    opacity: 0.28;
+    opacity: var(--bubble-peak-opacity, 0.28);
   }
   100% {
     transform: translate3d(var(--bubble-drift, 0px), var(--bubble-rise-distance, -180px), 0) scale(1.15);

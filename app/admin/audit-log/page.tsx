@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
+import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 import AuditLogClient from "./AuditLogClient";
@@ -14,9 +15,23 @@ const ACTION_LABELS: Record<string, string> = {
   "user.deleted": "Deleted user account",
   "user.restriction_applied": "Applied user restriction",
   "user.restriction_removed": "Removed user restriction",
+  "user.warning_issued": "Issued community warning",
   "forum.content_removed": "Removed forum content",
+  "forum.content_hidden": "Hid forum content",
+  "forum.content_restored": "Restored forum content",
   "community_report.status_updated": "Updated community report",
   "community_report.content_removed": "Removed reported content",
+  "community_report.claimed": "Assigned community report",
+  "community_report.released": "Released community report",
+  "community_report.note_updated": "Updated private moderation notes",
+  "community_report.warning": "Issued community warning",
+  "community_report.mute": "Applied community posting mute",
+  "community_report.content_hidden": "Hid reported forum content",
+  "community_report.content_restored": "Restored reported forum content",
+  "community_report.escalated": "Escalated community report",
+  "community_report.appeal_submitted": "Submitted community moderation appeal",
+  "community_report.appeal_upheld": "Upheld community moderation action appeal",
+  "community_report.appeal_overturned": "Overturned community moderation action appeal",
   "roadmap.status_updated": "Updated roadmap entry",
   "roadmap.entry_removed": "Removed completed roadmap entry",
   "changelog.saved": "Saved a release note",
@@ -101,13 +116,7 @@ export default async function AuditLogPage() {
     <main className="min-h-screen px-6 py-12 text-white">
       <div className="relative mx-auto mt-12 max-w-5xl rounded-xl border border-white/10 bg-black/60 p-6 pt-16 backdrop-blur-md sm:p-10 sm:pt-16">
         <div className="absolute left-4 top-2 z-40 sm:top-4">
-          <Link
-            href="/admin"
-            aria-label="Back to admin"
-            className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 hover:bg-white/20"
-          >
-            ←
-          </Link>
+          <BackButton />
         </div>
         <div className="absolute right-4 top-2 z-40 sm:top-4">
           <MenuOverlay current="admin" />

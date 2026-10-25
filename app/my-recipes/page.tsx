@@ -154,7 +154,7 @@ export default function RecipesPage() {
       if (!profileResponse.ok) {
         throw new Error(profile.error || "Could not load your account plan.");
       }
-      setIsPremium(profile.account_tier === "premium");
+      setIsPremium(profile.has_premium_access === true);
       setPlanLoaded(true);
       setLimitNotice(new URLSearchParams(window.location.search).get("limit") === "reached");
 

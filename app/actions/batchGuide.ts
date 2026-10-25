@@ -1,6 +1,7 @@
 "use server";
 
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
+import { hasPremiumEntitlement } from "@/lib/auth/plan";
 import {
   isBatchGuideMilestone,
   type BatchGuideMilestone,
@@ -53,13 +54,13 @@ export async function getPremiumWelcomeStatus() {
 
   const { data: profile, error } = await serviceRole
     .from("profiles")
-    .select("account_tier, onboarding_completed")
+    .select("account_tier, membership_status, onboarding_completed")
     .eq("id", user.id)
     .maybeSingle();
   if (error) throw new Error(`Could not load Premium welcome status: ${error.message}`);
   if (!profile) throw new Error("Could not find the profile for Premium welcome");
 
-  const isPremium = profile.account_tier === "premium";
+  const isPremium = hasPremiumEntitlement(profile.account_tier, profile.membership_status);
   const onboardingCompleted = profile.onboarding_completed === true;
   const seen = user.user_metadata?.batchlogg_premium_welcome_seen === true;
   return {

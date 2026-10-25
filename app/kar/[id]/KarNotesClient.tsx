@@ -107,7 +107,8 @@ export function KarNotesClient({
           value={noteText}
           onChange={setNoteText}
           placeholder="Make a note..."
-          className="p-3 rounded bg-black/40 border border-white/20"
+          rows={5}
+          className="w-full min-h-32 resize-y p-3 rounded bg-black/40 border border-white/20"
         />
 
         {/* IMAGE INPUT WITH PREVIEW */}

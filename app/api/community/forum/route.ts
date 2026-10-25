@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
 
   let topicQuery = serviceRole
     .from("forum_topics")
-    .select("id, author_id, title, body, category, is_community_recipe, created_at, updated_at");
+    .select("id, author_id, title, body, category, is_community_recipe, created_at, updated_at, moderation_hidden, moderation_hidden_at, moderation_hidden_reason");
   if (topicId) {
     topicQuery = topicQuery.eq("id", topicId);
   } else {
@@ -66,6 +66,7 @@ export async function GET(request: NextRequest) {
         requestedPage * TOPICS_PER_PAGE
       );
   }
+  if (!canModerate) topicQuery = topicQuery.eq("moderation_hidden", false);
 
   let { data: topicRows, error: topicsError } = await topicQuery;
   if (
@@ -74,7 +75,7 @@ export async function GET(request: NextRequest) {
   ) {
     let fallbackQuery = serviceRole
       .from("forum_topics")
-      .select("id, author_id, title, body, category, created_at, updated_at");
+      .select("id, author_id, title, body, category, created_at, updated_at, moderation_hidden, moderation_hidden_at, moderation_hidden_reason");
     if (topicId) {
       fallbackQuery = fallbackQuery.eq("id", topicId);
     } else {
@@ -86,6 +87,7 @@ export async function GET(request: NextRequest) {
           requestedPage * TOPICS_PER_PAGE
         );
     }
+    if (!canModerate) fallbackQuery = fallbackQuery.eq("moderation_hidden", false);
     const fallback = await fallbackQuery;
     if (!fallback.error) {
       topicRows = (fallback.data ?? []).map((topic) => ({
@@ -110,14 +112,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ topics: [], canModerate, hasMore: false, mute });
   }
 
-  const { data: replyRows, error: repliesError } = await serviceRole
+  let replyQuery = serviceRole
     .from("forum_replies")
-    .select("id, topic_id, author_id, body, created_at, updated_at")
+    .select("id, topic_id, author_id, body, created_at, updated_at, moderation_hidden, moderation_hidden_at, moderation_hidden_reason")
     .in(
       "topic_id",
       topics.map((topic) => topic.id)
     )
     .order("created_at", { ascending: true });
+  if (!canModerate) replyQuery = replyQuery.eq("moderation_hidden", false);
+  const { data: replyRows, error: repliesError } = await replyQuery;
 
   if (repliesError) {
     console.error("Could not load forum replies", repliesError);

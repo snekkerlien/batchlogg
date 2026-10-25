@@ -132,9 +132,11 @@ function PublicMentionLink({
 export default function PublicMentionText({
   text,
   unitAware = false,
+  compactMentions = false,
 }: {
   text: string | null | undefined;
   unitAware?: boolean;
+  compactMentions?: boolean;
 }) {
   const safeText = text ?? "";
   const mentions = parsePublicMentions(safeText);
@@ -172,15 +174,30 @@ export default function PublicMentionText({
         ? `/public-recipes/${match[3]}`
         : `/public-batches/${match[3]}`;
     const kind = match[2].toLowerCase();
-    nodes.push(
-      <PublicMentionLink
-        key={key++}
-        href={href}
-        kind={kind}
-        label={label}
-        context={context}
-      />
-    );
+    if (compactMentions) {
+      nodes.push(
+        <span
+          key={key++}
+          title={`${kind === "recipe" ? "Public recipe" : "Public batch"}: ${label}${context ? ` · ${context}` : ""}`}
+          className="mx-0.5 inline-flex max-w-full translate-y-0.5 items-center gap-1.5 rounded-md border border-green-300/20 bg-green-300/[0.08] px-1.5 py-0.5 align-baseline text-[11px] leading-4 text-green-100"
+        >
+          <span className="shrink-0 rounded border border-green-200/15 bg-black/20 px-1 text-[8px] font-bold uppercase tracking-wide text-green-200/75">
+            {kind === "recipe" ? "Recipe" : "Batch"}
+          </span>
+          <span className="min-w-0 truncate font-medium">{label}</span>
+        </span>
+      );
+    } else {
+      nodes.push(
+        <PublicMentionLink
+          key={key++}
+          href={href}
+          kind={kind}
+          label={label}
+          context={context}
+        />
+      );
+    }
     previousIndex = index + match[0].length;
   }
 

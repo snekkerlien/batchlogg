@@ -40,6 +40,12 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+function localDateValue() {
+  const date = new Date();
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+  return date.toISOString().slice(0, 10);
+}
+
 export default function KarPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -808,7 +814,7 @@ const sharingSection = isOwner ? (
 
       
 
-      <ActiveBatchOverview batch={activeBatch} secondary />
+      <ActiveBatchOverview batch={activeBatch} />
       <div id="batch-recipe" className="scroll-mt-6">
         <BatchRecipeCard batch={activeBatch} />
       </div>
@@ -1116,7 +1122,7 @@ const sharingSection = isOwner ? (
 )}
 
     {/* Rack to conditioning */}
-{hasActive && canContribute && ["Sekundær", "secondary"].includes(activeBatch.status) && (
+{hasActive && canContribute && ["Aktiv", "Sekundær", "secondary"].includes(activeBatch.status) && (
   <div className="mt-6 bg-white/5 border border-white/10 rounded-lg p-4">
     <div className="flex w-full items-center justify-between gap-3 font-semibold text-green-300">
       <span className="text-lg">Rack to conditioning</span>
@@ -1143,15 +1149,31 @@ const sharingSection = isOwner ? (
             <input type="hidden" name="batch_id" value={activeBatch.id} />
             <input type="hidden" name="kar_id" value={kar.id} />
             <p className="text-sm text-white/70">
-              Conditioning is an optional vessel stage after secondary fermentation and before finishing.
+              Move directly from primary fermentation, or after optional secondary fermentation, into conditioning.
             </p>
+            <label className="flex w-full flex-col gap-2 text-sm font-medium">
+              Conditioning start date
+              <input
+                name="conditioning_startdate"
+                type="date"
+                required
+                defaultValue={localDateValue()}
+                className="w-full rounded border border-white/20 bg-black/40 p-3"
+              />
+            </label>
+            <input
+              type="hidden"
+              name="timezone_offset_minutes"
+              value={new Date().getTimezoneOffset()}
+            />
             <label className="flex flex-col gap-2 text-sm font-medium">
               Conditioning notes (optional)
               <PublicMentionTextarea
                 name="conditioning_notes"
                 maxLength={3000}
-                rows={3}
-                className="rounded border border-white/20 bg-black/40 p-3"
+                rows={8}
+                className="w-full resize-y rounded border border-white/20 bg-black/40 p-3"
+                placeholder="Record your conditioning plan, observations, or anything you want to remember."
               />
             </label>
             <button className="rounded-lg border border-green-500 bg-green-700 px-4 py-3 font-semibold hover:bg-green-600">
@@ -1221,25 +1243,27 @@ const sharingSection = isOwner ? (
 
         {sgReadings.length > 0 && (
           <>
-            <section
-              aria-label="Saved specific gravity readings"
-              className="mt-6 rounded-lg border border-white/10 bg-black/30 p-4"
-            >
-              <h3 className="mb-3 font-semibold text-green-300">Recorded readings</h3>
-              <ul className="space-y-2 text-sm text-white/75">
-                {[...sgReadings].reverse().map((reading, index) => (
-                  <li
-                    key={reading.id ?? `${reading.created_at}-${index}`}
-                    className="flex justify-between gap-4"
-                  >
-                    <time dateTime={reading.created_at}>
-                      {new Date(reading.created_at).toLocaleString()}
-                    </time>
-                    <span className="font-mono">{Number(reading.sg).toFixed(3)}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
+            {!canViewSGGraph && (
+              <section
+                aria-label="Saved specific gravity readings"
+                className="mt-6 rounded-lg border border-white/10 bg-black/30 p-4"
+              >
+                <h3 className="mb-3 font-semibold text-green-300">Recorded readings</h3>
+                <ul className="space-y-2 text-sm text-white/75">
+                  {[...sgReadings].reverse().map((reading, index) => (
+                    <li
+                      key={reading.id ?? `${reading.created_at}-${index}`}
+                      className="flex justify-between gap-4"
+                    >
+                      <time dateTime={reading.created_at}>
+                        {new Date(reading.created_at).toLocaleString()}
+                      </time>
+                      <span className="font-mono">{Number(reading.sg).toFixed(3)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
 
             <section className="mt-6" aria-label="SG development graph">
               <h3 className="mb-3 text-xl font-bold text-green-300">
@@ -1425,18 +1449,22 @@ const sharingSection = isOwner ? (
             </div>
           </fieldset>
 
-          <PublicMentionTextarea
-            name="finished_notes"
-            placeholder="Finishing notes"
-            className="p-3 rounded bg-black/40 border border-white/20"
-          />
+          <label className="flex w-full flex-col gap-2 text-sm font-medium">
+            Finishing notes (optional)
+            <PublicMentionTextarea
+              name="finished_notes"
+              rows={6}
+              placeholder="Record anything notable about finishing this batch."
+              className="min-h-32 w-full resize-y rounded border border-white/20 bg-black/40 p-3"
+            />
+          </label>
 
           <label className="flex flex-col gap-2 text-sm font-medium">
             Tasting notes (optional; you can add these later)
             <PublicMentionTextarea
               name="tasting_notes"
-              rows={3}
-              className="p-3 rounded bg-black/40 border border-white/20"
+              rows={6}
+              className="min-h-32 w-full resize-y rounded border border-white/20 bg-black/40 p-3"
             />
           </label>
 

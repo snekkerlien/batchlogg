@@ -5,6 +5,7 @@ import { supabaseServer } from "../../../../lib/supabase/supabaseServerFinal";
 import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
 import { writeAdminAuditEvent } from "@/lib/admin/auditLog";
 import { isPlanTier } from "@/lib/auth/plan";
+import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 import UserRestrictionControls from "@/app/components/UserRestrictionControls";
@@ -350,27 +351,7 @@ export default async function UserAdminPage({
     <main className="min-h-screen px-6 py-12 text-white">
       <div className="relative mx-auto mt-12 max-w-4xl rounded-xl border border-white/10 bg-black/60 p-6 pt-16 backdrop-blur-md sm:p-10 sm:pt-16">
         <div className="absolute left-4 top-2 z-40 sm:top-4">
-          <Link
-            href="/admin/users"
-            aria-label="Back to users"
-            className="flex items-center justify-center rounded-lg border border-white/20 bg-white/10 px-3 py-2 transition hover:bg-white/20"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="white"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M12 19l-7-7 7-7" />
-              <path d="M19 12H5" />
-            </svg>
-          </Link>
+          <BackButton />
         </div>
         <div className="absolute right-4 top-2 z-40 sm:top-4">
           <MenuOverlay current="admin" />

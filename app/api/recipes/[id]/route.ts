@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { supabaseServer } from "../../../../lib/supabase/supabaseServerFinal";
+import { recipeOwnerFilter } from "../../../../lib/recipes/ownership";
 
 export const runtime = "nodejs";
 
@@ -19,13 +20,14 @@ export async function GET(
     return NextResponse.json({ error: "Ikke innlogget" }, { status: 401 });
   }
 
+  const [ownerColumn, ownerId] = recipeOwnerFilter(user.id);
   const { data: recipe, error } = await supabase
     .from("recipes")
     .select(
       "id, type, name, volume, og, honey_type, honey_amount, base_liquid, base_liquid_amount, fruits, juice_type, sugar_amount, malts, hops, dry_hops, boil_time, boil_volume, yeast, additives, full_process, notes, ingredients, steps, had_secondary, secondary_additions, secondary_notes, copyright_free, created_at"
     )
     .eq("id", params.id)
-    .eq("user_id", user.id)
+    .eq(ownerColumn, ownerId)
     .maybeSingle();
 
   if (error) {
@@ -80,10 +82,12 @@ export async function DELETE(
       return NextResponse.json({ error: "Ikke innlogget" }, { status: 401 });
     }
 
+    const [ownerColumn, ownerId] = recipeOwnerFilter(user.id);
     const { data, error } = await supabase
       .from("recipes")
       .delete()
       .eq("id", recipeId)
+      .eq(ownerColumn, ownerId)
       .select()
       .single();
 
@@ -162,11 +166,12 @@ export async function PATCH(
     }
 
     if (body.copyright_free !== undefined) {
+      const [ownerColumn, ownerId] = recipeOwnerFilter(user.id);
       const { data: recipe, error: recipeError } = await supabase
         .from("recipes")
         .select("source_recipe_id")
         .eq("id", recipeId)
-        .eq("user_id", user.id)
+        .eq(ownerColumn, ownerId)
         .maybeSingle();
       if (recipeError) {
         console.error("Could not check recipe copyright ownership", recipeError);
@@ -208,11 +213,12 @@ export async function PATCH(
       }
     }
 
+    const [ownerColumn, ownerId] = recipeOwnerFilter(user.id);
     const { data, error } = await supabase
       .from("recipes")
       .update(updateData)
       .eq("id", recipeId)
-      .eq("user_id", user.id)
+      .eq(ownerColumn, ownerId)
       .select()
       .single();
 

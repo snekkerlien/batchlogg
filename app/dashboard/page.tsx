@@ -13,7 +13,7 @@ export default async function DashboardPage() {
   if (!user) redirect("/auth/login?redirect=%2Fdashboard");
 
   return (
-    <main className="min-h-screen p-6 text-white">
+    <main data-dashboard-page className="min-h-screen p-6 text-white">
       <DashboardClient />
     </main>
   );

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
+import { hasPremiumEntitlement } from "@/lib/auth/plan";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -257,7 +258,13 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json({
-    profile,
+    profile: {
+      ...profile,
+      has_premium_access: hasPremiumEntitlement(
+        profile.account_tier,
+        profile.membership_status
+      ),
+    },
     canViewContent: isOwner || profile.is_public,
     isFriend,
     friendRequest,
@@ -311,14 +318,17 @@ export async function PATCH(request: NextRequest) {
   if (featuredRecipeId) {
     const { data: currentProfile, error: currentProfileError } = await serviceRole
       .from("profiles")
-      .select("account_tier, featured_recipe_id")
+      .select("account_tier, membership_status, featured_recipe_id")
       .eq("id", user.id)
       .single();
     if (currentProfileError) {
       console.error("Could not verify profile showcase access", currentProfileError);
       return NextResponse.json({ error: "Could not verify profile showcase access" }, { status: 500 });
     }
-    const isFree = currentProfile.account_tier !== "premium";
+    const isFree = !hasPremiumEntitlement(
+      currentProfile.account_tier,
+      currentProfile.membership_status
+    );
     if (isFree && featuredRecipeId && currentProfile.featured_recipe_id !== featuredRecipeId) {
       return NextResponse.json(
         { error: "Profile recipe featuring is a Premium feature.", upgradeUrl: "/premium" },

@@ -315,7 +315,7 @@ export default function MessagesPage() {
     <main className="min-h-screen px-6 py-12 text-white">
       <div className="relative mx-auto w-full max-w-4xl rounded-xl border border-white/10 bg-black/60 p-6 pt-16 backdrop-blur-md sm:p-8 sm:pt-16">
         <div className="absolute left-4 top-4 z-40">
-          <BackButton href={returnTo} />
+          <BackButton />
         </div>
         <div className="absolute right-4 top-4 z-40">
           <MenuOverlay current="messages" />

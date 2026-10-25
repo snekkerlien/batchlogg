@@ -67,6 +67,8 @@ interface ForumReply {
   body: string;
   created_at: string;
   updated_at: string;
+  moderation_hidden: boolean;
+  moderation_hidden_reason: string | null;
   like_count: number;
   liked_by_user: boolean;
   author: ForumAuthor;
@@ -83,6 +85,8 @@ interface ForumTopic {
   is_community_recipe: boolean;
   created_at: string;
   updated_at: string;
+  moderation_hidden: boolean;
+  moderation_hidden_reason: string | null;
   like_count: number;
   liked_by_user: boolean;
   bookmarked_by_user: boolean;
@@ -1164,29 +1168,11 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
     setError("");
     try {
       const isTopic = pendingDelete.type === "topic";
-      const targetId = isTopic
-        ? pendingDelete.topic.id
-        : pendingDelete.reply.id;
-      if (canModerate) {
-        const response = await fetch("/api/community/forum/moderation", {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            contentType: isTopic ? "topic" : "reply",
-            contentId: targetId,
-          }),
-        });
-        const result: { error?: string } = await response.json();
-        if (!response.ok) {
-          throw new Error(result.error || "Could not remove forum content");
-        }
-      } else {
-        await submitForumMutation("DELETE", {
-          type: isTopic ? "topic" : "reply",
-          id: targetId,
-        });
-      }
+      const targetId = isTopic ? pendingDelete.topic.id : pendingDelete.reply.id;
+      await submitForumMutation("DELETE", {
+        type: isTopic ? "topic" : "reply",
+        id: targetId,
+      });
 
       try {
         await loadTopics();
@@ -1199,6 +1185,39 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
       console.error("Could not delete forum content", deleteError);
       setError("The content could not be deleted. Please try again.");
       return false;
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function setModerationVisibility(
+    contentType: "topic" | "reply",
+    contentId: string,
+    hidden: boolean
+  ) {
+    const reason = window.prompt(
+      hidden ? "Why is this content being hidden?" : "Why is this content being restored?"
+    );
+    if (reason === null) return;
+    if (reason.trim().length < 3) {
+      setError("Enter a reason with at least 3 characters.");
+      return;
+    }
+    setSubmitting(true);
+    setError("");
+    try {
+      const response = await fetch("/api/community/forum/moderation", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ contentType, contentId, hidden, reason: reason.trim() }),
+      });
+      const result: { error?: string } = await response.json();
+      if (!response.ok) throw new Error(result.error || "Could not update forum content");
+      await loadTopics();
+    } catch (moderationError) {
+      console.error("Could not update forum content visibility", moderationError);
+      setError(moderationError instanceof Error ? moderationError.message : "Could not update forum content.");
     } finally {
       setSubmitting(false);
     }
@@ -1478,28 +1497,47 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                       {(userId === topic.author_id || canModerate) && (
                         <div className="flex gap-2">
                           {userId === topic.author_id && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => startEditingTopic(topic)}
+                                disabled={submitting}
+                                className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/20 disabled:opacity-50"
+                              >
+                                Edit discussion
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setPendingDelete({ type: "topic", topic })}
+                                disabled={submitting}
+                                className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/20 disabled:opacity-50"
+                              >
+                                Delete discussion
+                              </button>
+                            </>
+                          )}
+                          {canModerate && (
                             <button
                               type="button"
-                              onClick={() => startEditingTopic(topic)}
+                              onClick={() =>
+                                void setModerationVisibility("topic", topic.id, !topic.moderation_hidden)
+                              }
                               disabled={submitting}
-                              className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/20 disabled:opacity-50"
+                              className="rounded-lg border border-blue-300/25 bg-blue-300/10 px-3 py-2 text-sm font-semibold text-blue-100 hover:bg-blue-300/20 disabled:opacity-50"
                             >
-                              Edit discussion
+                              {topic.moderation_hidden ? "Restore discussion" : "Hide discussion"}
                             </button>
                           )}
-                          <button
-                            type="button"
-                            onClick={() => setPendingDelete({ type: "topic", topic })}
-                            disabled={submitting}
-                            className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/20 disabled:opacity-50"
-                          >
-                            {userId === topic.author_id ? "Delete discussion" : "Remove discussion"}
-                          </button>
                         </div>
                       )}
                     </>
                   )}
                 </div>
+                {canModerate && topic.moderation_hidden && (
+                  <p className="mt-3 rounded-lg border border-amber-300/20 bg-amber-300/5 px-3 py-2 text-xs text-amber-100/80">
+                    Hidden from the community{topic.moderation_hidden_reason ? `: ${topic.moderation_hidden_reason}` : "."}
+                  </p>
+                )}
                 {editingTopic !== topic.id && (
                   <div className="mt-3">
                     {topic.body && (
@@ -1599,26 +1637,45 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                             {(userId === reply.author_id || canModerate) && (
                               <div className="flex shrink-0 gap-3">
                                 {userId === reply.author_id && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => startEditingReply(reply)}
+                                      disabled={submitting}
+                                      className="text-xs text-white/60 underline hover:text-white disabled:opacity-50"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setPendingDelete({ type: "reply", reply })}
+                                      disabled={submitting}
+                                      className="text-xs text-white/60 underline hover:text-white disabled:opacity-50"
+                                    >
+                                      Delete
+                                    </button>
+                                  </>
+                                )}
+                                {canModerate && (
                                   <button
                                     type="button"
-                                    onClick={() => startEditingReply(reply)}
+                                    onClick={() =>
+                                      void setModerationVisibility("reply", reply.id, !reply.moderation_hidden)
+                                    }
                                     disabled={submitting}
-                                    className="text-xs text-white/60 underline hover:text-white disabled:opacity-50"
+                                    className="text-xs text-blue-200 underline hover:text-blue-100 disabled:opacity-50"
                                   >
-                                    Edit
+                                    {reply.moderation_hidden ? "Restore" : "Hide"}
                                   </button>
                                 )}
-                                <button
-                                  type="button"
-                                  onClick={() => setPendingDelete({ type: "reply", reply })}
-                                  disabled={submitting}
-                                  className="text-xs text-white/60 underline hover:text-white disabled:opacity-50"
-                                >
-                                  {userId === reply.author_id ? "Delete" : "Remove"}
-                                </button>
                               </div>
                             )}
                           </div>
+                        )}
+                        {canModerate && reply.moderation_hidden && (
+                          <p className="mt-2 text-xs text-amber-100/75">
+                            Hidden from the community{reply.moderation_hidden_reason ? `: ${reply.moderation_hidden_reason}` : "."}
+                          </p>
                         )}
                         <div className="mt-2 flex flex-wrap items-center gap-3">
                           <p className="text-xs text-white/50">

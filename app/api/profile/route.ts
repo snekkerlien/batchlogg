@@ -4,6 +4,7 @@ export const revalidate = 0;
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { hasPremiumEntitlement } from "@/lib/auth/plan";
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("Authorization") ?? "";
@@ -81,6 +82,10 @@ export async function GET(request: NextRequest) {
     onboarding_completed: profile.onboarding_completed,
     membership_status: profile.membership_status,
     account_tier: profile.account_tier,
+    has_premium_access: hasPremiumEntitlement(
+      profile.account_tier,
+      profile.membership_status
+    ),
     premium_grant_source: profile.premium_grant_source,
     stripe_subscription_status: profile.stripe_subscription_status,
     profile_banner: profile.profile_banner,
