@@ -36,6 +36,27 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+.app-background-image {
+  background-color: #000;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.app-background-fade {
+  height: 100vh;
+  height: 100svh;
+  background: linear-gradient(
+    to bottom,
+    rgb(0 0 0 / 8%) 0%,
+    transparent 24%,
+    rgb(0 0 0 / 12%) 42%,
+    rgb(0 0 0 / 38%) 62%,
+    rgb(0 0 0 / 82%) 84%,
+    #000 100%
+  );
+}
+
 :is(
   input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="hidden"]),
   textarea,
@@ -194,8 +215,8 @@ details[open] > summary .disclosure-arrow {
   box-shadow: 0 0 6px rgb(210 240 255 / 18%);
   opacity: 0;
   animation-name: fermentation-bubble-rise;
-  animation-duration: 2.5s;
-  animation-delay: 0s;
+  animation-duration: var(--bubble-duration, 2.5s);
+  animation-delay: var(--bubble-delay, 0s);
   animation-timing-function: linear;
   animation-iteration-count: infinite;
 }
