@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -188,22 +188,22 @@ function createBrewDayPracticeQuestions(): QuestionSeed[] {
 
 function createFermentationPracticeQuestions(): QuestionSeed[] {
   return [
-    ["The fermenter is producing a sulfur aroma during active fermentation. What is a sensible response?", "Monitor the fermentation and allow the yeast time to condition the beer", "Some yeast strains produce sulfur compounds that can fade during fermentation or conditioning.", "Raise the temperature well above the yeast's recommended range", "Package the beer before gravity is stable", "Add oxygen after fermentation has begun"],
-    ["A buttery note is present before fermentation has finished. What should you consider?", "Allow appropriate yeast time and check whether the flavor cleans up", "Yeast can reduce diacetyl during conditioning; follow the strain and recipe guidance.", "Cold-crash the beer before the yeast has had time to finish", "Bottle the beer while gravity is still changing", "Assume the flavor will disappear without checking fermentation progress"],
-    ["A green-apple aroma is present in young beer. What is a sensible first step?", "Allow fermentation to finish and reassess after conditioning", "Acetaldehyde can be present in young beer and may be reduced by yeast as fermentation completes.", "Transfer the beer away from yeast before fermentation is complete", "Bottle it before gravity stabilizes", "Expose the beer to oxygen during transfer"],
+    ["The fermenter is producing a sulfur aroma during active fermentation. What is the best first response?", "Keep conditions within the yeast's range and reassess after fermentation and conditioning", "Some yeast strains produce sulfur compounds that can fade during fermentation or conditioning.", "Transfer the beer off the yeast before gravity has stabilized", "Cold-crash immediately to remove the yeast before it can produce more sulfur", "Add a late hop charge before checking whether the aroma fades"],
+    ["A buttery note is present before fermentation has finished. What is the best next step?", "Verify fermentation progress and allow suitable yeast conditioning time", "Yeast can reduce diacetyl during conditioning; follow the strain and recipe guidance.", "Cold-crash before gravity is stable to preserve the current flavor", "Transfer the beer off the yeast as soon as the buttery note appears", "Package on the planned date without checking gravity or flavor"],
+    ["A green-apple aroma is present in young beer. What is a sensible first step?", "Allow fermentation to finish and reassess after conditioning", "Acetaldehyde can be present in young beer and may be reduced by yeast as fermentation completes.", "Package while the beer is young so the aroma cannot develop further", "Cold-crash before checking whether fermentation is complete", "Increase oxygen exposure during transfer to help the yeast finish"],
     ["The beer tastes unexpectedly sweet after fermentation. What should you measure?", "Final gravity and, if needed, compare it with the recipe target", "Gravity helps distinguish residual extract from a sensory impression of sweetness.", "The original gravity again without measuring the finished beer", "The fermentation temperature alone", "The remaining yeast amount without checking gravity"],
-    ["Gravity is stable but higher than the recipe's expected final gravity. What should you review?", "The yeast strain, mash fermentability, and fermentation conditions", "These factors influence how much extract is fermented and can help explain a high finish.", "The recipe's original gravity without checking the mash or yeast", "The yeast's flocculation alone, without considering attenuation", "The fermentation temperature without checking gravity accuracy"],
-    ["A beer seems to have stopped fermenting early. What is a useful diagnostic?", "Verify the gravity reading and check temperature and yeast guidance", "Confirming measurements and fermentation conditions is safer than adding ingredients blindly.", "Add an unmeasured dose of fermentable sugar", "Raise the temperature sharply without checking the strain range", "Rouse the yeast repeatedly before confirming a stall"],
-    ["The yeast has settled before gravity is stable. What should you do?", "Gently rouse the yeast only if appropriate and follow the strain guidance", "Some fermentations may benefit from yeast being brought back into suspension, but intervene carefully.", "Package the beer because clear beer cannot still ferment", "Cold-crash it to keep more yeast from settling", "Add a large dose of yeast without checking the fermentation conditions"],
+    ["Gravity is stable but higher than the recipe's expected final gravity. Which set of factors should you review together?", "The yeast strain, mash fermentability, and fermentation conditions", "These factors influence how much extract is fermented and can help explain a high finish.", "Only the yeast's flocculation and whether it settled early", "Only the measured original gravity and the recipe's target gravity", "Only the fermentation temperature, without checking gravity accuracy"],
+    ["A beer seems to have stopped fermenting early. What is a useful diagnostic?", "Verify the gravity reading and check temperature and yeast guidance", "Confirming measurements and fermentation conditions is safer than adding ingredients blindly.", "Use the airlock rate alone to decide whether fermentation is stalled", "Raise the temperature sharply before checking the strain's range", "Add fermentable sugar to see whether the yeast responds"],
+    ["The yeast has settled before gravity is stable. What should you do first?", "Check gravity and temperature, then decide whether gentle rousing is appropriate", "Confirm the fermentation trend and conditions before disturbing the beer or adding yeast.", "Rouse the yeast immediately without checking the gravity trend", "Cold-crash the beer to settle the remaining yeast", "Add another yeast pitch before checking temperature"],
     ["You suspect a stuck fermentation. What should you check before taking action?", "Gravity trend, beer temperature, and the yeast's expected attenuation", "Measurements and conditions help distinguish a true stall from a slow or nearly complete fermentation.", "The original gravity without checking the current gravity", "The yeast's appearance without checking temperature", "The airlock's bubble rate without taking gravity readings"],
-    ["The temperature rises during vigorous fermentation. Why can this happen?", "Yeast activity generates heat", "The beer itself may become warmer than the surrounding room during active fermentation.", "The airlock releases heat into the fermenter", "Fermentation heat is produced only after the beer is packaged", "A rise in temperature proves that the beer is boiling"],
-    ["The beer is fermenting at the lower end of the yeast range. What should guide any adjustment?", "The strain's recommended range and the recipe's fermentation profile", "Temperature changes should be gradual and suited to the specific yeast.", "Move it above the strain's recommended range to speed fermentation", "Use the serving temperature as the fermentation target", "Change the temperature whenever the airlock slows"],
-    ["A large krausen has formed, but the airlock is quiet. What is plausible?", "Gas may be escaping through a leak or another vent path", "Airlock activity can be misleading if the fermenter is not fully sealed.", "The fermenter seal must be perfect for fermentation to occur", "The yeast has stopped because krausen is present", "The airlock is the only possible path for fermentation gas"],
-    ["Krausen has fallen and the beer is cloudy. What does that tell you about completion?", "Cloudiness and krausen appearance alone cannot confirm final gravity", "Use gravity readings over time rather than visual signs to assess completion.", "It proves the beer is contaminated", "It proves the beer has reached stable gravity", "It shows that bottle carbonation is complete"],
-    ["The fermenter is bulging or appears pressurized. What should you do?", "Safely restore an unobstructed gas-release path without sealing the vessel", "Fermentation vessels need a safe vent; trapped gas can create dangerous pressure.", "Block the airlock to keep more gas in the beer", "Tighten the lid and continue fermentation without checking pressure", "Open a pressurized vessel abruptly without following its instructions"],
+    ["The temperature rises during vigorous fermentation. What is the best explanation?", "Yeast metabolism releases heat, so the beer can run warmer than the surrounding room", "The beer itself may become warmer than the surrounding room during active fermentation.", "The room temperature can only rise if fermentation is producing heat", "Yeast produces most fermentation heat after activity has ended", "A warmer beer reading means the fermenter has reached its final gravity"],
+    ["The beer is fermenting at the lower end of the yeast range. What should guide any adjustment?", "The strain's recommended range and the recipe's fermentation profile", "Temperature changes should be gradual and suited to the specific yeast.", "Raise it by a fixed amount whenever the airlock slows, without checking beer temperature", "Use the same fermentation temperature as the previous beer regardless of strain", "Move it to the warmest available location to shorten fermentation"],
+    ["Krausen is rising, but the airlock shows no bubbles. What is the best next step?", "Check for a leak or obstruction while keeping a safe vent path", "Krausen suggests activity, but a leak or blocked airlock can make bubbling misleading; maintain safe venting.", "Treat the quiet airlock as evidence that fermentation has stopped", "Seal the fermenter more tightly so pressure builds until bubbles appear", "Remove the airlock and leave the opening uncovered"],
+    ["Krausen has fallen and the beer is cloudy. What does that tell you about completion?", "Cloudiness and krausen appearance alone cannot confirm final gravity", "Use gravity readings over time rather than visual signs to assess completion.", "A fallen krausen usually confirms fermentation is finished if the recipe timeline has passed", "Cloudiness means the beer has not reached its expected final gravity", "Wait the recipe's stated number of days and package without checking gravity"],
+    ["A standard non-pressure-rated fermenter is bulging or appears pressurized. What should you do?", "Safely restore an unobstructed gas-release path without sealing the vessel", "A standard fermentation vessel needs a safe vent; trapped gas can create dangerous pressure.", "Move the vessel and continue monitoring without checking the vent", "Treat the bulging as normal krausen pressure and wait for it to subside", "Use a pressure-relief setting intended for a different vessel"],
     ["The airlock liquid has been sucked back into the fermenter after cooling. What should you consider?", "Avoid contamination and replace the airlock liquid using clean, suitable practice", "Temperature changes can draw airlock liquid inward; handle the airlock hygienically.", "Add replacement liquid with an unclean utensil", "Leave the airlock empty and uncovered", "Open the fermenter to stir the airlock liquid through the beer"],
-    ["You take a gravity sample during fermentation. What should you do with it afterward?", "Discard or use the sample without returning it to the fermenter", "Returning a sample can introduce contamination; use clean sampling practice.", "Return the sample after tasting it", "Pour the sample through the airlock to avoid opening the vessel", "Pour the sample back after adding sanitizer to it"],
-    ["A hydrometer reading varies unexpectedly between samples. What should you verify?", "Sample temperature, instrument calibration, and reading technique", "Consistent technique and temperature correction help make gravity comparisons reliable.", "Whether each sample was degassed in the same way", "Whether the hydrometer was read at the correct meniscus", "Whether the sample contained clinging bubbles"],
+    ["Why should a gravity sample not be poured back into the fermenter?", "It can carry microbes from the sample, instrument, or handling back into the beer", "Discarding the sample avoids reintroducing contaminants after measurement or tasting.", "The sample contains no yeast after it has been measured", "The sample's lower volume would change the batch gravity", "A sample can be returned safely if it looks and smells normal"],
+    ["A hydrometer reading varies unexpectedly between samples. Which check addresses the broadest sources of variation?", "Use consistent sampling, temperature correction, calibration, and meniscus reading", "Consistent technique and temperature correction help make gravity comparisons reliable.", "Check sample temperature but assume the instrument is correctly calibrated", "Check calibration but ignore bubbles and reading technique", "Use a different sample without controlling its temperature"],
     ["A refractometer reading changes after fermentation begins. What correction is needed?", "Account for alcohol using the original reading and an appropriate correction", "Alcohol changes refractive index, so an uncorrected post-fermentation reading is misleading.", "Use the original refractometer reading alone as the final gravity", "Use a hydrometer correction formula without accounting for alcohol", "Treat the refractometer reading as a direct ABV measurement"],
     ["The gravity reading is stable across appropriate checks. What should you still consider before packaging?", "Whether the beer has had adequate time to finish and condition", "Stable gravity is a key check, but yeast may need time to complete cleanup and conditioning.", "Whether the beer has been cold-crashed, regardless of the recipe", "Whether yeast has completely disappeared from the beer", "Whether the beer has reached the recipe's exact expected gravity"],
     ["A beer develops an unexpected pellicle or fuzzy growth. What is a careful response?", "Avoid tasting it and assess the contamination safely", "Visible growth can indicate contamination; do not taste beer with clear warning signs.", "Remove the growth and assume the beer is safe without further assessment", "Bottle it before checking whether the growth returns", "Stir the surface growth into the beer to hide it"],
@@ -223,28 +223,28 @@ function createFermentationPracticeQuestions(): QuestionSeed[] {
 
 function createRecipePracticeQuestions(): QuestionSeed[] {
   const decisions: QuestionSeed[] = [
-    ["You want a pale color and clean malt profile. Which base should dominate the grain bill?", "Pale base malt", "A pale base malt supplies most of the extract without adding substantial dark color.", "Roasted barley", "Chocolate malt", "Black patent malt"],
-    ["You want a restrained caramel note in the malt profile. Which specialty malt should you use sparingly?", "Crystal malt", "A measured amount of crystal malt can add caramel-like flavor and color.", "Roasted barley", "Acidulated malt", "Pale base malt alone"],
-    ["You want a smooth roast character rather than sharp roast bitterness. Which malt choice fits?", "A restrained amount of a smooth-roasting dark malt", "A carefully chosen dark malt and modest proportion can add roast without overwhelming the beer.", "A large amount of highly roasted malt", "A large amount of black patent malt", "A large amount of crystal malt"],
-    ["You want stronger biscuit-like malt flavor. Which grain-bill change is most direct?", "Add a measured portion of biscuit or toasted malt", "Biscuit and toasted malts contribute bread-like, toasty flavors.", "Increase the share of crystal malt for caramel sweetness", "Use more pale base malt without adding a toasted malt", "Add roasted barley for a sharper roast character"],
-    ["You want more fermentable extract without changing the beer's color much. Which adjustment fits?", "Increase the pale base malt while recalculating the batch gravity", "Pale base malt adds fermentable extract with less color impact than dark specialty malts.", "Replace the pale base malt with roasted barley", "Increase the specialty-malt share while reducing the base malt", "Use a darker crystal malt as the main fermentable"],
-    ["You want a fuller body and a sweeter finish. Which mash profile is a sensible starting point?", "Mash toward the warmer end of the recipe's suitable range", "A warmer mash often leaves more dextrins, which can contribute body and sweetness.", "Mash at the coolest possible temperature", "Use a highly attenuative yeast", "Extend the bittering addition"],
-    ["You want a drier finish without changing the recipe's target gravity. What is a useful first adjustment?", "Mash toward the cooler end of a suitable range", "A cooler mash often produces more fermentable wort and can support a drier finish.", "Add more crystal malt", "Mash much warmer", "Choose a lower-attenuation yeast"],
-    ["You want more body without adding a strong flavor. Which ingredient could help in a restrained amount?", "Dextrin malt", "Dextrin malt is commonly used to add body and foam support with limited strong flavor.", "A small amount of roasted barley", "A larger share of highly fermentable base malt", "A more attenuative yeast strain"],
-    ["You want a stronger citrus hop aroma with moderate bitterness. Which timing is a good fit?", "Use late-boil or whirlpool additions of an aroma-forward hop", "Later additions emphasize volatile hop flavor and aroma while generally adding less bitterness than a long boil.", "Boil all hops for the full boil", "Use only an early bittering addition", "Remove all late additions"],
-    ["You want more bitterness while keeping the late-hop aroma unchanged. What should you adjust?", "Increase the calculated early-boil bittering addition", "An appropriately sized early addition contributes bitterness; keep the aroma additions as planned.", "Use a lower-alpha hop at the same early-boil timing and amount", "Shorten the early addition's boil time", "Reduce the amount of the early bittering addition"],
-    ["You want hop aroma but minimal additional bitterness. Which change is most suitable?", "Increase a suitable dry-hop addition", "Dry hopping extracts hop aroma and flavor without a long boil.", "Move the entire hop charge to the start of the boil", "Increase only the bittering addition", "Boil the aroma hops for the full boil"],
-    ["You want a softer bitterness while preserving late-hop character. What should you review?", "Reduce or adjust the early bittering addition", "The early addition contributes much of the bitterness; late additions can be retained for aroma and flavor.", "Increase the early bittering addition while keeping late hops unchanged", "Replace the late additions with an equal amount of early-boil hops", "Use a higher-alpha hop for the same early addition"],
-    ["You want a fruit-forward fermentation profile. Which yeast selection is most relevant?", "Choose a strain known for producing suitable fruity esters", "Yeast strain and fermentation conditions influence ester production; choose a profile suited to the beer.", "Choose a strongly neutral strain", "Choose a strain outside its recommended range", "Choose yeast based only on its flocculation"],
-    ["You want a clean, restrained yeast profile so hops remain prominent. What should guide yeast choice?", "Select a compatible strain with a relatively neutral profile", "A neutral strain can let malt and hop character stand out when fermented appropriately.", "Select a strongly phenolic strain", "Select the most ester-producing strain available", "Ignore the yeast's temperature range"],
-    ["You want a clove-like note typical of some wheat beers. What yeast character should you seek?", "A suitable phenolic wheat-beer yeast", "Some wheat-beer strains produce clove-like phenols as part of their characteristic profile.", "A highly neutral lager strain", "A strain selected only for high flocculation", "A strain with no maltose fermentation"],
-    ["You are increasing a recipe from 20 L to 30 L. What is the best ingredient-scaling approach?", "Scale the ingredient amounts by 1.5 and review system efficiency", "The volume ratio is 30 ÷ 20 = 1.5; efficiency and equipment losses may also affect the result.", "Scale the ingredient amounts by 0.5", "Leave all fermentables unchanged", "Scale only the yeast and not the ingredients"],
-    ["Your recipe estimate is below its target original gravity at the planned volume. Which change directly raises extract?", "Increase fermentable malt or extract and recalculate the recipe", "More fermentable ingredient increases extract; account for batch volume and system efficiency.", "Increase hop aroma without changing fermentable ingredients", "Change the yeast strain without changing the grain bill", "Adjust carbonation without changing wort composition"],
-    ["You want a lighter color without changing hop character. What should you change first?", "Use a paler malt bill and reduce dark specialty malts", "The grain bill largely determines wort color, so choose malts that fit the intended shade.", "Change the hop variety only", "Increase roasted malt", "Increase the boil time"],
-    ["You want a more stable foam without a strong roasted flavor. Which grain choice is worth considering?", "A modest amount of wheat or dextrin malt", "Wheat and dextrin malts can support foam and body without requiring a large roast addition.", "A large share of roasted barley", "A large share of black patent malt", "A large share of highly kilned roast malt"],
-    ["You want a crisp, dry finish in a lager. Which yeast trait is useful?", "Choose a lager strain with attenuation suited to a crisp, dry finish", "A strain with suitable attenuation can consume enough fermentable extract to support the intended finish.", "Choose a strain with very low attenuation, regardless of style", "Choose a strain that produces strong clove-like phenols", "Choose a highly ester-producing strain that does not suit the lager profile"],
-    ["You want a more rounded malt impression without adding caramel sweetness. What can you adjust?", "Use a suitable Munich-style malt in a balanced proportion", "Munich-style malt can contribute rich bready malt character without relying on crystal sweetness.", "Use a high proportion of crystal malt for caramel notes", "Use a large proportion of roasted barley for roast character", "Use only pale base malt without any richer specialty malt"],
-    ["You want less astringency from a grain bill with husked malt. What process choice helps?", "Avoid excessively hot, high-pH sparging", "Careful sparge temperature and pH help limit extraction of harsh husk compounds.", "Crush the grain to flour", "Use very alkaline sparge water", "Continue sparging regardless of runoff gravity"],
+    ["You want a pale color and clean malt profile. Which base should dominate the grain bill?", "Use pale base malt for most of the extract and keep colored specialty malts restrained", "A pale base malt supplies most of the extract while a modest specialty-malt share preserves a light, clean profile.", "Use pale malt with a larger share of Vienna malt for a richer bread-like profile", "Use pale malt with a measured crystal-malt addition for more caramel character", "Use pale malt with a small roasted-malt addition for a hint of roast"],
+    ["You want a restrained caramel note in the malt profile. Which specialty malt should you use sparingly?", "Crystal malt", "A measured amount of crystal malt can add caramel-like flavor and color.", "Light Munich malt for a bready malt note", "Carapils or dextrin malt for foam and body", "A small amount of toasted malt for a biscuit-like note"],
+    ["You want a smooth roast character rather than sharp roast bitterness. Which malt choice fits?", "A restrained amount of a smooth-roasting dark malt", "A carefully chosen dark malt and modest proportion can add roast without overwhelming the beer.", "A small amount of dehusked roasted malt for softer roast character", "A modest portion of chocolate malt for cocoa and roast notes", "A larger share of black patent malt for a sharper, more assertive roast"],
+    ["You want stronger biscuit-like malt flavor. Which grain-bill change is most direct?", "Add a measured portion of biscuit or toasted malt", "Biscuit and toasted malts contribute bread-like, toasty flavors.", "Increase light Munich malt for a rounder, bread-like malt character", "Increase crystal malt for more caramel sweetness", "Add a small amount of roasted malt for a darker toast character"],
+    ["You want more fermentable extract without changing the beer's color much. Which adjustment fits?", "Increase the pale base malt while recalculating the batch gravity", "Pale base malt adds fermentable extract with less color impact than dark specialty malts.", "Increase pale malt and reduce the batch volume to concentrate the wort", "Replace some pale malt with light crystal malt for additional extract and color", "Increase the malt bill but keep the same water volume and final batch size"],
+    ["You want a fuller body and a sweeter finish. Which mash profile is a sensible starting point?", "Mash toward the warmer end of the recipe's suitable range", "A warmer mash often leaves more dextrins, which can contribute body and sweetness.", "Mash toward the cooler end and rely on a highly attenuative yeast", "Keep the mash temperature and increase the proportion of highly fermentable base malt", "Mash warmer but use a highly attenuative yeast to offset the fuller wort"],
+    ["You want a drier finish without changing the recipe's target gravity. What is a useful first adjustment?", "Mash toward the cooler end of a suitable range", "A cooler mash often produces more fermentable wort and can support a drier finish.", "Mash warmer to leave more dextrins in the wort", "Keep the mash profile and choose a lower-attenuation yeast", "Increase crystal malt while keeping the same mash profile"],
+    ["You want more body without adding a strong flavor. Which ingredient could help in a restrained amount?", "Dextrin malt", "Dextrin malt is commonly used to add body and foam support with limited strong flavor.", "Light wheat malt for protein and foam support", "Light Munich malt for a more noticeable bready flavor", "A more attenuative yeast strain for a drier finish"],
+    ["You want a stronger citrus hop aroma with moderate bitterness. Which timing is a good fit?", "Use late-boil or whirlpool additions of an aroma-forward hop", "Later additions emphasize volatile hop flavor and aroma while generally adding less bitterness than a long boil.", "Move the same hop charge earlier to increase bitterness and reduce retained aroma", "Use a larger whirlpool addition at a controlled temperature for more aroma and some bitterness", "Keep the hop amounts but move the late addition to dry hopping"],
+    ["You want more bitterness while keeping the late-hop aroma unchanged. What should you adjust?", "Increase the calculated early-boil bittering addition", "An appropriately sized early addition contributes bitterness; keep the aroma additions as planned.", "Use a higher-alpha hop at the same early-boil timing and recalculate the amount", "Move some of the late addition earlier while keeping the total hop mass constant", "Increase the late-hop amount and leave the bittering addition unchanged"],
+    ["You want hop aroma but minimal additional bitterness. Which change is most suitable?", "Increase a suitable dry-hop addition", "Dry hopping extracts hop aroma and flavor without a long boil.", "Increase a whirlpool addition while keeping its temperature and contact time controlled", "Move the aroma addition to a short late-boil addition", "Increase the early bittering addition while reducing late hops"],
+    ["You want a softer bitterness while preserving late-hop character. What should you review?", "Reduce or adjust the early bittering addition", "The early addition contributes much of the bitterness; late additions can be retained for aroma and flavor.", "Use a lower-alpha hop for the early addition and recalculate its amount", "Move some of the early charge later while accounting for the changed bitterness", "Reduce the late-hop charge and leave the bittering schedule unchanged"],
+    ["You want a fruit-forward fermentation profile. Which yeast selection is most relevant?", "Choose a strain known for producing suitable fruity esters", "Yeast strain and fermentation conditions influence ester production; choose a profile suited to the beer.", "Choose a relatively neutral strain and emphasize fruit character with suitable hops", "Choose a phenolic strain for a more spice-forward profile", "Choose a strain with a suitable ester profile but ferment it at the cool end of its range"],
+    ["You want a clean, restrained yeast profile so hops remain prominent. What should guide yeast choice?", "Select a compatible strain with a relatively neutral profile", "A neutral strain can let malt and hop character stand out when fermented appropriately.", "Select a compatible strain with moderate esters for a more expressive fermentation", "Select a phenolic strain to add clove and spice alongside the hops", "Select a neutral strain but ferment it outside its recommended range"],
+    ["You want a clove-like note typical of some wheat beers. What yeast character should you seek?", "A suitable phenolic wheat-beer yeast", "Some wheat-beer strains produce clove-like phenols as part of their characteristic profile.", "A wheat-beer strain known mainly for banana-like esters", "A clean, neutral wheat strain for a restrained yeast character", "A strain with a strong sulfur profile rather than clove-like phenols"],
+    ["You are increasing a recipe from 20 L to 30 L. What is the best starting approach?", "Scale ingredient amounts by 1.5, then review gravity, bitterness, and system losses", "The volume ratio is 30 ÷ 20 = 1.5; efficiency, hop utilization, and equipment losses may still change the result.", "Scale only the fermentables and keep the hop schedule unchanged", "Use a factor of 0.67 because the original batch is smaller", "Scale every amount by 1.5 and assume the original gravity and bitterness will match exactly"],
+    ["Your recipe estimate is below its target original gravity at the planned volume. Which change directly raises extract?", "Increase fermentable malt or extract and recalculate the recipe", "More fermentable ingredient increases extract; account for batch volume and system efficiency.", "Reduce the batch volume while keeping the fermentable amount fixed", "Improve expected mash efficiency and update the gravity estimate", "Add specialty malt with a lower extract potential and recalculate the grain bill"],
+    ["You want a lighter color without changing hop character. What should you change first?", "Use a paler malt bill and reduce dark specialty malts", "The grain bill largely determines wort color, so choose malts that fit the intended shade.", "Replace a portion of dark crystal malt with a lighter crystal malt", "Reduce the amount of roasted malt while keeping the hop schedule fixed", "Use a lighter base malt but retain the same proportion of dark specialty malt"],
+    ["You want a more stable foam without adding much malt flavor. Which grain choice is a sensible starting point?", "A modest amount of dextrin malt", "Dextrin malt can support foam and body while contributing relatively little strong flavor.", "A modest amount of wheat malt for protein and a light grain character", "A larger share of crystal malt for body and caramel notes", "A restrained amount of roasted malt for body and roast character"],
+    ["You want a crisp, dry finish in a lager. Which yeast trait is useful?", "Choose a lager strain with attenuation suited to a crisp, dry finish", "A strain with suitable attenuation can consume enough fermentable extract to support the intended finish.", "Choose a lager strain with lower attenuation to retain more body", "Choose a strain with suitable attenuation but a more expressive ester profile", "Choose a highly flocculent strain without checking its attenuation"],
+    ["You want a rich, bready malt note without adding caramel sweetness. Which malt is the most direct choice?", "Use a suitable Munich-style malt in a balanced proportion", "Munich-style malt can contribute rich bready malt character without relying on crystal sweetness.", "Use Vienna malt for a lighter, more toasted malt character", "Use light crystal malt for a mild caramel note", "Use biscuit malt for a drier, cracker-like impression"],
+    ["You want less astringency from a grain bill with husked malt. What process choice helps?", "Avoid excessively hot, high-pH sparging", "Careful sparge temperature and pH help limit extraction of harsh husk compounds.", "Keep sparge pH controlled but extend runoff to a very low final gravity", "Use a finer crush while maintaining the same sparge conditions", "Use cooler sparge water but allow runoff pH to rise unchecked"],
   ];
   const contexts = [
     (question: string) => question,
@@ -274,9 +274,9 @@ function createMathPracticeQuestions(system: UnitSystem): QuestionSeed[] {
       "How can original- and final-gravity readings be used to estimate alcohol content?",
       "Use their gravity difference in an approximate ABV formula",
       "The OG-to-FG drop gives a homebrew ABV estimate; it is approximate rather than a laboratory measurement.",
-      "Use only the final gravity",
-      "Use the starting gravity without comparing it with the final gravity",
-      "Subtract final gravity from original gravity but do not use a formula",
+      "Use the final gravity alone and apply a fixed conversion factor",
+      "Divide the original gravity points by the final gravity points",
+      "Treat the gravity-point drop as the ABV percentage without a conversion factor",
     ],
     metric
       ? [
@@ -448,19 +448,19 @@ function createFlavorPracticeQuestions(): QuestionSeed[] {
       compound: "Diacetyl",
       explanation: "Diacetyl is associated with buttery or butterscotch-like flavor; yeast can reduce it during conditioning.",
       clues: ["a buttery aroma", "a butterscotch-like finish", "a slick, butter-like palate impression", "a buttered-popcorn note", "a creamy butterscotch character", "a lingering buttery flavor"],
-      alternatives: ["Acetaldehyde", "Fusel alcohols", "Hydrogen sulfide"],
+      alternatives: ["Acetaldehyde", "Ethyl acetate", "Dimethyl sulfide (DMS)"],
     },
     {
       compound: "Acetaldehyde",
       explanation: "Acetaldehyde is commonly associated with green-apple notes and can be reduced by yeast as fermentation finishes.",
       clues: ["a fresh green-apple aroma", "a cut-apple flavor", "a green fruit note in young beer", "a raw apple-like finish", "a sharp green-apple character", "an apple-skin aroma before conditioning"],
-      alternatives: ["Diacetyl", "Dimethyl sulfide", "Oxidation"],
+      alternatives: ["Diacetyl", "Ethyl acetate", "Oxidation"],
     },
     {
       compound: "Dimethyl sulfide (DMS)",
       explanation: "DMS is often described as cooked corn or cabbage and can be influenced by wort production and cooling.",
       clues: ["a cooked-corn aroma", "a sweet canned-corn note", "a cooked vegetable character", "a cabbage-like sulfur note", "a creamed-corn flavor", "a cooked sweetcorn finish"],
-      alternatives: ["Hydrogen sulfide", "Diacetyl", "Acetaldehyde"],
+      alternatives: ["Hydrogen sulfide", "Sulfur dioxide", "Acetaldehyde"],
     },
     {
       compound: "Hydrogen sulfide",
@@ -472,19 +472,19 @@ function createFlavorPracticeQuestions(): QuestionSeed[] {
       compound: "Fusel alcohols",
       explanation: "Elevated fusel alcohols can produce hot, harsh, or solvent-like aromas and flavors.",
       clues: ["a hot solvent-like aroma", "a harsh nail-polish-remover note", "a warming, spirit-like harshness", "a sharp alcoholic burn", "a solvent-like finish", "an overly hot alcoholic aroma"],
-      alternatives: ["Ethyl acetate", "Diacetyl", "Oxidation"],
+      alternatives: ["Ethyl acetate", "Acetaldehyde", "Diacetyl"],
     },
     {
       compound: "Isoamyl acetate",
       explanation: "Isoamyl acetate is a fruity ester commonly associated with banana-like aroma, especially in some wheat beers.",
       clues: ["a banana aroma", "a ripe banana flavor", "a banana-like ester note", "a sweet banana character", "a banana-and-pear fruit note", "a bubblegum-like banana aroma"],
-      alternatives: ["4-vinyl guaiacol", "Diacetyl", "Acetaldehyde"],
+      alternatives: ["4-vinyl guaiacol", "Ethyl acetate", "Acetaldehyde"],
     },
     {
       compound: "4-vinyl guaiacol",
       explanation: "4-vinyl guaiacol is a yeast-derived phenol associated with clove-like spice in some wheat beers.",
       clues: ["a clove-like aroma", "a spicy clove flavor", "a medicinal clove note", "a clove-and-spice character", "a peppery, clove-like finish", "a familiar wheat-beer clove aroma"],
-      alternatives: ["Isoamyl acetate", "Diacetyl", "Fusel alcohols"],
+      alternatives: ["Isoamyl acetate", "Chlorophenols", "Sulfur dioxide"],
     },
     {
       compound: "Oxidation",
@@ -520,7 +520,7 @@ function createFlavorPracticeQuestions(): QuestionSeed[] {
       compound: "Hop-derived citrus oils",
       explanation: "Citrus-like hop aroma can come from hop oils and varies by variety and handling.",
       clues: ["a grapefruit-like hop aroma", "a lemony hop nose", "a fresh orange-peel note", "a citrus zest aroma from late hops", "a bright citrus hop character", "a grapefruit-and-lemon aroma"],
-      alternatives: ["Fruity yeast esters", "Roasted malt", "Diacetyl"],
+      alternatives: ["Fruity yeast esters", "Hop-derived pine oils", "Diacetyl"],
     },
     {
       compound: "Roasted malt compounds",
@@ -555,6 +555,20 @@ function shuffle<T>(items: T[]): T[] {
   return shuffled;
 }
 
+function questionPromptKey(prompt: string): string {
+  return prompt.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function uniqueQuestionsByPrompt(questions: Question[]): Question[] {
+  const seenPrompts = new Set<string>();
+  return questions.filter((question) => {
+    const promptKey = questionPromptKey(question.prompt);
+    if (seenPrompts.has(promptKey)) return false;
+    seenPrompts.add(promptKey);
+    return true;
+  });
+}
+
 const LEARNING_GAMES: Record<string, LearningGame> = {
   "brew-basics": {
     title: "Brew Basics",
@@ -562,22 +576,22 @@ const LEARNING_GAMES: Record<string, LearningGame> = {
     intro: "Answer seven random questions from a 100-question pool. Choices are shuffled on every attempt, and explanations reveal the brewing behind each answer.",
     source: "How to Brew, Chapters 1–11",
     questions: buildQuestions([
-      ["What is wort?", "The sweet liquid extracted from malt before fermentation", "Wort is the sugar-rich liquid made during mashing and collected before yeast ferments it.", "Beer after it has finished fermenting", "The grain left behind after sparging", "Water used to rinse brewing equipment"],
-      ["What does brewing yeast do during fermentation?", "Converts fermentable sugars into alcohol and carbon dioxide", "Yeast consumes fermentable sugars and produces alcohol, carbon dioxide, and flavor compounds.", "Consumes sugars but produces no fermentation gas", "Converts most alcohol back into sugar", "Converts hop oils into fermentable malt sugars"],
-      ["Why is crushed malt mixed with warm water during the mash?", "To let malt enzymes convert starches into sugars", "The mash gives malt enzymes suitable conditions to convert starch into sugars that yeast can use.", "To dissolve already-fermented alcohol from the grain", "To extract hop bitterness before the boil", "To ferment the wort before it is boiled"],
-      ["What is the main purpose of milling malt before brewing?", "Crack the grain so water can reach its starchy interior", "A suitable crush exposes the grain interior while retaining husks that help form a filter bed.", "Grind the grain until the husks and endosperm become fine flour", "Separate the starch from the grain before mashing", "Heat the malt enough to activate its enzymes"],
-      ["What is a base malt mainly used for?", "Providing most of the fermentable extract in many beer recipes", "Base malts commonly provide much of a recipe's extract and enzymes for starch conversion.", "Providing most of the beer's color and roast flavor", "Supplying the bitterness in the recipe", "Adding yeast nutrients instead of fermentable extract"],
-      ["What do specialty malts commonly contribute?", "Color, flavor, and sometimes body", "Roasting and processing create flavors such as toast, caramel, or roast and can deepen beer color.", "Most of the beer's hop bitterness", "The yeast that ferments the wort", "The water profile used in the mash"],
-      ["What is a mash rest?", "A period when crushed malt and water are held at a chosen temperature", "The rest gives malt enzymes time to work on starches and other grain components.", "The time when wort is held at a rolling boil", "The period when yeast ferments the cooled wort", "The time when hops steep in finished beer"],
-      ["Which statement about mash enzymes is correct?", "They help convert malt starches into smaller sugars", "Malt enzymes, including amylases, break starch into sugars during mashing.", "They convert sugars into alcohol during fermentation", "They create the hop compounds used for bitterness", "They remove proteins from the finished beer"],
-      ["What is one role of alpha-amylase in the mash?", "It breaks starch chains into shorter dextrins and sugars", "Alpha-amylase cuts starch chains at internal points, helping create a range of shorter carbohydrates.", "It ferments maltose into alcohol", "It converts hop acids into bitterness", "It consumes all the sugars produced by beta-amylase"],
-      ["What is one role of beta-amylase in the mash?", "It releases maltose units from starch-chain ends", "Beta-amylase helps produce maltose, an important fermentable sugar, from starch.", "It converts alcohol into carbon dioxide during fermentation", "It breaks down hop alpha acids during the boil", "It turns yeast cells into fermentable sugars"],
-      ["What can a warmer mash temperature generally encourage?", "A wort with more dextrins and a fuller perceived body", "Mash temperature affects enzyme activity; warmer rests often favor less fermentable wort, within recipe and process limits.", "A wort with fewer fermentable sugars and no dextrins", "A lower original gravity regardless of the grain bill", "A wort that ferments before yeast is added"],
-      ["Why do brewers pay attention to mash pH?", "Enzyme performance and wort extraction are affected by pH", "Mash pH influences enzyme activity and the chemistry of extraction; brewers manage it for consistency.", "It affects only the color of the finished beer", "It replaces the need to control mash temperature", "It is used to estimate how much sparge water to collect"],
-      ["What is strike water?", "The water heated and added to the grain to begin mashing", "Strike-water volume and temperature are planned so the mash reaches its target conditions.", "The water collected from the mash before sparging", "The rinse water added after the mash rest", "The water used to dilute beer after fermentation"],
-      ["What does lautering mean?", "Separating wort from the grain bed", "Lautering collects liquid wort from the mash while retaining the spent grain.", "Rinsing the grain bed to collect additional extract", "Recirculating wort through the grain before collecting it", "Boiling the collected wort with hops"],
-      ["What is sparging in a typical all-grain brew?", "Rinsing the grain bed with water to collect more wort extract", "Sparging washes additional dissolved sugars from the grain bed into the kettle.", "Draining the first wort before adding rinse water", "Recirculating wort to clarify it before runoff", "Adding water to the kettle after the boil to lower gravity"],
-      ["What are first runnings?", "The first sweet liquid drained from the grain before it is rinsed", "First runnings are the first sweet liquid collected from the grain. The later rinse collects more liquid.", "The sweet liquid collected after the grain is rinsed", "The water poured over the grain to rinse out sugar", "The wet grain left after the sweet liquid drains"],
+      ["What is wort?", "The sweet liquid extracted from malt before fermentation", "Wort is the sugar-rich liquid made during mashing and collected before yeast ferments it.", "The liquid collected after fermentation but before conditioning", "The grain bed after most of its soluble extract has been rinsed away", "The sparge water before it has passed through the grain"],
+      ["What does brewing yeast do during fermentation?", "Converts fermentable sugars into alcohol and carbon dioxide", "Yeast consumes fermentable sugars and produces alcohol, carbon dioxide, and flavor compounds.", "Converts fermentable sugars mainly into carbon dioxide and organic acids", "Produces alcohol and water, with little carbon dioxide", "Converts most sugars into glycerol and flavor compounds rather than alcohol"],
+      ["Why is crushed malt mixed with warm water during the mash?", "To let malt enzymes convert starches into sugars", "The mash gives malt enzymes suitable conditions to convert starch into sugars that yeast can use.", "To dissolve sugars already present in the grain without enzyme activity", "To extract color and flavor from the malt after starch conversion", "To prepare the grain for rinsing before the mash enzymes have acted"],
+      ["What is the main purpose of milling malt before brewing?", "Crack the grain so water can reach its starchy interior", "A suitable crush exposes the grain interior while retaining husks that help form a filter bed.", "Crush the kernels finely enough to expose the endosperm but risk a slower runoff", "Crack the grain lightly while leaving some kernels mostly intact", "Remove the husks before crushing to expose the endosperm"],
+      ["What is a base malt mainly used for?", "Providing most of the fermentable extract in many beer recipes", "Base malts commonly provide much of a recipe's extract and enzymes for starch conversion.", "Providing much of the extract but little of the enzymes needed for a typical all-malt mash", "Contributing a distinctive toast or caramel note in a modest proportion", "Providing most of the color while contributing only a small share of the extract"],
+      ["What do specialty malts commonly contribute?", "Color, flavor, and sometimes body", "Roasting and processing create flavors such as toast, caramel, or roast and can deepen beer color.", "Fermentable extract and a flavor contribution, with the balance depending on the malt", "Color and roast character but little enzymatic power", "Body and foam support with relatively little change to flavor"],
+      ["What is a mash rest?", "A period when crushed malt and water are held at a chosen temperature", "The rest gives malt enzymes time to work on starches and other grain components.", "A period when the mash is raised gradually through enzyme-active temperatures", "A short hold after lautering to settle particles before boiling", "A rest during fermentation when yeast reduces some flavor compounds"],
+      ["Which statement about mash enzymes is correct?", "They help convert malt starches into smaller sugars", "Malt enzymes, including amylases, break starch into sugars during mashing.", "They convert starch into sugars most actively during fermentation", "They break down proteins but do not act on starch", "They continue converting starch throughout the wort boil"],
+      ["What is one role of alpha-amylase in the mash?", "It breaks starch chains into shorter dextrins and sugars", "Alpha-amylase cuts starch chains at internal points, helping create a range of shorter carbohydrates.", "It releases maltose from the ends of starch chains", "It converts longer dextrins into fermentable sugars only", "It breaks starch chains into shorter pieces while beta-amylase produces much of the maltose"],
+      ["What is one role of beta-amylase in the mash?", "It releases maltose units from starch-chain ends", "Beta-amylase helps produce maltose, an important fermentable sugar, from starch.", "It cuts starch chains at internal points to create shorter dextrins", "It breaks maltose into glucose during the mash", "It removes branch points from starch chains rather than releasing maltose"],
+      ["What can a warmer mash temperature generally encourage?", "A wort with more dextrins and a fuller perceived body", "Mash temperature affects enzyme activity; warmer rests often favor less fermentable wort, within recipe and process limits.", "A more fermentable wort with a lower final gravity", "A similar fermentability with faster enzyme activity only", "A fuller wort mainly because more grain extract is created"],
+      ["Why do brewers pay attention to mash pH?", "Enzyme performance and wort extraction are affected by pH", "Mash pH influences enzyme activity and the chemistry of extraction; brewers manage it for consistency.", "It affects extraction and flavor but has little bearing on enzyme activity", "It is used mainly to predict the beer's final carbonation", "It determines fermentability more directly than mash temperature"],
+      ["What is strike water?", "The water heated and added to the grain to begin mashing", "Strike-water volume and temperature are planned so the mash reaches its target conditions.", "The first wort collected from the mash before sparging", "The water added after the mash rest to rinse the grain", "The water used to adjust the kettle volume after the boil"],
+      ["What does lautering mean?", "Separating wort from the grain bed", "Lautering collects liquid wort from the mash while retaining the spent grain.", "Rinsing the grain bed with sparge water to recover more extract", "Recirculating early runoff through the grain bed to improve clarity", "Draining the mash tun after the sparge is complete"],
+      ["What is sparging in a typical all-grain brew?", "Rinsing the grain bed with water to collect more wort extract", "Sparging washes additional dissolved sugars from the grain bed into the kettle.", "Recirculating the first cloudy runoff until it clears", "Collecting the concentrated first wort before adding rinse water", "Diluting collected wort to reach the planned kettle volume"],
+      ["What are first runnings?", "The first sweet liquid drained from the grain before it is rinsed", "First runnings are the first sweet liquid collected from the grain. The later rinse collects more liquid.", "The wort collected after sparge water has rinsed the grain", "The initial cloudy wort returned to the top of the grain bed", "The final low-gravity runoff collected after sparging"],
       ["Why is wort boiled in many beer recipes?", "To help sanitize it, drive off some volatiles, and support hop utilization", "The boil serves several purposes; its details depend on the recipe and brewing process.", "To extract all bitterness from hops before adding them", "To concentrate the wort without changing its gravity", "To make the wort ferment without yeast"],
       ["What is the hot break?", "Protein and other material that coagulate during the wort boil", "The hot break is material formed as wort boils; it can later settle with trub.", "The foam produced by yeast during active fermentation", "The sediment that forms only after bottle conditioning", "The hop material left in the kettle after chilling"],
       ["Why does a brewer account for boil-off?", "Boiling evaporates water and changes the wort volume and concentration", "Estimating boil-off helps the brewer plan pre-boil volume and reach the intended post-boil volume and gravity.", "It estimates the volume lost to grain absorption during lautering", "It predicts how much wort the fermenter will absorb", "It measures how much water is retained in the grain bed"],
@@ -697,19 +711,19 @@ const LEARNING_GAMES: Record<string, LearningGame> = {
             feedback: "Strike water is heated for the mash. The crushed malt is mixed in so enzymes can convert starches into sugars.",
           },
           {
-            text: "Drain the grain to collect the sweet liquid",
+            text: "Heat the sparge water and prepare the lauter tun",
             correct: false,
-            feedback: "Drain the grain only after it has soaked in warm water. First, heat the water and mix in the grain.",
+            feedback: "Those preparations come later in the process. First heat strike water and mash in the grain.",
           },
           {
-            text: "Cool the sweet liquid and add yeast",
+            text: "Add the crushed malt to room-temperature water and begin runoff",
             correct: false,
-            feedback: "Yeast is added after the sweet liquid is boiled and cooled. First, make the liquid from the grain.",
+            feedback: "The mash needs suitable temperature and time before runoff; calculate and heat the strike water first.",
           },
           {
-            text: "Boil the sweet liquid and add hops",
+            text: "Begin recirculating wort through the grain bed",
             correct: false,
-            feedback: "The grain is mashed with warm water first; the collected wort is boiled later.",
+            feedback: "Recirculation takes place after the mash rest, during lautering.",
           },
         ],
         source: "Wikipedia: Brewing — process overview",
@@ -723,19 +737,19 @@ const LEARNING_GAMES: Record<string, LearningGame> = {
             feedback: "Lautering separates wort from the grain bed; sparging rinses remaining sugars from the grain.",
           },
           {
-            text: "Boil the sweet liquid with hops",
+            text: "Raise the mash to mash-out temperature, then begin runoff",
             correct: false,
-            feedback: "First drain the sweet liquid away from the grain. Then boil it with hops.",
+            feedback: "A mash-out may be part of the process, but first establish runoff and separate wort from the grain.",
           },
           {
-            text: "Add yeast to the mash before separating the wort",
+            text: "Recirculate the first cloudy runoff, then collect the wort",
             correct: false,
-            feedback: "Yeast is added to cooled wort after the grain has been separated and the wort boiled.",
+            feedback: "Recirculation is a lautering step, but the grain bed must first be set for runoff after the mash rest.",
           },
           {
-            text: "Boil the grain and wort together before lautering",
+            text: "Add all sparge water and drain it without separating the first wort",
             correct: false,
-            feedback: "Separate the wort from the grain before boiling it.",
+            feedback: "Collect the first wort from the grain bed before the planned sparge and runoff steps.",
           },
         ],
         source: "Wikipedia: Brewing — process overview",
@@ -749,19 +763,19 @@ const LEARNING_GAMES: Record<string, LearningGame> = {
             feedback: "The boil helps sanitize wort and is when many hop additions are made. Follow the recipe's timing.",
           },
           {
-            text: "Cool the sweet liquid before adding yeast",
+            text: "Check pre-boil volume and gravity, then bring the wort to a boil",
             correct: false,
-            feedback: "Boil the sweet liquid first. Cool it before adding yeast.",
+            feedback: "Those checks happen before the boil. Once wort is collected and measured, follow the boil and hop schedule.",
           },
           {
-            text: "Collect another runoff from the grain before boiling",
+            text: "Transfer the wort to the fermenter and begin cooling it there",
             correct: false,
-            feedback: "Boil the sweet liquid first. Cool it before adding yeast.",
+            feedback: "The planned boil comes before cooling and transfer to the fermenter.",
           },
           {
-            text: "Add yeast before boiling the sweet liquid",
+            text: "Begin chilling the wort while the scheduled boil is still underway",
             correct: false,
-            feedback: "The wort is boiled first, then cooled to a suitable temperature before yeast is pitched.",
+            feedback: "Complete the scheduled boil and hop additions before chilling the wort.",
           },
         ],
         source: "Wikipedia: Brewing — process overview",
@@ -775,19 +789,19 @@ const LEARNING_GAMES: Record<string, LearningGame> = {
             feedback: "Cooling prepares the wort for yeast. The target depends on the yeast and recipe.",
           },
           {
-            text: "Transfer the hot sweet liquid to the fermenter",
+            text: "Whirlpool or settle the wort, then chill it to pitching temperature",
             correct: false,
-            feedback: "Cool the sweet liquid before moving it to the fermenter and adding yeast.",
+            feedback: "Whirlpooling or settling may follow the boil, but the wort still needs to reach a suitable pitching temperature.",
           },
           {
-            text: "Add yeast while the sweet liquid is still hot",
+            text: "Transfer the wort while hot and rely on the fermenter to cool it",
             correct: false,
-            feedback: "Hot liquid can harm yeast. Cool it to the right temperature first.",
+            feedback: "The wort should be cooled to a suitable pitching temperature before yeast is added.",
           },
           {
-            text: "Wait for the liquid to cool without covering it",
+            text: "Add yeast nutrient and pitch yeast before checking the wort temperature",
             correct: false,
-            feedback: "Cool the wort safely before pitching and protect it from contamination.",
+            feedback: "Check and reach the yeast's suitable pitching temperature before adding it; follow nutrient instructions.",
           },
         ],
       },
@@ -800,19 +814,19 @@ const LEARNING_GAMES: Record<string, LearningGame> = {
             feedback: "Once cooled, transfer with clean, sanitized equipment and pitch suitable yeast according to its instructions.",
           },
           {
-            text: "Add yeast before the liquid has cooled",
+            text: "Measure the cooled wort and aerate or oxygenate it as the process calls for",
             correct: false,
-            feedback: "Yeast needs the liquid to be cool enough before it is added.",
+            feedback: "That can be part of the next steps, but transfer to a sanitized fermenter and pitch suitable yeast.",
           },
           {
-            text: "Bottle the beer before the yeast has finished working",
+            text: "Transfer the wort to a sanitized fermenter and wait for visible airlock activity before pitching",
             correct: false,
-            feedback: "Fermentation must take place before packaging. Bottling fermenting beer can create dangerous pressure.",
+            feedback: "Pitch suitable yeast after transfer; visible airlock activity is not a prerequisite and may not be a reliable sign.",
           },
           {
-            text: "Leave the liquid in the kettle until the yeast starts working",
+            text: "Pitch yeast into the kettle and transfer the beer after fermentation begins",
             correct: false,
-            feedback: "Move the cooled liquid into a clean fermenter before adding yeast.",
+            feedback: "Transfer cooled wort to the sanitized fermenter before pitching to protect the batch and use the vessel as intended.",
           },
         ],
       },
@@ -825,19 +839,19 @@ const LEARNING_GAMES: Record<string, LearningGame> = {
             feedback: "Airlock activity alone is not a dependable measure. Stable gravity readings, along with the recipe and yeast guidance, help assess completion.",
           },
           {
-            text: "Wait until the bubbles stop, then bottle it",
+            text: "Use a single gravity reading and package if it matches the expected final gravity",
             correct: false,
-            feedback: "An airlock can stop for reasons other than completed fermentation. Confirm stable gravity before packaging.",
+            feedback: "One reading cannot establish stability; compare gravity readings over an appropriate interval before packaging.",
           },
           {
-            text: "Add more yeast if the bubbles slow down",
+            text: "Use the beer's clarity and a quiet airlock together as confirmation",
             correct: false,
-            feedback: "A slower airlock does not automatically mean fermentation is stuck. Check gravity and fermentation conditions first.",
+            feedback: "Clarity and airlock activity are not reliable completion tests; use gravity readings over time.",
           },
           {
-            text: "Bottle it when it looks clear",
+            text: "Wait a fixed number of days after bubbling stops, then package",
             correct: false,
-            feedback: "Clarity does not confirm fermentation completion. Check that gravity readings are stable over time.",
+            feedback: "Fermentation timing varies by yeast and conditions; confirm stable gravity rather than relying on a fixed interval.",
           },
         ],
       },
@@ -1048,11 +1062,11 @@ const LEARNING_GAMES: Record<string, LearningGame> = {
       ...buildQuestions([
         ["Your airlock is quiet twelve hours after pitching. What is the best first move?", "Check the fermenter seal and monitor temperature and gravity", "A leak or normal lag can explain a quiet airlock; gravity and temperature provide better clues.", "Bottle the beer immediately", "Add sanitizer to the wort", "Discard the batch without checking"],
         ["There is no visible activity after one day, but the wort is within the yeast range. What should you do?", "Give the yeast time and keep monitoring", "Lag time varies with yeast, pitching rate, and wort; visible bubbles are not the only sign of fermentation.", "Pitch a second packet every hour", "Heat the fermenter above the strain's range", "Open it and stir with an unclean spoon"],
-        ["The airlock is not bubbling, but gravity has fallen since pitching. What does that suggest?", "Fermentation is occurring even if the airlock is quiet", "A leaky seal can prevent airlock activity; gravity change is evidence that extract is being consumed.", "The beer is fully carbonated", "The hydrometer is measuring hop aroma", "The batch must be discarded"],
-        ["The airlock bubbles steadily. Does that prove fermentation is healthy and complete?", "No; check gravity, temperature, and the recipe's expected progress", "Bubbles show gas is escaping, but do not establish fermentation health or completion by themselves.", "Yes, bubbling always means the beer is finished", "Yes, it proves the beer is not contaminated", "No; add sanitizer to the airlock"],
-        ["The fermenter is warmer than the room during active fermentation. Is that unusual?", "No; yeast activity can generate heat", "Fermenting beer can be warmer than ambient air, especially during vigorous activity.", "Yes; it proves the thermometer is broken", "Yes; fermentation never produces heat", "No; the beer is boiling"],
+        ["The airlock is not bubbling, but gravity has fallen since pitching. What does that suggest?", "Fermentation is occurring even if the airlock is quiet", "A leaky seal can prevent airlock activity; gravity change is evidence that extract is being consumed.", "The sample temperature or reading technique may need checking before drawing a conclusion", "The beer has reached final gravity because its reading is lower", "The airlock may not show activity even while gravity is still changing"],
+        ["The airlock bubbles steadily. Does that prove fermentation is healthy and complete?", "No; check gravity, temperature, and the recipe's expected progress", "Bubbles show gas is escaping, but do not establish fermentation health or completion by themselves.", "Check whether gravity is stable before interpreting the airlock activity", "A steady airlock can coexist with a fermentation issue or leak", "Use the yeast's expected timeline alongside gravity and temperature"],
+        ["The fermenter is warmer than the room during active fermentation. What best explains the difference?", "Yeast activity releases heat, so the beer can run warmer than the room", "Active fermentation can raise the beer temperature above ambient.", "The fermenter is insulated, so the beer cannot exchange heat with its surroundings", "Fermentation consumes heat, so a warmer reading means activity has stopped", "Only the airlock can create a temperature difference between beer and room"],
         ["A temperature probe attached to the fermenter reads above the yeast's recommended range. What next?", "Use a controlled cooling method and monitor the beer temperature", "Gently return the beer toward the strain's range and avoid abrupt swings.", "Add ice directly into the fermenter", "Move it next to a heater", "Open it to release heat"],
-        ["The beer is colder than the yeast's recommended range and gravity is unchanged. What is sensible?", "Gently bring it toward the strain's range and monitor for activity", "Cold can slow some yeast; adjust gradually and recheck gravity rather than assuming a failure.", "Boil the fermenter contents", "Add priming sugar and bottle", "Shake air into the finished beer"],
+        ["The beer is colder than the yeast's recommended range and gravity is unchanged. What is sensible?", "Gently bring it toward the strain's range and monitor for activity", "Cold can slow some yeast; adjust gradually and recheck gravity rather than assuming a failure.", "Warm it gradually within the strain's range and recheck gravity", "Package it if the airlock is quiet, without confirming gravity stability", "Raise it well above the strain's range to restart activity quickly"],
         ["Fermentation temperature rose quickly after vigorous activity began. What should you consider?", "Use temperature control to avoid sustained excessive warmth", "Fermentation heat can raise beer temperature; follow the yeast's recommended range.", "Raise the temperature further above the strain's range", "Cool the beer far below the strain's range all at once", "Ignore the beer temperature and rely only on room temperature"],
         ["The fermenter is in direct sunlight. What is a better location?", "A shaded place with stable, suitable temperature", "Stable temperature and protection from light are generally preferable for fermentation.", "A location with the same temperature but stronger sunlight", "A warm location with large temperature swings", "A cold location outside the yeast's recommended range"],
         ["The yeast package says to ferment within a specific range. Which temperature should guide you?", "The yeast supplier's range and the recipe's intended profile", "Strain-specific guidance is more useful than a universal temperature for every beer.", "The room temperature regardless of the beer temperature", "The mash temperature used before the wort was boiled", "A single temperature used for every yeast strain"],
@@ -1125,24 +1139,24 @@ const LEARNING_GAMES: Record<string, LearningGame> = {
         ["You see foam or bubbles after adding fermentable fruit. What should you do?", "Keep the vessel safely vented and monitor gravity", "Fruit sugars can restart fermentation and produce gas; do not seal an actively fermenting vessel without rated equipment.", "Seal the vessel tightly without a vent", "Bottle immediately", "Add sanitizer to stop the yeast"],
         ["The fermenter is nearly full and krausen is rising. What is a safer plan for future batches?", "Allow adequate headspace or use an appropriate blow-off setup", "Krausen can overflow; plan vessel capacity and venting for vigorous fermentation.", "Seal the airlock", "Fill above the lid", "Use a non-pressure-rated vessel as a pressure tank"],
         ["A pressure relief valve is venting frequently. What should you check?", "The pressure setting, gas path, and equipment instructions", "Use rated equipment and verify settings and obstructions; never disable a relief valve to retain pressure.", "Block the relief valve", "Heat the vessel", "Ignore vessel ratings"],
-        ["You hear a hissing sound from a pressure fermenter. What should you do?", "Check for leaks and follow the equipment's safe pressure procedure", "A leak can affect pressure and sanitation; handle pressurized equipment according to its manufacturer.", "Open it abruptly", "Increase pressure until the sound stops", "Use a flame to find the leak"],
+        ["You hear a hissing sound from a pressure fermenter. What should you do?", "Check for leaks and follow the equipment's safe pressure procedure", "A leak can affect pressure and sanitation; handle pressurized equipment according to its manufacturer.", "Ignore it if the pressure gauge is still within its usual range", "Increase the regulator pressure to compensate for the sound", "Disconnect a pressurized fitting to reseat the connection"],
         ["A fermentation temperature sensor fell off the vessel. What is appropriate?", "Reattach it correctly and verify the beer temperature with a reliable method", "A detached probe may read air temperature instead of beer temperature; confirm the actual process conditions.", "Assume the beer stayed exactly on target", "Increase heating to maximum", "Add ice to the fermenter"],
         ["The fermenter was moved during active fermentation. What should you do?", "Keep it sealed, restore suitable conditions, and continue monitoring", "Movement alone does not necessarily harm beer; minimize unnecessary exposure and check progress normally.", "Open it to stir in air", "Bottle it immediately", "Add sanitizer through the airlock"],
-        ["A sample smells like rotten eggs during fermentation. What should you consider?", "Some yeast strains produce sulfur compounds that may diminish with conditioning", "Sulfur aromas can be strain-related; assess the beer after fermentation and follow yeast guidance.", "It always proves dangerous contamination", "Add bleach to the batch", "Bottle it before gravity stabilizes"],
+        ["A sample smells like rotten eggs during fermentation. What should you consider?", "Some yeast strains produce sulfur compounds that may diminish with conditioning", "Sulfur aromas can be strain-related; assess the beer after fermentation and follow yeast guidance.", "Check whether the strain commonly produces sulfur and allow appropriate conditioning time", "Treat the aroma as conclusive evidence of contamination", "Package the beer before gravity stabilizes to limit further sulfur production"],
         ["A strong solvent aroma persists in finished beer. What should you review for future batches?", "Yeast strain, fermentation temperature, pitching health, and wort gravity", "These factors can influence higher alcohol production and yeast stress.", "Bottle shape and label font", "The fermenter's exterior color", "The length of the mash paddle"],
-        ["You have an uncertain fermentation problem and are considering adding a chemical. What should you do?", "Identify the product and use only a suitable, measured treatment with reliable guidance", "Unverified additions can harm beer or create safety issues; never guess with brewing chemicals.", "Add a random sanitizer dose", "Mix cleaning products in the fermenter", "Pour in household chemicals until the aroma changes"],
-        ["A sample has a sharp solvent smell, but the fermenter is still active. What should you do?", "Check temperature and yeast guidance, then reassess after fermentation", "Young beer can change during conditioning; avoid premature interventions and review fermentation conditions.", "Bottle it immediately", "Add household cleaner", "Aerate it repeatedly"],
-        ["The beer is still cloudy after a short cold crash. What should you do?", "Allow more settling time or use a suitable clarification approach", "Clarification speed varies with yeast, temperature, and process; haze is not automatically a defect.", "Add sanitizer", "Boil it in the fermenter", "Bottle before confirming gravity"],
+        ["You have an uncertain fermentation problem and are considering adding a chemical. What should you do?", "Identify the product and use only a suitable, measured treatment with reliable guidance", "Unverified additions can harm beer or create safety issues; never guess with brewing chemicals.", "Add yeast nutrient without checking whether the wort needs it", "Adjust pH based on taste without measuring or checking the recipe", "Use a brewing treatment at a guessed concentration"],
+        ["A sample has a sharp solvent smell, but the fermenter is still active. What should you do?", "Check temperature and yeast guidance, then reassess after fermentation", "Young beer can change during conditioning; avoid premature interventions and review fermentation conditions.", "Compare the beer temperature and pitching conditions with the yeast guidance", "Transfer the beer off the yeast before gravity has stabilized", "Increase the temperature beyond the strain's range to speed cleanup"],
+        ["The beer is still cloudy after a short cold crash. What should you do?", "Allow more settling time or use a suitable clarification approach", "Clarification speed varies with yeast, temperature, and process; haze is not automatically a defect.", "Allow more time at a suitable temperature for the yeast and particles to settle", "Use a fining agent without checking its suitability or instructions", "Package before confirming gravity stability"],
         ["You notice sediment was disturbed while transferring finished beer. What should you do?", "Minimize further disturbance and avoid splashing", "Some sediment carryover may affect clarity and flavor; careful transfer limits more disturbance and oxygen.", "Stir vigorously to remove it", "Add priming sugar to settle it", "Open the fermenter for several hours"],
-        ["A batch's gravity is stable but higher than expected, and the beer tastes sweet. What is a useful diagnostic?", "Review mash fermentability, yeast performance, and gravity measurement", "Recipe and process factors can leave more residual extract; verify readings and compare with expected FG.", "Add sanitizer", "Bottle with no priming sugar immediately", "Assume the hydrometer is an airlock"],
-        ["The beer reached a lower-than-expected FG. What should you review?", "Yeast attenuation, mash profile, recipe fermentability, and measurement accuracy", "These factors influence final gravity; compare process notes before changing future recipes.", "The bottle cap color", "The size of the airlock", "The kettle handle material"],
+        ["A batch's gravity is stable but higher than expected, and the beer tastes sweet. What is a useful diagnostic?", "Review mash fermentability, yeast performance, and gravity measurement", "Recipe and process factors can leave more residual extract; verify readings and compare with expected FG.", "Compare measured original gravity and mash temperature with the recipe", "Review yeast attenuation and fermentation temperature before changing the recipe", "Check whether the sample was temperature-corrected and read consistently"],
+        ["The beer reached a lower-than-expected FG. What should you review?", "Yeast attenuation, mash profile, recipe fermentability, and measurement accuracy", "These factors influence final gravity; compare process notes before changing future recipes.", "The measured original gravity and the yeast's expected attenuation", "Whether the mash temperature favored a more fermentable wort", "Whether the gravity reading was corrected for sample temperature"],
         ["You are planning a warm fermentation but the strain has a narrow temperature range. What should you do?", "Use a suitable temperature-control plan or choose a compatible strain", "Strain selection and temperature management should match the recipe and desired profile.", "Ignore the strain guidance", "Use direct sunlight as a controller", "Pitch the yeast during the boil"],
         ["The beer fermented colder than intended and is slow. What should you avoid?", "Avoid abrupt heating; adjust gradually and monitor progress", "Sudden changes can stress yeast; follow the strain's guidance and use gravity to assess activity.", "Boil the fermenter", "Add unmeasured sugar and bottle", "Open it and shake vigorously"],
-        ["You suspect fermentation has stopped because the beer is too cold. What is a careful approach?", "Verify gravity and gradually restore a suitable temperature if appropriate", "Check whether gravity is actually stable, then make a controlled adjustment based on the yeast and recipe.", "Add sanitizer", "Bottle without checking", "Heat it with an open flame"],
+        ["You suspect fermentation has stopped because the beer is too cold. What is a careful approach?", "Verify gravity and gradually restore a suitable temperature if appropriate", "Check whether gravity is actually stable, then make a controlled adjustment based on the yeast and recipe.", "Warm it gradually within the strain's range and monitor gravity", "Package it if the airlock is quiet, without confirming gravity stability", "Raise it well above the strain's range to restart activity quickly"],
         ["A fermenter is leaking around the lid, but gravity is decreasing. What should you conclude?", "Fermentation is progressing; the leak explains why the airlock may be quiet", "Gravity change is useful evidence; improve the seal if possible without unnecessary exposure.", "The batch is definitely finished", "The yeast is dead", "The wort has not been made"],
         ["There is no airlock movement, no gravity change, and the beer is cold. What first?", "Verify the readings and bring the beer gradually into the yeast's recommended range", "Confirm instrument technique and temperature before diagnosing a stuck fermentation.", "Bottle immediately", "Add boiling water", "Add a random sanitizer"],
-        ["There is no airlock movement, but the beer is warm and gravity is falling. What is likely?", "Fermentation is active, with gas escaping somewhere other than the airlock", "A leak can bypass the airlock; gravity decline indicates fermentation activity.", "The yeast has stopped", "The beer is carbonated in bottles", "The batch must be discarded"],
-        ["A gravity sample was taken with an unsanitized tool. What should you do next?", "Sanitize future sampling equipment and avoid returning samples", "The sample may have introduced contamination; do not add more risk by returning it.", "Add sanitizer directly to the beer", "Boil the fermenter contents", "Bottle immediately"],
+        ["There is no airlock movement, but the beer is warm and gravity is falling. What is likely?", "Fermentation is active, with gas escaping somewhere other than the airlock", "A leak can bypass the airlock; gravity decline indicates fermentation activity.", "A small leak or imperfect seal may let gas bypass the airlock", "The gravity change may be measurement error, so compare another reading consistently", "The fermenter may be venting through a path other than the airlock"],
+        ["A gravity sample was taken with an unsanitized tool. What should you do next?", "Sanitize future sampling equipment and avoid returning samples", "The sample may have introduced contamination; do not add more risk by returning it.", "Keep the fermenter closed and monitor for signs of contamination", "Add a measured brewing sanitizer dose directly to the beer", "Package immediately before any contamination can develop"],
         ["A strong yeasty flavor is present in a young beer. What may help?", "Allow settling and conditioning time, then transfer carefully if appropriate", "Suspended yeast can contribute flavor; time and careful handling may improve the finished beer.", "Add more yeast", "Aerate it after fermentation", "Bottle before gravity is stable"],
         ["The beer has a medicinal flavor and you used chlorinated tap water. What should you investigate?", "Water treatment and chlorine or chloramine removal", "Disinfectants can contribute medicinal off-flavors; verify water treatment for future batches.", "Mash paddle length", "Bottle headspace only", "The yeast packet color"],
         ["A finished beer has a cardboard-like flavor. What is a likely process area to review?", "Oxygen exposure during transfer and packaging", "Oxidation is a common cause of papery or stale flavors; reduce oxygen pickup after fermentation.", "Mash temperature only", "Kettle size only", "The amount of calcium only"],
@@ -1161,18 +1175,18 @@ const LEARNING_GAMES: Record<string, LearningGame> = {
     intro: "Answer seven random questions from a 100-question recipe pool. Choose ingredients and techniques that best fit the beer you want to brew, then learn why each choice matters.",
     source: "How to Brew, Chapters 3–8",
     questions: buildQuestions([
-      ["You want a clean, pale ale with a crisp finish. Which grain bill is the best starting point?", "Use pale base malt for most of the fermentable extract, with only a small amount of specialty malt", "A pale base malt provides fermentable extract while a restrained specialty-malt share keeps the color and flavor light.", "Use pale base malt with a large share of caramel malt", "Use pale base malt with a large share of roasted malt", "Use a mix dominated by dark specialty malts"],
-      ["You want a darker beer with restrained roast character. What is a sensible recipe choice?", "Add a modest amount of a dark malt suited to smooth roast character", "A measured amount of an appropriate dark malt can add color and subtle roast without dominating the beer.", "Use a large proportion of highly roasted malt", "Use crystal malt alone to create a strong roast flavor", "Add dark malt at a level that overwhelms the base malt"],
-      ["You want more hop aroma without greatly increasing bitterness. Which addition is the best fit?", "Use a late whirlpool or dry-hop addition with a suitable aroma variety", "Late and post-boil additions can emphasize volatile hop aroma while contributing less bitterness than a long boil.", "Add all the hops at the start of a long boil", "Increase the mash temperature and keep the hop schedule unchanged", "Add a high-alpha hop early and remove all late additions"],
-      ["Your beer should have a more pronounced bitterness. Which recipe change most directly supports that goal?", "Increase the appropriately calculated early-boil bittering addition", "An early-boil addition gives alpha acids more time to isomerize; calculate the amount for the recipe and target.", "Move some of the early bittering hops to late additions", "Use a lower-alpha hop at the same early-boil timing and amount", "Increase dry hops without changing the boil-hop schedule"],
-      ["You want a fuller malt impression and caramel notes in an amber ale. Which adjustment is most appropriate?", "Add a measured portion of a suitable crystal malt", "Crystal malts can add caramel-like flavors and color; keep the amount balanced with the base malt.", "Use a larger share of roasted barley for a roast-forward result", "Use a larger share of pale malt without specialty malt", "Choose a crystal malt amount that dominates the base malt"],
-      ["You want a drier, more fermentable wort while keeping the grain bill similar. Which mash adjustment is a sensible starting point?", "Mash toward the lower end of the recipe's suitable temperature range", "A lower mash temperature generally favors more fermentable wort, though yeast strain and process also affect the finish.", "Mash toward the upper end of the suitable temperature range", "Use more dextrin malt to increase unfermentable extract", "Keep the mash unchanged and use a less attenuative yeast"],
-      ["You are choosing yeast for a beer where malt and hop character should stay prominent. What is a useful selection criterion?", "Choose a strain with a compatible fermentation range and a relatively neutral profile", "A suitable neutral strain can let the recipe's malt and hop character come through; match it to the beer and process.", "Choose a strongly phenolic strain to add clove and spice notes", "Choose a strongly ester-producing strain to add fruit notes", "Choose a strain whose recommended range does not fit the planned temperature"],
-      ["The recipe's target original gravity is higher than your current recipe estimate. What is the most direct ingredient adjustment?", "Increase the fermentable grain or extract while keeping the target batch volume in mind", "More fermentable ingredient can raise wort strength; update the recipe and account for expected system efficiency.", "Increase the bittering-hop amount without changing the fermentables", "Choose a darker malt but keep the fermentable amount unchanged", "Increase the yeast amount while keeping the fermentables unchanged"],
-      ["You want a lighter-colored beer. Which recipe decision most directly helps?", "Use a pale base malt and limit dark specialty malts", "The malt bill is the main recipe choice for wort color; select malts that fit the intended shade.", "Use a larger share of roasted malt for deeper color", "Use a larger share of chocolate malt for deeper color", "Change the hop variety but keep the malt bill unchanged"],
-      ["You want a beer with noticeable hop flavor but less bitterness than a heavily bittered version. How might you adjust the hop schedule?", "Shift some hop emphasis toward late-boil or whirlpool additions", "Later additions generally retain more flavor and aroma than long-boiled additions, while still contributing some bitterness.", "Move more of the hop charge to the start of a long boil", "Replace late additions with an equal amount of early-boil hops", "Keep the schedule unchanged and increase only the bittering addition"],
-      ["You are adapting a recipe to a different batch volume. What should you do with ingredient amounts?", "Scale the recipe and review expected gravity, bitterness, and equipment losses", "Scaling ingredients is a starting point, but system efficiency and volume-related losses can affect the result.", "Scale the ingredient amounts by the inverse volume ratio", "Scale only the water and leave the ingredient amounts unchanged", "Scale the fermentables but leave all hop additions unchanged"],
-      ["Your recipe tastes too sweet and heavy in previous batches. Which recipe adjustment is a reasonable one to test?", "Use a more fermentable mash profile and review the yeast's attenuation", "Mash fermentability and yeast behavior both influence finishing gravity and perceived body; change and record one or both deliberately.", "Use a less fermentable mash profile and more dextrin malt", "Use a yeast strain with lower attenuation", "Increase crystal malt while keeping the mash profile unchanged"],
+      ["You want a clean, pale ale with a crisp finish. Which grain bill is the best starting point?", "Use pale base malt for most of the fermentable extract, with only a small amount of specialty malt", "A pale base malt provides fermentable extract while a restrained specialty-malt share keeps the color and flavor light.", "Use pale base malt with a measured share of Vienna malt for more bread-like malt character", "Use pale base malt with a small crystal addition for a hint of caramel sweetness", "Use pale base malt with a small amount of light Munich malt for a rounder malt profile"],
+      ["You want a darker beer with restrained roast character. What is a sensible recipe choice?", "Add a modest amount of a dark malt suited to smooth roast character", "A measured amount of an appropriate dark malt can add color and subtle roast without dominating the beer.", "Use a larger share of chocolate malt for deeper color and cocoa notes", "Use dark crystal malt for deeper color and caramel character rather than roast", "Use black patent malt for a sharper roast character at a restrained proportion"],
+      ["You want to boost hop aroma with minimal additional bitterness. Which change is the best fit?", "Increase a suitable dry-hop addition", "Dry hopping emphasizes hop aroma without adding bitterness from a long boil.", "Increase a whirlpool addition while the wort is still hot enough to isomerize some alpha acids", "Move the existing aroma addition earlier for a longer hot steep", "Increase the early bittering charge and reduce the late-hop amount"],
+      ["Your beer should have a more pronounced bitterness. Which recipe change most directly supports that goal?", "Increase the appropriately calculated early-boil bittering addition", "An early-boil addition gives alpha acids more time to isomerize; calculate the amount for the recipe and target.", "Use a lower-alpha hop at the same early-boil amount and timing", "Move part of the bittering charge to a late or whirlpool addition", "Increase the dry-hop charge without changing the boil schedule"],
+      ["You want a fuller malt impression and caramel notes in an amber ale. Which adjustment is most appropriate?", "Add a measured portion of a suitable crystal malt", "Crystal malts can add caramel-like flavors and color; keep the amount balanced with the base malt.", "Increase light Munich malt for a richer bread-like malt note", "Add more pale base malt while keeping the specialty-malt share unchanged", "Use a small amount of toasted malt for a drier, biscuit-like impression"],
+      ["You want a drier, more fermentable wort while keeping the grain bill similar. Which mash adjustment is a sensible starting point?", "Mash toward the lower end of the recipe's suitable temperature range", "A lower mash temperature generally favors more fermentable wort, though yeast strain and process also affect the finish.", "Mash toward the upper end of the suitable temperature range", "Use more dextrin malt to increase unfermentable extract", "Extend the mash at the same temperature without changing the grain bill"],
+      ["You are choosing yeast for a beer where malt and hop character should stay prominent. What is a useful selection criterion?", "Choose a strain with a compatible fermentation range and a relatively neutral profile", "A suitable neutral strain can let the recipe's malt and hop character come through; match it to the beer and process.", "Choose a strain with moderate esters that complement rather than dominate the hops", "Choose a phenolic strain to add clove and spice alongside the malt", "Choose a neutral strain whose fermentation range fits the planned temperature"],
+      ["The recipe's target original gravity is higher than your current recipe estimate. What is the most direct ingredient adjustment?", "Increase the fermentable grain or extract while keeping the target batch volume in mind", "More fermentable ingredient can raise wort strength; update the recipe and account for expected system efficiency.", "Increase the fermentable amount and reduce batch volume to concentrate the wort", "Replace some pale base malt with an equal weight of lower-extract specialty malt", "Improve expected mash efficiency and update the estimated gravity before changing ingredients"],
+      ["You want a lighter-colored beer without lowering its target gravity. Which recipe decision most directly helps?", "Replace some dark specialty malt with pale base malt and recalculate to maintain gravity", "The malt bill is the main recipe choice for wort color; replacing darker malt with pale base malt can retain extract while reducing color.", "Reduce the dark malt without replacing its extract contribution", "Choose a lighter base malt but retain the same dark specialty-malt proportions", "Increase the crystal-malt share while reducing the pale base malt"],
+      ["You want to keep hop flavor while reducing bitterness. Which change most directly targets the bitterness contribution?", "Reduce the calculated early-boil bittering addition while keeping late hops unchanged", "The early addition contributes much of the bitterness; retaining late additions helps preserve flavor and aroma.", "Move some of the late hop charge to an earlier boil addition", "Replace the early bittering hop with a higher-alpha variety at the same amount", "Increase the early-boil addition and shorten the dry-hop contact time"],
+      ["You are adapting a recipe to a different batch volume. What should you do with ingredient amounts?", "Scale ingredients by the volume ratio, then review gravity, bitterness, and system losses", "Volume scaling is a starting point; efficiency, hop utilization, and equipment losses can change the final recipe.", "Scale the water but leave the grain and hop amounts unchanged", "Scale by the inverse of the volume ratio", "Scale the grain bill but leave the hop schedule unchanged"],
+      ["Your recipe tastes too sweet and heavy in previous batches. Which mash change is a sensible first trial if the grain bill and yeast stay the same?", "Mash toward the cooler end of the suitable range to favor a more fermentable wort", "A cooler mash can increase wort fermentability; keep the yeast and grain bill fixed to evaluate that change.", "Mash toward the warmer end of the suitable range to leave more dextrins", "Extend the mash rest at the same temperature to increase body", "Raise mash temperature and reduce the rest time to lower residual sweetness"],
       ...createRecipePracticeQuestions(),
     ]),
   },
@@ -1191,13 +1205,13 @@ const LEARNING_GAMES: Record<string, LearningGame> = {
     questions: buildQuestions([
       ["A Belgian ale yeast gives a beer fruity, banana-like notes. Which yeast-derived flavor family best fits?", "Fruity esters", "Belgian ale strains can produce fruity esters, including banana-like notes.", "Clove-like phenols", "Buttery diacetyl", "Solvent-like fusel alcohols", "How to Brew, Chapter 6 — Belgian ale yeast"],
       ["A wheat beer has a clove-like, spicy character. Which yeast-derived flavor family best fits?", "Phenols", "Weizen yeast can produce the distinctive clove and spice character of wheat beers.", "Fruity esters", "Buttery diacetyl", "Solvent-like fusel alcohols", "How to Brew, Chapter 6 — wheat beer yeast"],
-      ["You want a pale ale with a distinct citrus hop aroma. Which hop variety is a familiar choice for this character?", "Cascade", "Cascade has a distinct citrus aroma compared with European hops.", "Fuggle", "Saaz", "Hallertau Mittelfrüh", "How to Brew, Chapter 7 — Cascade hops"],
-      ["You want a pale ale with a hint of sweet caramel that does not mask the hop finish. Which ingredient fits?", "A restrained amount of crystal malt", "The pale-ale recipe uses caramel malt to add a hint of sweet caramel.", "Roasted barley", "Chocolate malt", "Black patent malt", "How to Brew, Chapter 7 — pale ale recipe"],
+      ["Which hop variety is specifically named in the pale-ale example for its distinct citrus aroma?", "Cascade", "Cascade is the variety named in the pale-ale example for its citrus aroma.", "Centennial", "Citra", "Amarillo", "How to Brew, Chapter 7 — Cascade hops"],
+      ["You want a pale ale with a hint of sweet caramel that does not mask the hop finish. Which ingredient fits?", "A restrained amount of crystal malt", "The pale-ale recipe uses caramel malt to add a hint of sweet caramel.", "A small amount of light Munich malt for a bready note", "A restrained amount of dextrin malt for body and foam", "A small share of Vienna malt for a light toasted character", "How to Brew, Chapter 7 — pale ale recipe"],
       ["A recipe uses toasted, roasted, or chocolate malt. What kind of character are these malts chosen to contribute?", "Toasty, roasted, or chocolate-like malt flavor", "These malt types are used to create different beer flavors and aromas.", "Caramel-like sweetness from crystal malt", "Fruity or spicy notes from yeast", "Citrus aroma from late hops", "How to Brew, Chapter 3 — malt types"],
       ["A beer tastes buttery or like butterscotch. Which brewing compound is commonly associated with this flavor?", "Diacetyl", "Diacetyl can give beer butter or butterscotch notes; whether a small amount is welcome depends on the style.", "Acetaldehyde", "Fusel alcohols", "Oxidized compounds", "How to Brew, Chapter 6 — yeast compounds"],
       ["A beer has a green-apple aroma. Which fermentation compound may be responsible?", "Acetaldehyde", "Acetaldehyde is associated with green-apple aroma or flavor, and yeast can reduce it later in fermentation.", "Diacetyl", "Fusel alcohols", "Hydrogen sulfide", "How to Brew, Chapter 10 — fermentation byproducts"],
       ["An old beer tastes papery or like cardboard. Which process issue could explain it?", "Oxygen exposure during aging or packaging", "Oxidation of fatty acids in old beers can produce cardboard-like and soapy off-flavors.", "Light exposure that can cause a skunky character", "Warm fermentation that can create solvent-like flavors", "Chlorine exposure that can create medicinal flavors", "How to Brew, Chapter 6 — oxidation and off-flavors"],
-      ["A lager has a sulfur smell during fermentation. What should you keep in mind?", "Lager-yeast sulfur may fade during conditioning", "Lager yeast can produce more sulfur compounds during primary fermentation, and sulfur smells are not necessarily bad.", "Acetaldehyde may cause green-apple notes", "Diacetyl may cause buttery notes", "Oxidation may cause stale notes", "How to Brew, Chapters 6 and 10 — yeast and lager fermentation"],
+      ["A lager has a sulfur smell during fermentation. What should you keep in mind?", "Lager-yeast sulfur may fade during conditioning", "Lager yeast can produce more sulfur compounds during primary fermentation, and sulfur smells are not necessarily bad.", "Dimethyl sulfide may create a cooked-corn note", "Hydrogen sulfide may smell like rotten eggs", "Sulfur dioxide may smell like struck matches", "How to Brew, Chapters 6 and 10 — yeast and lager fermentation"],
       ["A beer has a sharp, solvent-like aroma. Which fermentation byproduct is a likely cause?", "Fusel alcohols", "Fusel alcohols can produce sharp or solvent-like aromas, and their levels are affected by fermentation conditions.", "Acetaldehyde", "Diacetyl", "Hydrogen sulfide", "How to Brew, Chapter 10 — fusel alcohols"],
       ...createFlavorPracticeQuestions(),
     ]),
@@ -1439,6 +1453,7 @@ export default function LearningGamePage() {
   >({});
   const [progressMessage, setProgressMessage] = useState("");
   const [savingProgress, setSavingProgress] = useState(false);
+  const lastQuestionByGame = useRef<Record<string, string>>({});
 
   useEffect(() => {
     let active = true;
@@ -1484,10 +1499,23 @@ export default function LearningGamePage() {
   }, [game, params.game]);
 
   function startGame(questionPool = activeQuestions, retry = false) {
-    const selectedQuestions = shuffle(questionPool).slice(0, 7).map((question) => ({
+    const previousPrompt = lastQuestionByGame.current[params.game];
+    const previousPromptKey = previousPrompt ? questionPromptKey(previousPrompt) : null;
+    const uniquePool = uniqueQuestionsByPrompt(questionPool);
+    const eligiblePool = uniquePool.filter(
+      (question) => questionPromptKey(question.prompt) !== previousPromptKey,
+    );
+    const fallbackPool = uniqueQuestionsByPrompt(activeQuestions).filter(
+      (question) => questionPromptKey(question.prompt) !== previousPromptKey,
+    );
+    const questionsToDraw = eligiblePool.length > 0 ? eligiblePool : fallbackPool;
+    const selectedQuestions = shuffle(questionsToDraw).slice(0, 7).map((question) => ({
       ...question,
       answers: shuffle(question.answers),
     }));
+    if (selectedQuestions[0]) {
+      lastQuestionByGame.current[params.game] = selectedQuestions[0].prompt;
+    }
     setAttemptQuestions(selectedQuestions);
     setQuestionIndex(0);
     setScore(0);
@@ -1575,6 +1603,7 @@ export default function LearningGamePage() {
       }
       return;
     }
+    lastQuestionByGame.current[params.game] = attemptQuestions[questionIndex + 1].prompt;
     setQuestionIndex((current) => current + 1);
     setSelectedAnswer(null);
     setHintVisible(false);
