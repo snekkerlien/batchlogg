@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import * as Actions from "../../actions/createRecipe";
 import MenuOverlay from "../../MenuOverlay";
@@ -11,6 +11,9 @@ import { UnitInput, UnitSymbol, useUnits } from "../../../components/Units";
 import BeerStyleSelect from "@/app/components/BeerStyleSelect";
 import RecipeAdditiveFields from "../RecipeAdditiveFields";
 import RecipeSecondaryFields from "../RecipeSecondaryFields";
+import { calcDryHopIBU, calcEBC, calcIBU } from "@/lib/brewing/beerCalculators";
+import BeerColorGlass from "@/app/components/BeerColorGlass";
+import BitternessMeter from "@/app/components/BitternessMeter";
 
 export default function NewBeerRecipePage() {
   const router = useRouter();
@@ -18,6 +21,9 @@ export default function NewBeerRecipePage() {
   const { label } = useUnits();
   const [beerSubtype, setBeerSubtype] = useState("");
   const [beerStyle, setBeerStyle] = useState("");
+  const [volume, setVolume] = useState("");
+  const [boilVolume, setBoilVolume] = useState("");
+  const [og, setOg] = useState("");
 
   // ⭐ warnings fra server action
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -85,6 +91,30 @@ function removeDryHop(index: number) {
     updated.splice(index, 1);
     setHops(updated);
   }
+
+  const recipeEstimates = useMemo(() => {
+    const finalVolumeL = Number(volume);
+    const originalGravity = Number(og.replace(",", "."));
+    if (
+      !Number.isFinite(finalVolumeL) ||
+      finalVolumeL <= 0 ||
+      !Number.isFinite(originalGravity) ||
+      originalGravity <= 1
+    ) {
+      return null;
+    }
+
+    const parsedBoilVolume = Number(boilVolume);
+    const validBoilVolume =
+      Number.isFinite(parsedBoilVolume) && parsedBoilVolume > 0
+        ? parsedBoilVolume
+        : finalVolumeL;
+    const ibu =
+      calcIBU(hops, originalGravity, finalVolumeL, validBoilVolume) +
+      calcDryHopIBU(dryHops, finalVolumeL);
+    const color = calcEBC(malts, finalVolumeL);
+    return { ibu, ebc: color.ebc, maltWarnings: color.warnings };
+  }, [boilVolume, dryHops, hops, malts, og, volume]);
 
   // ⭐ HANDLE SUBMIT (viktig)
   async function handleSubmit(e: React.FormEvent) {
@@ -225,6 +255,8 @@ function removeDryHop(index: number) {
                   ? "Final batch size after the boil (e.g., 20 L)"
                   : "Final kit volume (e.g., 20 L)"
               }
+              value={volume}
+              onValueChange={setVolume}
               required={beerSubtype !== "all_grain"}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
@@ -239,6 +271,8 @@ function removeDryHop(index: number) {
               name="boil_volume_l"
               kind="volume"
               placeholder="Total wort volume before the boil"
+              value={boilVolume}
+              onValueChange={setBoilVolume}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </FormField>
@@ -252,10 +286,70 @@ function removeDryHop(index: number) {
               name="og"
               type="text"
               placeholder="Example: 1.050"
+              value={og}
+              onChange={(event) => setOg(event.target.value)}
               required={beerSubtype !== "all_grain"}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </FormField>
+
+          {beerSubtype === "all_grain" && (
+            <section
+              aria-labelledby="recipe-estimates-title"
+              className="rounded-lg border border-white/15 bg-white/[0.04] p-4 text-center"
+            >
+              <h2 id="recipe-estimates-title" className="font-semibold text-white/85">
+                Live recipe estimates
+              </h2>
+              {recipeEstimates ? (
+                <>
+                  <dl className="mx-auto mt-3 grid max-w-lg grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="min-w-0 rounded-lg border border-white/10 bg-black/10 p-3 text-left">
+                      <dt className="mb-2 text-xs font-medium text-white/55">
+                        Bitterness
+                      </dt>
+                      <dd>
+                        <BitternessMeter ibu={recipeEstimates.ibu} />
+                      </dd>
+                    </div>
+                    <div className="min-w-0 rounded-lg border border-white/10 bg-black/10 p-3 text-left">
+                      <dt className="mb-2 text-xs font-medium text-white/55">
+                        Color
+                      </dt>
+                      <dd>
+                        <span className="flex min-h-[5.5rem] items-start">
+                          <span className="flex items-baseline gap-1.5">
+                            <span className="text-xl font-bold leading-none tracking-tight text-white">
+                              {Math.round(recipeEstimates.ebc)}
+                            </span>
+                            <span className="text-xs font-medium text-white/50">
+                              EBC
+                            </span>
+                          </span>
+                          <span className="flex flex-1 -translate-x-3 items-center justify-center">
+                            <BeerColorGlass ebc={recipeEstimates.ebc} />
+                          </span>
+                        </span>
+                      </dd>
+                    </div>
+                  </dl>
+                  {recipeEstimates.maltWarnings.length > 0 && (
+                    <p role="status" className="mt-3 text-sm text-amber-200">
+                      Enter EBC values for all malt additions to complete the color estimate.
+                    </p>
+                  )}
+                  <p className="mt-3 text-xs text-white/50">
+                    Estimated values update as you edit ingredients. Bitterness is a guide;
+                    sweetness and style affect perception. Color is a model-based estimate.
+                  </p>
+                </>
+              ) : (
+                <p className="mt-2 text-sm text-white/60">
+                  Enter a valid original gravity and final volume to see estimates.
+                </p>
+              )}
+            </section>
+          )}
 
           {beerSubtype === "fresh_wort_kit" && (
             <div className="grid gap-4 sm:grid-cols-2">

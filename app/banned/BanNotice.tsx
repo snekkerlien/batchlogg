@@ -15,9 +15,18 @@ function formatCountdown(milliseconds: number) {
 export default function BanNotice({
   endsAt,
   reason,
+  appealStatus,
+  appealMessages,
 }: {
   endsAt: string | null;
   reason: string | null;
+  appealStatus: "pending" | "info_requested" | "granted" | "dismissed" | null;
+  appealMessages: Array<{
+    id: string;
+    sender_role: "user" | "admin";
+    message: string;
+    created_at: string;
+  }>;
 }) {
   const router = useRouter();
   const [remaining, setRemaining] = useState<number | null>(null);
@@ -74,9 +83,11 @@ export default function BanNotice({
       setAppeal("");
       setSuccess(
         result.notificationWarning
-          ? "Your appeal was saved, but the admin email notification could not be sent."
-          : "Your appeal has been sent to the administrators."
+          ? "Your message was saved, but the admin email notification could not be sent."
+          : "Your message has been sent to the administrators."
       );
+      setAppealOpen(false);
+      router.refresh();
     } catch (submitError) {
       setError(
         submitError instanceof Error
@@ -123,18 +134,72 @@ export default function BanNotice({
         )}
       </div>
 
-      <div className="mt-8 text-center">
-        <button
-          type="button"
-          onClick={() => {
-            setError("");
-            setSuccess("");
-            setAppealOpen(true);
-          }}
-          className="rounded-lg bg-red-700 px-5 py-3 font-semibold hover:bg-red-600"
+      {appealStatus && (
+        <section
+          aria-labelledby="appeal-status-title"
+          className="mt-8 rounded-xl border border-white/10 bg-white/5 p-4"
         >
-          Plead for mercy
-        </button>
+          <h2 id="appeal-status-title" className="font-semibold text-white">
+            Appeal status: {appealStatus.replace("_", " ")}
+          </h2>
+          <ol className="mt-3 space-y-3">
+            {appealMessages.map((item) => (
+              <li
+                key={item.id}
+                className={`rounded-lg border p-3 ${
+                  item.sender_role === "admin"
+                    ? "border-amber-300/20 bg-amber-950/20"
+                    : "border-white/10 bg-black/20"
+                }`}
+              >
+                <p className="text-xs text-white/55">
+                  {item.sender_role === "admin" ? "Admin request" : "Your message"} ·{" "}
+                  {new Date(item.created_at).toLocaleString("en-GB")}
+                </p>
+                <p className="mt-2 whitespace-pre-wrap text-sm text-white/85">
+                  {item.message}
+                </p>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+
+      <div className="mt-8 text-center">
+        {appealStatus === null ? (
+          <button
+            type="button"
+            onClick={() => {
+              setError("");
+              setSuccess("");
+              setAppealOpen(true);
+            }}
+            className="rounded-lg bg-red-700 px-5 py-3 font-semibold hover:bg-red-600"
+          >
+            Plead for mercy
+          </button>
+        ) : appealStatus === "info_requested" ? (
+          <button
+            type="button"
+            onClick={() => {
+              setError("");
+              setSuccess("");
+              setAppealOpen(true);
+            }}
+            className="rounded-lg bg-amber-700 px-5 py-3 font-semibold hover:bg-amber-600"
+          >
+            Send requested information
+          </button>
+        ) : (
+          <p className="text-sm text-white/60">
+            {appealStatus === "pending"
+              ? "Your appeal is awaiting review. You can send another message only if an admin requests more information."
+              : appealStatus === "granted"
+                ? "Your appeal was granted. Refresh the page to continue if your ban has been lifted."
+                : "Your appeal was dismissed. You cannot submit another appeal."}
+          </p>
+        )}
+        {success && <p role="status" className="mt-3 text-sm text-green-300">{success}</p>}
       </div>
 
       {appealOpen && (
@@ -162,10 +227,12 @@ export default function BanNotice({
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 id="ban-appeal-title" className="text-xl font-semibold">
-                  Plead for mercy
+                  {appealStatus === "info_requested" ? "Reply to admin request" : "Plead for mercy"}
                 </h2>
                 <p className="mt-2 text-sm text-white/65">
-                  Though gates are shut and shadows fall, a heartfelt plea may change it all. Leave your words; the keepers may hear, and turn the key to draw you near.
+                  {appealStatus === "info_requested"
+                    ? "An administrator requested more information about your appeal. You may send one reply."
+                    : "Explain why you believe your ban should be reviewed. You can only submit one appeal."}
                 </p>
               </div>
               <button
@@ -192,16 +259,23 @@ export default function BanNotice({
                 required
                 rows={5}
                 className="w-full rounded-lg border border-white/20 bg-black/50 p-3 text-white"
-                placeholder="Set down your words and make your case clear."
+                placeholder={
+                  appealStatus === "info_requested"
+                    ? "Reply to the administrator's request."
+                    : "Explain why you are appealing the ban."
+                }
               />
               {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
-              {success && <p role="status" className="text-sm text-green-300">{success}</p>}
               <button
                 type="submit"
                 disabled={submitting}
                 className="w-full rounded-lg bg-red-700 px-4 py-3 font-semibold hover:bg-red-600 disabled:cursor-wait disabled:opacity-50"
               >
-                {submitting ? "Sending…" : "Send appeal"}
+                {submitting
+                  ? "Sending…"
+                  : appealStatus === "info_requested"
+                    ? "Send reply"
+                    : "Send appeal"}
               </button>
             </form>
           </section>

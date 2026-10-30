@@ -41,6 +41,80 @@ export async function GET(request: NextRequest) {
   const context = await authorize();
   if ("response" in context) return context.response;
 
+  if (request.nextUrl.searchParams.get("view") === "ban-appeals") {
+    const { data: banAppeals, error: appealsError } = await context.serviceRole
+      .from("ban_appeals")
+      .select("user_id, status, created_at, updated_at")
+      .order("updated_at", { ascending: false })
+      .limit(200);
+    if (appealsError) {
+      console.error("Could not load ban appeals in moderation", appealsError);
+      return NextResponse.json({ error: "Could not load ban appeals" }, { status: 500 });
+    }
+
+    const rows = banAppeals ?? [];
+    const userIds = rows.map((appeal) => appeal.user_id);
+    type AppealMessageRow = {
+      id: string;
+      user_id: string;
+      sender_role: "user" | "admin";
+      message: string;
+      created_at: string;
+    };
+    let messages: AppealMessageRow[] = [];
+    let profiles: { id: string; username: string | null }[] = [];
+    let banRestrictions: { user_id: string; reason: string | null }[] = [];
+    if (userIds.length > 0) {
+      const [
+        { data: messageRows, error: messagesError },
+        { data: profileRows, error: profilesError },
+        { data: restrictionRows, error: restrictionsError },
+      ] = await Promise.all([
+        context.serviceRole
+          .from("ban_appeal_messages")
+          .select("id, user_id, sender_role, message, created_at")
+          .in("user_id", userIds)
+          .order("created_at", { ascending: true }),
+        context.serviceRole.from("profiles").select("id, username").in("id", userIds),
+        context.serviceRole
+          .from("user_restrictions")
+          .select("user_id, reason")
+          .in("user_id", userIds)
+          .eq("restriction_type", "ban"),
+      ]);
+      if (messagesError || profilesError || restrictionsError) {
+        console.error(
+          "Could not load ban appeal details",
+          messagesError || profilesError || restrictionsError
+        );
+        return NextResponse.json({ error: "Could not load ban appeal details" }, { status: 500 });
+      }
+      messages = messageRows ?? [];
+      profiles = profileRows ?? [];
+      banRestrictions = restrictionRows ?? [];
+    }
+
+    const usernames = new Map((profiles ?? []).map((profile) => [profile.id, profile.username]));
+    const banReasons = new Map(
+      banRestrictions.map((restriction) => [restriction.user_id, restriction.reason])
+    );
+    const messagesByUser = new Map<string, AppealMessageRow[]>();
+    for (const message of messages) {
+      const current = messagesByUser.get(message.user_id) ?? [];
+      current.push(message);
+      messagesByUser.set(message.user_id, current);
+    }
+
+    return NextResponse.json({
+      appeals: rows.map((appeal) => ({
+        ...appeal,
+        username: usernames.get(appeal.user_id) ?? null,
+        banReason: banReasons.get(appeal.user_id) ?? null,
+        messages: messagesByUser.get(appeal.user_id) ?? [],
+      })),
+    });
+  }
+
   if (request.nextUrl.searchParams.get("view") === "appeals") {
     const { data: appeals, error } = await context.serviceRole
       .from("community_report_appeals")

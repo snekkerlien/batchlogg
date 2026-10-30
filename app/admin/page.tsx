@@ -3,9 +3,27 @@ import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
 import Link from "next/link";
 import BackButton from "../batch-history/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
+import AdminNotificationBadge from "./AdminNotificationBadge";
+
+type CountQuery = PromiseLike<{
+  count: number | null;
+  error: { message: string } | null;
+}>;
+
+async function loadNotificationCount(
+  label: string,
+  query: CountQuery
+): Promise<{ count: number | null; error: string | null }> {
+  const { count, error } = await query;
+  if (error) {
+    console.error(`Could not load ${label} admin notification count`, error);
+    return { count: null, error: label };
+  }
+  return { count: count ?? 0, error: null };
+}
 
 export default async function AdminPage() {
-  const { supabase } = supabaseServer();
+  const { supabase, serviceRole } = supabaseServer();
 
   const {
     data: { user },
@@ -31,6 +49,94 @@ export default async function AdminPage() {
     );
   }
 
+  let feedbackCount: number | null = null;
+  let pendingBanAppealCount: number | null = null;
+  let pendingCommunityAppealCount: number | null = null;
+  let moderationAppealCount: number | null = null;
+  let communityWorkCount: number | null = null;
+  let businessWorkCount: number | null = null;
+  const notificationErrors: string[] = [];
+
+  if (hasPermission(role, "manage_users")) {
+    const [feedbackResult, pendingBanAppealsResult, pendingApplicationsResult, openReviewReportsResult] =
+      await Promise.all([
+        loadNotificationCount(
+          "unread feedback",
+          serviceRole
+            .from("feedback")
+            .select("id", { count: "exact", head: true })
+            .is("read_at", null)
+            .neq("category", "ban_appeal")
+        ),
+        loadNotificationCount(
+          "pending ban appeals",
+          serviceRole
+            .from("ban_appeals")
+            .select("user_id", { count: "exact", head: true })
+            .eq("status", "pending")
+        ),
+        loadNotificationCount(
+          "pending business applications",
+          serviceRole
+            .from("brewery_accounts")
+            .select("id", { count: "exact", head: true })
+            .eq("status", "pending")
+        ),
+        loadNotificationCount(
+          "open brewery review reports",
+          serviceRole
+            .from("brewery_review_reports")
+            .select("id", { count: "exact", head: true })
+            .in("status", ["open", "under_review"])
+        ),
+      ]);
+    feedbackCount = feedbackResult.count;
+    pendingBanAppealCount = pendingBanAppealsResult.count;
+    notificationErrors.push(...[feedbackResult, pendingBanAppealsResult, pendingApplicationsResult, openReviewReportsResult]
+      .flatMap((result) => result.error ? [result.error] : []));
+    businessWorkCount =
+      pendingApplicationsResult.count === null || openReviewReportsResult.count === null
+        ? null
+        : pendingApplicationsResult.count + openReviewReportsResult.count;
+  }
+
+  if (
+    hasPermission(role, "moderate_community_members") ||
+    hasPermission(role, "review_reports")
+  ) {
+    const { count, error } = await loadNotificationCount(
+      "pending community moderation appeals",
+      serviceRole
+        .from("community_report_appeals")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending")
+    );
+    if (error) notificationErrors.push(error);
+    pendingCommunityAppealCount = count;
+  }
+
+  if (hasPermission(role, "moderate_community_members")) {
+    if (pendingBanAppealCount !== null || pendingCommunityAppealCount !== null) {
+      moderationAppealCount =
+        (pendingBanAppealCount ?? 0) + (pendingCommunityAppealCount ?? 0);
+    }
+  }
+
+  if (hasPermission(role, "review_reports")) {
+    const openReportsResult = await loadNotificationCount(
+      "open community reports",
+      serviceRole
+        .from("community_reports")
+        .select("id", { count: "exact", head: true })
+        .in("status", ["open", "under_review"])
+    );
+    if (openReportsResult.error) notificationErrors.push(openReportsResult.error);
+    communityWorkCount =
+      openReportsResult.count === null || pendingCommunityAppealCount === null
+        ? null
+        : openReportsResult.count + pendingCommunityAppealCount;
+  }
+
   return (
     <main className="min-h-screen px-6 py-12 text-white">
       <div className="relative mx-auto mt-12 max-w-5xl rounded-xl border border-white/10 bg-black/60 p-6 pt-16 backdrop-blur-md sm:p-10 sm:pt-16">
@@ -54,6 +160,12 @@ export default async function AdminPage() {
               : "Manage accounts, access, and community reports."}
           </p>
         </header>
+
+        {notificationErrors.length > 0 && (
+          <p role="status" className="mb-6 rounded-lg border border-amber-300/20 bg-amber-950/20 p-3 text-center text-sm text-amber-100/80">
+            Some notification counts could not be loaded: {[...new Set(notificationErrors)].join(", ")}.
+          </p>
+        )}
 
         {/* ⭐ Updated grid — no centering hacks */}
         <section
@@ -122,7 +234,10 @@ export default async function AdminPage() {
                   </p>
                   <h2 className="mt-2 text-2xl font-bold">Business accounts</h2>
                 </div>
-                <span aria-hidden="true" className="text-2xl text-green-300 transition group-hover:translate-x-1">→</span>
+                <div className="flex items-center gap-3">
+                  {businessWorkCount !== null && <AdminNotificationBadge count={businessWorkCount} />}
+                  <span aria-hidden="true" className="text-2xl text-green-300 transition group-hover:translate-x-1">→</span>
+                </div>
               </div>
               <p className="mt-4 leading-relaxed text-white/70">
                 Review applications, manage complimentary access, and moderate product reviews.
@@ -167,12 +282,15 @@ export default async function AdminPage() {
                   </p>
                   <h2 className="mt-2 text-2xl font-bold">Community reports</h2>
                 </div>
-                <span
-                  aria-hidden="true"
-                  className="text-2xl text-green-300 transition group-hover:translate-x-1"
-                >
-                  →
-                </span>
+                <div className="flex items-center gap-3">
+                  {communityWorkCount !== null && <AdminNotificationBadge count={communityWorkCount} />}
+                  <span
+                    aria-hidden="true"
+                    className="text-2xl text-green-300 transition group-hover:translate-x-1"
+                  >
+                    →
+                  </span>
+                </div>
               </div>
               <p className="mt-4 leading-relaxed text-white/70">
                 Review member reports, inspect reported content, and track
@@ -193,12 +311,15 @@ export default async function AdminPage() {
                   </p>
                   <h2 className="mt-2 text-2xl font-bold">Member moderation</h2>
                 </div>
-                <span
-                  aria-hidden="true"
-                  className="text-2xl text-green-300 transition group-hover:translate-x-1"
-                >
-                  →
-                </span>
+                <div className="flex items-center gap-3">
+                  {moderationAppealCount !== null && <AdminNotificationBadge count={moderationAppealCount} />}
+                  <span
+                    aria-hidden="true"
+                    className="text-2xl text-green-300 transition group-hover:translate-x-1"
+                  >
+                    →
+                  </span>
+                </div>
               </div>
               <p className="mt-4 leading-relaxed text-white/70">
                 Search members, issue warnings or temporary posting mutes, and review appeals.
@@ -301,12 +422,15 @@ export default async function AdminPage() {
                     Feedback & suggestions
                   </h2>
                 </div>
-                <span
-                  aria-hidden="true"
-                  className="text-2xl text-green-300 transition group-hover:translate-x-1"
-                >
-                  →
-                </span>
+                <div className="flex items-center gap-3">
+                  {feedbackCount !== null && <AdminNotificationBadge count={feedbackCount} />}
+                  <span
+                    aria-hidden="true"
+                    className="text-2xl text-green-300 transition group-hover:translate-x-1"
+                  >
+                    →
+                  </span>
+                </div>
               </div>
               <p className="mt-4 leading-relaxed text-white/70">
                 Read feedback, suggestions and bug reports sent in from

@@ -31,60 +31,42 @@ export async function POST(request: Request) {
     message.trim().length > 3000
   ) {
     return NextResponse.json(
-      { error: "Write between 3 and 3000 characters for your appeal." },
+      { error: "Write between 3 and 3000 characters for your message." },
       { status: 400 }
     );
   }
 
-  const now = new Date().toISOString();
-  const { data: ban, error: banError } = await serviceRole
-    .from("user_restrictions")
-    .select("user_id")
-    .eq("user_id", user.id)
-    .eq("restriction_type", "ban")
-    .is("revoked_at", null)
-    .lte("starts_at", now)
-    .or(`ends_at.is.null,ends_at.gt.${now}`)
-    .maybeSingle();
-  if (banError) {
-    console.error("Could not verify ban appeal eligibility", banError);
-    return NextResponse.json({ error: "Could not verify your ban status." }, { status: 503 });
-  }
-  if (!ban) {
-    return NextResponse.json(
-      { error: "An appeal can only be sent while your account is banned." },
-      { status: 403 }
-    );
-  }
-
-  const { data: profile, error: profileError } = await serviceRole
-    .from("profiles")
-    .select("username")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (profileError) {
-    console.error("Could not load ban appeal username", profileError);
-    return NextResponse.json({ error: "Could not submit your appeal." }, { status: 500 });
-  }
-
-  const { error } = await serviceRole.from("feedback").insert({
-    user_id: user.id,
-    username: profile?.username ?? null,
-    email: user.email ?? null,
-    category: "ban_appeal",
-    message: message.trim(),
+  const { data: result, error } = await serviceRole.rpc("submit_ban_appeal", {
+    p_user_id: user.id,
+    p_message: message.trim(),
   });
   if (error) {
     console.error("Could not submit ban appeal", error);
     return NextResponse.json({ error: "Could not submit your appeal." }, { status: 500 });
   }
 
+  if (result === "not_banned") {
+    return NextResponse.json(
+      { error: "An appeal can only be sent while your account is banned." },
+      { status: 403 }
+    );
+  }
+  if (result === "appeal_exists") {
+    return NextResponse.json(
+      { error: "You have already sent an appeal. You can only reply when an admin requests more information." },
+      { status: 409 }
+    );
+  }
+  if (result !== "success") {
+    return NextResponse.json({ error: "Write between 3 and 3000 characters." }, { status: 400 });
+  }
+
   let notificationWarning = false;
   try {
     await sendStaffNotification(serviceRole, {
-      subject: "New ban appeal",
-      text: `From: ${profile?.username ?? user.email ?? "A member"}\nEmail: ${user.email ?? "Not provided"}\n\n${message.trim()}`,
-      path: "/admin/feedback",
+      subject: "Ban appeal update",
+      text: `From: ${user.email ?? user.id}\n\n${message.trim()}`,
+      path: "/admin/moderation",
     });
   } catch (notificationError) {
     notificationWarning = true;

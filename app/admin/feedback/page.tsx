@@ -4,13 +4,11 @@ import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
 import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
-import BanAppealActions from "./BanAppealActions";
 
 const CATEGORY_LABELS: Record<string, string> = {
   suggestion: "Suggestion",
   feedback: "Feedback",
   bug: "Bug report",
-  ban_appeal: "Ban appeal",
 };
 
 export default async function AdminFeedbackPage({
@@ -47,9 +45,19 @@ console.log("SSR SUPABASE URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
     );
   }
 
+  const { error: markReadError } = await serviceRole
+    .from("feedback")
+    .update({ read_at: new Date().toISOString() })
+    .is("read_at", null)
+    .neq("category", "ban_appeal");
+  if (markReadError) {
+    console.error("Could not mark feedback notifications as read", markReadError);
+  }
+
   const { data: items, error } = await serviceRole
     .from("feedback")
     .select("id, user_id, username, email, category, message, created_at")
+    .neq("category", "ban_appeal")
     .order("created_at", { ascending: false })
     .limit(200);
 
@@ -65,8 +73,14 @@ console.log("SSR SUPABASE URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
 
         <PageHeading
           title="Feedback"
-          subtitle="Suggestions, feedback, bug reports, and ban appeals sent in by members."
+          subtitle="Suggestions, feedback, and bug reports sent in by members."
         />
+
+        {markReadError && (
+          <p role="alert" className="mb-5 rounded-lg border border-amber-400/30 bg-amber-900/20 p-3 text-sm text-amber-100">
+            Feedback loaded, but its notification state could not be updated.
+          </p>
+        )}
 
         {searchParams?.error && (
           <p role="alert" className="mb-5 rounded-lg border border-red-400/30 bg-red-900/20 p-3 text-sm text-red-200">
@@ -123,30 +137,26 @@ console.log("SSR SUPABASE URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
                   {item.email && item.username ? ` (${item.email})` : ""}
                 </p>
 
-                {item.category === "ban_appeal" ? (
-                  <BanAppealActions feedbackId={item.id} />
-                ) : (
-                  <div className="mt-5 flex items-center gap-3 text-sm">
-                    <form action="/api/admin/feedback/add-to-roadmap" method="POST">
-                      <input type="hidden" name="feedbackId" value={item.id} />
-                      <button
-                        className="rounded-lg border border-green-400/40 bg-green-500/10 px-3 py-2 font-semibold text-green-300 hover:bg-green-500/20"
-                        title="Add this feedback to the roadmap"
-                      >
-                        Add to roadmap
-                      </button>
-                    </form>
-                    <form action="/api/admin/feedback/delete" method="POST">
-                      <input type="hidden" name="feedbackId" value={item.id} />
-                      <button
-                        className="rounded-lg border border-red-400/40 bg-red-500/10 px-3 py-2 font-semibold text-red-300 hover:bg-red-500/20"
-                        title="Delete this feedback"
-                      >
-                        Delete
-                      </button>
-                    </form>
-                  </div>
-                )}
+                <div className="mt-5 flex items-center gap-3 text-sm">
+                  <form action="/api/admin/feedback/add-to-roadmap" method="POST">
+                    <input type="hidden" name="feedbackId" value={item.id} />
+                    <button
+                      className="rounded-lg border border-green-400/40 bg-green-500/10 px-3 py-2 font-semibold text-green-300 hover:bg-green-500/20"
+                      title="Add this feedback to the roadmap"
+                    >
+                      Add to roadmap
+                    </button>
+                  </form>
+                  <form action="/api/admin/feedback/delete" method="POST">
+                    <input type="hidden" name="feedbackId" value={item.id} />
+                    <button
+                      className="rounded-lg border border-red-400/40 bg-red-500/10 px-3 py-2 font-semibold text-red-300 hover:bg-red-500/20"
+                      title="Delete this feedback"
+                    >
+                      Delete
+                    </button>
+                  </form>
+                </div>
               </li>
             ))}
           </ul>
