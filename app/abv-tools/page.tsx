@@ -4,7 +4,7 @@ import ABVToolsClient from "./ABVToolsClient";
 export const metadata: Metadata = {
   title: "Brewing Calculators",
   description:
-    "Free brewing calculators for ABV, dilution, target strength, original gravity, sugar or honey requirements, all-grain water planning, and water chemistry.",
+    "Free brewing calculators for ABV, dilution, target strength, original gravity, bottle counts, all-grain water planning, and water chemistry.",
   alternates: { canonical: "/abv-tools" },
 };
 

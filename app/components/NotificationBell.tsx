@@ -7,6 +7,12 @@ import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
 import PublicMentionText from "@/app/components/PublicMentionText";
 import { forumTopicHref } from "@/lib/community/forumDraft";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { translateBatchError, translateCommunityError } from "@/lib/i18n/apiErrors";
+import {
+  COMMUNITY_ACHIEVEMENT_TIERS,
+  RATING_ACHIEVEMENT_TIERS,
+} from "@/lib/community/achievementTiers";
 
 interface ForumReplyNotification {
   kind: "forum_reply";
@@ -75,7 +81,18 @@ type Notification =
   | AchievementNotification
   | SocialNotification;
 
+function achievementName(name: string, t: (key: string) => string) {
+  const known = [...COMMUNITY_ACHIEVEMENT_TIERS, ...RATING_ACHIEVEMENT_TIERS]
+    .some(([tierName]) => tierName === name);
+  return known ? t(name) : name;
+}
+
+function achievementCategory(category: string, t: (key: string) => string) {
+  return category === "Community" || category === "Ratings" ? t(category) : category;
+}
+
 export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
+  const { t, language } = useTranslation();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -172,7 +189,7 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
     if (knownAchievementIds) {
       achievementData.notifications.forEach((notification) => {
         if (!knownAchievementIds.has(notification.id) && !notification.read_at) {
-          toast.success(`${notification.achievement_name} unlocked!`, { duration: 6000 });
+          toast.success(t("{name} unlocked!").replace("{name}", achievementName(notification.achievement_name, t)), { duration: 6000 });
         }
       });
     }
@@ -239,7 +256,7 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
         socialData.unreadCount +
         achievementData.unreadCount
     );
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     let active = true;
@@ -250,7 +267,7 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
         if (active) setError("");
       } catch (loadError) {
         console.error("Could not load notifications", loadError);
-        if (active) setError("Notifications could not be loaded.");
+        if (active) setError(t("Notifications could not be loaded."));
       }
     }
 
@@ -267,7 +284,7 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
       document.removeEventListener("visibilitychange", refreshWhenVisible);
       window.clearInterval(refreshInterval);
     };
-  }, [loadNotifications]);
+  }, [loadNotifications, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -303,7 +320,7 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
             if (knownIds.has(notification.id)) return;
             knownIds.add(notification.id);
             seenAchievementIds.current = knownIds;
-            toast.success(`${notification.achievement_name} unlocked!`, { duration: 6000 });
+            toast.success(t("{name} unlocked!").replace("{name}", achievementName(notification.achievement_name, t)), { duration: 6000 });
             void loadNotifications().catch((loadError) => {
               console.error(
                 "Could not refresh notifications after achievement unlock",
@@ -329,7 +346,7 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
       cancelled = true;
       if (channel) void supabaseBrowser.removeChannel(channel);
     };
-  }, [loadNotifications]);
+  }, [loadNotifications, t]);
 
   useEffect(() => {
     if (!open) return;
@@ -385,7 +402,7 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
       .then(() => setError(""))
       .catch((loadError) => {
         console.error("Could not refresh notifications", loadError);
-        setError("Notifications could not be loaded.");
+        setError(t("Notifications could not be loaded."));
       })
       .finally(() => setLoading(false));
   }
@@ -419,7 +436,7 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
 
       if (!response.ok) {
         console.error("Could not mark notification as read", response.status);
-        setError("Could not mark this notification as read.");
+        setError(t("Could not mark this notification as read."));
         return;
       }
 
@@ -492,7 +509,7 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
       if (failedResponse) {
         const failure = await failedResponse.json().catch(() => ({}));
         throw new Error(
-          failure.error || `Could not mark all notifications read (${failedResponse.status})`
+          failure.error || t("Could not mark all notifications read ({status})").replace("{status}", String(failedResponse.status))
         );
       }
 
@@ -508,7 +525,7 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
       setError(
         markError instanceof Error
           ? markError.message
-          : "Could not mark all notifications as read."
+          : t("Could not mark all notifications as read.")
       );
       try {
         await loadNotifications();
@@ -547,7 +564,7 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
       if (failedResponse) {
         const failure = await failedResponse.json().catch(() => ({}));
         throw new Error(
-          failure.error || `Could not clear all notifications (${failedResponse.status})`
+          failure.error || t("Could not clear all notifications ({status})").replace("{status}", String(failedResponse.status))
         );
       }
 
@@ -561,7 +578,7 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
       const message =
         clearError instanceof Error
           ? clearError.message
-          : "Could not clear all notifications.";
+          : t("Could not clear all notifications.");
       setClearAllError(message);
       setError(message);
       try {
@@ -583,8 +600,8 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
         onClick={toggleOpen}
         aria-label={
           unreadCount > 0
-            ? `Notifications, ${unreadCount} unread`
-            : "Notifications"
+            ? t("Notifications, {count} unread").replace("{count}", String(unreadCount))
+            : t("Notifications")
         }
         aria-expanded={open}
         aria-controls="notification-panel"
@@ -612,14 +629,14 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
       </button>
       <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
         {unreadCount === 0
-          ? "No unread notifications"
-          : `${unreadCount} unread ${unreadCount === 1 ? "notification" : "notifications"}`}
+          ? t("No unread notifications")
+          : t(unreadCount === 1 ? "{count} unread notification" : "{count} unread notifications").replace("{count}", String(unreadCount))}
       </span>
 
       {open && (
         <section
           id="notification-panel"
-          aria-label="Notifications"
+          aria-label={t("Notifications")}
           role="region"
           className={`absolute top-full z-[60] mt-2 ${mobilePanelPosition ? "" : "right-0 w-[min(22rem,calc(100vw-2rem))]"} rounded-xl border border-white/20 bg-zinc-950/95 p-3 text-left shadow-2xl backdrop-blur-md`}
           style={
@@ -632,19 +649,19 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
           }
         >
           <div className="mb-2 flex items-center justify-between border-b border-white/10 px-1 pb-2">
-            <h2 className="font-semibold">Notifications</h2>
+            <h2 className="font-semibold">{t("Notifications")}</h2>
             {notifications.length > 0 && (
               <div className="flex items-center gap-2">
                 {unreadCount > 0 && (
                   <>
-                    <span className="text-xs text-green-300">{unreadCount} unread</span>
+                    <span className="text-xs text-green-300">{t("{count} unread").replace("{count}", String(unreadCount))}</span>
                     <button
                       type="button"
                       onClick={markAllAsRead}
                       disabled={markingAllRead || clearingAll}
                       className="text-xs text-white/70 underline decoration-white/30 underline-offset-2 hover:text-white disabled:cursor-wait disabled:opacity-50"
                     >
-                      {markingAllRead ? "Marking…" : "Mark all as read"}
+                      {markingAllRead ? t("Marking…") : t("Mark all as read")}
                     </button>
                   </>
                 )}
@@ -657,21 +674,21 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
                   disabled={clearingAll || markingAllRead}
                   className="text-xs text-red-300 underline decoration-red-300/40 underline-offset-2 hover:text-red-200 disabled:cursor-wait disabled:opacity-50"
                 >
-                  Clear all
+                  {t("Clear all")}
                 </button>
               </div>
             )}
           </div>
           {error && (
             <p role="alert" className="px-2 py-3 text-sm text-amber-300">
-              {error}
+              {translateCommunityError(translateBatchError(error, t), t)}
             </p>
           )}
           {loading && notifications.length === 0 ? (
-            <p className="px-2 py-4 text-sm text-white/60">Loading…</p>
+            <p className="px-2 py-4 text-sm text-white/60">{t("Loading…")}</p>
           ) : notifications.length === 0 ? (
             <p className="px-2 py-4 text-sm text-white/60">
-              You’re all caught up.
+              {t("You’re all caught up.")}
             </p>
           ) : (
             <ul className="max-h-96 space-y-1 overflow-y-auto">
@@ -685,12 +702,12 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
                     }`}
                   >
                     <span className="sr-only">
-                      {notification.read_at ? "Read notification. " : "Unread notification. "}
+                      {notification.read_at ? t("Read notification. ") : t("Unread notification. ")}
                     </span>
                     {notification.kind === "forum_reply" ? (
                       <>
                         <span className="block text-sm font-semibold text-green-300">
-                          {notification.reply_author} replied to your discussion
+                          {t("{author} replied to your discussion").replace("{author}", notification.reply_author)}
                         </span>
                         <span className="mt-1 block truncate text-sm font-medium">
                           {notification.topic_title}
@@ -700,7 +717,7 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
                         </span>
                         <span className="mt-2 block text-xs text-white/45">
                           {new Date(notification.created_at).toLocaleString(
-                            "en-GB",
+                            language === "nb" ? "nb-NO" : "en-GB",
                             { dateStyle: "medium", timeStyle: "short" }
                           )}
                         </span>
@@ -708,15 +725,14 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
                     ) : notification.kind === "forum_like" ? (
                       <>
                         <span className="block text-sm font-semibold text-green-300">
-                          {notification.actor_name} liked your{" "}
-                          {notification.target_type === "topic" ? "discussion" : "reply"}
+                          {t(notification.target_type === "topic" ? "{actor} liked your discussion" : "{actor} liked your reply").replace("{actor}", notification.actor_name)}
                         </span>
                         <span className="mt-1 block truncate text-sm font-medium">
                           {notification.topic_title}
                         </span>
                         <span className="mt-2 block text-xs text-white/45">
                           {new Date(notification.created_at).toLocaleString(
-                            "en-GB",
+                            language === "nb" ? "nb-NO" : "en-GB",
                             { dateStyle: "medium", timeStyle: "short" }
                           )}
                         </span>
@@ -725,8 +741,8 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
                       <>
                         <span className="block text-sm font-semibold text-green-300">
                           {notification.type === "sg_check"
-                            ? "Gravity check reminder"
-                            : "Batch reminder"}
+                            ? t("Gravity check reminder")
+                            : t("Batch reminder")}
                         </span>
                         <span className="mt-1 block truncate text-sm font-medium">
                           {notification.batch_name}
@@ -736,7 +752,7 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
                         </span>
                         <span className="mt-2 block text-xs text-white/45">
                           {new Date(notification.remind_at).toLocaleString(
-                            "en-GB",
+                            language === "nb" ? "nb-NO" : "en-GB",
                             { dateStyle: "medium", timeStyle: "short" }
                           )}
                         </span>
@@ -744,17 +760,17 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
                     ) : notification.kind === "achievement" ? (
                       <>
                         <span className="block text-sm font-semibold text-green-300">
-                          Achievement unlocked
+                          {t("Achievement unlocked")}
                         </span>
                         <span className="mt-1 block truncate text-sm font-medium">
-                          {notification.achievement_name}
+                          {achievementName(notification.achievement_name, t)}
                         </span>
                         <span className="mt-1 block text-sm text-white/70">
-                          {notification.category} · goal reached: {notification.goal}
+                          {t("{category} · goal reached: {goal}").replace("{category}", achievementCategory(notification.category, t)).replace("{goal}", String(notification.goal))}
                         </span>
                         <span className="mt-2 block text-xs text-white/45">
                           {new Date(notification.created_at).toLocaleString(
-                            "en-GB",
+                            language === "nb" ? "nb-NO" : "en-GB",
                             { dateStyle: "medium", timeStyle: "short" }
                           )}
                         </span>
@@ -763,17 +779,17 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
                       <>
                         <span className="block text-sm font-semibold text-green-300">
                           {notification.type === "friend_request"
-                            ? "Friend request"
+                            ? t("Friend request")
                             : (notification.messageCount ?? 1) > 1
-                              ? "New messages"
-                              : "New message"}
+                              ? t("New messages")
+                              : t("New message")}
                         </span>
                         <span className="mt-1 flex items-center gap-2 text-sm font-medium">
                           <span className="min-w-0 flex-1 truncate">{notification.actor_name}</span>
                           {notification.type === "message" &&
                             (notification.unreadMessageCount ?? 0) > 1 && (
                               <span className="shrink-0 rounded-full border border-green-300/25 bg-green-300/10 px-1.5 py-0.5 text-[10px] font-semibold text-green-100">
-                                {notification.unreadMessageCount} unread
+                                {t("{count} unread").replace("{count}", String(notification.unreadMessageCount))}
                               </span>
                             )}
                         </span>
@@ -784,7 +800,7 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
                         )}
                         <span className="mt-2 block text-xs text-white/45">
                           {new Date(notification.created_at).toLocaleString(
-                            "en-GB",
+                            language === "nb" ? "nb-NO" : "en-GB",
                             { dateStyle: "medium", timeStyle: "short" }
                           )}
                         </span>
@@ -799,12 +815,12 @@ export default function NotificationBell({ onOpen }: { onOpen: () => void }) {
       )}
       <ConfirmDialog
         open={confirmClearAll}
-        title="Clear all notifications?"
+        title={t("Clear all notifications?")}
         message={
-          clearAllError ||
-          "This removes your forum notifications and due batch reminders. Future scheduled batch reminders will remain."
+          translateCommunityError(translateBatchError(clearAllError, t), t) ||
+          t("This removes your forum notifications and due batch reminders. Future scheduled batch reminders will remain.")
         }
-        confirmLabel={clearingAll ? "Clearing…" : "Clear all"}
+        confirmLabel={clearingAll ? t("Clearing…") : t("Clear all")}
         onConfirm={clearAllNotifications}
         onCancel={() => {
           if (!clearingAll) {

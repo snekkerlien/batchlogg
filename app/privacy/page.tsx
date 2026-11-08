@@ -3,179 +3,153 @@
 import PageHeading from "@/app/components/PageHeading";
 import PublicPageNavigation from "@/app/components/PublicPageNavigation";
 import IssueTrackerLink from "@/app/components/IssueTrackerLink";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export default function PrivacyPage() {
+  const { t } = useTranslation();
   return (
     <main className="min-h-screen flex flex-col items-center px-6 py-12 text-white">
       <div className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-3xl border border-white/10">
         <PublicPageNavigation />
 
         <PageHeading
-          title="Privacy Policy"
-          subtitle="How Batchlogg collects, stores, and protects your data."
+          title={t("Privacy Policy")}
+          subtitle={t("How Batchlogg collects, stores, and protects your data.")}
         />
 
         {/* INTRO */}
         <section className="mb-8 border-b border-white/10 pb-6 text-center">
           <h2 className="text-lg font-semibold text-green-300 mb-3">
-            1. Overview
+            {t("1. Overview")}
           </h2>
           <p className="text-sm text-zinc-300 leading-relaxed mb-3">
-            This Privacy Policy explains how Batchlogg handles your personal
-            information, brewing data, and account details. By using Batchlogg,
-            you agree to the practices described here.
+            {t("This Privacy Policy explains how Batchlogg handles your personal information, brewing data, and account details. By using Batchlogg, you agree to the practices described here.")}
           </p>
           <p className="text-sm text-zinc-300 leading-relaxed">
-            We are committed to protecting your privacy and keeping your data
-            secure.
+            {t("We are committed to protecting your privacy and keeping your data secure.")}
           </p>
         </section>
 
         {/* DATA WE COLLECT */}
         <section className="mb-8 border-b border-white/10 pb-6 text-center">
           <h2 className="text-lg font-semibold text-green-300 mb-3">
-            2. Information We Collect
+            {t("2. Information We Collect")}
           </h2>
           <p className="text-sm text-zinc-300 leading-relaxed mb-3">
-            Batchlogg collects information necessary to operate the service and
-            provide brewing tools. This includes:
+            {t("Batchlogg collects information necessary to operate the service and provide brewing tools. This includes:")}
           </p>
 
           <div className="space-y-2 text-sm text-zinc-300 leading-relaxed">
-            <p>Your account details such as email and username.</p>
-            <p>Your brewing data including batches, recipes, vessels, and logs.</p>
+            <p>{t("Your account details such as email and username.")}</p>
+            <p>{t("Your brewing data including batches, recipes, vessels, and logs.")}</p>
             <p>
-              Daily page-view counts grouped by top-level site section and
-              successful sign-in counts. For account retention reporting, we
-              also store the last-seen timestamp linked to your account and
-              compare it with your signup and first-batch dates. We also store
-              a broad signup source category (such as search, social, or
-              referral) and calculate feature adoption from saved brewing
-              records. We do not store referring URLs, campaign identifiers,
-              IP addresses, or full page URLs for these analytics.
+              {t("Daily page-view counts grouped by top-level site section and successful sign-in counts. For account retention reporting, we also store the last-seen timestamp linked to your account and compare it with your signup and first-batch dates. We also store a broad signup source category (such as search, social, or referral) and calculate feature adoption from saved brewing records. We do not store referring URLs, campaign identifiers, IP addresses, or full page URLs for these analytics.")}
             </p>
-            <p>Optional feedback or messages you submit through the platform.</p>
+            <p>{t("Optional feedback or messages you submit through the platform.")}</p>
           </div>
         </section>
 
         {/* HOW WE USE DATA */}
         <section className="mb-8 border-b border-white/10 pb-6 text-center">
           <h2 className="text-lg font-semibold text-green-300 mb-3">
-            3. How Your Data Is Used
+            {t("3. How Your Data Is Used")}
           </h2>
           <p className="text-sm text-zinc-300 leading-relaxed mb-3">
-            We use your data to operate Batchlogg, improve features, and ensure
-            a smooth brewing experience.
+            {t("We use your data to operate Batchlogg, improve features, and ensure a smooth brewing experience.")}
           </p>
 
           <div className="space-y-2 text-sm text-zinc-300 leading-relaxed">
-            <p>To store and display your brewing records.</p>
-            <p>To personalize your account settings and preferences.</p>
-            <p>To maintain platform security and prevent abuse.</p>
-            <p>To develop new features and improve existing ones.</p>
+            <p>{t("To store and display your brewing records.")}</p>
+            <p>{t("To personalize your account settings and preferences.")}</p>
+            <p>{t("To maintain platform security and prevent abuse.")}</p>
+            <p>{t("To develop new features and improve existing ones.")}</p>
           </div>
         </section>
 
         {/* DATA STORAGE */}
         <section className="mb-8 border-b border-white/10 pb-6 text-center">
           <h2 className="text-lg font-semibold text-green-300 mb-3">
-            4. Data Storage & Security
+            {t("4. Data Storage & Security")}
           </h2>
           <p className="text-sm text-zinc-300 leading-relaxed mb-3">
-            Your data is stored securely using modern cloud infrastructure.
-            Batchlogg takes reasonable measures to protect your information from
-            unauthorized access, loss, or misuse.
+            {t("Your data is stored securely using modern cloud infrastructure. Batchlogg takes reasonable measures to protect your information from unauthorized access, loss, or misuse.")}
           </p>
           <p className="text-sm text-zinc-300 leading-relaxed">
-            No system is completely immune to risks, but we continuously work to
-            maintain a safe environment for your brewing data.
+            {t("No system is completely immune to risks, but we continuously work to maintain a safe environment for your brewing data.")}
           </p>
         </section>
         {/* DATA SHARING */}
         <section className="mb-8 border-b border-white/10 pb-6 text-center">
           <h2 className="text-lg font-semibold text-green-300 mb-3">
-            5. Data Sharing
+            {t("5. Data Sharing")}
           </h2>
           <p className="text-sm text-zinc-300 leading-relaxed mb-3">
-            Batchlogg does not sell your data. We only share information when it
-            is necessary to operate the service or comply with legal
-            requirements.
+            {t("Batchlogg does not sell your data. We only share information when it is necessary to operate the service or comply with legal requirements.")}
           </p>
 
           <div className="space-y-2 text-sm text-zinc-300 leading-relaxed">
-            <p>We may share data with trusted service providers who support the platform.</p>
-            <p>We may disclose information if required by law or to protect Batchlogg.</p>
-            <p>Your public profile is visible only if you enable it in settings.</p>
+            <p>{t("We may share data with trusted service providers who support the platform.")}</p>
+            <p>{t("We may disclose information if required by law or to protect Batchlogg.")}</p>
+            <p>{t("Your public profile is visible only if you enable it in settings.")}</p>
           </div>
         </section>
 
         <section className="mb-8 border-b border-white/10 pb-6 text-center">
           <h2 className="text-lg font-semibold text-green-300 mb-3">
-            Advertising
+            {t("Advertising")}
           </h2>
           <p className="text-sm text-zinc-300 leading-relaxed">
-            Batchlogg does not currently display third-party advertisements. If
-            advertising is introduced, this policy will be updated before ads
-            are enabled to identify the providers, explain relevant data and
-            cookie use, and describe available consent choices.
+            {t("Batchlogg does not currently display third-party advertisements. If advertising is introduced, this policy will be updated before ads are enabled to identify the providers, explain relevant data and cookie use, and describe available consent choices.")}
           </p>
         </section>
 
         {/* BACKUPS */}
         <section className="mb-8 border-b border-white/10 pb-6 text-center">
           <h2 className="text-lg font-semibold text-green-300 mb-3">
-            6. Backups & Data Portability
+            {t("6. Backups & Data Portability")}
           </h2>
           <p className="text-sm text-zinc-300 leading-relaxed mb-3">
-            Batchlogg provides tools to export your data and restore backups.
-            These tools allow you to maintain control over your brewing history.
+            {t("Batchlogg provides tools to export your data and restore backups. These tools allow you to maintain control over your brewing history.")}
           </p>
           <p className="text-sm text-zinc-300 leading-relaxed">
-            You are responsible for storing your exported backups safely.
+            {t("You are responsible for storing your exported backups safely.")}
           </p>
         </section>
 
         {/* ACCOUNT DELETION */}
         <section className="mb-8 border-b border-white/10 pb-6 text-center">
           <h2 className="text-lg font-semibold text-green-300 mb-3">
-            7. Account Deletion
+            {t("7. Account Deletion")}
           </h2>
           <p className="text-sm text-zinc-300 leading-relaxed mb-3">
-            You may delete your account at any time through the Settings page.
-            Deleting your account permanently removes your brewing data,
-            recipes, vessels, and profile information.
+            {t("You may delete your account at any time through the Settings page. Deleting your account permanently removes your brewing data, recipes, vessels, and profile information.")}
           </p>
           <p className="text-sm text-zinc-300 leading-relaxed">
-            This action cannot be undone.
+            {t("This action cannot be undone.")}
           </p>
         </section>
 
         {/* POLICY CHANGES */}
         <section className="mb-8 border-b border-white/10 pb-6 text-center">
           <h2 className="text-lg font-semibold text-green-300 mb-3">
-            8. Changes to This Policy
+            {t("8. Changes to This Policy")}
           </h2>
           <p className="text-sm text-zinc-300 leading-relaxed">
-            We may update this Privacy Policy from time to time. Continued use
-            of Batchlogg after changes are published means you accept the
-            updated policy.
+            {t("We may update this Privacy Policy from time to time. Continued use of Batchlogg after changes are published means you accept the updated policy.")}
           </p>
         </section>
 
         {/* CONTACT */}
         <section className="mb-8 border-b border-white/10 pb-6 text-center">
           <h2 className="text-lg font-semibold text-green-300 mb-3">
-            9. Contact Information
+            {t("9. Contact Information")}
           </h2>
           <p className="text-sm text-zinc-300 leading-relaxed">
-            If you have questions about this Privacy Policy or how your data is
-            handled, signed-in members can use Feedback in Settings. For
-            non-sensitive questions, you can also use the public{" "}
+            {t("If you have questions about this Privacy Policy or how your data is handled, signed-in members can use Feedback in Settings. For non-sensitive questions, you can also use the public")}{" "}
             <IssueTrackerLink className="text-green-300 underline">
-              GitHub issue tracker
+              {t("GitHub issue tracker")}
             </IssueTrackerLink>
-            . Issues are public; do not include passwords, account details, or
-            private personal information.
+            {t(". Issues are public; do not include passwords, account details, or private personal information.")}
           </p>
         </section>
 

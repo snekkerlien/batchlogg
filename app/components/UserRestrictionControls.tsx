@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export interface UserRestriction {
   user_id: string;
@@ -17,6 +18,7 @@ export default function UserRestrictionControls({
   userId: string;
   restrictions: UserRestriction[];
 }) {
+  const { t } = useTranslation();
   const [restrictions, setRestrictions] = useState(initialRestrictions);
   const [restrictionType, setRestrictionType] = useState<"mute" | "ban">("mute");
   const [duration, setDuration] = useState("7");
@@ -31,7 +33,7 @@ export default function UserRestrictionControls({
     if (busy) return;
     const days = Number(duration);
     if (!indefinite && (!Number.isInteger(days) || days < 1 || days > 36500)) {
-      setError("Enter a duration between 1 and 36500 days, or choose indefinite.");
+      setError(t("Enter a duration between 1 and 36500 days, or choose indefinite."));
       return;
     }
 
@@ -55,7 +57,7 @@ export default function UserRestrictionControls({
         restriction?: UserRestriction;
       } = await response.json();
       if (!response.ok || !result.restriction) {
-        throw new Error(result.error || "Could not apply restriction");
+        throw new Error(result.error || t("Could not apply restriction"));
       }
 
       const savedRestriction = result.restriction;
@@ -66,15 +68,18 @@ export default function UserRestrictionControls({
         savedRestriction,
       ]);
       setSuccess(
-        `${restrictionType === "mute" ? "Mute" : "Ban"} applied ${
-          indefinite ? "indefinitely" : `for ${days} day${days === 1 ? "" : "s"}`
-        }.`
+        t(indefinite
+          ? restrictionType === "mute" ? "Mute applied indefinitely." : "Ban applied indefinitely."
+          : restrictionType === "mute"
+            ? days === 1 ? "Mute applied for {count} day." : "Mute applied for {count} days."
+            : days === 1 ? "Ban applied for {count} day." : "Ban applied for {count} days."
+        ).replace("{count}", String(days))
       );
       setReason("");
     } catch (applyError) {
       console.error("Could not apply user restriction", applyError);
       setError(
-        applyError instanceof Error ? applyError.message : "Could not apply restriction."
+        applyError instanceof Error ? applyError.message : t("Could not apply restriction.")
       );
     } finally {
       setBusy(false);
@@ -94,15 +99,15 @@ export default function UserRestrictionControls({
         body: JSON.stringify({ userId, type }),
       });
       const result: { error?: string } = await response.json();
-      if (!response.ok) throw new Error(result.error || "Could not remove restriction");
+      if (!response.ok) throw new Error(result.error || t("Could not remove restriction"));
       setRestrictions((current) =>
         current.filter((item) => item.restriction_type !== type)
       );
-      setSuccess(`${type === "mute" ? "Mute" : "Ban"} removed.`);
+      setSuccess(t(type === "mute" ? "Mute removed." : "Ban removed."));
     } catch (removeError) {
       console.error("Could not remove user restriction", removeError);
       setError(
-        removeError instanceof Error ? removeError.message : "Could not remove restriction."
+        removeError instanceof Error ? removeError.message : t("Could not remove restriction.")
       );
     } finally {
       setBusy(false);
@@ -111,7 +116,7 @@ export default function UserRestrictionControls({
 
   return (
     <div className="mt-8 border-t border-white/10 pt-6">
-      <h3 className="text-base font-semibold text-green-300">Mute or ban</h3>
+      <h3 className="text-base font-semibold text-green-300">{t("Mute or ban")}</h3>
       <div className="mt-3 space-y-2">
         {(["mute", "ban"] as const).map((type) => {
           const restriction = restrictions.find((item) => item.restriction_type === type);
@@ -121,12 +126,12 @@ export default function UserRestrictionControls({
               className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/10 bg-black/20 p-3"
             >
               <p className="text-sm text-white/75">
-                {type === "mute" ? "Community mute" : "Write ban"}
+                {t(type === "mute" ? "Community mute" : "Write ban")}
                 {restriction && (
                   <span className="ml-2 text-white/50">
                     {restriction.ends_at
-                      ? `until ${new Date(restriction.ends_at).toLocaleString("en-GB")}`
-                      : "indefinite"}
+                      ? t("until {date}").replace("{date}", new Date(restriction.ends_at).toLocaleString("en-GB"))
+                      : t("indefinite")}
                   </span>
                 )}
               </p>
@@ -137,7 +142,7 @@ export default function UserRestrictionControls({
                   disabled={busy}
                   className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm hover:bg-white/20 disabled:cursor-wait disabled:opacity-50"
                 >
-                  {type === "mute" ? "Unmute" : "Unban"}
+                  {t(type === "mute" ? "Unmute" : "Unban")}
                 </button>
               )}
             </div>
@@ -147,7 +152,7 @@ export default function UserRestrictionControls({
 
       <form onSubmit={applyRestriction} className="mt-4 space-y-3">
         <label className="block text-sm font-medium text-white/80">
-          Restriction
+          {t("Restriction")}
           <select
             value={restrictionType}
             onChange={(event) =>
@@ -155,8 +160,8 @@ export default function UserRestrictionControls({
             }
             className="mt-2 w-full rounded-lg border border-white/20 bg-black/40 p-3 text-white"
           >
-            <option value="mute">Mute from community actions</option>
-            <option value="ban">Ban from making changes</option>
+            <option value="mute">{t("Mute from community actions")}</option>
+            <option value="ban">{t("Ban from making changes")}</option>
           </select>
         </label>
         <label className="flex items-center gap-3 text-sm text-white/80">
@@ -166,11 +171,11 @@ export default function UserRestrictionControls({
             onChange={(event) => setIndefinite(event.target.checked)}
             className="h-4 w-4 accent-green-600"
           />
-          Indefinitely
+          {t("Indefinitely")}
         </label>
         {!indefinite && (
           <label className="block text-sm font-medium text-white/80">
-            Duration in days
+            {t("Duration in days")}
             <input
               type="number"
               min={1}
@@ -184,7 +189,7 @@ export default function UserRestrictionControls({
           </label>
         )}
         <label className="block text-sm font-medium text-white/80">
-          Reason (optional)
+          {t("Reason (optional)")}
           <textarea
             maxLength={500}
             rows={2}
@@ -200,7 +205,7 @@ export default function UserRestrictionControls({
           disabled={busy}
           className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20 disabled:cursor-wait disabled:opacity-50"
         >
-          {busy ? "Saving…" : `Apply ${restrictionType}`}
+          {busy ? t("Saving…") : t(restrictionType === "mute" ? "Apply mute" : "Apply ban")}
         </button>
       </form>
     </div>

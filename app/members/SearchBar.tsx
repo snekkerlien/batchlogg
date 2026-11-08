@@ -1,14 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export default function SearchBar({ onSearch }: { onSearch: (v: string) => void }) {
+  const { t } = useTranslation();
   const [value, setValue] = useState("");
 
   return (
     <input
       type="text"
-      placeholder="Search users..."
+      placeholder={t("Search users...")}
       value={value}
       onChange={(e) => {
         setValue(e.target.value);

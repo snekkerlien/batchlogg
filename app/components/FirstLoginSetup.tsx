@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthContext } from "@/app/providers/AuthProvider";
 import { useUnits } from "@/app/components/Units";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import { saveUserPreferences } from "@/app/actions/userPreferences";
+import LanguagePreferenceSelect from "./LanguagePreferenceSelect";
+import { useLanguage } from "./LanguageProvider";
+import { getMessage } from "@/lib/i18n/messages";
 import {
   getReducedMotionPreference,
   setReducedMotionPreference,
@@ -17,13 +20,18 @@ import {
   isAccentColor,
 } from "@/lib/theme/accentColor";
 import { isUnitSystem, type UnitSystem } from "@/lib/units";
+import { isAvailableSiteLanguage, type SiteLanguage } from "@/lib/i18n/language";
 
 type SetupStage = "welcome" | "preferences" | null;
 
 export default function FirstLoginSetup() {
   const router = useRouter();
   const { user } = useAuthContext();
+  const userId = user?.id;
+  const activeUserId = useRef(userId);
+  activeUserId.current = userId;
   const { setSystem } = useUnits();
+  const { applyLanguage } = useLanguage();
   const [stage, setStage] = useState<SetupStage>(null);
   const isOpen = stage !== null;
   const [loading, setLoading] = useState(false);
@@ -32,6 +40,8 @@ export default function FirstLoginSetup() {
   const [username, setUsername] = useState("");
   const [accentColor, setAccentColor] = useState(DEFAULT_ACCENT_COLOR);
   const [unitSystem, setUnitSystem] = useState<UnitSystem>("metric");
+  const [language, setLanguage] = useState<SiteLanguage>("en");
+  const t = useCallback((key: string) => getMessage(language, key), [language]);
   const [useInventory, setUseInventory] = useState(false);
   const [publicProfile, setPublicProfile] = useState(true);
   const [remindersEnabled, setRemindersEnabled] = useState(true);
@@ -46,7 +56,7 @@ export default function FirstLoginSetup() {
     window.addEventListener("batchlogg-open-welcome-tour", reopenWelcomeTour);
 
     let active = true;
-    if (!user) {
+    if (!userId) {
       setStage(null);
       return () => {
         window.removeEventListener("batchlogg-open-welcome-tour", reopenWelcomeTour);
@@ -83,6 +93,11 @@ export default function FirstLoginSetup() {
             ? profile.preferred_unit_system
             : "metric"
         );
+        setLanguage(
+          isAvailableSiteLanguage(profile.preferred_language)
+            ? profile.preferred_language
+            : "en"
+        );
         setUseInventory(profile.use_inventory_for_batches === true);
         setPublicProfile(profile.is_public !== false);
         setRemindersEnabled(profile.batch_reminders_enabled !== false);
@@ -91,7 +106,7 @@ export default function FirstLoginSetup() {
         if (profile.onboarding_completed === false) setStage("welcome");
       } catch (loadError) {
         console.error("Could not load first-login setup", loadError);
-        if (active) setError("");
+        if (active) setError("Could not load your first-login preferences. Please reload and try again.");
       } finally {
         if (active) setLoading(false);
       }
@@ -108,7 +123,7 @@ export default function FirstLoginSetup() {
       window.removeEventListener("batchlogg-profile-created", onProfileCreated);
       window.removeEventListener("batchlogg-open-welcome-tour", reopenWelcomeTour);
     };
-  }, [user?.id]);
+  }, [userId]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -123,25 +138,31 @@ export default function FirstLoginSetup() {
     setSaving(true);
     setError("");
     try {
-      setReducedMotionPreference(reducedMotion);
+      if (!userId) throw new Error("Authentication required");
       await saveUserPreferences({
         theme_accent_color: accentColor,
         preferred_unit_system: unitSystem,
+        preferred_language: language,
         use_inventory_for_batches: useInventory,
         batch_reminders_enabled: remindersEnabled,
         games_enabled: gamesEnabled,
         is_public: publicProfile,
         onboarding_completed: true,
-      });
+      }, userId);
+      if (activeUserId.current !== userId) throw new Error("The signed-in account changed. Please try again.");
+      setReducedMotionPreference(reducedMotion);
       applyAccentColor(accentColor);
       window.dispatchEvent(new Event("batchlogg-preferences-saved"));
       setSystem(unitSystem);
+      applyLanguage(language);
       setStage(null);
       window.dispatchEvent(new Event("batchlogg-onboarding-completed"));
       return true;
     } catch (saveError) {
       console.error("Could not save first-login setup", saveError);
-      setError("Your preferences could not be saved. Please try again.");
+      if (activeUserId.current === userId) {
+        setError("Your preferences could not be saved. Please try again.");
+      }
       return false;
     } finally {
       setSaving(false);
@@ -155,7 +176,7 @@ export default function FirstLoginSetup() {
   if (loading || !stage) {
     return error ? (
       <p role="alert" className="fixed bottom-4 right-4 z-[120] max-w-sm rounded-lg border border-amber-400/40 bg-zinc-950 p-3 text-sm text-amber-200">
-        {error}
+        {t(error)}
       </p>
     ) : null;
   }
@@ -177,53 +198,51 @@ export default function FirstLoginSetup() {
         {stage === "welcome" ? (
           <div className="py-1">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-green-300">
-              Welcome to Batchlogg
+              {t("Welcome to Batchlogg")}
             </p>
             <h1 id="first-login-title" className="mt-3 text-3xl font-bold">
-              Welcome, {username}!
+              {t("Welcome, {username}!").replace("{username}", username)}
             </h1>
             <p className="mt-3 max-w-2xl leading-7 text-white/70">
-              Your brewing workspace brings the whole hobby together. Here are a few
-              places to start—explore in any order, and come back to the rest whenever
-              you like.
+              {t("Your brewing workspace brings the whole hobby together. Here are a few places to start—explore in any order, and come back to the rest whenever you like.")}
             </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               {[
                 {
                   href: "/my-recipes",
-                  label: "My Recipes",
-                  description: "Create, organize, and refine the recipes you brew.",
+                  label: t("My Recipes"),
+                  description: t("Create, organize, and refine the recipes you brew."),
                   number: "01",
                 },
                 {
                   href: "/dashboard",
-                  label: "Batches & fermentation",
-                  description: "Follow active batches with gravity readings, notes, and reminders.",
+                  label: t("Batches & fermentation"),
+                  description: t("Follow active batches with gravity readings, notes, and reminders."),
                   number: "02",
                 },
                 {
                   href: "/inventory",
-                  label: "Inventory",
-                  description: "Keep track of ingredients and brewing supplies.",
+                  label: t("Inventory"),
+                  description: t("Keep track of ingredients and brewing supplies."),
                   number: "03",
                 },
                 {
                   href: "/abv-tools",
-                  label: "Brewing calculators",
-                  description: "Use practical tools for common brewing calculations.",
+                  label: t("Brewing calculators"),
+                  description: t("Use practical tools for common brewing calculations."),
                   number: "04",
                 },
                 {
                   href: "/batch-history",
-                  label: "Batch history",
-                  description: "Look back at finished batches and the details you recorded.",
+                  label: t("Batch history"),
+                  description: t("Look back at finished batches and the details you recorded."),
                   number: "05",
                 },
                 {
                   href: "/community/forum",
-                  label: "Community forum",
-                  description: "Share ideas and learn from other brewers.",
+                  label: t("Community forum"),
+                  description: t("Share ideas and learn from other brewers."),
                   number: "06",
                 },
               ].map((feature) => (
@@ -246,7 +265,7 @@ export default function FirstLoginSetup() {
                     {feature.description}
                   </span>
                   <span className="mt-3 block text-xs font-semibold text-green-200 opacity-80 group-hover:opacity-100">
-                    Explore <span aria-hidden="true">→</span>
+                    {t("Explore")} <span aria-hidden="true">→</span>
                   </span>
                 </Link>
               ))}
@@ -254,7 +273,7 @@ export default function FirstLoginSetup() {
 
             <div className="mt-6 flex flex-col-reverse justify-between gap-3 border-t border-white/10 pt-5 sm:flex-row sm:items-center">
               <p className="text-xs text-white/45">
-                Your plan includes the features shown here. You can explore at your own pace.
+                {t("Your plan includes the features shown here. You can explore at your own pace.")}
               </p>
               <div className="flex flex-col gap-3 sm:flex-row">
                 <button
@@ -263,7 +282,7 @@ export default function FirstLoginSetup() {
                   onClick={() => setStage("preferences")}
                   className="rounded-lg border border-white/20 bg-white/10 px-5 py-3 font-semibold hover:bg-white/20 disabled:opacity-50"
                 >
-                  Choose your preferences
+                  {t("Choose your preferences")}
                 </button>
                 <button
                   type="button"
@@ -271,45 +290,45 @@ export default function FirstLoginSetup() {
                   onClick={() => void finishSetup()}
                   className="rounded-lg bg-green-700 px-5 py-3 font-semibold hover:bg-green-600 disabled:opacity-50"
                 >
-                  Start brewing
+                  {t("Start brewing")}
                 </button>
               </div>
             </div>
-            {error && <p role="alert" className="mt-4 text-sm text-red-300">{error}</p>}
+            {error && <p role="alert" className="mt-4 text-sm text-red-300">{t(error)}</p>}
           </div>
         ) : (
           <>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-green-300">
-              A few quick choices
+              {t("A few quick choices")}
             </p>
             <h1 id="first-login-title" className="mt-2 text-2xl font-bold">
-              Set up your profile
+              {t("Set up your profile")}
             </h1>
             <p className="mt-2 text-sm text-white/65">
-              You can change these any time in Settings.
+              {t("You can change these any time in Settings.")}
             </p>
 
             <div className="mt-6 space-y-5">
               <label className="flex items-center justify-between gap-4">
                 <span>
-                  <span className="block font-medium">Site accent color</span>
-                  <span className="text-sm text-white/60">Choose your highlight color.</span>
+                  <span className="block font-medium">{t("Site accent color")}</span>
+                  <span className="text-sm text-white/60">{t("Choose your highlight color.")}</span>
                 </span>
                 <input
                   type="color"
                   value={accentColor}
                   onChange={(event) => setAccentColor(event.target.value)}
-                  aria-label="Choose site accent color"
+                  aria-label={t("Choose site accent color")}
                   className="h-10 w-14 cursor-pointer rounded border border-white/20 bg-transparent p-1"
                 />
               </label>
 
               <fieldset>
-                <legend className="font-medium">Preferred units</legend>
+                <legend className="font-medium">{t("Preferred units")}</legend>
                 <div className="mt-2 flex flex-wrap gap-3">
                   {([
-                    ["metric", "Metric (L, kg)"],
-                    ["imperial", "Imperial (gal, lb)"],
+                    ["metric", t("Metric (L, kg)")],
+                    ["imperial", t("Imperial (gal, lb)")],
                   ] as const).map(([value, label]) => (
                     <label key={value} className="flex items-center gap-2 text-sm">
                       <input
@@ -326,6 +345,13 @@ export default function FirstLoginSetup() {
                 </div>
               </fieldset>
 
+              <LanguagePreferenceSelect
+                id="onboarding-language"
+                value={language}
+                disabled={saving}
+                onChange={setLanguage}
+              />
+
               <label className="flex items-start gap-3">
                 <input
                   type="checkbox"
@@ -334,9 +360,9 @@ export default function FirstLoginSetup() {
                   className={`${checkboxClass} mt-1`}
                 />
                 <span>
-                  <span className="block font-medium">Reduce motion</span>
+                  <span className="block font-medium">{t("Reduce motion")}</span>
                   <span className="text-sm text-white/60">
-                    Hide carbonation bubbles throughout the site.
+                    {t("Hide carbonation bubbles throughout the site.")}
                   </span>
                 </span>
               </label>
@@ -349,9 +375,9 @@ export default function FirstLoginSetup() {
                   className={`${checkboxClass} mt-1`}
                 />
                 <span>
-                  <span className="block font-medium">Use my inventory when creating batches</span>
+                  <span className="block font-medium">{t("Use my inventory when creating batches")}</span>
                   <span className="text-sm text-white/60">
-                    Turn this on to opt into ingredient tracking and stock deductions as that integration is added.
+                    {t("Turn this on to opt into ingredient tracking and stock deductions as that integration is added.")}
                   </span>
                 </span>
               </label>
@@ -364,9 +390,9 @@ export default function FirstLoginSetup() {
                   className={`${checkboxClass} mt-1`}
                 />
                 <span>
-                  <span className="block font-medium">Make my profile visible to the community</span>
+                  <span className="block font-medium">{t("Make my profile visible to the community")}</span>
                   <span className="text-sm text-white/60">
-                    You can still choose visibility for individual fermentation vessels.
+                    {t("You can still choose visibility for individual fermentation vessels.")}
                   </span>
                 </span>
               </label>
@@ -379,9 +405,9 @@ export default function FirstLoginSetup() {
                   className={`${checkboxClass} mt-1`}
                 />
                 <span>
-                  <span className="block font-medium">Enable brew reminders</span>
+                  <span className="block font-medium">{t("Enable brew reminders")}</span>
                   <span className="text-sm text-white/60">
-                    Allow scheduled reminders and gravity-check reminders.
+                    {t("Allow scheduled reminders and gravity-check reminders.")}
                   </span>
                 </span>
               </label>
@@ -394,15 +420,15 @@ export default function FirstLoginSetup() {
                   className={`${checkboxClass} mt-1`}
                 />
                 <span>
-                  <span className="block font-medium">Enable Brewing Academy</span>
+                  <span className="block font-medium">{t("Enable Brewing Academy")}</span>
                   <span className="text-sm text-white/60">
-                    Add brewing learning challenges under More tools in the navigation menu.
+                    {t("Add brewing learning challenges under More tools in the navigation menu.")}
                   </span>
                 </span>
               </label>
             </div>
 
-            {error && <p role="alert" className="mt-5 text-sm text-red-300">{error}</p>}
+            {error && <p role="alert" className="mt-5 text-sm text-red-300">{t(error)}</p>}
             <div className="mt-7 flex flex-col-reverse justify-between gap-3 sm:flex-row">
               <button
                 type="button"
@@ -410,7 +436,7 @@ export default function FirstLoginSetup() {
                 disabled={saving}
                 className="rounded-lg border border-white/20 bg-white/10 px-5 py-3 font-semibold hover:bg-white/20 disabled:opacity-50"
               >
-                Back
+                {t("Back")}
               </button>
               <div className="flex flex-col gap-3 sm:flex-row">
                 <button
@@ -419,7 +445,7 @@ export default function FirstLoginSetup() {
                   onClick={() => void finishSetup()}
                   className="rounded-lg border border-white/20 bg-white/10 px-5 py-3 font-semibold hover:bg-white/20 disabled:opacity-50"
                 >
-                  Skip preferences
+                  {t("Skip preferences")}
                 </button>
                 <button
                   type="button"
@@ -427,7 +453,7 @@ export default function FirstLoginSetup() {
                   onClick={() => void finishSetup()}
                   className="rounded-lg bg-green-700 px-5 py-3 font-semibold hover:bg-green-600 disabled:opacity-50"
                 >
-                  {saving ? "Saving…" : "Save preferences"}
+                  {saving ? t("Saving…") : t("Save preferences")}
                 </button>
               </div>
             </div>

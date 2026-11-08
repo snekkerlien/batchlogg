@@ -2,6 +2,8 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
+import { translateBatchError } from "@/lib/i18n/apiErrors";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type Aging = {
   id: string;
@@ -28,7 +30,16 @@ function localDateTimeValue(date: Date) {
   return localDate.toISOString().slice(0, 16);
 }
 
+function getVisibleError(error: unknown, fallback: string): string {
+  return error instanceof Error &&
+    !(error instanceof TypeError) &&
+    !(error instanceof SyntaxError)
+    ? error.message
+    : fallback;
+}
+
 export default function BottleAging({ batchId }: { batchId: string }) {
+  const { t, language } = useTranslation();
   const [aging, setAging] = useState<Aging | null>(null);
   const [tastings, setTastings] = useState<Tasting[]>([]);
   const [reminderAtSaved, setReminderAtSaved] = useState<string | null>(null);
@@ -56,7 +67,7 @@ export default function BottleAging({ batchId }: { batchId: string }) {
           reminder?: { remind_at: string } | null;
           error?: string;
         } = await response.json();
-        if (!response.ok) throw new Error(result.error || "Could not load bottle aging.");
+        if (!response.ok) throw new Error(result.error || t("Could not load bottle aging."));
         if (active) {
           setAging(result.aging ?? null);
           setTastings(result.tastings ?? []);
@@ -66,7 +77,7 @@ export default function BottleAging({ batchId }: { batchId: string }) {
       .catch((loadError: unknown) => {
         console.error("Could not load bottle aging", loadError);
         if (active) {
-          setError(loadError instanceof Error ? loadError.message : "Could not load bottle aging.");
+          setError(getVisibleError(loadError, t("Could not load bottle aging.")));
         }
       })
       .finally(() => {
@@ -75,7 +86,7 @@ export default function BottleAging({ batchId }: { batchId: string }) {
     return () => {
       active = false;
     };
-  }, [batchId]);
+  }, [batchId, t]);
 
   async function request(
     method: "POST" | "PATCH",
@@ -92,7 +103,7 @@ export default function BottleAging({ batchId }: { batchId: string }) {
       tasting?: Tasting;
       error?: string;
     } = await response.json();
-    if (!response.ok) throw new Error(result.error || "Could not save bottle aging.");
+    if (!response.ok) throw new Error(result.error || t("Could not save bottle aging."));
     return result;
   }
 
@@ -110,7 +121,7 @@ export default function BottleAging({ batchId }: { batchId: string }) {
       setShowStartForm(false);
     } catch (saveError) {
       console.error("Could not start bottle aging", saveError);
-      setError(saveError instanceof Error ? saveError.message : "Could not start bottle aging.");
+      setError(getVisibleError(saveError, t("Could not start bottle aging.")));
     } finally {
       setSaving(false);
     }
@@ -137,7 +148,7 @@ export default function BottleAging({ batchId }: { batchId: string }) {
       }
     } catch (saveError) {
       console.error("Could not save bottle aging tasting", saveError);
-      setError(saveError instanceof Error ? saveError.message : "Could not save tasting notes.");
+      setError(getVisibleError(saveError, t("Could not save tasting notes.")));
     } finally {
       setSaving(false);
     }
@@ -155,7 +166,7 @@ export default function BottleAging({ batchId }: { batchId: string }) {
       return true;
     } catch (saveError) {
       console.error("Could not complete bottle aging", saveError);
-      setError(saveError instanceof Error ? saveError.message : "Could not complete bottle aging.");
+      setError(getVisibleError(saveError, t("Could not complete bottle aging.")));
       setConfirmComplete(false);
       return false;
     } finally {
@@ -165,21 +176,20 @@ export default function BottleAging({ batchId }: { batchId: string }) {
 
   return (
     <section className="mt-6 rounded-xl border border-white/10 bg-white/5 p-5">
-      <h2 className="text-lg font-semibold text-green-200">Bottle aging</h2>
+      <h2 className="text-lg font-semibold text-green-200">{t("Bottle aging")}</h2>
       <p className="mt-1 text-sm text-white/65">
-        Optional: track how this packaged batch develops over time. Add a target tasting date,
-        a reminder, and dated tasting notes.
+        {t("Optional: track how this packaged batch develops over time. Add a target tasting date, a reminder, and dated tasting notes.")}
       </p>
 
       {loading ? (
-        <p role="status" className="mt-4 text-sm text-white/60">Loading bottle aging…</p>
+        <p role="status" className="mt-4 text-sm text-white/60">{t("Loading bottle aging…")}</p>
       ) : error && !aging && !showStartForm ? (
-        <p role="alert" className="mt-4 text-sm text-amber-200">{error}</p>
+        <p role="alert" className="mt-4 text-sm text-amber-200">{translateBatchError(error, t)}</p>
       ) : !aging ? (
         showStartForm ? (
           <form onSubmit={startAging} className="mt-4 grid gap-4 sm:grid-cols-2">
             <label className="flex flex-col gap-2 text-sm">
-              Target tasting date (optional)
+              {t("Target tasting date (optional)")}
               <input
                 type="date"
                 min={todayDate()}
@@ -189,7 +199,7 @@ export default function BottleAging({ batchId }: { batchId: string }) {
               />
             </label>
             <label className="flex flex-col gap-2 text-sm">
-              Reminder date and time (optional)
+              {t("Reminder date and time (optional)")}
               <input
                 type="datetime-local"
                 min={localDateTimeValue(new Date())}
@@ -198,21 +208,21 @@ export default function BottleAging({ batchId }: { batchId: string }) {
                 className="rounded-lg border border-white/20 bg-black/40 p-3 text-white"
               />
             </label>
-            {error && <p role="alert" className="text-sm text-amber-200 sm:col-span-2">{error}</p>}
+            {error && <p role="alert" className="text-sm text-amber-200 sm:col-span-2">{translateBatchError(error, t)}</p>}
             <div className="flex flex-wrap gap-3 sm:col-span-2">
               <button
                 type="submit"
                 disabled={saving}
                 className="rounded-lg border border-green-500 bg-green-700 px-4 py-3 font-semibold hover:bg-green-600 disabled:opacity-60"
               >
-                {saving ? "Starting…" : "Start bottle aging"}
+                {saving ? t("Starting…") : t("Start bottle aging")}
               </button>
               <button
                 type="button"
                 onClick={() => { setShowStartForm(false); setError(""); }}
                 className="rounded-lg border border-white/20 bg-white/5 px-4 py-3 font-semibold hover:bg-white/10"
               >
-                Cancel
+                {t("Cancel")}
               </button>
             </div>
           </form>
@@ -222,43 +232,43 @@ export default function BottleAging({ batchId }: { batchId: string }) {
             onClick={() => setShowStartForm(true)}
             className="mt-4 rounded-lg border border-green-500 bg-green-700 px-4 py-3 font-semibold hover:bg-green-600"
           >
-            Track bottle aging
+            {t("Track bottle aging")}
           </button>
         )
       ) : (
         <>
           <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
             <div className="rounded-lg border border-white/10 bg-black/20 p-4">
-              <dt className="text-xs uppercase tracking-wide text-white/50">Aging since</dt>
-              <dd className="mt-1 text-white/90">{new Date(aging.started_at).toLocaleDateString()}</dd>
+              <dt className="text-xs uppercase tracking-wide text-white/50">{t("Aging since")}</dt>
+              <dd className="mt-1 text-white/90">{new Date(aging.started_at).toLocaleDateString(language === "nb" ? "nb-NO" : undefined)}</dd>
             </div>
             <div className="rounded-lg border border-white/10 bg-black/20 p-4">
-              <dt className="text-xs uppercase tracking-wide text-white/50">Target tasting</dt>
+              <dt className="text-xs uppercase tracking-wide text-white/50">{t("Target tasting")}</dt>
               <dd className="mt-1 text-white/90">
                 {aging.target_tasting_date
-                  ? new Date(`${aging.target_tasting_date}T00:00:00`).toLocaleDateString()
-                  : "No target date set"}
+                  ? new Date(`${aging.target_tasting_date}T00:00:00`).toLocaleDateString(language === "nb" ? "nb-NO" : undefined)
+                  : t("No target date set")}
               </dd>
             </div>
           </dl>
 
           {aging.reminder_id && !aging.completed_at && (
             <p className="mt-3 text-sm text-green-200">
-              Bottle-aging reminder scheduled
-              {reminderAtSaved ? ` for ${new Date(reminderAtSaved).toLocaleString()}` : ""}.
+              {t("Bottle-aging reminder scheduled")}
+              {reminderAtSaved ? ` ${t("for")} ${new Date(reminderAtSaved).toLocaleString(language === "nb" ? "nb-NO" : undefined)}` : ""}.
             </p>
           )}
 
           {aging.completed_at ? (
             <p className="mt-4 rounded-lg border border-green-300/20 bg-green-300/5 p-3 text-sm text-green-100">
-              Bottle aging marked complete on {new Date(aging.completed_at).toLocaleDateString()}.
+              {t("Bottle aging marked complete on")} {new Date(aging.completed_at).toLocaleDateString(language === "nb" ? "nb-NO" : undefined)}.
             </p>
           ) : (
             <>
               <form onSubmit={addTasting} className="mt-5 grid gap-3">
-                <h3 className="font-semibold text-white">Add a tasting</h3>
+                <h3 className="font-semibold text-white">{t("Add a tasting")}</h3>
                 <label className="flex flex-col gap-2 text-sm">
-                  Tasting date
+                  {t("Tasting date")}
                   <input
                     type="date"
                     max={todayDate()}
@@ -269,7 +279,7 @@ export default function BottleAging({ batchId }: { batchId: string }) {
                   />
                 </label>
                 <label className="flex w-full flex-col gap-2 text-sm">
-                  Tasting notes
+                  {t("Tasting notes")}
                   <textarea
                     required
                     maxLength={2000}
@@ -277,7 +287,7 @@ export default function BottleAging({ batchId }: { batchId: string }) {
                     value={notes}
                     onChange={(event) => setNotes(event.target.value)}
                     className="min-h-32 w-full resize-y rounded-lg border border-white/20 bg-black/40 p-3 text-white"
-                    placeholder="How has the flavor, aroma, or carbonation changed?"
+                    placeholder={t("How has the flavor, aroma, or carbonation changed?")}
                   />
                 </label>
                 <div className="flex flex-wrap gap-3">
@@ -286,7 +296,7 @@ export default function BottleAging({ batchId }: { batchId: string }) {
                     disabled={saving}
                     className="rounded-lg border border-green-500 bg-green-700 px-4 py-3 font-semibold hover:bg-green-600 disabled:opacity-60"
                   >
-                    {saving ? "Saving…" : "Save tasting"}
+                    {saving ? t("Saving…") : t("Save tasting")}
                   </button>
                   <button
                     type="button"
@@ -294,29 +304,29 @@ export default function BottleAging({ batchId }: { batchId: string }) {
                     onClick={() => setConfirmComplete(true)}
                     className="rounded-lg border border-white/20 bg-white/5 px-4 py-3 font-semibold hover:bg-white/10 disabled:opacity-60"
                   >
-                    Mark aging complete
+                    {t("Mark aging complete")}
                   </button>
                 </div>
               </form>
             </>
           )}
 
-          {error && <p role="alert" className="mt-3 text-sm text-amber-200">{error}</p>}
-          <section className="mt-6" aria-label="Bottle aging tasting history">
-            <h3 className="font-semibold text-white">Tasting history</h3>
+          {error && <p role="alert" className="mt-3 text-sm text-amber-200">{translateBatchError(error, t)}</p>}
+          <section className="mt-6" aria-label={t("Bottle aging tasting history")}>
+            <h3 className="font-semibold text-white">{t("Tasting history")}</h3>
             {tastings.length ? (
               <ol className="mt-3 space-y-3">
                 {tastings.map((tasting) => (
                   <li key={tasting.id} className="rounded-lg border border-white/10 bg-black/20 p-4">
                     <time dateTime={tasting.tasted_at} className="text-sm font-semibold text-green-200">
-                      {new Date(`${tasting.tasted_at}T00:00:00`).toLocaleDateString()}
+                      {new Date(`${tasting.tasted_at}T00:00:00`).toLocaleDateString(language === "nb" ? "nb-NO" : undefined)}
                     </time>
                     <p className="mt-2 whitespace-pre-wrap text-sm text-white/80">{tasting.notes}</p>
                   </li>
                 ))}
               </ol>
             ) : (
-              <p className="mt-2 text-sm text-white/55">No tastings recorded yet.</p>
+              <p className="mt-2 text-sm text-white/55">{t("No tastings recorded yet.")}</p>
             )}
           </section>
         </>
@@ -324,9 +334,9 @@ export default function BottleAging({ batchId }: { batchId: string }) {
 
       <ConfirmDialog
         open={confirmComplete}
-        title="Mark bottle aging complete?"
-        message="This will close the aging record and stop its pending reminder. You will still be able to view the tasting history, but you cannot add more tastings."
-        confirmLabel={saving ? "Saving…" : "Mark complete"}
+        title={t("Mark bottle aging complete?")}
+        message={t("This will close the aging record and stop its pending reminder. You will still be able to view the tasting history, but you cannot add more tastings.")}
+        confirmLabel={saving ? t("Saving…") : t("Mark complete")}
         onConfirm={completeAging}
         onCancel={() => setConfirmComplete(false)}
       />

@@ -1,12 +1,14 @@
 "use client";
 
 import { useRef } from "react";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type UploadProps = {
   onUpload: (file: File) => void;
 };
 
 export default function UploadComponent({ onUpload }: UploadProps) {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   function trigger() {
@@ -25,7 +27,7 @@ export default function UploadComponent({ onUpload }: UploadProps) {
         onClick={trigger}
         className="flex items-center justify-center w-[150px] h-[48px] bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold text-white text-center"
       >
-        Last opp bilde
+        {t("Upload image")}
       </button>
 
       <input

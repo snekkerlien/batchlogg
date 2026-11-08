@@ -25,6 +25,7 @@ import {
 import { useAuthContext } from "@/app/providers/AuthProvider";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import { savePreferredUnitSystem } from "@/app/actions/userPreferences";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 // Several providers can be mounted at once (nested layouts), so keep them in sync within the same tab.
 const UNIT_CHANGE_EVENT = "batchlog-unit-change";
@@ -240,13 +241,14 @@ export function UnitInput({
 
 export function UnitToggle({ className = "" }: { className?: string }) {
   const { system, setSystem, saveError } = useUnits();
+  const { t } = useTranslation();
   const options: { value: UnitSystem; label: string }[] = [
-    { value: "metric", label: "Metric (L, kg)" },
-    { value: "imperial", label: "Imperial (gal, lb)" },
+    { value: "metric", label: t("Metric (L, kg)") },
+    { value: "imperial", label: t("Imperial (gal, lb)") },
   ];
   return (
     <div className={className}>
-    <div role="group" aria-label="Unit system" className="flex justify-center gap-2">
+    <div role="group" aria-label={t("Unit system")} className="flex justify-center gap-2">
       {options.map((option) => (
         <button
           key={option.value}
@@ -263,7 +265,7 @@ export function UnitToggle({ className = "" }: { className?: string }) {
         </button>
       ))}
     </div>
-    {saveError && <p role="alert" className="mt-2 text-center text-sm text-red-300">{saveError}</p>}
+    {saveError && <p role="alert" className="mt-2 text-center text-sm text-red-300">{t(saveError)}</p>}
     </div>
   );
 }

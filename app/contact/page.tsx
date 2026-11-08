@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import TranslatedText from "@/app/components/TranslatedText";
 import PublicPageNavigation from "@/app/components/PublicPageNavigation";
 import ContactOptions from "./ContactOptions";
 
@@ -16,11 +17,10 @@ export default function ContactPage() {
         <PublicPageNavigation current="contact" />
         <header className="mx-auto mb-10 max-w-2xl">
           <h1 className="text-3xl font-bold text-green-300">
-            Contact Batchlogg
+            <TranslatedText text="Contact Batchlogg" />
           </h1>
           <p className="mt-4 text-lg leading-8 text-white/80">
-            Questions, suggestions, and bug reports are welcome. Choose the
-            option that fits your situation below.
+            <TranslatedText text="Questions, suggestions, and bug reports are welcome. Choose the option that fits your situation below." />
           </p>
         </header>
 

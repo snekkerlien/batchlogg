@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useMemo, useState, type FormEvent } from "react";
 import { Qty, UnitInput, UnitSymbol } from "@/app/components/Units";
 import ExpandArrowButton from "@/app/components/ExpandArrowButton";
+import { translateBatchError } from "@/lib/i18n/apiErrors";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type VesselOption = {
   id: string;
@@ -37,6 +39,7 @@ export default function SplitBatchPanel({
   batch,
   vessels,
 }: SplitBatchPanelProps) {
+  const { t } = useTranslation();
   const sourceVolume = Number(batch.volume_l);
   const [open, setOpen] = useState(false);
   const [allocations, setAllocations] = useState(() =>
@@ -107,7 +110,7 @@ export default function SplitBatchPanel({
         children?: { id: string; batchnummer: string }[];
       } = await response.json();
       if (!response.ok) {
-        throw new Error(result.error || "Could not split this batch.");
+        throw new Error(result.error || t("Could not split this batch."));
       }
       setChildren(result.children ?? []);
     } catch (splitError) {
@@ -115,7 +118,7 @@ export default function SplitBatchPanel({
       setError(
         splitError instanceof Error
           ? splitError.message
-          : "Could not split this batch. Please try again."
+          : t("Could not split this batch. Please try again.")
       );
     } finally {
       setSaving(false);
@@ -125,10 +128,10 @@ export default function SplitBatchPanel({
   return (
     <section className="mt-6 rounded-lg border border-white/10 bg-white/5 p-4">
       <div className="flex w-full items-center justify-between gap-3 font-semibold text-green-300">
-        <h2 className="text-lg">Split into multiple vessels</h2>
+        <h2 className="text-lg">{t("Split into multiple vessels")}</h2>
         <ExpandArrowButton
           expanded={open}
-          label="split into multiple vessels"
+          label={t("Split into multiple vessels")}
           controls="split-batch-content"
           onClick={() => setOpen((value) => !value)}
         />
@@ -144,15 +147,15 @@ export default function SplitBatchPanel({
           {children ? (
             <div className="mt-4 rounded-lg border border-green-400/20 bg-green-950/30 p-4">
               <p role="status" className="font-semibold text-green-200">
-                Batch split into {children.length} batches.
+                {t("Batch split into")} {children.length} {t("batches")}.
               </p>
               <p className="mt-1 text-sm text-white/75">
-                Transfer loss recorded:{" "}
+                {t("Transfer loss recorded:")}{" "}
                 <Qty kind="volume" value={transferLoss} maxDecimals={3} />
               </p>
               <ul className="mt-2 space-y-1 text-sm text-white/75">
                 {children.map((child) => (
-                  <li key={child.id}>Batch {child.batchnummer}</li>
+                  <li key={child.id}>{t("Batch")} {child.batchnummer}</li>
                 ))}
               </ul>
               {children[0] && (
@@ -160,17 +163,16 @@ export default function SplitBatchPanel({
                   href={`/batch-history?batchId=${encodeURIComponent(children[0].id)}`}
                   className="mt-4 inline-block rounded-lg bg-green-700 px-4 py-2 text-sm font-semibold hover:bg-green-600"
                 >
-                  View split batches
+                  {t("View split batches")}
                 </Link>
               )}
             </div>
           ) : (
             <form onSubmit={submitSplit} className="mt-4 space-y-4">
               <p className="text-sm text-white/75">
-                Split up to all{" "}
-                <Qty kind="volume" value={sourceVolume} maxDecimals={3} />. You can
-                keep a portion in this vessel or move portions to other empty
-                vessels. Any volume not transferred is recorded as loss.
+                {t("Split up to all")}{" "}
+                <Qty kind="volume" value={sourceVolume} maxDecimals={3} />.{" "}
+                {t("You can keep a portion in this vessel or move portions to other empty vessels. Any volume not transferred is recorded as loss.")}
               </p>
 
               <div className="space-y-3">
@@ -180,7 +182,7 @@ export default function SplitBatchPanel({
                     className="grid gap-3 rounded-lg border border-white/10 bg-black/20 p-3 sm:grid-cols-[minmax(0,1fr)_9rem_auto]"
                   >
                     <label className="text-sm text-white/75">
-                      Vessel {index + 1}
+                      {t("Vessel")} {index + 1}
                       <select
                         required
                         value={allocation.vesselId}
@@ -190,7 +192,7 @@ export default function SplitBatchPanel({
                         className="mt-1 block w-full rounded-lg border border-white/20 bg-zinc-900 p-3 text-white"
                       >
                         <option value="" disabled>
-                          Select vessel
+                          {t("Select vessel")}
                         </option>
                         {vessels
                           .filter(
@@ -200,15 +202,15 @@ export default function SplitBatchPanel({
                           )
                           .map((vessel) => (
                             <option key={vessel.id} value={vessel.id}>
-                              Vessel {vessel.nummer ?? "—"}
-                              {vessel.isCurrent ? " (current)" : ""}
+                              {t("Vessel")} {vessel.nummer ?? "—"}
+                              {vessel.isCurrent ? ` (${t("current")})` : ""}
                             </option>
                           ))}
                       </select>
                     </label>
 
                     <label className="text-sm text-white/75">
-                      Volume (<UnitSymbol kind="volume" />)
+                      {t("Volume")} (<UnitSymbol kind="volume" />)
                       <UnitInput
                         kind="volume"
                         value={allocation.volumeL}
@@ -229,9 +231,9 @@ export default function SplitBatchPanel({
                           )
                         }
                         className="self-end rounded-lg border border-white/20 px-3 py-2 text-sm hover:bg-white/10"
-                        aria-label={`Remove vessel ${index + 1}`}
+                        aria-label={`${t("Remove vessel")} ${index + 1}`}
                       >
-                        Remove
+                        {t("Remove")}
                       </button>
                     )}
                   </div>
@@ -249,7 +251,7 @@ export default function SplitBatchPanel({
                   }
                   className="rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm font-semibold hover:bg-white/10"
                 >
-                  Add another vessel
+                  {t("Add another vessel")}
                 </button>
               )}
 
@@ -260,17 +262,17 @@ export default function SplitBatchPanel({
                     : "border-red-300/20 bg-red-950/20 text-red-100"
                 }`}
               >
-                Allocated{" "}
+                {t("Allocated")}{" "}
                 <Qty kind="volume" value={totalVolume} maxDecimals={3} /> of{" "}
                 <Qty kind="volume" value={sourceVolume} maxDecimals={3} />
-                {" · Transfer loss: "}
+                {` · ${t("Transfer loss:")} `}
                 <Qty kind="volume" value={transferLoss} maxDecimals={3} />
-                {remainingVolume < -0.00005 && " · Reduce the allocated volume"}
+                {remainingVolume < -0.00005 && ` · ${t("Reduce the allocated volume")}`}
               </div>
 
               {error && (
                 <p role="alert" className="text-sm text-red-300">
-                  {error}
+                  {translateBatchError(error, t)}
                 </p>
               )}
 
@@ -279,7 +281,7 @@ export default function SplitBatchPanel({
                 disabled={!isValid || saving}
                 className="w-full rounded-lg border border-green-500 bg-green-700 px-4 py-3 font-semibold hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {saving ? "Splitting batch…" : "Confirm split"}
+                {saving ? t("Splitting batch…") : t("Confirm split")}
               </button>
             </form>
           )}

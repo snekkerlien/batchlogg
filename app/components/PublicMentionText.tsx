@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { UnitAwareText } from "@/app/components/Units";
 import { parsePublicMentions } from "@/lib/community/mentions";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 const MENTION_PATTERN =
   /\[@([^\]\r\n]{1,1000})\]\(batchlogg:\/\/(recipe|batch)\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\?context=([^)\r\n]{1,500}))?\)/gi;
@@ -19,6 +20,7 @@ function PublicMentionLink({
   label: string;
   context: string;
 }) {
+  const { t } = useTranslation();
   const wrapperRef = useRef<HTMLSpanElement>(null);
   const tooltipRef = useRef<HTMLSpanElement>(null);
   const [previewPosition, setPreviewPosition] = useState<{ left: number; top: number } | null>(
@@ -69,7 +71,7 @@ function PublicMentionLink({
       >
       <a
         href={href}
-        aria-label={`Open public ${kind}: ${label}${context ? `, ${context}` : ""}`}
+        aria-label={`${t(kind === "recipe" ? "Open public recipe:" : "Open public batch:")} ${label}${context ? `, ${context}` : ""}`}
         className="inline-flex rounded-md border border-green-400/30 bg-green-950/50 px-1.5 py-0.5 font-medium text-green-200 no-underline transition-colors hover:border-green-300/50 hover:bg-green-900/70 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-300"
       >
         @{label}
@@ -106,7 +108,7 @@ function PublicMentionLink({
           </span>
           <span className="min-w-0">
             <span className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-green-300/75">
-              Public {kind}
+              {t(kind === "recipe" ? "Public recipe" : "Public batch")}
             </span>
             <span className="block truncate text-sm font-semibold text-white">{label}</span>
           </span>
@@ -117,9 +119,9 @@ function PublicMentionLink({
           </span>
         )}
         <span className="mt-3 flex items-center justify-between border-t border-white/10 pt-2 text-xs">
-          <span className="text-white/45">Preview tag</span>
+          <span className="text-white/45">{t("Preview tag")}</span>
           <span className="font-medium text-green-300">
-            Click tag to open <span aria-hidden="true">↗</span>
+            {t("Click tag to open")} <span aria-hidden="true">↗</span>
           </span>
         </span>
           </span>,
@@ -138,6 +140,7 @@ export default function PublicMentionText({
   unitAware?: boolean;
   compactMentions?: boolean;
 }) {
+  const { t } = useTranslation();
   const safeText = text ?? "";
   const mentions = parsePublicMentions(safeText);
   if (!mentions.length) {
@@ -178,11 +181,11 @@ export default function PublicMentionText({
       nodes.push(
         <span
           key={key++}
-          title={`${kind === "recipe" ? "Public recipe" : "Public batch"}: ${label}${context ? ` · ${context}` : ""}`}
+          title={`${t(kind === "recipe" ? "Public recipe" : "Public batch")}: ${label}${context ? ` · ${context}` : ""}`}
           className="mx-0.5 inline-flex max-w-full translate-y-0.5 items-center gap-1.5 rounded-md border border-green-300/20 bg-green-300/[0.08] px-1.5 py-0.5 align-baseline text-[11px] leading-4 text-green-100"
         >
           <span className="shrink-0 rounded border border-green-200/15 bg-black/20 px-1 text-[8px] font-bold uppercase tracking-wide text-green-200/75">
-            {kind === "recipe" ? "Recipe" : "Batch"}
+            {t(kind === "recipe" ? "Recipe" : "Batch")}
           </span>
           <span className="min-w-0 truncate font-medium">{label}</span>
         </span>

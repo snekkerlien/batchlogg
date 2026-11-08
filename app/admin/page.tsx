@@ -442,7 +442,7 @@ export default async function AdminPage() {
           {/* ⭐ Roadmap */}
           {hasPermission(role, "manage_users") && (
             <Link
-              href="/admin/roadmap"
+              href="/admin/roadmap?returnTo=%2Fadmin"
               className="group rounded-xl border border-white/10 bg-white/5 p-6 transition hover:border-green-400/40 hover:bg-white/10"
             >
               <div className="flex items-start justify-between gap-4">

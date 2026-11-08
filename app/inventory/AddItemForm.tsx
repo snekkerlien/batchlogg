@@ -8,6 +8,7 @@ import {
   INVENTORY_CATEGORIES,
   SNUS_CATEGORIES,
 } from "@/lib/inventory/categories";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type AddItemFormProps = {
   onSubmitComplete?: () => void;
@@ -22,6 +23,7 @@ export default function AddItemForm({
   profile,
   fixedCategory,
 }: AddItemFormProps) {
+  const { t } = useTranslation();
   const [form, setForm] = useState({
     name: "",
     category: fixedCategory ?? "fermentables",
@@ -74,7 +76,7 @@ export default function AddItemForm({
       onSubmitComplete?.();
     } catch (submitError) {
       console.error("Could not add inventory item", submitError);
-      setError("Could not add this item. Please check the values and try again.");
+      setError(t("Could not add this item. Please check the values and try again."));
     } finally {
       setSaving(false);
     }
@@ -82,7 +84,7 @@ export default function AddItemForm({
 
   return (
     <form onSubmit={handleSubmit} aria-busy={saving} className="flex flex-col gap-4">
-      <FormField id="inventory-add-name" label={isMalt ? "Malt type" : isHop ? "Hop type" : "Name"} required>
+      <FormField id="inventory-add-name" label={t(isMalt ? "Malt type" : isHop ? "Hop type" : "Name")} required>
         <input
           id="inventory-add-name"
           required
@@ -96,7 +98,7 @@ export default function AddItemForm({
       {fixedCategory ? (
         <input type="hidden" name="category" value={form.category} />
       ) : (
-        <FormField id="inventory-add-category" label="Category">
+        <FormField id="inventory-add-category" label={t("Category")}>
           <select
             id="inventory-add-category"
             disabled={saving}
@@ -113,7 +115,7 @@ export default function AddItemForm({
           >
             {visibleCategories.map((cat) => (
               <option key={cat.id} value={cat.id}>
-                {cat.label}
+                {t(cat.label)}
               </option>
             ))}
           </select>
@@ -121,7 +123,7 @@ export default function AddItemForm({
       )}
 
       {selectedCategory && selectedCategory.subcategories.length > 0 && (
-        <FormField id="inventory-add-subcategory" label="Subcategory">
+        <FormField id="inventory-add-subcategory" label={t("Subcategory")}>
           <select
             id="inventory-add-subcategory"
             disabled={saving}
@@ -136,10 +138,10 @@ export default function AddItemForm({
               })
             }
           >
-            <option value="">Choose a subcategory</option>
+            <option value="">{t("Choose a subcategory")}</option>
             {getInventorySubcategoryOptions(selectedCategory.id).map((subcategory) => (
               <option key={subcategory.value} value={subcategory.value}>
-                {subcategory.label}
+                {t(subcategory.label)}
               </option>
             ))}
           </select>
@@ -147,7 +149,7 @@ export default function AddItemForm({
       )}
 
       {isBottle && (
-        <FormField id="inventory-add-bottle-type" label="Bottle type" required>
+        <FormField id="inventory-add-bottle-type" label={t("Bottle type")} required>
           <select
             id="inventory-add-bottle-type"
             required
@@ -158,17 +160,17 @@ export default function AddItemForm({
               setForm({ ...form, bottle_type: event.target.value })
             }
           >
-            <option value="">Choose a bottle type</option>
+            <option value="">{t("Choose a bottle type")}</option>
             {INVENTORY_BOTTLE_TYPES.map((bottleType) => (
               <option key={bottleType} value={bottleType}>
-                {bottleType}
+                {t(bottleType)}
               </option>
             ))}
           </select>
         </FormField>
       )}
 
-      <FormField id="inventory-add-amount" label="Current stock">
+      <FormField id="inventory-add-amount" label={t("Current stock")}>
         <input
           id="inventory-add-amount"
           type="number"
@@ -181,7 +183,7 @@ export default function AddItemForm({
         />
       </FormField>
 
-      <FormField id="inventory-add-unit" label="Unit" hint="For example: kg, g, L, or pcs.">
+      <FormField id="inventory-add-unit" label={t("Unit")} hint={t("For example: kg, g, L, or pcs.")}>
         <input
           id="inventory-add-unit"
           disabled={saving}
@@ -191,7 +193,7 @@ export default function AddItemForm({
         />
       </FormField>
 
-      <FormField id="inventory-add-minimum" label="Minimum amount">
+      <FormField id="inventory-add-minimum" label={t("Minimum amount")}>
         <input
           id="inventory-add-minimum"
           type="number"
@@ -207,7 +209,7 @@ export default function AddItemForm({
       </FormField>
 
       {isHop && (
-        <FormField id="inventory-add-alpha-acid" label="Alpha acid (%)" required>
+        <FormField id="inventory-add-alpha-acid" label={t("Alpha acid (%)")} required>
           <input
             id="inventory-add-alpha-acid"
             required
@@ -224,7 +226,7 @@ export default function AddItemForm({
       )}
 
       {isHop && (
-        <FormField id="inventory-add-hop-year" label="Harvest year">
+        <FormField id="inventory-add-hop-year" label={t("Harvest year")}>
           <input
             id="inventory-add-hop-year"
             type="number"
@@ -240,7 +242,7 @@ export default function AddItemForm({
       )}
 
       {isMalt && (
-        <FormField id="inventory-add-ebc" label="Color (EBC)" required>
+        <FormField id="inventory-add-ebc" label={t("Color (EBC)")} required>
           <input
             id="inventory-add-ebc"
             required
@@ -261,7 +263,7 @@ export default function AddItemForm({
         disabled={saving}
         className="rounded-lg border border-green-500 bg-green-700 px-4 py-3 font-semibold hover:bg-green-600 disabled:cursor-wait disabled:opacity-60"
       >
-        {saving ? "Adding…" : `Add ${itemType}`}
+        {saving ? t("Adding…") : `${t("Add")} ${t(itemType)}`}
       </button>
     </form>
   );

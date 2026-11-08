@@ -9,6 +9,7 @@ import {
   getOtherRecipeIngredients,
   getOtherRecipeStyle,
 } from "@/lib/recipes/otherRecipe";
+import TranslatedText from "@/app/components/TranslatedText";
 
 export type RecipePresentationData = {
   name?: string | null;
@@ -50,7 +51,7 @@ function RecipeSection({ title, children }: { title: string; children: ReactNode
   return (
     <section className="rounded-xl border border-white/10 bg-white/[0.04] p-5 sm:p-6">
       <h2 className="mb-4 border-b border-white/10 pb-3 text-lg font-semibold text-green-300">
-        {title}
+        <TranslatedText text={title} />
       </h2>
       <div className="space-y-3 text-sm leading-relaxed text-white/85">{children}</div>
     </section>
@@ -60,7 +61,7 @@ function RecipeSection({ title, children }: { title: string; children: ReactNode
 function RecipeMetric({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="rounded-lg border border-white/10 bg-black/20 p-3">
-      <dt className="text-xs font-medium uppercase tracking-wide text-white/50">{label}</dt>
+      <dt className="text-xs font-medium uppercase tracking-wide text-white/50"><TranslatedText text={label} /></dt>
       <dd className="mt-1 text-base font-semibold text-white">{children}</dd>
     </div>
   );
@@ -105,7 +106,7 @@ export function RecipeBadges({ recipe }: { recipe: RecipePresentationData }) {
       </span>
       {recipe.type === "Beer" && (
         <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-white/70">
-          {beerMethod}
+          <TranslatedText text={beerMethod} />
         </span>
       )}
       {recipe.type === "Beer" && beerIngredients?.beer_style && (
@@ -182,7 +183,7 @@ export default function RecipePresentation({
       {beforeMetrics}
 
       <section className={`mb-6 rounded-xl border border-white/10 bg-white/[0.04] ${compact ? "p-3 sm:p-4" : "p-5 sm:p-6"}`}>
-        <h2 className="mb-4 text-lg font-semibold text-green-300">Recipe at a glance</h2>
+        <h2 className="mb-4 text-lg font-semibold text-green-300"><TranslatedText text="Recipe at a glance" /></h2>
         <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {recipe.og != null && <RecipeMetric label="Original gravity">{Number(recipe.og).toFixed(3)}</RecipeMetric>}
           {recipe.fg != null && <RecipeMetric label="Final gravity">{Number(recipe.fg).toFixed(3)}</RecipeMetric>}
@@ -211,7 +212,7 @@ export default function RecipePresentation({
         </dl>
         {(recipe.type === "Beer" || recipe.type === "Braggot") && recipe.ibu != null && (
           <p className="mt-3 text-xs text-white/45">
-            Bitterness is a guide; sweetness and style affect perception.
+            <TranslatedText text="Bitterness is a guide; sweetness and style affect perception." />
           </p>
         )}
       </section>
@@ -221,35 +222,35 @@ export default function RecipePresentation({
           <RecipeSection title="Grain & hop schedule">
             {beerIngredients?.kit_url && (
               <p>
-                <strong>Kit:</strong>{" "}
+                <strong><TranslatedText text="Kit" />:</strong>{" "}
                 <a href={beerIngredients.kit_url} target="_blank" rel="noreferrer" tabIndex={linkTabIndex} className="text-green-300 underline">
-                  Open kit
+                  <TranslatedText text="Open kit" />
                 </a>
               </p>
             )}
-            {recipe.boil_volume != null && <p><strong>Boil volume:</strong> <Qty kind="volume" value={recipe.boil_volume} /></p>}
+            {recipe.boil_volume != null && <p><strong><TranslatedText text="Boil volume" />:</strong> <Qty kind="volume" value={recipe.boil_volume} /></p>}
             {hasEntries(recipe.malts) && (
               <div>
-                <h3 className="mb-2 font-semibold text-white">Malts</h3>
+                <h3 className="mb-2 font-semibold text-white"><TranslatedText text="Malts" /></h3>
                 <ul className="divide-y divide-white/10 rounded-lg border border-white/10">{renderMalts()}</ul>
               </div>
             )}
             {hasEntries(recipe.hops) && (
               <div>
-                <h3 className="mb-2 font-semibold text-white">Boil & whirlpool hops</h3>
+                <h3 className="mb-2 font-semibold text-white"><TranslatedText text="Boil & whirlpool hops" /></h3>
                 <ol className="space-y-2">{renderHops()}</ol>
               </div>
             )}
             {hasEntries(recipe.dry_hops) && (
               <div>
-                <h3 className="mb-2 font-semibold text-white">Dry hops</h3>
+                <h3 className="mb-2 font-semibold text-white"><TranslatedText text="Dry hops" /></h3>
                 <ul className="divide-y divide-white/10 rounded-lg border border-white/10">
                   {recipe.dry_hops.map((hop, i) => (
                     <li key={i} className="flex justify-between gap-4 px-3 py-2">
                       <span>
                         {hop.name}
                         <span className="block text-white/60">
-                          {hop.contact} days contact
+                          {hop.contact} <TranslatedText text="days contact" />
                           {hop.alpha != null && ` · ${Number(hop.alpha)}% alpha`}
                           {hop.year != null && ` · ${hop.year}`}
                         </span>
@@ -260,8 +261,8 @@ export default function RecipePresentation({
                 </ul>
               </div>
             )}
-            {recipe.boil_time != null && <p><strong>Total boil time:</strong> {recipe.boil_time} min</p>}
-            {recipe.yeast && <p><strong>Yeast:</strong> {recipe.yeast}</p>}
+            {recipe.boil_time != null && <p><strong><TranslatedText text="Total boil time" />:</strong> {recipe.boil_time} min</p>}
+            {recipe.yeast && <p><strong><TranslatedText text="Yeast" />:</strong> {recipe.yeast}</p>}
           </RecipeSection>
         )}
 
@@ -269,24 +270,24 @@ export default function RecipePresentation({
           <RecipeSection title="Malt, hops & honey">
             {hasEntries(recipe.malts) && (
               <div>
-                <h3 className="mb-2 font-semibold text-white">Malts</h3>
+                <h3 className="mb-2 font-semibold text-white"><TranslatedText text="Malts" /></h3>
                 <ul className="divide-y divide-white/10 rounded-lg border border-white/10">{renderMalts()}</ul>
               </div>
             )}
             {hasEntries(recipe.hops) && (
               <div>
-                <h3 className="mb-2 font-semibold text-white">Hop schedule</h3>
+                <h3 className="mb-2 font-semibold text-white"><TranslatedText text="Hop schedule" /></h3>
                 <ul className="space-y-2">{renderHops()}</ul>
               </div>
             )}
             {(recipe.honey_type || recipe.honey_amount != null) && (
               <p>
-                <strong>Honey:</strong> {recipe.honey_type ?? "Unspecified"}
+                <strong><TranslatedText text="Honey" />:</strong> {recipe.honey_type ?? <TranslatedText text="Unspecified" />}
                 {recipe.honey_amount != null && <> · <Qty kind="kg" value={recipe.honey_amount} /></>}
               </p>
             )}
-            {recipe.boil_time != null && <p><strong>Boil time:</strong> {recipe.boil_time} min</p>}
-            {recipe.yeast && <p><strong>Yeast:</strong> {recipe.yeast}</p>}
+            {recipe.boil_time != null && <p><strong><TranslatedText text="Boil time" />:</strong> {recipe.boil_time} min</p>}
+            {recipe.yeast && <p><strong><TranslatedText text="Yeast" />:</strong> {recipe.yeast}</p>}
           </RecipeSection>
         )}
 
@@ -294,13 +295,13 @@ export default function RecipePresentation({
           <RecipeSection title="Honey & fruit">
             {(recipe.base_liquid || recipe.base_liquid_amount != null) && (
               <p>
-                <strong>Base liquid:</strong> {recipe.base_liquid || "Water"}
-                {recipe.base_liquid_amount != null && <> · up to <Qty kind="volume" value={recipe.base_liquid_amount} /></>}
+                <strong><TranslatedText text="Base liquid" />:</strong> {recipe.base_liquid || <TranslatedText text="Water" />}
+                {recipe.base_liquid_amount != null && <> · <TranslatedText text="up to" /> <Qty kind="volume" value={recipe.base_liquid_amount} /></>}
               </p>
             )}
             {(recipe.honey_type || recipe.honey_amount != null) && (
               <p>
-                <strong>Honey:</strong> {recipe.honey_type ?? "Unspecified"}
+                <strong><TranslatedText text="Honey" />:</strong> {recipe.honey_type ?? <TranslatedText text="Unspecified" />}
                 {recipe.honey_amount != null && <> · <Qty kind="kg" value={recipe.honey_amount} /></>}
               </p>
             )}
@@ -313,22 +314,22 @@ export default function RecipePresentation({
                 ))}
               </ul>
             )}
-            {recipe.yeast && <p><strong>Yeast:</strong> {recipe.yeast}</p>}
+            {recipe.yeast && <p><strong><TranslatedText text="Yeast" />:</strong> {recipe.yeast}</p>}
           </RecipeSection>
         )}
 
         {(recipe.type === "Cider" || recipe.type === "Wine" || recipe.type === "Seltzer") && (
           <RecipeSection title={recipe.type === "Wine" ? "Must & additions" : "Juice & additions"}>
-            {recipe.juice_type && <p><strong>{recipe.type === "Wine" ? "Must / juice" : "Juice"}:</strong> {recipe.juice_type}</p>}
-            {recipe.sugar_amount != null && <p><strong>Sugar added:</strong> <Qty kind="kg" value={recipe.sugar_amount} /></p>}
-            {recipe.yeast && <p><strong>Yeast:</strong> {recipe.yeast}</p>}
+            {recipe.juice_type && <p><strong><TranslatedText text={recipe.type === "Wine" ? "Must / juice" : "Juice"} />:</strong> {recipe.juice_type}</p>}
+            {recipe.sugar_amount != null && <p><strong><TranslatedText text="Sugar added" />:</strong> <Qty kind="kg" value={recipe.sugar_amount} /></p>}
+            {recipe.yeast && <p><strong><TranslatedText text="Yeast" />:</strong> {recipe.yeast}</p>}
           </RecipeSection>
         )}
 
         {recipe.type === "Other" && (
           <RecipeSection title="Ingredients & fermentation">
             {otherRecipeStyle && (
-              <p><strong>Style / type:</strong> {otherRecipeStyle}</p>
+              <p><strong><TranslatedText text="Style / type:" /></strong> {otherRecipeStyle}</p>
             )}
             {hasEntries(otherRecipeIngredients) && (
               <ul className="divide-y divide-white/10 rounded-lg border border-white/10">
@@ -339,7 +340,7 @@ export default function RecipePresentation({
                 ))}
               </ul>
             )}
-            {recipe.yeast && <p><strong>Yeast:</strong> {recipe.yeast}</p>}
+            {recipe.yeast && <p><strong><TranslatedText text="Yeast" />:</strong> {recipe.yeast}</p>}
           </RecipeSection>
         )}
 
@@ -364,7 +365,7 @@ export default function RecipePresentation({
             {recipe.secondary_additions?.trim() ? (
               <p className="whitespace-pre-line">{formatSecondaryAdditions(recipe.secondary_additions)}</p>
             ) : recipe.had_secondary ? (
-              <p>This recipe includes a secondary fermentation.</p>
+              <p><TranslatedText text="This recipe includes a secondary fermentation." /></p>
             ) : null}
             {recipe.secondary_notes?.trim() && <p className="whitespace-pre-line text-white/65"><PublicMentionText text={recipe.secondary_notes} unitAware /></p>}
           </RecipeSection>

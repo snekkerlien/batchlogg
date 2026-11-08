@@ -12,6 +12,8 @@ import BatchRecipeCard, {
   type BatchRecipeDetails,
 } from "@/app/kar/[id]/BatchRecipeCard";
 import { formatSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { translateBatchError } from "@/lib/i18n/apiErrors";
 
 type BatchInsight = Omit<Partial<BatchRecipeDetails>, "type"> & {
   id: string;
@@ -116,10 +118,11 @@ function Metric({
   label: string;
   value: string;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-xl border border-white/10 bg-black/20 p-4">
       <p className="text-xs font-medium uppercase tracking-wide text-white/50">
-        {label}
+        {t(label)}
       </p>
       <p className="mt-2 text-xl font-semibold text-white">{value}</p>
     </div>
@@ -127,17 +130,19 @@ function Metric({
 }
 
 function TimelineDate({ label, date }: { label: string; date?: string | null }) {
+  const { t, language } = useTranslation();
   return (
     <div className="rounded-lg border border-white/10 bg-black/20 p-3">
-      <dt className="text-xs font-medium uppercase tracking-wide text-white/50">{label}</dt>
+      <dt className="text-xs font-medium uppercase tracking-wide text-white/50">{t(label)}</dt>
       <dd className="mt-1 text-sm text-white/85">
-        {date ? new Date(date).toLocaleDateString() : "Not recorded"}
+        {date ? new Date(date).toLocaleDateString(language === "nb" ? "nb-NO" : "en-GB") : t("Not recorded")}
       </dd>
     </div>
   );
 }
 
 export default function BatchInsightsPage() {
+  const { t, language } = useTranslation();
   const params = useParams<{ batchId: string }>();
   const searchParams = useSearchParams();
   const batchId = params.batchId;
@@ -188,9 +193,9 @@ export default function BatchInsightsPage() {
         console.error("Could not load batch-specific insights", loadError);
         if (active) {
           setError(
-            loadError instanceof Error
-              ? loadError.message
-              : "Could not load batch insights."
+            loadError instanceof Error && !(loadError instanceof TypeError)
+              ? translateBatchError(loadError.message, t)
+              : t("Could not load batch insights.")
           );
         }
       })
@@ -201,7 +206,7 @@ export default function BatchInsightsPage() {
     return () => {
       active = false;
     };
-  }, [batchId]);
+  }, [batchId, t]);
 
   const originalGravity = numberOrNull(batch?.og);
   const finalGravity = numberOrNull(batch?.fg);
@@ -255,13 +260,18 @@ export default function BatchInsightsPage() {
       : null;
   const nextBrewNotes = [
     ogVariance !== null && Math.abs(ogVariance) >= 0.002
-      ? `Original gravity finished ${ogVariance > 0 ? "above" : "below"} target by ${Math.abs(ogVariance).toFixed(3)}. Check measured volume and extraction before changing the recipe.`
+      ? t("Original gravity finished {direction} target by {amount}. Check measured volume and extraction before changing the recipe.")
+          .replace("{direction}", t(ogVariance > 0 ? "above" : "below"))
+          .replace("{amount}", Math.abs(ogVariance).toFixed(3))
       : null,
     fgVariance !== null && Math.abs(fgVariance) >= 0.002
-      ? `Final gravity finished ${fgVariance > 0 ? "above" : "below"} target by ${Math.abs(fgVariance).toFixed(3)}. Review fermentation conditions and readings before changing the recipe.`
+      ? t("Final gravity finished {direction} target by {amount}. Review fermentation conditions and readings before changing the recipe.")
+          .replace("{direction}", t(fgVariance > 0 ? "above" : "below"))
+          .replace("{amount}", Math.abs(fgVariance).toFixed(3))
       : null,
     packagedYield !== null && packagedYield < 95
-      ? `Packaged yield was ${packagedYield.toFixed(1)}% of planned volume. Note transfer losses when planning the next batch.`
+      ? t("Packaged yield was {yield}% of planned volume. Note transfer losses when planning the next batch.")
+          .replace("{yield}", packagedYield.toFixed(1))
       : null,
   ].filter((note): note is string => note !== null);
 
@@ -275,21 +285,21 @@ export default function BatchInsightsPage() {
           <MenuOverlay current="brew-insights" />
         </div>
         <PageHeading
-          title="Batch insights"
-          subtitle="A closer look at how this batch turned out."
+          title={t("Batch insights")}
+          subtitle={t("A closer look at how this batch turned out.")}
         />
 
         {recipeLimitReached && (
           <p role="status" className="mb-4 rounded-lg border border-amber-400/30 bg-amber-950/40 p-3 text-sm text-amber-100">
-            Your batch was finished, but it wasn&apos;t saved as a recipe because free accounts can save up to 20 recipes.
-            {" "}<Link href="/my-recipes" className="font-semibold underline">Manage recipes</Link>
-            {" "}or{" "}<Link href="/premium" className="font-semibold underline">view Premium</Link>.
+            {t("Your batch was finished, but it wasn't saved as a recipe because free accounts can save up to 20 recipes.")}
+            {" "}<Link href="/my-recipes" className="font-semibold underline">{t("Manage recipes")}</Link>
+            {" "}{t("or")}{" "}<Link href="/premium" className="font-semibold underline">{t("view Premium")}</Link>.
           </p>
         )}
 
         {loading ? (
           <p role="status" className="py-12 text-center text-white/60">
-            Loading batch results…
+            {t("Loading batch results…")}
           </p>
         ) : error ? (
           <section className="rounded-xl border border-amber-400/30 bg-amber-950/30 p-5">
@@ -298,20 +308,20 @@ export default function BatchInsightsPage() {
               href="/batch-history"
               className="mt-4 inline-block text-sm font-semibold text-white underline underline-offset-4"
             >
-              Go to batch history
+              {t("Go to batch history")}
             </Link>
           </section>
         ) : batch ? (
           <>
             <header className="mt-6 rounded-xl border border-green-400/20 bg-green-500/10 p-5">
               <p className="text-sm font-medium text-green-200">
-                Batch packaged and finished
+                {t("Batch packaged and finished")}
               </p>
               <h2 className="mt-1 text-2xl font-bold">
-                {batch.name || "Unnamed batch"}
+                {batch.name || t("Unnamed batch")}
               </h2>
               <p className="mt-1 text-sm text-white/60">
-                {[batch.type, finishedDate?.toLocaleDateString()]
+                {[batch.type, finishedDate?.toLocaleDateString(language === "nb" ? "nb-NO" : "en-GB")]
                   .filter(Boolean)
                   .join(" · ")}
               </p>
@@ -322,7 +332,7 @@ export default function BatchInsightsPage() {
             />
 
             <section
-              aria-label="Batch results"
+              aria-label={t("Batch results")}
               className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3"
             >
               <Metric
@@ -353,14 +363,14 @@ export default function BatchInsightsPage() {
                 label="Recorded racking loss"
                 value={rackLossEntries.length > 0
                   ? `${conditioningRackLoss.toFixed(2)} L`
-                  : "Not recorded"}
+                  : t("Not recorded")}
               />
               <Metric
                 label="Fermentation time"
                 value={
                   fermentationDays === null
                     ? "—"
-                    : `${fermentationDays} ${fermentationDays === 1 ? "day" : "days"}`
+                    : `${fermentationDays} ${t(fermentationDays === 1 ? "day" : "days")}`
                 }
               />
               {numberOrNull(batch.ibu) !== null && (
@@ -372,20 +382,20 @@ export default function BatchInsightsPage() {
             </section>
             {rackLossEntries.length > 0 && rackLossEntries.length < rackEntries.length && (
               <p className="mt-2 text-sm text-white/55">
-                Loss amounts are recorded for {rackLossEntries.length} of {rackEntries.length} rack/transfer entries.
+                {t("Loss amounts are recorded for {recorded} of {total} rack/transfer entries.").replace("{recorded}", String(rackLossEntries.length)).replace("{total}", String(rackEntries.length))}
               </p>
             )}
 
             <section className="mt-6 rounded-xl border border-white/10 bg-white/5 p-5">
-              <h2 className="text-lg font-semibold text-green-200">Fermentation readings</h2>
+              <h2 className="text-lg font-semibold text-green-200">{t("Fermentation readings")}</h2>
               {readings.length === 0 ? (
-                <p className="mt-3 text-sm text-white/60">No gravity readings recorded.</p>
+                <p className="mt-3 text-sm text-white/60">{t("No gravity readings recorded.")}</p>
               ) : (
                 <ol className="mt-4 divide-y divide-white/10">
                   {readings.map((reading) => (
                     <li key={reading.id} className="flex flex-wrap justify-between gap-2 py-3 text-sm">
                       <time dateTime={reading.created_at} className="text-white/65">
-                        {new Date(reading.created_at).toLocaleString()}
+                        {new Date(reading.created_at).toLocaleString(language === "nb" ? "nb-NO" : "en-GB")}
                       </time>
                       <span className="font-mono font-semibold text-white">
                         {Number(reading.sg).toFixed(3)} SG
@@ -397,7 +407,7 @@ export default function BatchInsightsPage() {
             </section>
 
             <section className="mt-6 rounded-xl border border-white/10 bg-white/5 p-5">
-              <h2 className="text-lg font-semibold text-green-200">Fermentation and conditioning timeline</h2>
+              <h2 className="text-lg font-semibold text-green-200">{t("Fermentation and conditioning timeline")}</h2>
               <dl className="mt-4 grid gap-3 sm:grid-cols-2">
                 <TimelineDate label="Primary fermentation started" date={batch.startdato} />
                 <TimelineDate label="Secondary fermentation started" date={batch.secondary_startdate} />
@@ -407,23 +417,23 @@ export default function BatchInsightsPage() {
               </dl>
               {(batch.secondary_additions || batch.secondary_notes) && (
                 <div className="mt-4 rounded-lg border border-white/10 bg-black/20 p-4">
-                  <h3 className="font-semibold text-white">Secondary fermentation</h3>
+                  <h3 className="font-semibold text-white">{t("Secondary fermentation")}</h3>
                   {batch.secondary_additions && (
                     <p className="mt-2 whitespace-pre-wrap text-sm text-white/80">
-                      <strong>Additions:</strong>{" "}
+                      <strong>{t("Additions")}:</strong>{" "}
                       {formatSecondaryAdditions(batch.secondary_additions)}
                     </p>
                   )}
                   {batch.secondary_notes && (
                     <p className="mt-2 whitespace-pre-wrap text-sm text-white/75">
-                      <strong>Notes:</strong> <PublicMentionText text={batch.secondary_notes} unitAware />
+                      <strong>{t("Notes")}:</strong> <PublicMentionText text={batch.secondary_notes} unitAware />
                     </p>
                   )}
                 </div>
               )}
               {batch.conditioning_notes && (
                 <div className="mt-4 rounded-lg border border-white/10 bg-black/20 p-4">
-                  <h3 className="font-semibold text-white">Initial conditioning notes</h3>
+                  <h3 className="font-semibold text-white">{t("Initial conditioning notes")}</h3>
                   <p className="mt-2 whitespace-pre-wrap text-sm text-white/75">
                     <PublicMentionText text={batch.conditioning_notes} unitAware />
                   </p>
@@ -431,7 +441,7 @@ export default function BatchInsightsPage() {
               )}
               {!conditioningActivityAvailable ? (
                 <p role="status" className="mt-4 text-sm text-amber-200">
-                  Conditioning activity details are unavailable until the conditioning database migration is applied.
+                  {t("Conditioning activity details are unavailable until the conditioning database migration is applied.")}
                 </p>
               ) : conditioningEntries.length > 0 ? (
                 <ol className="mt-4 space-y-3">
@@ -441,23 +451,23 @@ export default function BatchInsightsPage() {
                       <li key={entry.id} className="rounded-lg border border-white/10 bg-black/20 p-4">
                         <div className="flex flex-wrap justify-between gap-2">
                           <h3 className="font-semibold text-white">
-                            {conditioningEntryLabels[entry.entry_type] ?? "Conditioning action"}
+                            {t(conditioningEntryLabels[entry.entry_type] ?? "Conditioning action")}
                           </h3>
                           <time dateTime={entry.occurred_at} className="text-sm text-white/55">
-                            {new Date(entry.occurred_at).toLocaleString()}
+                            {new Date(entry.occurred_at).toLocaleString(language === "nb" ? "nb-NO" : "en-GB")}
                           </time>
                         </div>
                         {Object.entries(details)
                           .filter(([key, value]) => key !== "unit" && Boolean(value))
                           .map(([key, value]) => (
                             <p key={key} className="mt-2 text-sm text-white/75">
-                              <strong>{conditioningDetailLabels[key] ?? key}:</strong>{" "}
+                              <strong>{conditioningDetailLabels[key] ? t(conditioningDetailLabels[key]) : key}:</strong>{" "}
                               {key === "amount" || key === "volume"
                                 ? `${value}${details.unit ? ` ${details.unit}` : key === "volume" ? " L" : ""}`
                                 : key === "volume_loss_l"
                                   ? `${value} L`
                                 : key === "wait_hours"
-                                  ? `${value} hours`
+                                  ? t("{value} hours").replace("{value}", value)
                                   : value}
                             </p>
                           ))}
@@ -471,18 +481,18 @@ export default function BatchInsightsPage() {
                   })}
                 </ol>
               ) : (
-                <p className="mt-4 text-sm text-white/60">No conditioning activity recorded.</p>
+                <p className="mt-4 text-sm text-white/60">{t("No conditioning activity recorded.")}</p>
               )}
             </section>
 
             {batchNotes.length > 0 && (
               <section className="mt-6 rounded-xl border border-white/10 bg-white/5 p-5">
-                <h2 className="text-lg font-semibold text-green-200">Batch notes and attachments</h2>
+                <h2 className="text-lg font-semibold text-green-200">{t("Batch notes and attachments")}</h2>
                 <ol className="mt-4 space-y-3">
                   {batchNotes.map((note) => (
                     <li key={note.id} className="rounded-lg border border-white/10 bg-black/20 p-4">
                       <time dateTime={note.created_at} className="text-xs text-white/50">
-                        {new Date(note.created_at).toLocaleString()}
+                        {new Date(note.created_at).toLocaleString(language === "nb" ? "nb-NO" : "en-GB")}
                       </time>
                       {note.note && (
                         <p className="mt-2 whitespace-pre-wrap text-sm text-white/80">
@@ -492,7 +502,7 @@ export default function BatchInsightsPage() {
                       {note.image_url && (
                         <a href={note.image_url} target="_blank" rel="noreferrer" className="mt-3 inline-block">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={note.image_url} alt="Batch note attachment" className="max-h-80 rounded-lg object-contain" />
+                          <img src={note.image_url} alt={t("Batch note attachment")} className="max-h-80 rounded-lg object-contain" />
                         </a>
                       )}
                     </li>
@@ -503,14 +513,14 @@ export default function BatchInsightsPage() {
 
             <section className="mt-6 rounded-xl border border-white/10 bg-white/5 p-5">
               <h2 className="text-lg font-semibold text-green-200">
-                Recipe targets vs. results
+                {t("Recipe targets vs. results")}
               </h2>
               {plannedOg === null &&
               plannedFg === null &&
               plannedAbv === null &&
               plannedVolumeFromRecipe === null ? (
                 <p className="mt-2 text-sm text-white/60">
-                  This batch has no saved recipe targets to compare.
+                  {t("This batch has no saved recipe targets to compare.")}
                 </p>
               ) : (
                 <dl className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -565,12 +575,12 @@ export default function BatchInsightsPage() {
 
             <section className="mt-6 rounded-xl border border-white/10 bg-white/5 p-5">
               <h2 className="text-lg font-semibold text-green-200">
-                Packaging
+                {t("Packaging")}
               </h2>
               <dl className="mt-4 grid gap-3 sm:grid-cols-2">
                 <Comparison
                   label="Method"
-                  target={batch.packaging_method || "Not recorded"}
+                  target={batch.packaging_method || t("Not recorded")}
                   actual={null}
                   variance={null}
                 />
@@ -639,10 +649,10 @@ export default function BatchInsightsPage() {
               className="mt-6 rounded-xl border border-green-300/20 bg-green-300/[0.05] p-5"
             >
               <h2 id="next-brew-title" className="text-lg font-semibold text-green-200">
-                Take this batch into your next brew
+                {t("Take this batch into your next brew")}
               </h2>
               <p className="mt-1 text-sm text-white/65">
-                Keep the result as a learning point, then use the original recipe as your starting plan.
+                {t("Keep the result as a learning point, then use the original recipe as your starting plan.")}
               </p>
               {nextBrewNotes.length > 0 && (
                 <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-white/75">
@@ -656,35 +666,35 @@ export default function BatchInsightsPage() {
                   href={`/my-recipes?start=${encodeURIComponent(batch.recipe_id)}`}
                   className="mt-4 inline-flex min-h-11 items-center justify-center rounded-lg border border-green-400 bg-green-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-600"
                 >
-                  Brew this recipe again
+                  {t("Brew this recipe again")}
                 </Link>
               ) : (
                 <p className="mt-3 text-sm text-white/60">
-                  This batch is not linked to a saved recipe, so it can’t be prefilled for another brew.
+                  {t("This batch is not linked to a saved recipe, so it can’t be prefilled for another brew.")}
                 </p>
               )}
             </section>
 
-            <nav aria-label="Batch follow-up" className="mt-4 flex flex-wrap gap-3">
+            <nav aria-label={t("Batch follow-up")} className="mt-4 flex flex-wrap gap-3">
               <Link
                 href={`/batch-history?batchId=${encodeURIComponent(batch.id)}`}
                 className="rounded-lg border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold hover:bg-white/20"
               >
-                Review full batch history
+                {t("Review full batch history")}
               </Link>
               {batch.recipe_id && (
                 <Link
                   href={`/my-recipes/${encodeURIComponent(batch.recipe_id)}`}
                   className="rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-sm font-semibold text-white/80 hover:bg-white/10 hover:text-white"
                 >
-                  View source recipe
+                  {t("View source recipe")}
                 </Link>
               )}
               <Link
                 href="/brew-insights"
                 className="rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-sm font-semibold text-white/80 hover:bg-white/10 hover:text-white"
               >
-                All brewing insights
+                {t("All brewing insights")}
               </Link>
             </nav>
           </>
@@ -705,15 +715,16 @@ function Comparison({
   actual: string | null;
   variance: string | null;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-lg border border-white/10 bg-black/20 p-3">
       <dt className="text-xs font-medium uppercase tracking-wide text-white/50">
-        {label}
+        {t(label)}
       </dt>
       <dd className="mt-1 text-sm text-white/85">
         {actual ? (
           <>
-            Target {target} · Actual {actual}
+            {t("Target")} {target} · {t("Actual")} {actual}
             {variance && <span className="text-white/55"> · {variance}</span>}
           </>
         ) : (
@@ -725,9 +736,10 @@ function Comparison({
 }
 
 function NoteCard({ title, note }: { title: string; note: string }) {
+  const { t } = useTranslation();
   return (
     <section className="rounded-xl border border-white/10 bg-white/5 p-4">
-      <h2 className="font-semibold text-green-200">{title}</h2>
+      <h2 className="font-semibold text-green-200">{t(title)}</h2>
       <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-white/75">
         <PublicMentionText text={note} unitAware />
       </p>

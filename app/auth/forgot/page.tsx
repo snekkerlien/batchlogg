@@ -3,8 +3,11 @@
 import { useState } from "react";
 import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
 import FormField from "@/app/components/FormField";
+import AuthRequiredLabel from "../AuthRequiredLabel";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export default function ForgotPasswordPage() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
@@ -22,14 +25,15 @@ export default function ForgotPasswordPage() {
       });
 
       if (resetError) {
-        setError("Could not send reset link. Please try again.");
+        console.error("Could not send password reset link", { code: resetError.code, status: resetError.status });
+        setError(t("Could not send reset link. Please try again."));
         return;
       }
 
-      setMsg("A reset link has been sent to your email.");
+      setMsg(t("A reset link has been sent to your email."));
     } catch (requestError) {
       console.error("Could not send password reset link", requestError);
-      setError("Could not send reset link. Please check your connection and try again.");
+      setError(t("Could not send reset link. Please check your connection and try again."));
     } finally {
       setSending(false);
     }
@@ -41,12 +45,12 @@ export default function ForgotPasswordPage() {
         onSubmit={handleSubmit}
         className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-sm border border-white/10 space-y-4"
       >
-        <h2 className="text-2xl font-bold text-center">Reset password</h2>
+        <h2 className="text-2xl font-bold text-center">{t("Reset password")}</h2>
 
         {msg && <p role="status" className="text-green-400 text-center">{msg}</p>}
         {error && <p id="forgot-password-error" role="alert" className="text-red-400 text-center">{error}</p>}
 
-        <FormField id="forgot-password-email" label="Email address" required>
+        <FormField id="forgot-password-email" label={<AuthRequiredLabel text="Email address" />}>
           <input
             id="forgot-password-email"
             type="email"
@@ -66,14 +70,14 @@ export default function ForgotPasswordPage() {
           disabled={sending}
           className="w-full rounded-lg bg-blue-600 p-3 font-semibold hover:bg-blue-700 disabled:cursor-wait disabled:opacity-60"
         >
-          {sending ? "Sending…" : "Send reset link"}
+          {sending ? t("Sending…") : t("Send reset link")}
         </button>
 
         <a
           href="/auth/login"
           className="block text-center text-sm text-blue-300 hover:text-blue-200 mt-2"
         >
-          Back to login
+          {t("Back to login")}
         </a>
       </form>
     </main>

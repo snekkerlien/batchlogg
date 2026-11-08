@@ -4,6 +4,8 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
+import { translateAccountProfileError } from "@/lib/i18n/apiErrors";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface ModerationAction {
   id: string;
@@ -22,6 +24,7 @@ interface ModerationAction {
 }
 
 export default function MyModerationPage() {
+  const { t, language } = useTranslation();
   const [actions, setActions] = useState<ModerationAction[]>([]);
   const [appealTexts, setAppealTexts] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -43,10 +46,10 @@ export default function MyModerationPage() {
     loadActions()
       .catch((loadError) => {
         console.error("Could not load account moderation history", loadError);
-        setError("Moderation history could not be loaded.");
+        setError(t("Moderation history could not be loaded."));
       })
       .finally(() => setLoading(false));
-  }, [loadActions]);
+  }, [loadActions, t]);
 
   async function submitAppeal(event: FormEvent<HTMLFormElement>, actionId: string) {
     event.preventDefault();
@@ -67,10 +70,10 @@ export default function MyModerationPage() {
       if (!response.ok) throw new Error(data.error || "Could not submit appeal.");
       await loadActions();
       setAppealTexts((current) => ({ ...current, [actionId]: "" }));
-      setNotice("Your appeal has been sent to the moderation team.");
+      setNotice(t("Your appeal has been sent to the moderation team."));
     } catch (submitError) {
       console.error("Could not submit moderation appeal", submitError);
-      setError(submitError instanceof Error ? submitError.message : "Could not submit appeal.");
+      setError(submitError instanceof Error ? submitError.message : t("Could not submit appeal."));
     } finally {
       setSubmittingId(null);
     }
@@ -86,35 +89,38 @@ export default function MyModerationPage() {
           <MenuOverlay current="account" />
         </div>
         <PageHeading
-          title="Moderation history"
-          subtitle="Review community warnings and posting restrictions, and appeal a decision."
+          title={t("Moderation history")}
+          subtitle={t("Review community warnings and posting restrictions, and appeal a decision.")}
         />
-        {error && <p role="alert" className="mb-4 rounded-lg bg-red-900/40 p-3 text-sm text-red-100">{error}</p>}
+        {error && <p role="alert" className="mb-4 rounded-lg bg-red-900/40 p-3 text-sm text-red-100">{translateAccountProfileError(error, t)}</p>}
         {notice && <p role="status" className="mb-4 rounded-lg bg-green-900/40 p-3 text-sm text-green-100">{notice}</p>}
         {loading ? (
-          <p role="status" className="text-center text-white/60">Loading moderation history…</p>
+          <p role="status" className="text-center text-white/60">{t("Loading moderation history…")}</p>
         ) : actions.length === 0 ? (
           <p className="rounded-lg border border-white/10 bg-white/5 p-5 text-center text-white/60">
-            There are no moderation actions on your account.
+            {t("There are no moderation actions on your account.")}
           </p>
         ) : (
           <ul className="space-y-4">
             {actions.map((action) => (
               <li key={action.id} className="rounded-xl border border-white/10 bg-white/5 p-5">
                 <div className="flex flex-wrap items-start justify-between gap-2">
-                  <h2 className="text-lg font-semibold capitalize text-amber-100">{action.action_type}</h2>
-                  <time className="text-xs text-white/50">{new Date(action.created_at).toLocaleString()}</time>
+                  <h2 className="text-lg font-semibold capitalize text-amber-100">{t(action.action_type === "mute" ? "Posting restriction" : "Warning")}</h2>
+                  <time className="text-xs text-white/50">{new Date(action.created_at).toLocaleString(language === "nb" ? "nb-NO" : "en-GB")}</time>
                 </div>
                 <p className="mt-3 whitespace-pre-wrap text-sm text-white/80">{action.reason}</p>
                 {action.action_type === "mute" && action.restriction_ends_at && (
                   <p className="mt-2 text-xs text-white/55">
-                    Posting restriction ends {new Date(action.restriction_ends_at).toLocaleString()}.
+                    {t("Posting restriction ends {date}.").replace("{date}", new Date(action.restriction_ends_at).toLocaleString(language === "nb" ? "nb-NO" : "en-GB"))}
                   </p>
                 )}
-                <p className="mt-2 text-xs text-white/45">Issued by {action.moderator}</p>
+                <p className="mt-2 text-xs text-white/45">{t("Issued by {moderator}").replace("{moderator}", action.moderator)}</p>
                 {action.appeal ? (
                   <div className="mt-4 rounded-lg border border-white/10 bg-black/20 p-3">
-                    <p className="text-sm font-semibold capitalize">Appeal {action.appeal.status}</p>
+                    <p className="text-sm font-semibold">{t(
+                      action.appeal.status === "pending" ? "Appeal pending" :
+                        action.appeal.status === "upheld" ? "Appeal upheld" : "Appeal overturned"
+                    )}</p>
                     <p className="mt-2 whitespace-pre-wrap text-sm text-white/70">{action.appeal.appeal_text}</p>
                     {action.appeal.resolution_note && (
                       <p className="mt-3 border-t border-white/10 pt-3 text-sm text-white/70">
@@ -125,7 +131,7 @@ export default function MyModerationPage() {
                 ) : (
                   <form onSubmit={(event) => void submitAppeal(event, action.id)} className="mt-4">
                     <label className="block text-sm font-semibold">
-                      Appeal this decision
+                      {t("Appeal this decision")}
                       <textarea
                         required
                         minLength={10}
@@ -134,7 +140,7 @@ export default function MyModerationPage() {
                         onChange={(event) =>
                           setAppealTexts((current) => ({ ...current, [action.id]: event.target.value }))
                         }
-                        placeholder="Explain why you believe this decision should be reviewed."
+                        placeholder={t("Explain why you believe this decision should be reviewed.")}
                         className="mt-2 min-h-28 w-full resize-y rounded-lg border border-white/20 bg-black/40 p-3 font-normal"
                       />
                     </label>
@@ -143,7 +149,7 @@ export default function MyModerationPage() {
                       disabled={submittingId === action.id}
                       className="mt-3 rounded-lg border border-green-300/25 bg-green-300/10 px-4 py-2 text-sm font-semibold text-green-100 hover:bg-green-300/20 disabled:opacity-50"
                     >
-                      {submittingId === action.id ? "Sending…" : "Submit appeal"}
+                      {submittingId === action.id ? t("Sending…") : t("Submit appeal")}
                     </button>
                   </form>
                 )}

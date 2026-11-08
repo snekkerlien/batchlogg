@@ -3,6 +3,7 @@
 import { useState } from "react";
 import FormField from "@/app/components/FormField";
 import PublicMentionTextarea from "@/app/components/PublicMentionTextarea";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import {
   parseSecondaryAdditions,
   type SecondaryAdditionItem,
@@ -17,6 +18,7 @@ function AdditionRows({
   rows: SecondaryAdditionItem[];
   onChange: (rows: SecondaryAdditionItem[]) => void;
 }) {
+  const { t } = useTranslation();
   function update(index: number, changes: Partial<SecondaryAdditionItem>) {
     onChange(rows.map((row, rowIndex) =>
       rowIndex === index ? { ...row, ...changes } : row
@@ -28,15 +30,15 @@ function AdditionRows({
       {rows.map((row, index) => (
         <div key={index} className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(6rem,0.35fr)_minmax(5rem,0.25fr)_auto]">
           <input
-            aria-label={`${label} ${index + 1}`}
-            placeholder={`${label} name`}
+            aria-label={`${t(label)} ${index + 1}`}
+            placeholder={`${t(label)} ${t("name")}`}
             value={row.name}
             onChange={(event) => update(index, { name: event.target.value })}
             className="col-span-2 min-w-0 rounded border border-white/20 bg-black/40 p-3 sm:col-span-1"
           />
           <input
-            aria-label={`${label} ${index + 1} amount`}
-            placeholder="Amount"
+            aria-label={`${t(label)} ${index + 1} ${t("Amount")}`}
+            placeholder={t("Amount")}
             type="number"
             min="0"
             step="any"
@@ -45,8 +47,8 @@ function AdditionRows({
             className="min-w-0 rounded border border-white/20 bg-black/40 p-3"
           />
           <input
-            aria-label={`${label} ${index + 1} unit`}
-            placeholder="Unit"
+            aria-label={`${t(label)} ${index + 1} ${t("Unit")}`}
+            placeholder={t("Unit")}
             value={row.unit}
             onChange={(event) => update(index, { unit: event.target.value })}
             className="min-w-0 rounded border border-white/20 bg-black/40 p-3"
@@ -56,7 +58,7 @@ function AdditionRows({
             onClick={() => onChange(rows.filter((_, rowIndex) => rowIndex !== index))}
             className="col-span-2 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm hover:bg-white/20 sm:col-span-1"
           >
-            Remove
+            {t("Remove")}
           </button>
         </div>
       ))}
@@ -65,7 +67,7 @@ function AdditionRows({
         onClick={() => onChange([...rows, { name: "", amount: "", unit: "" }])}
         className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm hover:bg-white/20"
       >
-        + Add {label.toLowerCase()}
+        + {t("Add")} {t(label === "Secondary additive" ? "additive" : "fruit")}
       </button>
     </div>
   );
@@ -84,6 +86,7 @@ export default function RecipeSecondaryFields({
   showToggle?: boolean;
   includeHadSecondaryField?: boolean;
 }) {
+  const { t } = useTranslation();
   const [hadSecondary, setHadSecondary] = useState(defaultEnabled);
   const [additions, setAdditions] = useState(() => parseSecondaryAdditions(defaultValue));
   const [notes, setNotes] = useState(defaultNotes ?? "");
@@ -96,7 +99,7 @@ export default function RecipeSecondaryFields({
     <div className="flex flex-col gap-4">
       {showToggle && (
         <div>
-          <label className="mb-2 block font-semibold">Secondary fermentation</label>
+          <label className="mb-2 block font-semibold">{t("Secondary fermentation")}</label>
           <button
             type="button"
             aria-pressed={hadSecondary}
@@ -107,7 +110,7 @@ export default function RecipeSecondaryFields({
                 : "border-white/20 bg-black/40"
             }`}
           >
-            {hadSecondary ? "Secondary enabled" : "Enable secondary"}
+            {hadSecondary ? t("Secondary enabled") : t("Enable secondary")}
           </button>
         </div>
       )}
@@ -120,7 +123,7 @@ export default function RecipeSecondaryFields({
       {secondaryEnabled && (
         <>
           <div>
-            <label className="mb-1 block font-semibold">Secondary additives</label>
+            <label className="mb-1 block font-semibold">{t("Secondary additives")}</label>
             <AdditionRows
               label="Secondary additive"
               rows={additions.additives}
@@ -128,18 +131,18 @@ export default function RecipeSecondaryFields({
             />
           </div>
           <div>
-            <label className="mb-1 block font-semibold">Secondary fruit additions</label>
+            <label className="mb-1 block font-semibold">{t("Secondary fruit additions")}</label>
             <AdditionRows
               label="Fruit"
               rows={additions.fruits}
               onChange={(fruits) => setAdditions((current) => ({ ...current, fruits }))}
             />
           </div>
-          <FormField id="recipe-secondary-notes" label="Secondary notes">
+          <FormField id="recipe-secondary-notes" label={t("Secondary notes")}>
             <PublicMentionTextarea
               id="recipe-secondary-notes"
               name="secondary_notes"
-              placeholder="Notes about the secondary fermentation..."
+              placeholder={t("Notes about the secondary fermentation...")}
               rows={6}
               className="min-h-32 w-full resize-y rounded border border-white/20 bg-black/40 p-3"
               value={notes}

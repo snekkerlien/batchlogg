@@ -7,6 +7,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import NotificationBell from "@/app/components/NotificationBell";
 import PublicNavigationLinks from "@/app/components/PublicNavigationLinks";
 import { useAuthContext } from "@/app/providers/AuthProvider";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export default function MenuOverlay({ current }: { current: string }) {
   return (
@@ -18,6 +19,7 @@ export default function MenuOverlay({ current }: { current: string }) {
 
 function MenuOverlayContent({ current }: { current: string }) {
   const { user, loading } = useAuthContext();
+  const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const [canManageKegs, setCanManageKegs] = useState(false);
@@ -155,7 +157,7 @@ function MenuOverlayContent({ current }: { current: string }) {
 
   if (!user) {
     return (
-      <nav aria-label="Public site navigation" className="flex justify-end text-sm">
+      <nav       aria-label={t("Public site navigation")} className="flex justify-end text-sm">
         <PublicNavigationLinks
           className="flex flex-wrap justify-end gap-x-3 gap-y-2 text-white/75"
           showAuthLinks={!loading}
@@ -250,7 +252,7 @@ function MenuOverlayContent({ current }: { current: string }) {
           ref={menuButtonRef}
           type="button"
           onClick={() => setMenuOpen((open) => !open)}
-          aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
+          aria-label={menuOpen ? t("Close navigation menu") : t("Open navigation menu")}
           aria-expanded={menuOpen}
           aria-controls="navigation-menu"
           className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg flex items-center justify-center"
@@ -298,9 +300,9 @@ function MenuOverlayContent({ current }: { current: string }) {
               id="workspace-menu-heading"
               className="px-3 pb-1 text-xs font-semibold text-zinc-400"
             >
-              Brewing
+              {t("Brewing")}
             </h2>
-            <nav aria-label="Brewing navigation" className="flex flex-col">
+            <nav aria-label={t("Brewing navigation")} className="flex flex-col">
               {primaryItems.map((item) => (
                 <Link
                   key={item.key}
@@ -313,7 +315,7 @@ function MenuOverlayContent({ current }: { current: string }) {
                       : "border-transparent text-white/90"
                   }`}
                 >
-                  {item.label}
+                  {pathname.startsWith("/admin") ? item.label : t(item.label)}
                 </Link>
               ))}
             </nav>
@@ -340,11 +342,16 @@ function MenuOverlayContent({ current }: { current: string }) {
                           containsCurrentItem ? "text-green-300" : "text-white/80"
                         }`}
                       >
-                        {group.label}
+                        {pathname.startsWith("/admin") ? group.label : t(group.label)}
                       </Link>
                       <button
                         type="button"
-                        aria-label={`${expanded ? "Collapse" : "Expand"} ${group.label} menu`}
+                        aria-label={pathname.startsWith("/admin")
+                          ? `${expanded ? "Collapse" : "Expand"} ${group.label} menu`
+                          : t(`${expanded ? "Collapse" : "Expand"} {group} menu`).replace(
+                              "{group}",
+                              t(group.label)
+                            )}
                         aria-expanded={expanded}
                         onClick={() => setExpandedGroups((previous) =>
                           expanded
@@ -369,14 +376,16 @@ function MenuOverlayContent({ current }: { current: string }) {
                         containsCurrentItem ? "text-green-300" : "text-white/80"
                       }`}
                     >
-                      {group.label}
+                      {pathname.startsWith("/admin") ? group.label : t(group.label)}
                       <span aria-hidden="true" className="ml-3 text-sm text-white/50">
                         {expanded ? "−" : "+"}
                       </span>
                     </button>
                   )}
                   {expanded && (
-                    <nav aria-label={`${group.label} navigation`} className="pb-1 pl-3">
+                    <nav aria-label={pathname.startsWith("/admin")
+                      ? `${group.label} navigation`
+                      : t("{group} navigation").replace("{group}", t(group.label))} className="pb-1 pl-3">
                       {group.items.map((item) => (
                         <Link
                           key={item.key}
@@ -401,7 +410,7 @@ function MenuOverlayContent({ current }: { current: string }) {
                               : "border-transparent text-white/90"
                           }`}
                         >
-                          {item.label}
+                          {pathname.startsWith("/admin") ? item.label : t(item.label)}
                         </Link>
                       ))}
                     </nav>
@@ -417,14 +426,14 @@ function MenuOverlayContent({ current }: { current: string }) {
               onClick={() => setMenuOpen(false)}
               className="hidden min-h-10 items-center rounded-md px-3 py-2 text-sm text-white/80 hover:bg-white/5 hover:text-green-300 sm:flex"
             >
-              Download desktop app
+              {t("Download desktop app")}
             </Link>
             <button
               type="button"
               onClick={logout}
               className="min-h-10 rounded-md px-3 py-2 text-sm text-white/80 hover:bg-white/5 hover:text-green-300"
             >
-              Log out
+              {t("Log out")}
             </button>
           </div>
         </div>

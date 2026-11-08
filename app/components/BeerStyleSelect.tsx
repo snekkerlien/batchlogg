@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { beerStyleOptions } from "@/lib/brewing/beerStyles";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 function editDistanceWithinOne(left: string, right: string): boolean {
   if (Math.abs(left.length - right.length) > 1) return false;
@@ -62,6 +63,7 @@ export default function BeerStyleSelect({
   value: string;
   onChange: (style: string) => void;
 }) {
+  const { t } = useTranslation();
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -104,7 +106,7 @@ export default function BeerStyleSelect({
   return (
     <div ref={wrapperRef} className="relative">
       <label htmlFor={id} className="mb-1 block font-semibold">
-        Beer style
+        {t("Beer style")}
       </label>
       <input type="hidden" name={name} value={value} />
       <div className="flex">
@@ -120,7 +122,7 @@ export default function BeerStyleSelect({
           autoComplete="off"
           required
           value={query}
-          placeholder="Search beer styles"
+          placeholder={t("Search beer styles")}
           onFocus={() => {
             setOpen(true);
             setSearching(false);
@@ -133,7 +135,7 @@ export default function BeerStyleSelect({
             setActiveIndex(0);
             onChange("");
             event.target.setCustomValidity(
-              nextQuery ? "Choose a beer style from the list." : ""
+              nextQuery ? t("Choose a beer style from the list.") : ""
             );
           }}
           onKeyDown={(event) => {
@@ -161,7 +163,7 @@ export default function BeerStyleSelect({
         />
         <button
           type="button"
-          aria-label="Toggle beer styles"
+          aria-label={t("Toggle beer styles")}
           aria-expanded={open}
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => {
@@ -180,7 +182,7 @@ export default function BeerStyleSelect({
         <ul
           id={listId}
           role="listbox"
-          aria-label="Beer styles"
+          aria-label={t("Beer styles")}
           className="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-white/20 bg-zinc-900 py-1 shadow-xl"
         >
           {filteredStyles.length ? (
@@ -200,7 +202,7 @@ export default function BeerStyleSelect({
               </li>
             ))
           ) : (
-            <li className="px-3 py-2 text-sm text-white/55">No matching styles.</li>
+            <li className="px-3 py-2 text-sm text-white/55">{t("No matching styles.")}</li>
           )}
         </ul>
       )}

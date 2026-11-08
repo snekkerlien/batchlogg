@@ -4,9 +4,11 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
   const router = useRouter();
+  const { t } = useTranslation();
 
   const [open, setOpen] = useState(false);
   const [kode, setKode] = useState("");
@@ -49,26 +51,26 @@ export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
         onClick={() => setOpen(true)}
         className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
       >
-        Delete batch
+        {t("Delete batch")}
       </button>
 
       {open && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[100] bg-black/70 flex items-center justify-center p-4">
           <div className="bg-zinc-900 border border-white/10 p-6 rounded-xl w-80">
             <h3 className="text-xl font-semibold mb-4 text-center">
-              Confirm deletion
+              {t("Confirm deletion")}
             </h3>
 
             <form onSubmit={handleDelete} className="space-y-4">
               <div>
-                <label className="block mb-1">Safety code</label>
+                <label className="block mb-1">{t("Safety code")}</label>
                 <input
                   type="text"
                   value={kode}
                   onChange={(e) => setKode(e.target.value)}
                   required
                   disabled={loading}
-                  placeholder="Input code"
+                  placeholder={t("Input code")}
                   className="w-full p-2 rounded bg-zinc-800 border border-zinc-700 disabled:opacity-50"
                 />
 
@@ -85,10 +87,10 @@ export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
                 {loading ? (
                   <>
                     <span className="animate-spin border-2 border-white/30 border-t-white rounded-full w-4 h-4"></span>
-                    Deleting…
+                    {t("Deleting…")}
                   </>
                 ) : (
-                  "Slett batch"
+                  t("Delete batch")
                 )}
               </button>
 
@@ -98,7 +100,7 @@ export default function DeleteModal({ batchnummer }: { batchnummer: string }) {
                 disabled={loading}
                 className="w-full bg-zinc-700 hover:bg-zinc-600 p-2 rounded font-semibold mt-2 disabled:opacity-50"
               >
-                Abort
+                {t("Abort")}
               </button>
             </form>
           </div>

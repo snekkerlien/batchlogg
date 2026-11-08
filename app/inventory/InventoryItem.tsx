@@ -11,6 +11,7 @@ import {
   LEGACY_CATEGORY_ALIASES,
   SNUS_CATEGORIES,
 } from "@/lib/inventory/categories";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export default function InventoryItem({
   item,
@@ -31,6 +32,7 @@ export default function InventoryItem({
   ) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const [editMode, setEditMode] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteError, setDeleteError] = useState("");
@@ -78,6 +80,17 @@ export default function InventoryItem({
   const minimum = Number(item.minimum_amount);
   const current = Number(item.amount);
   const itemCategory = getInventoryItemCategory(item.category, item.subcategory);
+  const translateInventoryLabel = (label: string) => {
+    const labels = [
+      ...INVENTORY_CATEGORIES.flatMap((itemCategory) => [
+        itemCategory.label,
+        ...itemCategory.subcategories,
+      ]),
+      ...INVENTORY_BOTTLE_TYPES,
+      ...SNUS_CATEGORIES,
+    ];
+    return labels.includes(label as never) ? t(label) : label;
+  };
 
   let status = "OK";
   let statusColor = "text-green-400";
@@ -128,7 +141,7 @@ export default function InventoryItem({
       setEditMode(false);
     } catch (error) {
       console.error("Could not update inventory item", error);
-      setEditError("Could not update this item. Check the values and try again.");
+      setEditError(t("Could not update this item. Check the values and try again."));
     } finally {
       setSaving(false);
     }
@@ -140,7 +153,7 @@ export default function InventoryItem({
       return true;
     } catch (error) {
       console.error("Could not delete inventory item", error);
-      setDeleteError("Could not delete this item. Please try again.");
+      setDeleteError(t("Could not delete this item. Please try again."));
       return false;
     }
   }
@@ -154,14 +167,14 @@ export default function InventoryItem({
           </h3>
           {profile?.snus_is_true && snusCategories.includes(item.category) && (
             <span className="rounded-md border border-purple-500 bg-purple-700 px-2 py-1 text-xs">
-              Snus
+                    {t("Snus")}
             </span>
           )}
         </div>
         <div className="mt-1 text-xs text-white/60">
           {itemCategory.subcategory
-            ? `${INVENTORY_CATEGORIES.find((category) => category.id === itemCategory.category)?.label ?? itemCategory.category} · ${itemCategory.subcategory}`
-            : INVENTORY_CATEGORIES.find((category) => category.id === itemCategory.category)?.label ?? itemCategory.category}
+            ? `${translateInventoryLabel(INVENTORY_CATEGORIES.find((category) => category.id === itemCategory.category)?.label ?? itemCategory.category)} · ${translateInventoryLabel(itemCategory.subcategory)}`
+              : translateInventoryLabel(INVENTORY_CATEGORIES.find((category) => category.id === itemCategory.category)?.label ?? itemCategory.category)}
         </div>
         {item.category === "hops" && (
           <div className="mt-2 flex flex-wrap gap-2 text-xs">
@@ -198,13 +211,13 @@ export default function InventoryItem({
           <p className="text-lg font-bold">
             {item.amount} {item.unit}
           </p>
-          <span className={`font-semibold ${statusColor}`}>{status}</span>
+          <span className={`font-semibold ${statusColor}`}>{t(status)}</span>
         </div>
       )}
 
       {editMode && (
         <div aria-busy={saving} className="mt-1 flex flex-col gap-3">
-          <FormField id={`inventory-edit-${item.id}-name`} label="Name" required>
+          <FormField id={`inventory-edit-${item.id}-name`} label={t("Name")} required>
             <input
               id={`inventory-edit-${item.id}-name`}
               required
@@ -214,7 +227,7 @@ export default function InventoryItem({
               onChange={(event) => setName(event.target.value)}
             />
           </FormField>
-          <FormField id={`inventory-edit-${item.id}-category`} label="Category">
+          <FormField id={`inventory-edit-${item.id}-category`} label={t("Category")}>
             <select
               id={`inventory-edit-${item.id}-category`}
               disabled={saving}
@@ -228,13 +241,13 @@ export default function InventoryItem({
             >
               {visibleCategories.map((itemCategory) => (
                 <option key={itemCategory.id} value={itemCategory.id}>
-                  {itemCategory.label}
+                  {translateInventoryLabel(itemCategory.label)}
                 </option>
               ))}
             </select>
           </FormField>
           {selectedCategory && selectedCategory.subcategories.length > 0 && (
-            <FormField id={`inventory-edit-${item.id}-subcategory`} label="Subcategory">
+            <FormField id={`inventory-edit-${item.id}-subcategory`} label={t("Subcategory")}>
               <select
                 id={`inventory-edit-${item.id}-subcategory`}
                 disabled={saving}
@@ -245,17 +258,17 @@ export default function InventoryItem({
                   setBottleType("");
                 }}
               >
-                <option value="">Choose a subcategory</option>
+                <option value="">{t("Choose a subcategory")}</option>
                 {getInventorySubcategoryOptions(selectedCategory.id).map((option) => (
                   <option key={option.value} value={option.value}>
-                    {option.label}
+                    {translateInventoryLabel(option.label)}
                   </option>
                 ))}
               </select>
             </FormField>
           )}
           {category === "packaging" && subcategory === "Bottles" && (
-            <FormField id={`inventory-edit-${item.id}-bottle-type`} label="Bottle type" required>
+            <FormField id={`inventory-edit-${item.id}-bottle-type`} label={t("Bottle type")} required>
               <select
                 id={`inventory-edit-${item.id}-bottle-type`}
                 required
@@ -264,17 +277,17 @@ export default function InventoryItem({
                 value={bottleType}
                 onChange={(event) => setBottleType(event.target.value)}
               >
-                <option value="">Choose a bottle type</option>
+                <option value="">{t("Choose a bottle type")}</option>
                 {INVENTORY_BOTTLE_TYPES.map((type) => (
-                  <option key={type} value={type}>{type}</option>
+                  <option key={type} value={type}>{translateInventoryLabel(type)}</option>
                 ))}
               </select>
             </FormField>
           )}
           <FormField
             id={`inventory-edit-${item.id}-amount`}
-            label="Current stock"
-            hint="Set this to the amount you physically have. Stock changes appear in Recent stock history."
+            label={t("Current stock")}
+            hint={t("Set this to the amount you physically have. Stock changes appear in Recent stock history.")}
           >
             <input
               id={`inventory-edit-${item.id}-amount`}
@@ -287,7 +300,7 @@ export default function InventoryItem({
               onChange={(event) => setAmount(event.target.value)}
             />
           </FormField>
-          <FormField id={`inventory-edit-${item.id}-minimum`} label="Minimum amount">
+          <FormField id={`inventory-edit-${item.id}-minimum`} label={t("Minimum amount")}>
             <input
               id={`inventory-edit-${item.id}-minimum`}
               type="number"
@@ -311,7 +324,7 @@ export default function InventoryItem({
               disabled={saving}
               className="rounded border border-green-500 bg-green-700 px-4 py-2 text-sm font-semibold hover:bg-green-600"
             >
-              {saving ? "Saving…" : "Confirm"}
+              {saving ? t("Saving…") : t("Confirm")}
             </button>
             <button
               type="button"
@@ -319,7 +332,7 @@ export default function InventoryItem({
               disabled={saving}
               className="rounded border border-zinc-500 bg-zinc-700 px-4 py-2 text-sm font-semibold hover:bg-zinc-600"
             >
-              Cancel
+              {t("Cancel")}
             </button>
           </div>
         </div>
@@ -331,14 +344,14 @@ export default function InventoryItem({
             onClick={startEdit}
             className="rounded border border-green-500 bg-green-700 px-4 py-2 text-sm font-semibold hover:bg-green-600"
           >
-            Update
+            {t("Update")}
           </button>
           <button
             onClick={() => setConfirmDelete(true)}
             type="button"
             className="rounded border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20"
           >
-            Delete
+            {t("Delete")}
           </button>
         </div>
       )}
@@ -349,9 +362,9 @@ export default function InventoryItem({
       )}
       <ConfirmDialog
         open={confirmDelete}
-        title="Delete inventory item?"
-        message={`Delete "${item.name}" from your inventory? This action cannot be undone.`}
-        confirmLabel="Delete item"
+        title={t("Delete inventory item?")}
+        message={`${t("Delete")} "${item.name}" ${t("from your inventory? This action cannot be undone.")}`}
+        confirmLabel={t("Delete item")}
         onConfirm={deleteInventoryItemConfirmed}
         onCancel={() => setConfirmDelete(false)}
       />

@@ -11,6 +11,16 @@ import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import ReportContentButton from "@/app/components/ReportContentButton";
 import PublicMentionTextarea from "@/app/components/PublicMentionTextarea";
 import PublicMentionText from "@/app/components/PublicMentionText";
+import { translateCommunityError } from "@/lib/i18n/apiErrors";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+
+function getVisibleError(error: unknown, fallback: string): string {
+  return error instanceof Error &&
+    !(error instanceof TypeError) &&
+    !(error instanceof SyntaxError)
+    ? error.message
+    : fallback;
+}
 
 interface Conversation {
   id: string;
@@ -36,6 +46,7 @@ interface Peer {
 }
 
 export default function MessagesPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
   const peerId = searchParams.get("peer_id");
@@ -87,11 +98,11 @@ export default function MessagesPage() {
       setDraftStorageError("");
     } catch (storageError) {
       console.error("Could not load message draft", storageError);
-      setDraftStorageError("This draft could not be saved between visits.");
+      setDraftStorageError(t("This draft could not be saved between visits."));
       setMessageText("");
     }
     setDraftReadyKey(draftKey);
-  }, [draftKey]);
+  }, [draftKey, t]);
 
   useEffect(() => {
     if (!draftKey || draftReadyKey !== draftKey) return;
@@ -104,9 +115,9 @@ export default function MessagesPage() {
       setDraftStorageError("");
     } catch (storageError) {
       console.error("Could not save message draft", storageError);
-      setDraftStorageError("This draft could not be saved between visits.");
+      setDraftStorageError(t("This draft could not be saved between visits."));
     }
-  }, [draftKey, draftReadyKey, messageText]);
+  }, [draftKey, draftReadyKey, messageText, t]);
 
   const loadInbox = useCallback(async () => {
     const response = await fetch("/api/community/messages", {
@@ -114,9 +125,9 @@ export default function MessagesPage() {
       credentials: "include",
     });
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "Could not load inbox");
+    if (!response.ok) throw new Error(data.error || t("Could not load inbox"));
     setConversations(data.conversations);
-  }, []);
+  }, [t]);
 
   const loadConversation = useCallback(async (id: string, preserveOlder = false) => {
     const response = await fetch(
@@ -124,7 +135,7 @@ export default function MessagesPage() {
       { cache: "no-store", credentials: "include" }
     );
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "Could not load conversation");
+    if (!response.ok) throw new Error(data.error || t("Could not load conversation"));
     setPeer(data.peer);
     setMessages((current) => {
       if (!preserveOlder) return data.messages;
@@ -135,7 +146,7 @@ export default function MessagesPage() {
       );
     });
     if (!preserveOlder) setHasOlderMessages(data.hasMore);
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     let active = true;
@@ -160,7 +171,7 @@ export default function MessagesPage() {
     load()
       .catch((loadError) => {
         console.error("Could not load community messages", loadError);
-        if (active) setLoadError(loadError instanceof Error ? loadError.message : "Could not load messages.");
+        if (active) setLoadError(getVisibleError(loadError, t("Could not load messages.")));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -168,7 +179,7 @@ export default function MessagesPage() {
     return () => {
       active = false;
     };
-  }, [loadAttempt, loadConversation, loadInbox, peerId, router]);
+  }, [loadAttempt, loadConversation, loadInbox, peerId, router, t]);
 
   useEffect(() => {
     if (!peerId) return;
@@ -180,7 +191,7 @@ export default function MessagesPage() {
         await Promise.all([loadInbox(), loadConversation(selectedPeerId, true)]);
       } catch (refreshError) {
         console.error("Could not refresh conversation", refreshError);
-        setLoadError("Could not refresh the conversation.");
+        setLoadError(t("Could not refresh the conversation."));
       }
     }
 
@@ -192,7 +203,7 @@ export default function MessagesPage() {
       window.removeEventListener("focus", refreshConversation);
       document.removeEventListener("visibilitychange", refreshConversation);
     };
-  }, [loadConversation, loadInbox, peerId]);
+  }, [loadConversation, loadInbox, peerId, t]);
 
   async function sendMessageText(text: string) {
     if (!peerId || !peer || !text.trim()) return;
@@ -208,7 +219,7 @@ export default function MessagesPage() {
         body: JSON.stringify({ peerId: sendingPeerId, message: text }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Could not send message");
+      if (!response.ok) throw new Error(data.error || t("Could not send message"));
       if (currentPeerIdRef.current !== sendingPeerId) return;
       setMessages((current) => [...current, data.message]);
       setFailedMessageText("");
@@ -219,14 +230,14 @@ export default function MessagesPage() {
         await loadInbox();
       } catch (inboxError) {
         console.error("Message sent, but inbox could not refresh", inboxError);
-        setLoadError("Message sent, but the inbox could not refresh.");
+        setLoadError(t("Message sent, but the inbox could not refresh."));
       }
     } catch (sendError) {
       if (currentPeerIdRef.current !== sendingPeerId) return;
       console.error("Could not send message", sendError);
       setFailedMessageText(text);
       setFailedMessagePeerId(peerId);
-      setError(sendError instanceof Error ? sendError.message : "Could not send message.");
+      setError(getVisibleError(sendError, t("Could not send message.")));
     } finally {
       setSending(false);
     }
@@ -248,12 +259,12 @@ export default function MessagesPage() {
         { cache: "no-store", credentials: "include" }
       );
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Could not load older messages");
+      if (!response.ok) throw new Error(data.error || t("Could not load older messages"));
       setMessages((current) => [...data.messages, ...current]);
       setHasOlderMessages(data.hasMore);
     } catch (loadError) {
       console.error("Could not load older messages", loadError);
-      setError(loadError instanceof Error ? loadError.message : "Could not load older messages.");
+      setError(getVisibleError(loadError, t("Could not load older messages.")));
     } finally {
       setLoadingOlder(false);
     }
@@ -270,12 +281,12 @@ export default function MessagesPage() {
         body: JSON.stringify({ action: "block", userId: peerId }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Could not block user");
+      if (!response.ok) throw new Error(data.error || t("Could not block user"));
       router.push("/community/friends");
       return true;
     } catch (blockError) {
       console.error("Could not block conversation member", blockError);
-      setError(blockError instanceof Error ? blockError.message : "Could not block user.");
+      setError(getVisibleError(blockError, t("Could not block user.")));
       return false;
     }
   }
@@ -297,22 +308,22 @@ export default function MessagesPage() {
         }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Could not submit report");
+      if (!response.ok) throw new Error(data.error || t("Could not submit report"));
       setReportReason("");
       setShowReport(false);
       setStatus(
         data.notificationWarning
-          ? "Report submitted, but staff email notification could not be sent."
-          : "Report submitted. Thank you for helping keep the community safe."
+          ? t("Report submitted, but staff email notification could not be sent.")
+          : t("Report submitted. Thank you for helping keep the community safe.")
       );
     } catch (reportError) {
       console.error("Could not submit community report", reportError);
-      setError(reportError instanceof Error ? reportError.message : "Could not submit report.");
+      setError(getVisibleError(reportError, t("Could not submit report.")));
     }
   }
 
   if (loading) {
-    return <main className="flex min-h-screen items-center justify-center text-white">Loading messages…</main>;
+    return <main className="flex min-h-screen items-center justify-center text-white">{t("Loading messages…")}</main>;
   }
 
   return (
@@ -325,23 +336,23 @@ export default function MessagesPage() {
           <MenuOverlay current="messages" />
         </div>
         <PageHeading
-          title="Messages"
-          subtitle="Private conversations with accepted friends."
+          title={t("Messages")}
+          subtitle={t("Private conversations with accepted friends.")}
         />
-        {error && <p role="alert" className="mb-4 text-sm text-amber-300">{error}</p>}
+        {error && <p role="alert" className="mb-4 text-sm text-amber-300">{translateCommunityError(error, t)}</p>}
         {loadError && (
           <div role="alert" className="mb-4 rounded-lg border border-amber-400/30 bg-amber-950/30 p-3 text-sm text-amber-200">
-            <p>{loadError}</p>
+            <p>{translateCommunityError(loadError, t)}</p>
             <button
               type="button"
               onClick={() => setLoadAttempt((attempt) => attempt + 1)}
               className="mt-2 rounded-md border border-white/20 bg-white/10 px-3 py-1.5 font-semibold text-white hover:bg-white/20"
             >
-              Try again
+              {t("Try again")}
             </button>
           </div>
         )}
-        {status && <p role="status" className="mb-4 text-sm text-green-300">{status}</p>}
+        {status && <p role="status" className="mb-4 text-sm text-green-300">{translateCommunityError(status, t)}</p>}
 
         {peerId ? (
           <section className="rounded-xl border border-white/10">
@@ -355,7 +366,7 @@ export default function MessagesPage() {
                     )
                   }
                   className="rounded-lg border border-white/20 px-3 py-2 hover:bg-white/10"
-                  aria-label="Back to inbox"
+                  aria-label={t("Back to inbox")}
                 >
                   ←
                 </button>
@@ -365,7 +376,7 @@ export default function MessagesPage() {
                     <h2 className="font-semibold">{peer.username}</h2>
                   </div>
                 ) : (
-                  <h2 className="font-semibold text-amber-200">Conversation unavailable</h2>
+                  <h2 className="font-semibold text-amber-200">{t("Conversation unavailable")}</h2>
                 )}
               </div>
               {peer && <div className="flex gap-2">
@@ -374,21 +385,21 @@ export default function MessagesPage() {
                   onClick={() => setShowReport((value) => !value)}
                   className="rounded-lg border border-white/20 px-3 py-2 text-sm hover:bg-white/10"
                 >
-                  Report
+                  {t("Report")}
                 </button>
                 <button
                   type="button"
                   onClick={() => setConfirmBlock(true)}
                   className="rounded-lg border border-red-500/30 px-3 py-2 text-sm text-red-200 hover:bg-red-950/50"
                 >
-                  Block
+                  {t("Block")}
                 </button>
               </div>}
             </div>
             {peer && showReport && (
               <form onSubmit={submitReport} className="border-b border-white/10 bg-white/5 p-4">
                 <label htmlFor="community-report" className="mb-2 block text-sm">
-                  Tell us why you’re reporting this user (10-2000 characters)
+                  {t("Tell us why you’re reporting this user (10-2000 characters)")}
                 </label>
                 <textarea
                   id="community-report"
@@ -400,7 +411,7 @@ export default function MessagesPage() {
                   className="min-h-24 w-full rounded-lg border border-white/20 bg-black/40 p-3"
                 />
                 <button className="mt-2 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/20">
-                  Submit report
+                  {t("Submit report")}
                 </button>
               </form>
             )}
@@ -413,7 +424,7 @@ export default function MessagesPage() {
                     disabled={loadingOlder}
                     className="rounded-lg border border-white/20 px-3 py-2 text-sm text-white/75 hover:bg-white/10 disabled:opacity-50"
                   >
-                    {loadingOlder ? "Loading…" : "Load older messages"}
+                    {loadingOlder ? t("Loading…") : t("Load older messages")}
                   </button>
                 </li>
               )}
@@ -429,7 +440,7 @@ export default function MessagesPage() {
                     </time>
                     {ownMessage && (
                       <span className="mt-1 block text-right text-xs text-white/55">
-                        {message.read_at ? "Read" : "Sent"}
+                        {message.read_at ? t("Read") : t("Sent")}
                       </span>
                     )}
                     {!ownMessage && (
@@ -443,11 +454,11 @@ export default function MessagesPage() {
                     )}
                   </li>
                 );
-              }) : <li className="m-auto text-sm text-white/55">Start the conversation.</li>}
+              }) : <li className="m-auto text-sm text-white/55">{t("Start the conversation.")}</li>}
             </ol>}
             {peer && <form onSubmit={sendMessage} className="flex gap-2 border-t border-white/10 p-4">
               <PublicMentionTextarea
-                aria-label="Write a message"
+                aria-label={t("Write a message")}
                 value={messageText}
                 onChange={setMessageText}
                 onKeyDown={(event) => {
@@ -464,7 +475,7 @@ export default function MessagesPage() {
                 maxLength={2000}
                 required
                 rows={2}
-                placeholder="Write a message…"
+                placeholder={t("Write a message…")}
                 containerClassName="min-w-0 flex-1"
                 suggestionPlacement="above"
                 showReadableMentions
@@ -475,12 +486,12 @@ export default function MessagesPage() {
                 disabled={sending || !messageText.trim()}
                 className="self-end rounded-lg border border-green-500/50 bg-green-700 px-4 py-2 font-semibold hover:bg-green-600 disabled:cursor-wait disabled:opacity-50"
               >
-                {sending ? "Sending…" : "Send"}
+                {sending ? t("Sending…") : t("Send")}
               </button>
             </form>}
             {peer && (
               <p className="border-t border-white/10 px-4 py-2 text-xs text-white/50">
-                Unsent text is saved as a draft on this device.
+                {t("Unsent text is saved as a draft on this device.")}
               </p>
             )}
             {peer && draftStorageError && (
@@ -490,14 +501,14 @@ export default function MessagesPage() {
             )}
             {peer && failedMessageText && failedMessagePeerId === peerId && (
               <div role="alert" className="flex flex-wrap items-center justify-between gap-3 border-t border-amber-400/20 bg-amber-950/30 px-4 py-3 text-sm text-amber-100">
-                <span>Message not sent. Your text is still here.</span>
+                <span>{t("Message not sent. Your text is still here.")}</span>
                 <button
                   type="button"
                   onClick={() => void sendMessageText(failedMessageText)}
                   disabled={sending}
                   className="rounded-lg border border-amber-200/30 bg-amber-100/10 px-3 py-2 font-semibold hover:bg-amber-100/20 disabled:cursor-wait disabled:opacity-60"
                 >
-                  {sending ? "Retrying…" : "Retry send"}
+                  {sending ? t("Retrying…") : t("Retry send")}
                 </button>
               </div>
             )}
@@ -505,18 +516,18 @@ export default function MessagesPage() {
         ) : (
           <section>
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-green-300">Inbox</h2>
+              <h2 className="text-xl font-semibold text-green-300">{t("Inbox")}</h2>
               <button
                 type="button"
                 onClick={() => router.push("/community/friends")}
                 className="rounded-lg border border-white/20 px-3 py-2 text-sm hover:bg-white/10"
               >
-                Find friends
+                {t("Find friends")}
               </button>
             </div>
             {loadError ? (
               <p className="rounded-xl border border-white/10 bg-white/5 p-8 text-center text-white/65">
-                Inbox is unavailable until messages load.
+                {t("Inbox is unavailable until messages load.")}
               </p>
             ) : conversations.length ? (
               <ul className="space-y-2">
@@ -534,7 +545,7 @@ export default function MessagesPage() {
                           ? "border-green-400/40 bg-green-950/30"
                           : "border-white/10 bg-white/5"
                       }`}
-                      aria-label={`${conversation.username}${conversation.unreadCount > 0 ? `, ${conversation.unreadCount} unread messages` : ""}`}
+                      aria-label={`${conversation.username}${conversation.unreadCount > 0 ? `, ${conversation.unreadCount} ${t("unread messages")}` : ""}`}
                     >
                       <Image src={conversation.avatar_url || "/default-avatar.png"} alt="" width={48} height={48} sizes="48px" unoptimized className="h-12 w-12 rounded-full object-cover" />
                       <span className="min-w-0 flex-1">
@@ -542,14 +553,14 @@ export default function MessagesPage() {
                           {conversation.username}
                           {conversation.unreadCount > 0 && (
                             <span className="ml-2 text-xs font-semibold uppercase tracking-wide text-green-200">
-                              Unread
+                              {t("Unread")}
                             </span>
                           )}
                         </span>
                         <span className={`block truncate text-sm ${conversation.unreadCount > 0 ? "font-medium text-white/85" : "text-white/60"}`}>
                           {conversation.latest?.body ? (
                             <PublicMentionText text={conversation.latest.body} />
-                          ) : "No messages yet"}
+                          ) : t("No messages yet")}
                         </span>
                       </span>
                       {conversation.unreadCount > 0 && (
@@ -563,13 +574,13 @@ export default function MessagesPage() {
               </ul>
             ) : (
               <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center">
-                <p className="text-white/65">No conversations yet. Find a brewer to start a conversation.</p>
+                <p className="text-white/65">{t("No conversations yet. Find a brewer to start a conversation.")}</p>
                 <button
                   type="button"
                   onClick={() => router.push("/community/friends")}
                   className="mt-4 rounded-lg border border-green-500/40 bg-green-800/60 px-4 py-2 font-semibold hover:bg-green-700"
                 >
-                  Find brewers
+                  {t("Find brewers")}
                 </button>
               </div>
             )}
@@ -578,9 +589,9 @@ export default function MessagesPage() {
       </div>
       <ConfirmDialog
         open={confirmBlock}
-        title="Block this user?"
-        message="This removes the friendship and prevents both of you from sending friend requests or messages to each other. Existing messages are retained."
-        confirmLabel="Block user"
+        title={t("Block this user?")}
+        message={t("This removes the friendship and prevents both of you from sending friend requests or messages to each other. Existing messages are retained.")}
+        confirmLabel={t("Block user")}
         onConfirm={blockPeer}
         onCancel={() => setConfirmBlock(false)}
       />

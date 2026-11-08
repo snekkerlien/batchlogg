@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { submitFeedback } from "@/app/actions/feedback";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export default function FeedbackForm({
   defaultOpen = false,
 }: {
   defaultOpen?: boolean;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(defaultOpen);
   const [category, setCategory] = useState("suggestion");
   const [message, setMessage] = useState("");
@@ -31,12 +33,12 @@ export default function FeedbackForm({
       setStatus({
         ok: true,
         text: result.notificationSent
-          ? "Thanks! Your message was sent."
-          : "Your message was saved, but the admin email notification could not be sent.",
+          ? t("Thanks! Your message was sent.")
+          : t("Your message was saved, but the admin email notification could not be sent."),
       });
     } catch (error) {
       console.error("Could not send feedback", error);
-      setStatus({ ok: false, text: "Could not send your message. Please try again." });
+      setStatus({ ok: false, text: t("Could not send your message. Please try again.") });
     } finally {
       setSending(false);
     }
@@ -53,7 +55,7 @@ export default function FeedbackForm({
           }}
           className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm"
         >
-          Feedback &amp; suggestions
+          {t("Feedback & suggestions")}
         </button>
       )}
 
@@ -64,9 +66,9 @@ export default function FeedbackForm({
             onChange={(e) => setCategory(e.target.value)}
             className="p-3 rounded bg-black/40 border border-white/20"
           >
-            <option value="suggestion">Suggestion</option>
-            <option value="feedback">General feedback</option>
-            <option value="bug">Bug report</option>
+            <option value="suggestion">{t("Suggestion")}</option>
+            <option value="feedback">{t("General feedback")}</option>
+            <option value="bug">{t("Bug report")}</option>
           </select>
 
           <textarea
@@ -76,7 +78,7 @@ export default function FeedbackForm({
             minLength={3}
             maxLength={3000}
             rows={5}
-            placeholder="What's on your mind?"
+            placeholder={t("What's on your mind?")}
             className="p-3 rounded bg-black/40 border border-white/20"
           />
 
@@ -86,7 +88,7 @@ export default function FeedbackForm({
               disabled={sending}
               className="flex-1 px-3 py-2 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold text-sm disabled:opacity-60"
             >
-              {sending ? "Sending…" : "Send"}
+              {sending ? t("Sending…") : t("Send")}
             </button>
 
             <button
@@ -95,7 +97,7 @@ export default function FeedbackForm({
               disabled={sending}
               className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm"
             >
-              Cancel
+              {t("Cancel")}
             </button>
           </div>
         </form>

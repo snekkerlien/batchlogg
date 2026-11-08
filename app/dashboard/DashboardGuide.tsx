@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePageGuidesEnabled } from "@/lib/accessibility/usePageGuidesEnabled";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export type DashboardGuideVessel = {
   id: string;
@@ -19,14 +20,14 @@ export type DashboardGuideVessel = {
   ownerUsername?: string;
 };
 
-function formatDateTime(value: string): string {
+function formatDateTime(value: string, t: (key: string) => string): string {
   const timestamp = Date.parse(value);
   return Number.isFinite(timestamp)
     ? new Date(timestamp).toLocaleString(undefined, {
         dateStyle: "medium",
         timeStyle: "short",
       })
-    : "Date unavailable";
+    : t("Date unavailable");
 }
 
 function DashboardIllustration() {
@@ -59,6 +60,7 @@ export default function DashboardGuide({
 }: {
   vessels: DashboardGuideVessel[];
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const guidesEnabled = usePageGuidesEnabled();
   const dialogRef = useRef<HTMLElement>(null);
@@ -94,7 +96,7 @@ export default function DashboardGuide({
             onClick={() => setOpen(true)}
             className="fixed bottom-4 right-4 z-[90] rounded-full border border-white/15 bg-zinc-950/95 px-4 py-2 text-sm font-semibold text-white/75 shadow-lg hover:border-green-300/40 hover:text-white"
           >
-            Dashboard guide
+            {t("Dashboard guide")}
           </button>,
           document.body
         )}
@@ -142,11 +144,11 @@ export default function DashboardGuide({
           >
             <div className="flex items-center justify-between border-b border-white/10 px-5 py-4 sm:px-8">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-green-300">
-                Dashboard guide
+                {t("Dashboard guide")}
               </p>
               <button
                 type="button"
-                aria-label="Close dashboard guide"
+                aria-label={t("Close dashboard guide")}
                 onClick={() => setOpen(false)}
                 className="rounded-lg px-3 py-2 text-lg leading-none text-white/60 hover:bg-white/10 hover:text-white"
               >
@@ -158,13 +160,13 @@ export default function DashboardGuide({
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="text-xs font-medium uppercase tracking-widest text-green-300">
-                    Your brewing workspace
+                    {t("Your brewing workspace")}
                   </p>
                   <h2
                     id="dashboard-guide-title"
                     className="mt-3 max-w-lg text-2xl font-bold leading-tight sm:text-3xl"
                   >
-                    Your dashboard, explained.
+                    {t("Your dashboard, explained.")}
                   </h2>
                 </div>
                 <div className="hidden min-[400px]:block">
@@ -172,9 +174,7 @@ export default function DashboardGuide({
                 </div>
               </div>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-white/65 sm:text-base">
-                Use this guide to understand your dashboard: where to find your
-                vessels, how to manage shared equipment, and where to go next
-                with an active batch.
+                {t("Use this guide to understand your dashboard: where to find your vessels, how to manage shared equipment, and where to go next with an active batch.")}
               </p>
 
               <div className="flex flex-col">
@@ -186,35 +186,31 @@ export default function DashboardGuide({
                   id="dashboard-guide-tools"
                   className="mb-3 text-xs font-semibold uppercase tracking-widest text-white/45"
                 >
-                  Your dashboard tools
+                  {t("Your dashboard tools")}
                 </h3>
                 <ul className="mt-3 grid gap-3 text-sm leading-6 text-white/65 sm:grid-cols-2">
                   <li className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                    <strong className="text-sm font-semibold text-green-200">Vessels</strong>
+                    <strong className="text-sm font-semibold text-green-200">{t("Vessels")}</strong>
                     <p className="mt-1">
-                      Open a vessel to view its batch, or start a brew in an
-                      empty one.
+                      {t("Open a vessel to view its batch, or start a brew in an empty one.")}
                     </p>
                   </li>
                   <li className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                    <strong className="text-sm font-semibold text-green-200">Select vessels</strong>
+                    <strong className="text-sm font-semibold text-green-200">{t("Select vessels")}</strong>
                     <p className="mt-1">
-                      Move a batch or delete vessels. Deleting an occupied
-                      vessel also deletes its batch and notes.
+                      {t("Move a batch or delete vessels. Deleting an occupied vessel also deletes its batch and notes.")}
                     </p>
                   </li>
                   <li className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                    <strong className="text-sm font-semibold text-green-200">Vessels shared with me</strong>
+                    <strong className="text-sm font-semibold text-green-200">{t("Vessels shared with me")}</strong>
                     <p className="mt-1">
-                      Open a shared vessel to collaborate, or leave to remove
-                      your access.
+                      {t("Open a shared vessel to collaborate, or leave to remove your access.")}
                     </p>
                   </li>
                   <li className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                    <strong className="text-sm font-semibold text-green-200">Shortcuts</strong>
+                    <strong className="text-sm font-semibold text-green-200">{t("Shortcuts")}</strong>
                     <p className="mt-1">
-                      Use the links above your vessels to plan recipes, review
-                      batches, and explore brewing insights.
+                      {t("Use the links above your vessels to plan recipes, review batches, and explore brewing insights.")}
                     </p>
                   </li>
                 </ul>
@@ -228,12 +224,11 @@ export default function DashboardGuide({
                   id="dashboard-guide-batches"
                   className="mb-3 text-xs font-semibold uppercase tracking-widest text-white/45"
                 >
-                  Active batches
+                  {t("Active batches")}
                 </h3>
                 {activeVessels.length === 0 ? (
                   <p className="mt-2 rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm leading-6 text-white/60">
-                    No active batches yet. Use <strong className="text-white/80">Plan a recipe</strong> to
-                    get started, then register it in an empty vessel.
+                    {t("No active batches yet. Use")} <strong className="text-white/80">{t("Plan a recipe")}</strong> {t("to get started, then register it in an empty vessel.")}
                   </p>
                 ) : (
                   <ul className="space-y-3">
@@ -251,24 +246,24 @@ export default function DashboardGuide({
                           <div className="flex flex-wrap items-start justify-between gap-2">
                             <div>
                               <h4 className="font-semibold text-green-200">
-                                {vessel.batchName || `Vessel ${vessel.nummer}`}
+                                {vessel.batchName || `${t("Vessel")} ${vessel.nummer}`}
                               </h4>
                               <p className="mt-1 text-xs text-white/50">
-                                Vessel {vessel.nummer}
+                                {t("Vessel")} {vessel.nummer}
                                 {vessel.ownerUsername
-                                  ? ` · shared by ${vessel.ownerUsername}`
+                                  ? ` · ${t("shared by")} ${vessel.ownerUsername}`
                                   : ""}
                                 {" · "}
                                 {vessel.status === "Conditioning"
-                                  ? "Conditioning"
+                                  ? t("Conditioning")
                                   : vessel.status === "Sekundær"
-                                    ? "Secondary fermentation"
-                                    : "Primary fermentation"}
+                                    ? t("Secondary fermentation")
+                                    : t("Primary fermentation")}
                               </p>
                             </div>
                             {due && (
                               <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2.5 py-1 text-xs font-semibold text-amber-100">
-                                Due
+                                {t("Due")}
                               </span>
                             )}
                           </div>
@@ -276,27 +271,27 @@ export default function DashboardGuide({
                           <dl className="mt-4 grid gap-3 sm:grid-cols-2">
                             <div>
                               <dt className="text-xs uppercase tracking-wide text-white/45">
-                                {reminder ? "Next reminder" : "Suggested next step"}
+                                {reminder ? t("Next reminder") : t("Suggested next step")}
                               </dt>
                               <dd className="mt-1 text-sm text-white/85">
                                 {reminder
                                   ? reminder.message
                                   : vessel.status === "Conditioning"
-                                    ? "Check the batch before finishing"
+                                    ? t("Check the batch before finishing")
                                     : vessel.status === "Sekundær"
-                                      ? "Check gravity before packaging"
-                                      : "Take a gravity reading"}
+                                      ? t("Check gravity before packaging")
+                                      : t("Take a gravity reading")}
                               </dd>
                               {reminder && (
                                 <dd className="mt-1 text-xs text-white/50">
-                                  {due ? "Due" : "Scheduled"}{" "}
-                                  {formatDateTime(reminder.remind_at)}
+                                  {due ? t("Due") : t("Scheduled")}{" "}
+                                  {formatDateTime(reminder.remind_at, t)}
                                 </dd>
                               )}
                             </div>
                             <div>
                               <dt className="text-xs uppercase tracking-wide text-white/45">
-                                Latest gravity reading
+                                {t("Latest gravity reading")}
                               </dt>
                               <dd className="mt-1 text-sm text-white/85">
                                 {vessel.latestReading ? (
@@ -308,14 +303,12 @@ export default function DashboardGuide({
                                       className="ml-2 text-xs text-white/50"
                                       dateTime={vessel.latestReading.created_at}
                                     >
-                                      {formatDateTime(
-                                        vessel.latestReading.created_at
-                                      )}
+                                      {formatDateTime(vessel.latestReading.created_at, t)}
                                     </time>
                                   </>
                                 ) : (
                                   <span className="text-white/55">
-                                    No readings logged yet
+                                    {t("No readings logged yet")}
                                   </span>
                                 )}
                               </dd>
@@ -326,7 +319,7 @@ export default function DashboardGuide({
                             href={`/kar/${vessel.id}`}
                             className="mt-4 inline-flex rounded-xl border border-green-300/30 bg-green-400/10 px-4 py-3 text-sm font-semibold text-green-200 transition hover:bg-green-400/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-300"
                           >
-                            Open batch <span aria-hidden="true" className="ml-2">→</span>
+                            {t("Open batch")} <span aria-hidden="true" className="ml-2">→</span>
                           </a>
                         </li>
                       );
@@ -338,14 +331,14 @@ export default function DashboardGuide({
               </div>
               <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-5">
                 <p className="text-xs text-white/40">
-                  Your brewing workspace, at a glance.
+                  {t("Your brewing workspace, at a glance.")}
                 </p>
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
                   className="rounded-lg border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-semibold hover:bg-white/10"
                 >
-                  Back to dashboard
+                  {t("Back to dashboard")}
                 </button>
               </div>
             </div>

@@ -1,6 +1,8 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { translateCommunityError } from "@/lib/i18n/apiErrors";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type ReportableContent = "post" | "reply" | "message" | "recipe" | "batch" | "profile";
 const MAX_EVIDENCE_FILES = 3;
@@ -16,6 +18,7 @@ export default function ReportContentButton({
   contentId: string;
   contextUrl: string;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState("other");
   const [reason, setReason] = useState("");
@@ -43,7 +46,7 @@ export default function ReportContentButton({
         body: formData,
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Could not submit report");
+      if (!response.ok) throw new Error(result.error || t("Could not submit report"));
       setNotificationWarning(result.notificationWarning === true);
       setSubmitted(true);
       setOpen(false);
@@ -54,7 +57,7 @@ export default function ReportContentButton({
       setError(
         submitError instanceof Error
           ? submitError.message
-          : "Could not submit report."
+          : t("Could not submit report.")
       );
     } finally {
       setSubmitting(false);
@@ -64,10 +67,10 @@ export default function ReportContentButton({
   if (submitted) {
     return (
       <span className="text-xs text-green-300">
-        Reported
+        {t("Reported")}
         {notificationWarning && (
           <span role="status" className="ml-2 text-amber-300">
-            Staff email notification could not be sent.
+            {t("Staff email notification could not be sent.")}
           </span>
         )}
       </span>
@@ -84,7 +87,7 @@ export default function ReportContentButton({
         }}
         className="text-xs text-white/50 underline underline-offset-2 hover:text-white"
       >
-        Report
+        {t("Report")}
       </button>
       {open && (
         <form
@@ -92,20 +95,20 @@ export default function ReportContentButton({
           className="mt-3 w-full max-w-md space-y-3 rounded-lg border border-white/10 bg-black/40 p-3"
         >
           <label className="block text-left text-xs text-white/70">
-            Reason
+            {t("Reason")}
             <select
               value={category}
               onChange={(event) => setCategory(event.target.value)}
               className="mt-1 w-full rounded border border-white/20 bg-zinc-900 p-2 text-sm"
             >
-              <option value="spam">Spam</option>
-              <option value="harassment">Harassment</option>
-              <option value="inappropriate">Inappropriate content</option>
-              <option value="other">Other</option>
+              <option value="spam">{t("Spam")}</option>
+              <option value="harassment">{t("Harassment")}</option>
+              <option value="inappropriate">{t("Inappropriate content")}</option>
+              <option value="other">{t("Other")}</option>
             </select>
           </label>
           <label className="block text-left text-xs text-white/70">
-            Details
+            {t("Details")}
             <textarea
               value={reason}
               onChange={(event) => setReason(event.target.value)}
@@ -117,7 +120,7 @@ export default function ReportContentButton({
             />
           </label>
           <label className="block text-left text-xs text-white/70">
-            Screenshot evidence (optional, up to {MAX_EVIDENCE_FILES} images)
+            {t("Screenshot evidence (optional, up to {count} images)").replace("{count}", String(MAX_EVIDENCE_FILES))}
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp"
@@ -127,15 +130,15 @@ export default function ReportContentButton({
                 const selected = Array.from(event.currentTarget.files ?? []);
                 event.currentTarget.value = "";
                 if (evidence.length + selected.length > MAX_EVIDENCE_FILES) {
-                  setError(`You can attach up to ${MAX_EVIDENCE_FILES} screenshots.`);
+                  setError(t("You can attach up to {count} screenshots.").replace("{count}", String(MAX_EVIDENCE_FILES)));
                   return;
                 }
                 if (selected.some((file) => !ALLOWED_EVIDENCE_TYPES.has(file.type))) {
-                  setError("Evidence must be JPEG, PNG, or WebP images.");
+                  setError(t("Evidence must be JPEG, PNG, or WebP images."));
                   return;
                 }
                 if (selected.some((file) => file.size === 0 || file.size > MAX_EVIDENCE_FILE_SIZE)) {
-                  setError("Each screenshot must be smaller than 5 MB.");
+                  setError(t("Each screenshot must be smaller than 5 MB."));
                   return;
                 }
                 setError("");
@@ -155,19 +158,19 @@ export default function ReportContentButton({
                     onClick={() => setEvidence((current) => current.filter((_, i) => i !== index))}
                     className="shrink-0 underline"
                   >
-                    Remove
+                    {t("Remove")}
                   </button>
                 </li>
               ))}
             </ul>
           )}
-          {error && <p role="alert" className="text-xs text-red-300">{error}</p>}
+          {error && <p role="alert" className="text-xs text-red-300">{translateCommunityError(error, t)}</p>}
           <button
             type="submit"
             disabled={submitting || reason.trim().length < 10}
             className="rounded border border-green-500/40 bg-green-700/70 px-3 py-2 text-xs font-semibold disabled:opacity-50"
           >
-            {submitting ? "Submitting…" : "Submit report"}
+            {submitting ? t("Submitting…") : t("Submit report")}
           </button>
         </form>
       )}

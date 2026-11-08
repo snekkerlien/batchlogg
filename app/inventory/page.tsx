@@ -17,8 +17,11 @@ import {
   INVENTORY_CATEGORIES,
   SNUS_CATEGORIES,
 } from "@/lib/inventory/categories";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { SHOPPING_LIST_ERROR_KEYS, translateApiError } from "@/lib/i18n/apiErrors";
 
 export default function InventoryPage() {
+  const { t } = useTranslation();
   const {
     items,
     loading,
@@ -109,16 +112,18 @@ export default function InventoryPage() {
           body: JSON.stringify({ items: batch }),
         });
         const result: { error?: string } = await response.json();
-        if (!response.ok) throw new Error(result.error || "Could not add stock items");
+        if (!response.ok) throw new Error(result.error || t("Could not add stock items"));
         addedItems += batch.length;
       }
-      setPlanningMessage(`Added ${restockItems.length} low-stock item${restockItems.length === 1 ? "" : "s"} to your shopping list.`);
+      setPlanningMessage(`${t("Added")} ${restockItems.length} ${t(restockItems.length === 1 ? "low-stock item" : "low-stock items")} ${t("to your shopping list.")}`);
     } catch (error) {
       console.error("Could not plan inventory restock", error);
-      const message = error instanceof Error ? error.message : "Could not create a restock plan.";
+      const message = error instanceof Error
+        ? translateApiError(error.message, t, SHOPPING_LIST_ERROR_KEYS)
+        : t("Could not create a restock plan.");
       setPlanningMessage(
         addedItems > 0
-          ? `Added ${addedItems} of ${restockItems.length} items before an error: ${message}`
+          ? `${t("Added")} ${addedItems} ${t("of")} ${restockItems.length} ${t("items before an error:")} ${message}`
           : message
       );
     } finally {
@@ -146,8 +151,8 @@ useEffect(() => {
         </div>
 
         <PageHeading
-          title="Inventory"
-          subtitle="Overview of categories and low-stock items."
+          title={t("Inventory")}
+          subtitle={t("Overview of categories and low-stock items.")}
         />
         {loadError && (
           <div
@@ -160,7 +165,7 @@ useEffect(() => {
               onClick={() => void reloadItems()}
               className="mt-3 rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold hover:bg-white/20"
             >
-              Try again
+              {t("Try again")}
             </button>
           </div>
         )}
@@ -170,69 +175,69 @@ useEffect(() => {
             onClick={() => setModalOpen(true)}
             className="px-6 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold"
           >
-            Add new item
+            {t("Add new item")}
           </button>
         </div>
 
-        <section aria-label="Search and filter inventory" className="mx-auto mb-6 max-w-4xl">
+        <section aria-label={t("Search and filter inventory")} className="mx-auto mb-6 max-w-4xl">
           <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
             <label>
-              <span className="sr-only">Search items by name or category</span>
+              <span className="sr-only">{t("Search items by name or category")}</span>
               <input
                 type="search"
                 value={inventorySearch}
                 onChange={(event) => setInventorySearch(event.target.value)}
-                placeholder="Search inventory…"
+                placeholder={t("Search inventory…")}
                 className="w-full rounded-lg border border-white/20 bg-black/40 px-3 py-2.5 text-sm"
               />
             </label>
             <label>
-              <span className="sr-only">Filter inventory by category</span>
+              <span className="sr-only">{t("Filter inventory by category")}</span>
               <select
                 value={inventoryCategory}
                 onChange={(event) => setInventoryCategory(event.target.value)}
                 className="w-full rounded-lg border border-white/20 bg-black/40 px-3 py-2.5 text-sm"
               >
-                <option value="all">All categories</option>
+                <option value="all">{t("All categories")}</option>
                 {inventoryCategories.map((category) => (
                   <option key={category.id} value={category.id}>
-                    {category.label}
+                    {t(category.label)}
                   </option>
                 ))}
               </select>
             </label>
             <label>
-              <span className="sr-only">Filter inventory by stock level</span>
+              <span className="sr-only">{t("Filter inventory by stock level")}</span>
               <select
                 value={inventoryStockFilter}
                 onChange={(event) => setInventoryStockFilter(event.target.value)}
                 className="w-full rounded-lg border border-white/20 bg-black/40 px-3 py-2.5 text-sm"
               >
-                <option value="all">All stock levels</option>
-                <option value="low">Low stock</option>
-                <option value="in-stock">In stock</option>
+                <option value="all">{t("All stock levels")}</option>
+                <option value="low">{t("Low stock")}</option>
+                <option value="in-stock">{t("In stock")}</option>
               </select>
             </label>
           </div>
           {inventoryBrowserActive && (
             <p aria-live="polite" className="mt-2 text-right text-xs text-white/50">
-              Showing {filteredInventoryItems.length} of {items.length} items
+              {t("Showing")} {filteredInventoryItems.length} {t("of")} {items.length} {t("items")}
             </p>
           )}
           {inventoryBrowserActive &&
             (loading ? (
               <p role="status" className="py-8 text-center text-sm text-white/60">
-                Loading inventory…
+                {t("Loading inventory…")}
               </p>
             ) : loadError ? (
               <p className="py-8 text-center text-sm text-white/60">
-                Inventory search is unavailable until items load.
+                {t("Inventory search is unavailable until items load.")}
               </p>
             ) : filteredInventoryItems.length === 0 ? (
               <p className="py-8 text-center text-sm text-white/60">
                 {items.length === 0
-                  ? "No inventory items yet. Add an item to start tracking your stock."
-                  : "No items match these search and filter options."}
+                  ? t("No inventory items yet. Add an item to start tracking your stock.")
+                  : t("No items match these search and filter options.")}
               </p>
             ) : (
               <InventoryList
@@ -244,7 +249,7 @@ useEffect(() => {
             ))}
         </section>
 
-        <h2 className="text-2xl font-bold mt-2 mb-4 text-center text-green-300">Categories</h2>
+        <h2 className="text-2xl font-bold mt-2 mb-4 text-center text-green-300">{t("Categories")}</h2>
 
 {/* Vanlige kategorier */}
 <div className="grid grid-cols-1 gap-6 mb-12 sm:grid-cols-2 md:grid-cols-6">
@@ -279,27 +284,27 @@ useEffect(() => {
     className="min-w-0 p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition flex flex-col sm:p-6"
   >
     <span className="mb-3 break-words text-base font-semibold leading-snug sm:text-xl">
-      {cat.label}
+      {t(cat.label)}
     </span>
 
     <div className="text-white/80 text-sm mb-1">
       {loading || loadError
-        ? "Item count unavailable"
-        : `${catCount} item${catCount !== 1 ? "s" : ""}`}
+        ? t("Item count unavailable")
+        : `${catCount} ${t(catCount === 1 ? "item" : "items")}`}
     </div>
 
     {loading || loadError ? (
       <div className="text-white/60 text-sm">
-        {loading ? "Loading…" : "Inventory unavailable"}
+        {loading ? t("Loading…") : t("Inventory unavailable")}
       </div>
     ) : catCount === 0 ? (
-      <div className="text-white/60 text-sm">No items yet</div>
+      <div className="text-white/60 text-sm">{t("No items yet")}</div>
     ) : catLow.length > 0 ? (
       <div className="text-yellow-400 text-sm">
-        {catLow.length} low‑stock item{catLow.length > 1 ? "s" : ""}
+        {catLow.length} {t(catLow.length === 1 ? "low-stock item" : "low-stock items")}
       </div>
     ) : (
-      <div className="text-green-400 text-sm">In stock</div>
+      <div className="text-green-400 text-sm">{t("In stock")}</div>
     )}
   </div>
 </Link>
@@ -311,7 +316,7 @@ useEffect(() => {
 {/* Snus-seksjon */}
 {profile?.snus_is_true && (
   <>
-    <h2 className="text-2xl font-bold mb-4 text-center">Snus</h2>
+    <h2 className="text-2xl font-bold mb-4 text-center">{t("Snus")}</h2>
 
     <div className="flex flex-wrap justify-center gap-6 mb-12">
   {visibleSnusCategories.map((cat) => {
@@ -332,27 +337,27 @@ useEffect(() => {
         className="min-w-0 p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition flex flex-col sm:p-6"
       >
         <span className="mb-3 break-words text-base font-semibold leading-snug capitalize sm:text-xl">
-          {cat.replace("_", " ")}
+          {t(cat.replace("_", " "))}
         </span>
 
         <div className="text-white/80 text-sm mb-1">
           {loading || loadError
-            ? "Item count unavailable"
-            : `${catCount} item${catCount !== 1 ? "s" : ""}`}
+            ? t("Item count unavailable")
+            : `${catCount} ${t(catCount === 1 ? "item" : "items")}`}
         </div>
 
         {loading || loadError ? (
           <div className="text-white/60 text-sm">
-            {loading ? "Loading…" : "Inventory unavailable"}
+            {loading ? t("Loading…") : t("Inventory unavailable")}
           </div>
         ) : catCount === 0 ? (
-          <div className="text-white/60 text-sm">No items yet</div>
+          <div className="text-white/60 text-sm">{t("No items yet")}</div>
         ) : catLow.length > 0 ? (
           <div className="text-yellow-400 text-sm">
-            {catLow.length} low‑stock item{catLow.length > 1 ? "s" : ""}
+            {catLow.length} {t(catLow.length === 1 ? "low-stock item" : "low-stock items")}
           </div>
         ) : (
-          <div className="text-green-400 text-sm">In stock</div>
+          <div className="text-green-400 text-sm">{t("In stock")}</div>
         )}
       </Link>
     );
@@ -363,7 +368,7 @@ useEffect(() => {
 )}
 
 
-        <h2 className="text-2xl font-bold mb-4 text-center">Low stock</h2>
+        <h2 className="text-2xl font-bold mb-4 text-center">{t("Low stock")}</h2>
 
         {profile?.has_premium_access === true ? (
           <div className="mb-4 text-center">
@@ -373,42 +378,42 @@ useEffect(() => {
               disabled={planningBusy || loading || Boolean(loadError) || restockableItems.length === 0}
               className="rounded-lg border border-green-500/40 bg-green-800/60 px-4 py-2 text-sm font-semibold disabled:opacity-50"
             >
-              {planningBusy ? "Adding items…" : "Plan restock from low-stock items"}
+              {planningBusy ? t("Adding items…") : t("Plan restock from low-stock items")}
             </button>
             {planningMessage && <p role="status" className="mt-2 text-sm text-white/70">{planningMessage}</p>}
             <p className="mx-auto mt-2 max-w-2xl text-sm text-white/60">
-              Adds low-stock items as purchase suggestions to your{" "}
+              {t("Adds low-stock items as purchase suggestions to your")}{" "}
               <Link href="/shopping-list" className="text-green-200 underline underline-offset-2">
-                shopping list
+                {t("shopping list")}
               </Link>
-              . Existing unchecked entries with the same item name and unit have their quantities added together; checked entries are left unchanged. Planning a restock does not change your recorded stock.
+              . {t("Existing unchecked entries with the same item name and unit have their quantities added together; checked entries are left unchanged. Planning a restock does not change your recorded stock.")}
             </p>
           </div>
         ) : (
           <div className="mb-4">
             <PremiumFeaturePrompt
-              feature="Low-stock restock planning"
+              feature={t("Low-stock restock planning")}
               description={
                 lowItems.length
-                  ? `You have ${lowItems.length} low-stock item${lowItems.length === 1 ? "" : "s"}. Premium can turn them into purchase suggestions without changing your recorded stock.`
-                  : "When an ingredient or supply runs low, Premium can turn it into a purchase suggestion without changing your recorded stock."
+                  ? `${t("You have")} ${lowItems.length} ${t(lowItems.length === 1 ? "low-stock item" : "low-stock items")} ${t("Premium can turn them into purchase suggestions without changing your recorded stock.")}`
+                  : t("When an ingredient or supply runs low, Premium can turn it into a purchase suggestion without changing your recorded stock.")
               }
               benefits={[
-                "Add low-stock amounts to your shopping list in one step.",
-                "Combine quantities with matching unchecked shopping-list entries.",
+                t("Add low-stock amounts to your shopping list in one step."),
+                t("Combine quantities with matching unchecked shopping-list entries."),
               ]}
             />
           </div>
         )}
 
         {loading ? (
-          <p className="opacity-60 text-center mt-10">Loading…</p>
+          <p className="opacity-60 text-center mt-10">{t("Loading…")}</p>
         ) : loadError ? (
           <p className="opacity-60 mb-10 text-center">
-            Low-stock items are unavailable until inventory loads.
+            {t("Low-stock items are unavailable until inventory loads.")}
           </p>
         ) : lowItems.length === 0 ? (
-          <p className="opacity-60 mb-10 text-center">No low‑stock items.</p>
+          <p className="opacity-60 mb-10 text-center">{t("No low‑stock items.")}</p>
         ) : (
           <InventoryList
             items={lowItems}

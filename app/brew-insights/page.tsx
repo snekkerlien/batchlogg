@@ -10,6 +10,7 @@ import { Qty } from "@/app/components/Units";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import { saveDownload } from "@/lib/desktopDownloads";
 import PageGuide from "@/app/components/PageGuide";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type Batch = {
   id: string;
@@ -56,6 +57,7 @@ function monthLabel(date: Date) {
 
 export default function BrewInsightsPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -97,7 +99,7 @@ export default function BrewInsightsPage() {
         if (active) setPremiumRequired(true);
         return;
       }
-      if (!response.ok) throw new Error(result.error || "Could not load brewing insights");
+      if (!response.ok) throw new Error(result.error || t("Could not load brewing insights"));
       if (active) {
         setBatches(result.batches ?? []);
         setLifecycleMigrationRequired(result.lifecycleMigrationRequired === true);
@@ -112,7 +114,7 @@ export default function BrewInsightsPage() {
     load()
       .catch((loadError) => {
         console.error("Could not load brewing insights", loadError);
-        if (active) setError("Your brewing analytics could not be loaded. Please try again.");
+        if (active) setError(t("Your brewing analytics could not be loaded. Please try again."));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -137,21 +139,21 @@ export default function BrewInsightsPage() {
   );
   const comparisonRows = [
     {
-      label: "Brew type",
+      label: t("Brew type"),
       values: comparisonBatches.map((batch) => batch?.type || "—"),
     },
     {
-      label: "Status",
+      label: t("Status"),
       values: comparisonBatches.map((batch) => batch?.status || "—"),
     },
     {
-      label: "Started",
+      label: t("Started"),
       values: comparisonBatches.map((batch) =>
         batch?.startdato ? new Date(batch.startdato).toLocaleDateString() : "—"
       ),
     },
     {
-      label: "Finished",
+      label: t("Finished"),
       values: comparisonBatches.map((batch) =>
         batch?.finished_date
           ? new Date(batch.finished_date).toLocaleDateString()
@@ -159,35 +161,35 @@ export default function BrewInsightsPage() {
       ),
     },
     {
-      label: "Original gravity · target",
+      label: t("Original gravity · target"),
       values: comparisonBatches.map((batch) => {
         const value = finiteNumber(batch?.recipe_snapshot?.og ?? null);
         return value === null ? "—" : value.toFixed(3);
       }),
     },
     {
-      label: "Original gravity · actual",
+      label: t("Original gravity · actual"),
       values: comparisonBatches.map((batch) => {
         const value = finiteNumber(batch?.og ?? null);
         return value === null ? "—" : value.toFixed(3);
       }),
     },
     {
-      label: "Final gravity",
+      label: t("Final gravity"),
       values: comparisonBatches.map((batch) => {
         const value = finiteNumber(batch?.fg ?? null);
         return value === null ? "—" : value.toFixed(3);
       }),
     },
     {
-      label: "ABV · target",
+      label: t("ABV · target"),
       values: comparisonBatches.map((batch) => {
         const value = finiteNumber(batch?.recipe_snapshot?.abv ?? null);
         return value === null ? "—" : `${value.toFixed(1)}%`;
       }),
     },
     {
-      label: "ABV · actual",
+      label: t("ABV · actual"),
       values: comparisonBatches.map((batch) => {
         const storedAbv = finiteNumber(batch?.abv ?? null);
         const og = finiteNumber(batch?.og ?? null);
@@ -199,28 +201,28 @@ export default function BrewInsightsPage() {
       }),
     },
     {
-      label: "Planned volume",
+      label: t("Planned volume"),
       values: comparisonBatches.map((batch) => {
         const value = finiteNumber(batch?.recipe_snapshot?.volume_l ?? null);
         return value === null ? "—" : `${value.toFixed(1)} L`;
       }),
     },
     {
-      label: "Batch volume",
+      label: t("Batch volume"),
       values: comparisonBatches.map((batch) => {
         const value = finiteNumber(batch?.volume_l ?? null);
         return value === null ? "—" : `${value.toFixed(1)} L`;
       }),
     },
     {
-      label: "Packaged volume",
+      label: t("Packaged volume"),
       values: comparisonBatches.map((batch) => {
         const value = finiteNumber(batch?.packaged_volume_l ?? null);
         return value === null ? "—" : `${value.toFixed(1)} L`;
       }),
     },
     {
-      label: "Recorded conditioning racking loss",
+      label: t("Recorded conditioning racking loss"),
       values: comparisonBatches.map((batch) =>
         batch && Object.prototype.hasOwnProperty.call(conditioningRackLosses, batch.id)
           ? `${conditioningRackLosses[batch.id].toFixed(2)} L`
@@ -390,44 +392,43 @@ export default function BrewInsightsPage() {
           <MenuOverlay current="brew-insights" />
         </div>
         <PageHeading
-          title="Brewing insights"
-          subtitle="Private trends from the batches you’ve logged."
+          title={t("Brewing insights")}
+          subtitle={t("Private trends from the batches you’ve logged.")}
         />
 
         {premiumRequired ? (
           <div className="rounded-xl border border-green-400/20 bg-green-500/10 p-6 text-center">
-            <p className="text-white/80">Brewing insights are part of Batchlogg Premium.</p>
-            <a href="/premium" className="mt-4 inline-block rounded-lg bg-green-700 px-5 py-3 font-semibold hover:bg-green-600">Explore Premium</a>
+            <p className="text-white/80">{t("Brewing insights are part of Batchlogg Premium.")}</p>
+            <a href="/premium" className="mt-4 inline-block rounded-lg bg-green-700 px-5 py-3 font-semibold hover:bg-green-600">{t("Explore Premium")}</a>
           </div>
         ) : error && <p role="alert" className="mb-5 rounded-lg bg-red-950/50 p-3 text-center text-red-200">{error}</p>}
         {!premiumRequired && lifecycleMigrationRequired && (
           <p role="status" className="mb-5 rounded-lg border border-amber-400/30 bg-amber-950/30 p-3 text-sm text-amber-100">
-            Packaging and recipe-result comparisons will appear after the batch
-            lifecycle database migration is applied. Existing insights remain available.
+            {t("Packaging and recipe-result comparisons will appear after the batch lifecycle database migration is applied. Existing insights remain available.")}
           </p>
         )}
         {!premiumRequired && conditioningActivityMigrationRequired && (
           <p role="status" className="mb-5 rounded-lg border border-amber-400/30 bg-amber-950/30 p-3 text-sm text-amber-100">
-            Conditioning activity analytics will appear after the conditioning database migration is applied.
+            {t("Conditioning activity analytics will appear after the conditioning database migration is applied.")}
           </p>
         )}
         {!premiumRequired && loading ? (
-          <p className="py-12 text-center text-white/60">Loading your brewing history…</p>
+          <p className="py-12 text-center text-white/60">{t("Loading your brewing history…")}</p>
         ) : !premiumRequired && batches.length === 0 ? (
           <div className="rounded-xl border border-white/10 bg-white/5 p-6 text-center">
-            <p className="text-white/70">Log a batch to start building your brewing insights.</p>
+            <p className="text-white/70">{t("Log a batch to start building your brewing insights.")}</p>
             <button
               type="button"
               onClick={() => router.push("/dashboard")}
               className="mt-4 rounded-lg border border-green-500 bg-green-700 px-4 py-2 font-semibold hover:bg-green-600"
             >
-              Go to dashboard
+              {t("Go to dashboard")}
             </button>
           </div>
         ) : !premiumRequired ? (
           <>
             <section className="mt-8 rounded-xl border border-white/10 bg-white/5 p-4">
-              <div className="flex w-full flex-wrap items-center justify-center gap-2 sm:justify-start" role="group" aria-label="Analyze batch type">
+              <div className="flex w-full flex-wrap items-center justify-center gap-2 sm:justify-start" role="group" aria-label={t("Analyze batch type")}>
                 {["All", ...new Set(batches.map((batch) => batch.type).filter((type): type is string => Boolean(type))).values()].map((type) => (
                   <button
                     key={type}
@@ -440,37 +441,37 @@ export default function BrewInsightsPage() {
                         : "border-white/20 bg-white/10 hover:bg-white/20"
                     }`}
                   >
-                    {type === "All" ? "All types" : type}
+                    {type === "All" ? t("All types") : type}
                   </button>
                 ))}
                 <button type="button" onClick={downloadCsv} className="mx-auto shrink-0 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/20 sm:ml-auto sm:mr-0">
-                  Export CSV
+                  {t("Export CSV")}
                 </button>
               </div>
             </section>
 
-            <section aria-label="Brewing summary" className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-10">
-              <Metric label="Batches logged" value={visibleBatches.length.toString()} />
-              <Metric label="Finished batches" value={completed.length.toString()} />
-              <Metric label="Total packaged volume" value={totalPackagedVolume > 0 ? `${totalPackagedVolume.toFixed(1)} L` : "—"} />
+            <section aria-label={t("Brewing summary")} className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-10">
+              <Metric label={t("Batches logged")} value={visibleBatches.length.toString()} />
+              <Metric label={t("Finished batches")} value={completed.length.toString()} />
+              <Metric label={t("Total packaged volume")} value={totalPackagedVolume > 0 ? `${totalPackagedVolume.toFixed(1)} L` : "—"} />
               <Metric
-                label="Recorded conditioning racking loss"
+                label={t("Recorded conditioning racking loss")}
                 value={
                   conditioningActivityMigrationRequired || !visibleRackLossRecorded
                     ? "—"
                     : `${totalConditioningRackLoss.toFixed(2)} L`
                 }
               />
-              <Metric label="Average final ABV" value={avgAbv === null ? "—" : `${avgAbv.toFixed(1)}%`} />
-              <Metric label="Average time to finish" value={avgDuration === null ? "—" : `${avgDuration.toFixed(0)} days`} />
-              <Metric label="Average attenuation" value={averageAttenuation === null ? "—" : `${averageAttenuation.toFixed(1)}%`} />
-              <Metric label="Average packaged yield" value={averagePackagedYield === null ? "—" : `${averagePackagedYield.toFixed(1)}%`} />
-              <Metric label="Average OG vs recipe" value={averageOgVariance === null ? "—" : `${averageOgVariance >= 0 ? "+" : ""}${averageOgVariance.toFixed(3)}`} />
-              <Metric label="Average ABV vs recipe" value={averageAbvVariance === null ? "—" : `${averageAbvVariance >= 0 ? "+" : ""}${averageAbvVariance.toFixed(1)} pp`} />
+              <Metric label={t("Average final ABV")} value={avgAbv === null ? "—" : `${avgAbv.toFixed(1)}%`} />
+              <Metric label={t("Average time to finish")} value={avgDuration === null ? "—" : `${avgDuration.toFixed(0)} ${t("days")}`} />
+              <Metric label={t("Average attenuation")} value={averageAttenuation === null ? "—" : `${averageAttenuation.toFixed(1)}%`} />
+              <Metric label={t("Average packaged yield")} value={averagePackagedYield === null ? "—" : `${averagePackagedYield.toFixed(1)}%`} />
+              <Metric label={t("Average OG vs recipe")} value={averageOgVariance === null ? "—" : `${averageOgVariance >= 0 ? "+" : ""}${averageOgVariance.toFixed(3)}`} />
+              <Metric label={t("Average ABV vs recipe")} value={averageAbvVariance === null ? "—" : `${averageAbvVariance >= 0 ? "+" : ""}${averageAbvVariance.toFixed(1)} pp`} />
             </section>
             {visibleRackLossRecorded && (
               <p className="mt-2 text-xs text-white/50">
-                Racking loss totals include only loss amounts explicitly recorded for each transfer.
+                {t("Racking loss totals include only loss amounts explicitly recorded for each transfer.")}
               </p>
             )}
 
@@ -483,15 +484,15 @@ export default function BrewInsightsPage() {
                   id="compare-batches-title"
                   className="text-lg font-semibold text-green-300"
                 >
-                  Compare batches
+                  {t("Compare batches")}
                 </h2>
                 <p className="mt-1 text-sm text-white/55">
-                  Choose two batches to compare their recipe targets and recorded results.
+                  {t("Choose two batches to compare their recipe targets and recorded results.")}
                 </p>
               </div>
               {batches.length < 2 ? (
                 <p className="mt-4 rounded-lg bg-black/20 p-4 text-sm text-white/60">
-                  Log at least two batches to compare them here.
+                  {t("Log at least two batches to compare them here.")}
                 </p>
               ) : (
                 <>
@@ -501,7 +502,7 @@ export default function BrewInsightsPage() {
                         key={index}
                         className="block text-sm font-medium text-white/75"
                       >
-                        Batch {index + 1}
+                        {t("Batch")} {index + 1}
                         <select
                           value={selectedId}
                           onChange={(event) =>
@@ -513,7 +514,7 @@ export default function BrewInsightsPage() {
                           }
                           className="mt-2 w-full rounded-lg border border-white/15 bg-black/40 px-3 py-2 text-white"
                         >
-                          <option value="">Choose a batch</option>
+                          <option value="">{t("Choose a batch")}</option>
                           {batches.map((batch) => (
                             <option
                               key={batch.id}
@@ -538,7 +539,7 @@ export default function BrewInsightsPage() {
                         <thead className="bg-black/25">
                           <tr>
                             <th scope="col" className="px-3 py-3 font-medium text-white/55">
-                              Measurement
+                              {t("Measurement")}
                             </th>
                             {comparisonBatches.map((batch) => (
                               <th
@@ -546,7 +547,7 @@ export default function BrewInsightsPage() {
                                 scope="col"
                                 className="px-3 py-3 font-semibold text-green-200"
                               >
-                                {batch ? batchLabel(batch) : "Unnamed batch"}
+                                {batch ? batchLabel(batch) : t("Unnamed batch")}
                               </th>
                             ))}
                           </tr>
@@ -582,11 +583,11 @@ export default function BrewInsightsPage() {
             </section>
 
             <section className="mt-8 rounded-xl border border-white/10 bg-white/5 p-4 sm:p-6">
-              <h2 className="mb-1 text-lg font-semibold text-green-300">Finished batches by month</h2>
-              <p className="mb-5 text-sm text-white/55">Last 12 months, based on finish date (or start date when no finish date was recorded).</p>
+              <h2 className="mb-1 text-lg font-semibold text-green-300">{t("Finished batches by month")}</h2>
+              <p className="mb-5 text-sm text-white/55">{t("Last 12 months, based on finish date (or start date when no finish date was recorded).")}</p>
               <div
                 role="img"
-                aria-label={`Finished batches per month: ${monthlyFinished.map(({ date, count }) => `${monthLabel(date)} ${count}`).join(", ")}`}
+                aria-label={`${t("Finished batches per month")}: ${monthlyFinished.map(({ date, count }) => `${monthLabel(date)} ${count}`).join(", ")}`}
                 className="grid grid-cols-6 gap-2 sm:grid-cols-12"
               >
                 {monthlyFinished.map(({ date, count }) => (
@@ -607,22 +608,22 @@ export default function BrewInsightsPage() {
             <section className="mt-8 rounded-xl border border-white/10 bg-white/5 p-4 sm:p-6">
               <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
                 <div>
-                  <h2 className="text-lg font-semibold text-green-300">By brew type</h2>
+                  <h2 className="text-lg font-semibold text-green-300">{t("By brew type")}</h2>
                   <p className="text-sm text-white/55">
-                    {totalVolume > 0 ? <>Logged volume: <Qty kind="volume" value={totalVolume} /></> : "Volume is shown when recorded."}
+                    {totalVolume > 0 ? <>{t("Logged volume:")} <Qty kind="volume" value={totalVolume} /></> : t("Volume is shown when recorded.")}
                   </p>
                 </div>
-                <span className="text-xs text-white/45">Totals include active and finished batches</span>
+                <span className="text-xs text-white/45">{t("Totals include active and finished batches")}</span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[28rem] text-left text-sm">
                   <thead className="border-b border-white/10 text-white/55">
                     <tr>
-                      <th scope="col" className="py-2 pr-3 font-medium">Type</th>
-                      <th scope="col" className="py-2 px-3 text-right font-medium">Batches</th>
-                      <th scope="col" className="py-2 px-3 text-right font-medium">Finished</th>
-                      <th scope="col" className="py-2 pl-3 text-right font-medium">Volume</th>
-                      <th scope="col" className="py-2 pl-3 text-right font-medium">Rack loss</th>
+                      <th scope="col" className="py-2 pr-3 font-medium">{t("Type")}</th>
+                      <th scope="col" className="py-2 px-3 text-right font-medium">{t("Batches")}</th>
+                      <th scope="col" className="py-2 px-3 text-right font-medium">{t("Finished")}</th>
+                      <th scope="col" className="py-2 pl-3 text-right font-medium">{t("Volume")}</th>
+                      <th scope="col" className="py-2 pl-3 text-right font-medium">{t("Rack loss")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -645,7 +646,7 @@ export default function BrewInsightsPage() {
             </section>
 
             <section className="mt-8">
-              <h2 className="mb-3 text-lg font-semibold text-green-300">Recent finished batches</h2>
+              <h2 className="mb-3 text-lg font-semibold text-green-300">{t("Recent finished batches")}</h2>
               <ul className="space-y-2">
                 {completed.slice(0, 8).map((batch) => {
                   const abv = finiteNumber(batch.abv) ??
@@ -668,7 +669,7 @@ export default function BrewInsightsPage() {
                         href={`/brew-insights/${encodeURIComponent(batch.id)}`}
                         className="shrink-0 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm font-semibold text-white/80 hover:bg-white/10 hover:text-white"
                       >
-                        View batch insights
+                        {t("View batch insights")}
                       </Link>
                     </li>
                   );
@@ -679,37 +680,37 @@ export default function BrewInsightsPage() {
         ) : null}
       </div>
       <PageGuide
-        buttonLabel="Brewing insights guide"
-        eyebrow="Learn from your brewing history"
-        title="Your brewing insights, explained."
-        description="Use your recorded batches to spot patterns, compare results with recipe targets, and see how your brewing changes over time."
-        sectionHeading="Explore your insights"
+        buttonLabel={t("Brewing insights guide")}
+        eyebrow={t("Learn from your brewing history")}
+        title={t("Your brewing insights, explained.")}
+        description={t("Use your recorded batches to spot patterns, compare results with recipe targets, and see how your brewing changes over time.")}
+        sectionHeading={t("Explore your insights")}
         illustration="insights"
-        footer="Insights are based on the batch details you have recorded."
+        footer={t("Insights are based on the batch details you have recorded.")}
         sections={[
           {
-            title: "Filter by brew type",
-            description: "Focus the summary and monthly trends on one beverage type or view them all.",
+            title: t("Filter by brew type"),
+            description: t("Focus the summary and monthly trends on one beverage type or view them all."),
           },
           {
-            title: "Read the summary",
-            description: "Review batch counts, average results, finish times, and recipe-target differences.",
+            title: t("Read the summary"),
+            description: t("Review batch counts, average results, finish times, and recipe-target differences."),
           },
           {
-            title: "Compare two batches",
-            description: "Choose specific batches to compare their planned targets with recorded results.",
+            title: t("Compare two batches"),
+            description: t("Choose specific batches to compare their planned targets with recorded results."),
           },
           {
-            title: "Explore trends",
-            description: "Use the monthly chart and brew-type breakdown to see how your batches add up.",
+            title: t("Explore trends"),
+            description: t("Use the monthly chart and brew-type breakdown to see how your batches add up."),
           },
           {
-            title: "Review finished batches",
-            description: "Open a batch’s results to revisit its recorded measurements and outcome.",
+            title: t("Review finished batches"),
+            description: t("Open a batch’s results to revisit its recorded measurements and outcome."),
           },
           {
-            title: "Export your data",
-            description: "Use Export CSV to save the brewing-insights batch summary.",
+            title: t("Export your data"),
+            description: t("Use Export CSV to save the brewing-insights batch summary."),
           },
         ]}
       />

@@ -15,6 +15,8 @@ import {
   getReducedMotionPreference,
   REDUCED_MOTION_EVENT,
 } from "@/lib/accessibility/reducedMotion";
+import { translateBatchError } from "@/lib/i18n/apiErrors";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 
 interface KarType {
@@ -55,11 +57,11 @@ function sharedVesselName(vessel: KarType & { ownerUsername: string }): string {
   return displayBatchName(vessel.batchName, `Vessel ${vessel.nummer}`);
 }
 
-function vesselStageLabel(status: KarType["status"]): string {
-  if (status === "Aktiv") return "Primary fermentation";
-  if (status === "Sekundær") return "Secondary fermentation";
-  if (status === "Conditioning") return "Conditioning";
-  return "Empty vessel";
+function vesselStageLabel(status: KarType["status"], t: (key: string) => string): string {
+  if (status === "Aktiv") return t("Primary fermentation");
+  if (status === "Sekundær") return t("Secondary fermentation");
+  if (status === "Conditioning") return t("Conditioning");
+  return t("Empty vessel");
 }
 
 const sharedVesselTextureStyle = {
@@ -88,6 +90,7 @@ function isCreatedKar(
 }
 
 export default function DashboardClient() {
+  const { t } = useTranslation();
  
   const router = useRouter();
   const addVesselAnimation = useAnimationControls();
@@ -219,7 +222,7 @@ useEffect(() => {
       setSharedKar(data.sharedKar);
     } catch (error) {
       console.error("Failed to load dashboard data", error);
-      setLoadError("Could not load your dashboard. Please try again.");
+      setLoadError(t("Could not load your dashboard. Please try again."));
     } finally {
       dashboardLoadInProgress.current = false;
       setLoading(false);
@@ -256,18 +259,14 @@ useEffect(() => {
 
   const deleteConfirmationMessage =
     selectedActiveBatches.length > 0
-      ? `Deleting these vessels will also cancel and permanently delete ${
+      ? `${t("Deleting these vessels will also cancel and permanently delete")} ${
           selectedActiveBatches.length === 1
-            ? `the active batch “${displayBatchName(selectedActiveBatches[0].batchName, "Unnamed batch")}” and its notes`
+            ? `${t("the active batch")} “${displayBatchName(selectedActiveBatches[0].batchName, t("Unnamed batch"))}” ${t("and its notes")}`
             : `${selectedActiveBatches.length} active batches (${selectedActiveBatches
-                .map((vessel) => displayBatchName(vessel.batchName, "Unnamed batch"))
-                .join(", ")}) and their notes`
-        }. Delete ${selectedKars.length} selected vessel${
-          selectedKars.length === 1 ? "" : "s"
-        }? This action cannot be undone.`
-      : `Delete ${selectedKars.length} selected vessel${
-          selectedKars.length === 1 ? "" : "s"
-        }? This action cannot be undone.`;
+                .map((vessel) => displayBatchName(vessel.batchName, t("Unnamed batch")))
+                .join(", ")}) ${t("and their notes")}`
+        }. ${t("Delete")} ${selectedKars.length} ${t("selected vessels")}? ${t("This action cannot be undone.")}`
+      : `${t("Delete")} ${selectedKars.length} ${t("selected vessels")}? ${t("This action cannot be undone.")}`;
 
   async function deleteSelectedKars() {
     try {
@@ -292,7 +291,7 @@ useEffect(() => {
       return true;
     } catch (error) {
       console.error("Could not delete selected vessels", error);
-      setFadeMessage("Could not delete the selected vessels. Please try again.");
+      setFadeMessage(t("Could not delete the selected vessels. Please try again."));
       setTimeout(() => setFadeMessage(""), 3000);
       return false;
     }
@@ -321,7 +320,7 @@ useEffect(() => {
       }
 
       if (res.status === 409) {
-        setFadeMessage(`You have reached your limit of ${maxVessels} vessels`);
+        setFadeMessage(`${t("You have reached your limit of")} ${maxVessels} ${t("vessels")}`);
         setTimeout(() => setFadeMessage(""), 2500);
         await loadDashboardData();
         return;
@@ -339,7 +338,7 @@ useEffect(() => {
 
       if (!isCreatedKar(createdKar)) {
         console.error("Vessel creation response did not include the created vessel");
-        setFadeMessage("Vessel was created, but could not be displayed. Please reload.");
+        setFadeMessage(t("Vessel was created, but could not be displayed. Please reload."));
         setTimeout(() => setFadeMessage(""), 4000);
         return;
       }
@@ -361,7 +360,7 @@ useEffect(() => {
       );
     } catch (error) {
       console.error("Failed to create vessel", error);
-      setFadeMessage("Could not create vessel. Please try again.");
+      setFadeMessage(t("Could not create vessel. Please try again."));
       setTimeout(() => setFadeMessage(""), 2500);
     } finally {
       setCreatingKar(false);
@@ -383,7 +382,7 @@ useEffect(() => {
       );
       const result: { error?: string } = await response.json();
       if (!response.ok) {
-        throw new Error(result.error || "Could not leave the shared vessel.");
+        throw new Error(result.error || t("Could not leave the shared vessel."));
       }
       setSharedKar((current) =>
         current.filter((vessel) => vessel.id !== sharedVesselToLeave.id)
@@ -392,9 +391,9 @@ useEffect(() => {
     } catch (error) {
       console.error("Could not leave shared vessel", error);
       setFadeMessage(
-        error instanceof Error
-          ? error.message
-          : "Could not leave the shared vessel. Please try again."
+        error instanceof Error && !(error instanceof TypeError)
+          ? translateBatchError(error.message, t)
+          : t("Could not leave the shared vessel. Please try again.")
       );
       setTimeout(() => setFadeMessage(""), 3000);
       return false;
@@ -417,13 +416,13 @@ useEffect(() => {
       });
       const result: { error?: string } = await response.json();
       if (!response.ok) {
-        throw new Error(result.error || "Could not move the batch.");
+        throw new Error(result.error || t("Could not move the batch."));
       }
 
       setMoveNotice({
-        message: `Batch moved from Vessel ${
+        message: `${t("Batch moved from Vessel")} ${
           kar.find((vessel) => vessel.id === sourceVesselId)?.nummer ?? ""
-        } to Vessel ${
+        } ${t("to Vessel")} ${
           kar.find((vessel) => vessel.id === targetVesselId)?.nummer ?? ""
         }.`,
         isError: false,
@@ -434,9 +433,9 @@ useEffect(() => {
       console.error("Could not move batch to another vessel", error);
       setMoveNotice({
         message:
-          error instanceof Error
-            ? error.message
-            : "Could not move the batch. Please try again.",
+          error instanceof Error && !(error instanceof TypeError)
+            ? translateBatchError(error.message, t)
+            : t("Could not move the batch. Please try again."),
         isError: true,
       });
     } finally {
@@ -454,7 +453,7 @@ useEffect(() => {
   return (
     <main className="min-h-screen flex items-center justify-center text-white">
       <div className="bg-black/60 backdrop-blur-md px-6 py-4 rounded-xl border border-white/10">
-        Loading dashboard…
+        {t("Loading dashboard…")}
       </div>
     </main>
   );
@@ -484,32 +483,32 @@ useEffect(() => {
       </div>
 
       <PageHeading
-        title="Ferment-station"
-        subtitle={`Logged in as ${username}`}
+        title={t("Ferment-station")}
+        subtitle={`${t("Logged in as")} ${username}`}
       />
 
       <p className="text-center text-zinc-300 mb-10 -mt-5 italic">
-        {motd}
+        {motd ? t(motd) : ""}
       </p>
 
-      <nav aria-label="Brewing workflow shortcuts" className="mb-8 flex flex-wrap justify-center gap-3">
+      <nav aria-label={t("Brewing workflow shortcuts")} className="mb-8 flex flex-wrap justify-center gap-3">
         <a
           href="/my-recipes"
           className="rounded-lg border border-green-500/50 bg-green-800/60 px-4 py-2 text-sm font-semibold shadow-md shadow-black/20 transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-1 hover:bg-green-700 hover:shadow-lg hover:shadow-black/30 active:translate-y-0 active:scale-[0.98] active:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
         >
-          Plan a recipe
+          {t("Plan a recipe")}
         </a>
         <a
           href="/batch-history"
           className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold shadow-md shadow-black/20 transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-1 hover:bg-white/20 hover:shadow-lg hover:shadow-black/30 active:translate-y-0 active:scale-[0.98] active:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
         >
-          Review batches
+          {t("Review batches")}
         </a>
         <a
           href="/brew-insights"
           className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold shadow-md shadow-black/20 transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-1 hover:bg-white/20 hover:shadow-lg hover:shadow-black/30 active:translate-y-0 active:scale-[0.98] active:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
         >
-          Learn from results
+          {t("Learn from results")}
         </a>
       </nav>
 
@@ -523,22 +522,22 @@ useEffect(() => {
             onClick={() => loadDashboardData()}
             className="mt-3 rounded-lg border border-white/20 bg-white/10 px-4 py-2 hover:bg-white/20"
           >
-            Try again
+            {t("Try again")}
           </button>
         </div>
       )}
 
       <h2 className="mb-6 text-center text-2xl font-semibold text-green-300">
-        Your vessels
+        {t("Your vessels")}
       </h2>
       {selectMode && moveSourceVesselId && (
         <p className="mb-4 rounded-lg border border-green-400/30 bg-green-950/30 px-4 py-3 text-center text-sm text-green-100">
-          Choose an empty vessel to move “
+          {t("Choose an empty vessel to move")} “
           {displayBatchName(
             kar.find((vessel) => vessel.id === moveSourceVesselId)?.batchName,
-            "active batch"
+            t("active batch")
           )}
-          ” from Vessel{" "}
+          ” {t("from Vessel")}{" "}
           {kar.find((vessel) => vessel.id === moveSourceVesselId)?.nummer}.
         </p>
       )}
@@ -581,7 +580,7 @@ useEffect(() => {
                     setMoveNotice(null);
                   } else if (k.id !== moveSourceVesselId) {
                     setMoveNotice({
-                      message: "Choose an empty vessel as the destination.",
+                      message: t("Choose an empty vessel as the destination."),
                       isError: true,
                     });
                   }
@@ -623,8 +622,8 @@ useEffect(() => {
             )}
             {k.isShared && (
               <span
-                title="Shared with others"
-                aria-label="Shared with others"
+                title={t("Shared with others")}
+                aria-label={t("Shared with others")}
                 style={sharedVesselIconStyle}
                 className="absolute right-2 top-2 z-20 flex h-6 w-6 items-center justify-center"
               >
@@ -661,7 +660,7 @@ useEffect(() => {
             <span
               className="relative z-10 mt-2 text-center text-xs font-semibold leading-tight text-zinc-400"
             >
-              {vesselStageLabel(k.status)}
+              {vesselStageLabel(k.status, t)}
             </span>
           </motion.a>
           {selectMode &&
@@ -681,7 +680,7 @@ useEffect(() => {
                   }}
                   className="w-full rounded-lg border border-white/15 bg-white/5 px-2 py-1.5 text-xs font-semibold text-white/75 shadow-md shadow-black/20 transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-1 hover:bg-white/10 hover:shadow-lg hover:shadow-black/30 active:translate-y-0 active:scale-[0.98] active:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
                 >
-                  {moveSourceVesselId === k.id ? "Cancel move" : "Move batch"}
+                  {moveSourceVesselId === k.id ? t("Cancel move") : t("Move batch")}
                 </button>
               </div>
             )}
@@ -719,11 +718,11 @@ useEffect(() => {
             }}
             animate={addVesselAnimation}
             disabled={creatingKar || kar.length >= maxVessels}
-            aria-label={creatingKar ? "Creating vessel" : "Create vessel"}
+            aria-label={creatingKar ? t("Creating vessel") : t("Create vessel")}
             title={
               kar.length >= maxVessels
-                ? `Vessel limit reached (${maxVessels})`
-                : "Create vessel"
+                ? `${t("Vessel limit reached")} (${maxVessels})`
+                : t("Create vessel")
             }
             className="flex h-32 w-32 items-center justify-center rounded-xl border-0 bg-white/5 p-4 text-3xl font-bold text-white shadow-md shadow-black/20 transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-1 hover:bg-white/10 hover:shadow-lg hover:shadow-black/30 active:translate-y-0 active:scale-[0.98] active:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-wait disabled:opacity-60 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
           >
@@ -773,7 +772,7 @@ useEffect(() => {
       </div>
 
       <p className="text-center mt-5 opacity-60">
-        Vessel limit: {maxVessels}
+        {t("Vessel limit")}: {maxVessels}
       </p>
 
       <div className="flex justify-center mt-6 mb-6">
@@ -782,7 +781,7 @@ useEffect(() => {
             onClick={toggleSelectMode}
             className="rounded-lg border border-white/20 bg-white/10 px-6 py-3 font-semibold shadow-md shadow-black/20 transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-1 hover:bg-white/20 hover:shadow-lg hover:shadow-black/30 active:translate-y-0 active:scale-[0.98] active:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
           >
-            Select vessels
+            {t("Select vessels")}
           </button>
         )}
 
@@ -794,14 +793,14 @@ useEffect(() => {
               disabled={selectedKars.length === 0}
               className="rounded-lg border border-white/20 bg-white/10 px-6 py-3 font-semibold shadow-md shadow-black/20 transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-1 hover:bg-white/20 hover:shadow-lg hover:shadow-black/30 active:translate-y-0 active:scale-[0.98] active:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
             >
-              Delete selected
+              {t("Delete selected")}
             </button>
 
             <button
               onClick={toggleSelectMode}
               className="rounded-lg border border-zinc-500 bg-zinc-700 px-6 py-3 font-semibold shadow-md shadow-black/20 transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-1 hover:bg-zinc-600 hover:shadow-lg hover:shadow-black/30 active:translate-y-0 active:scale-[0.98] active:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
             >
-              Cancel
+              {t("Cancel")}
             </button>
           </div>
         )}
@@ -810,7 +809,7 @@ useEffect(() => {
       {sharedKar.length > 0 && (
         <section className="mt-10 border-t border-white/10 pt-8">
           <h2 className="mb-4 text-center text-2xl font-semibold text-green-300">
-            Vessels shared with me
+            {t("Vessels shared with me")}
           </h2>
           <div className="flex flex-wrap justify-center gap-6">
             {sharedKar.map((vessel) => (
@@ -825,8 +824,8 @@ useEffect(() => {
                   style={sharedVesselTextureStyle}
                 />
                 <span
-                  title="Shared with you"
-                  aria-label="Shared with you"
+                  title={t("Shared with you")}
+                  aria-label={t("Shared with you")}
                   style={sharedVesselIconStyle}
                   className="absolute right-2 top-2 z-20 flex h-6 w-6 items-center justify-center"
                 >
@@ -853,10 +852,10 @@ useEffect(() => {
                   {sharedVesselName(vessel)}
                 </span>
                 <span className="relative z-10 mt-2 text-xs text-zinc-300">
-                  {vesselStageLabel(vessel.status)}
+                  {vesselStageLabel(vessel.status, t)}
                 </span>
                 <span className="relative z-10 mt-1 line-clamp-1 text-xs text-zinc-400">
-                  Shared by {vessel.ownerUsername}
+                  {t("Shared by")} {vessel.ownerUsername}
                 </span>
                 </a>
                 <button
@@ -864,7 +863,7 @@ useEffect(() => {
                   onClick={() => setSharedVesselToLeave(vessel)}
                   className="text-xs text-zinc-400 underline underline-offset-2 transition hover:text-red-300"
                 >
-                  Leave shared vessel
+                  {t("Leave shared vessel")}
                 </button>
               </div>
             ))}
@@ -876,33 +875,33 @@ useEffect(() => {
         open={confirmDeleteVessels}
         title={
           selectedActiveBatches.length > 0
-            ? "Delete vessels and active batches?"
-            : "Delete selected vessels?"
+            ? t("Delete vessels and active batches?")
+            : t("Delete selected vessels?")
         }
         message={deleteConfirmationMessage}
         confirmLabel={
           selectedActiveBatches.length > 0
-            ? "Delete vessels and batches"
-            : "Delete vessels"
+            ? t("Delete vessels and batches")
+            : t("Delete vessels")
         }
         onConfirm={deleteSelectedKars}
         onCancel={() => setConfirmDeleteVessels(false)}
       />
       <ConfirmDialog
         open={sharedVesselToLeave !== null}
-        title="Leave shared vessel?"
+        title={t("Leave shared vessel?")}
         message={
           sharedVesselToLeave
-            ? `You will lose access to ${sharedVesselName(sharedVesselToLeave)} shared by ${sharedVesselToLeave.ownerUsername}. The owner can share it with you again later.`
+            ? `${t("You will lose access to")} ${sharedVesselName(sharedVesselToLeave)} ${t("shared by")} ${sharedVesselToLeave.ownerUsername}. ${t("The owner can share it with you again later.")}`
             : ""
         }
-        confirmLabel={leavingSharedVessel ? "Leaving…" : "Leave vessel"}
+        confirmLabel={leavingSharedVessel ? t("Leaving…") : t("Leave vessel")}
         onConfirm={leaveSharedVessel}
         onCancel={() => setSharedVesselToLeave(null)}
       />
       <ConfirmDialog
         open={pendingMove !== null}
-        title="Move batch to this vessel?"
+        title={t("Move batch to this vessel?")}
         message={
           pendingMove
             ? `Move “${
@@ -910,20 +909,20 @@ useEffect(() => {
                   kar.find(
                     (vessel) => vessel.id === pendingMove.sourceVesselId
                   )?.batchName,
-                  "active batch"
+                  t("active batch")
                 )
-              }” from Vessel ${
+              }” ${t("from Vessel")} ${
                 kar.find(
                   (vessel) => vessel.id === pendingMove.sourceVesselId
                 )?.nummer
-              } to Vessel ${
+              } ${t("to Vessel")} ${
                 kar.find(
                   (vessel) => vessel.id === pendingMove.targetVesselId
                 )?.nummer
-              }? Vessel numbers stay fixed.`
+              }? ${t("Vessel numbers stay fixed.")}`
             : ""
         }
-        confirmLabel="Move batch"
+        confirmLabel={t("Move batch")}
         onConfirm={async () => {
           if (!pendingMove) return false;
           const source = kar.find(
@@ -931,7 +930,7 @@ useEffect(() => {
           );
           if (!source?.activeBatchId) {
             setMoveNotice({
-              message: "The source batch is no longer active. Refresh and try again.",
+              message: t("The source batch is no longer active. Refresh and try again."),
               isError: true,
             });
             return true;

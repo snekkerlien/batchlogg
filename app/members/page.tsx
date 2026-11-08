@@ -7,6 +7,7 @@ import MenuOverlay from "./MenuOverlay";
 import BackButton from "./BackButton";
 import ProfilesList from "./ProfilesList"; // ← NY
 import PageHeading from "@/app/components/PageHeading";
+import TranslatedText from "@/app/components/TranslatedText";
 
 export default async function ProfilesPage() {
   const { supabase } = await supabaseServer();
@@ -18,7 +19,7 @@ export default async function ProfilesPage() {
   if (!user) {
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
-        <h1 className="text-2xl font-bold">You must be logged in</h1>
+        <h1 className="text-2xl font-bold"><TranslatedText text="You must be logged in" /></h1>
       </main>
     );
   }
@@ -32,7 +33,7 @@ export default async function ProfilesPage() {
     return (
       <main className="min-h-screen flex items-center justify-center text-red-400">
         <h1 className="text-2xl font-bold">
-          Error fetching profiles: {profilesError.message}
+          <TranslatedText text="Error fetching profiles:" /> {profilesError.message}
         </h1>
       </main>
     );
@@ -62,8 +63,8 @@ export default async function ProfilesPage() {
         </div>
 
         <PageHeading
-          title="Community members"
-          subtitle="Explore the community and follow other brewers’ journeys."
+          title={<TranslatedText text="Community members" />}
+          subtitle={<TranslatedText text="Explore the community and follow other brewers’ journeys." />}
         />
 
         <ProfilesList profiles={otherProfiles} favorites={favorites} />

@@ -1,20 +1,5 @@
 import { normalizeOptionalUrl, slugifyBreweryValue } from "@/lib/brewery/access";
-
-const CATEGORIES = [
-  "all-grain-kit",
-  "fresh-wort-kit",
-  "malt-extract-kit",
-  "beer",
-  "cider",
-  "mead",
-  "wine",
-  "spirits",
-  "non-alcoholic",
-  "brewing-equipment",
-  "brewing-ingredients",
-  "merchandise",
-  "other",
-];
+import { breweryProductCategoryLabel } from "@/lib/brewery/productCategories";
 const AVAILABILITY = ["available", "seasonal", "discontinued"];
 const BEVERAGE_CATEGORIES = ["beer", "cider", "mead", "wine", "spirits", "non-alcoholic"];
 const BEER_KIT_CATEGORIES = ["all-grain-kit", "fresh-wort-kit", "malt-extract-kit"];
@@ -57,7 +42,7 @@ export function validateBreweryProduct(body: Record<string, unknown>) {
     !name ||
     name.length > 160 ||
     typeof category !== "string" ||
-    !CATEGORIES.includes(category) ||
+    !breweryProductCategoryLabel(category) ||
     description.length > 5000 ||
     productUrl === undefined ||
     (style !== null && (typeof style !== "string" || style.length > 120)) ||

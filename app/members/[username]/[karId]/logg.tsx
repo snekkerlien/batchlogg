@@ -1,5 +1,6 @@
 import { supabaseServer } from "../../../../lib/supabase/supabaseServerFinal";
 import PublicMentionText from "@/app/components/PublicMentionText";
+import TranslatedText from "@/app/components/TranslatedText";
 
 export default async function Logg({ batchId }: { batchId: string }) {
   // ⭐ Bruk riktig serverklient med cookies
@@ -13,7 +14,7 @@ export default async function Logg({ batchId }: { batchId: string }) {
     .order("created_at", { ascending: false });
 
   if (!notes || notes.length === 0)
-    return <p className="opacity-60">Ingen notater enda.</p>;
+    return <p className="opacity-60"><TranslatedText text="No batch notes yet." /></p>;
 
   return (
     <div className="space-y-4">
@@ -27,11 +28,17 @@ export default async function Logg({ batchId }: { batchId: string }) {
           </p>
 
           {n.note_type === "image" && n.image_url ? (
-            <img
-              src={n.image_url}
-              alt="Batch bilde"
-              className="rounded-lg mt-2"
-            />
+            <>
+              <span id={`batch-image-${n.id}`} className="sr-only">
+                <TranslatedText text="Batch image" />
+              </span>
+              <img
+                src={n.image_url}
+                alt=""
+                aria-labelledby={`batch-image-${n.id}`}
+                className="rounded-lg mt-2"
+              />
+            </>
           ) : null}
 
           {n.note && (

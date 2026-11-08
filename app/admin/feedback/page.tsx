@@ -75,6 +75,14 @@ console.log("SSR SUPABASE URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
           title="Feedback"
           subtitle="Suggestions, feedback, and bug reports sent in by members."
         />
+        <div className="mb-6 flex justify-center">
+          <Link
+            href="/admin/roadmap?returnTo=%2Fadmin%2Ffeedback"
+            className="inline-flex min-h-11 items-center rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-green-200 hover:bg-white/10"
+          >
+            Go to roadmap
+          </Link>
+        </div>
 
         {markReadError && (
           <p role="alert" className="mb-5 rounded-lg border border-amber-400/30 bg-amber-900/20 p-3 text-sm text-amber-100">

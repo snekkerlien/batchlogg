@@ -5,10 +5,14 @@ import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
 import { inferAcquisitionSource } from "@/lib/analytics/acquisitionSource";
 import FormField from "@/app/components/FormField";
+import AuthRequiredLabel from "../AuthRequiredLabel";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { SIGNUP_AUTH_CODE_KEYS, translateAuthApiError, translateAuthCode } from "@/lib/i18n/apiErrors";
 
 type SignupStep = "username" | "credentials";
 
 export default function SignupClient() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [step, setStep] = useState<SignupStep>("username");
   const [username, setUsername] = useState("");
@@ -24,10 +28,10 @@ export default function SignupClient() {
 
   function validatePassword(value: string) {
     if (value.length < 8) {
-      return "Password must be at least 8 characters.";
+      return t("Password must be at least 8 characters.");
     }
     if (!/[A-Z]/.test(value)) {
-      return "Password must contain at least one uppercase letter.";
+      return t("Password must contain at least one uppercase letter.");
     }
     return "";
   }
@@ -39,12 +43,12 @@ export default function SignupClient() {
 
     const normalizedUsername = username.trim().toLowerCase();
     if (!normalizedUsername) {
-      setError("Please choose a username.");
+      setError(t("Please choose a username."));
       setErrorField("username");
       return;
     }
     if (normalizedUsername.length > 64) {
-      setError("Username must be 64 characters or fewer.");
+      setError(t("Username must be 64 characters or fewer."));
       setErrorField("username");
       return;
     }
@@ -58,10 +62,10 @@ export default function SignupClient() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || "Could not check username availability.");
+        throw new Error(result.error || t("Could not check username availability."));
       }
       if (!result.available) {
-        setError("That username is already taken. Please choose another.");
+        setError(t("That username is already taken. Please choose another."));
         setErrorField("username");
         return;
       }
@@ -72,8 +76,8 @@ export default function SignupClient() {
       console.error("Could not check username availability", availabilityError);
       setError(
         availabilityError instanceof Error
-          ? availabilityError.message
-          : "Could not check username availability. Please try again."
+          ? translateAuthApiError(availabilityError.message, t)
+          : t("Could not check username availability. Please try again.")
       );
       setErrorField("username");
     } finally {
@@ -88,7 +92,7 @@ export default function SignupClient() {
 
     const normalizedEmail = email.trim();
     if (!username || !normalizedEmail || !password || !confirmPassword) {
-      setError("All fields are required.");
+      setError(t("All fields are required."));
       setErrorField(
         !normalizedEmail
           ? "email"
@@ -107,7 +111,7 @@ export default function SignupClient() {
     }
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+      setError(t("Passwords do not match."));
       setErrorField("confirmPassword");
       return;
     }
@@ -133,7 +137,10 @@ export default function SignupClient() {
 
       if (!signupResponse.ok || !signupResult.userId) {
         console.error("[Signup error]", signupResult.error);
-        setError(signupResult.error || "Could not create account.");
+        setError(
+          translateAuthCode(signupResult.code, t, SIGNUP_AUTH_CODE_KEYS) ??
+          (signupResult.error ? translateAuthApiError(signupResult.error, t) : t("Could not create account."))
+        );
         return;
       }
 
@@ -147,7 +154,7 @@ export default function SignupClient() {
 
       if (loginError || !loginData.session) {
         console.error("Could not log in after registration", loginError);
-        setError("Could not log in after registration.");
+        setError(t("Could not log in after registration."));
         return;
       }
 
@@ -168,10 +175,11 @@ export default function SignupClient() {
       if (!profileResponse.ok) {
         const profileResult = await profileResponse.json().catch(() => null);
         console.error("Could not create user profile", profileResult);
-        setError(
-          profileResult?.error ||
-            "Account created, but profile setup failed. Please contact support."
-        );
+        const summary = t("Account created, but profile setup failed. Please contact support.");
+        const detail = typeof profileResult?.error === "string"
+          ? translateAuthApiError(profileResult.error, t)
+          : "";
+        setError(detail && detail !== summary ? `${summary} ${detail}` : summary);
         return;
       }
 
@@ -179,7 +187,7 @@ export default function SignupClient() {
       router.replace("/dashboard");
     } catch (signupError) {
       console.error("Could not complete signup", signupError);
-      setError("Could not complete signup. Please try again.");
+      setError(t("Could not complete signup. Please try again."));
     } finally {
       setCreatingAccount(false);
     }
@@ -195,17 +203,17 @@ export default function SignupClient() {
           href="/"
           className="block text-center text-sm text-blue-300 hover:text-blue-200 mb-2"
         >
-          🏠 Back to homepage
+          🏠 {t("Back to homepage")}
         </a>
 
-        <h2 className="text-2xl font-bold text-center">Create new account</h2>
+        <h2 className="text-2xl font-bold text-center">{t("Create new account")}</h2>
 
         {step === "username" ? (
           <>
             <p className="text-center text-sm text-white/70">
-              Step 1 of 2: Choose a username
+              {t("Step 1 of 2: Choose a username")}
             </p>
-            <FormField id="signup-username" label="Username" required>
+            <FormField id="signup-username" label={<AuthRequiredLabel text="Username" />}>
               <input
                 id="signup-username"
                 type="text"
@@ -226,18 +234,18 @@ export default function SignupClient() {
               disabled={checkingUsername}
               className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-60 p-3 rounded-lg font-semibold"
             >
-              {checkingUsername ? "Checking…" : "Check username"}
+              {checkingUsername ? t("Checking…") : t("Check username")}
             </button>
           </>
         ) : (
           <>
             <p className="text-center text-sm text-white/70">
-              Step 2 of 2: Add your email and password
+              {t("Step 2 of 2: Add your email and password")}
             </p>
             <p className="text-center text-sm text-green-300">
-              Username “{username}” is available.
+              {t("Username")} “{username}” {t("is available.")}
             </p>
-            <FormField id="signup-email" label="Email address" required>
+            <FormField id="signup-email" label={<AuthRequiredLabel text="Email address" />}>
               <input
                 id="signup-email"
                 type="email"
@@ -254,9 +262,8 @@ export default function SignupClient() {
             </FormField>
             <FormField
               id="signup-password"
-              label="Password"
-              required
-              hint="At least 8 characters and one uppercase letter."
+              label={<AuthRequiredLabel text="Password" />}
+              hint={t("At least 8 characters and one uppercase letter.")}
             >
               <input
                 id="signup-password"
@@ -272,7 +279,7 @@ export default function SignupClient() {
                 className="w-full rounded-lg border border-white/20 bg-black/40 px-4 py-3 focus:border-green-400 focus:outline-none"
               />
             </FormField>
-            <FormField id="signup-confirm-password" label="Confirm password" required>
+            <FormField id="signup-confirm-password" label={<AuthRequiredLabel text="Confirm password" />}>
               <input
                 id="signup-confirm-password"
                 type="password"
@@ -292,7 +299,7 @@ export default function SignupClient() {
               disabled={creatingAccount}
               className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-60 p-3 rounded-lg font-semibold"
             >
-              {creatingAccount ? "Creating account…" : "Create account"}
+              {creatingAccount ? t("Creating account…") : t("Create account")}
             </button>
             <button
               type="button"
@@ -303,7 +310,7 @@ export default function SignupClient() {
               }}
               className="w-full bg-white/10 hover:bg-white/20 p-3 rounded-lg font-semibold"
             >
-              Back
+              {t("Back")}
             </button>
           </>
         )}
@@ -318,7 +325,7 @@ export default function SignupClient() {
           href="/auth/login"
           className="block text-center text-sm text-blue-300 hover:text-blue-200 mt-2"
         >
-          Already have an account? Log in
+          {t("Already have an account? Log in")}
         </a>
       </form>
     </main>

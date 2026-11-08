@@ -1,4 +1,9 @@
+"use client";
+
+import { useTranslation } from "@/lib/i18n/useTranslation";
+
 export default function BitternessMeter({ ibu }: { ibu: number }) {
+  const { t } = useTranslation();
   const value = Number.isFinite(ibu) ? Math.round(ibu) : 0;
   const position = Math.min(120, Math.max(0, value));
   const level =
@@ -13,11 +18,11 @@ export default function BitternessMeter({ ibu }: { ibu: number }) {
   return (
     <div
       role="meter"
-      aria-label="Bitterness guide"
+      aria-label={t("Bitterness guide")}
       aria-valuemin={0}
       aria-valuemax={120}
       aria-valuenow={position}
-      aria-valuetext={`${value} IBU, ${level}`}
+      aria-valuetext={`${value} IBU, ${t(level)}`}
       className="space-y-2"
     >
       <div className="flex items-center justify-between gap-2">
@@ -30,7 +35,7 @@ export default function BitternessMeter({ ibu }: { ibu: number }) {
         <span
           className={`text-[10px] font-medium leading-tight ${levelStyles}`}
         >
-          {level}
+          {t(level)}
         </span>
       </div>
       <div className="px-1 py-0.5">
@@ -54,15 +59,15 @@ export default function BitternessMeter({ ibu }: { ibu: number }) {
       </div>
       <div className="grid grid-cols-3 gap-1 text-center text-[9px] font-normal leading-tight">
         <span className="text-white/65">
-          <span className="block">Mild</span>
+          <span className="block">{t("Mild")}</span>
           <span className="mt-0.5 block text-white/40">0–30 IBU</span>
         </span>
         <span className="text-white/65">
-          <span className="block">Bitter</span>
+          <span className="block">{t("Bitter")}</span>
           <span className="mt-0.5 block text-white/40">30–60 IBU</span>
         </span>
         <span className="text-white/65">
-          <span className="block">Extra Bitter</span>
+          <span className="block">{t("Extra Bitter")}</span>
           <span className="mt-0.5 block text-white/40">60–120 IBU</span>
         </span>
       </div>

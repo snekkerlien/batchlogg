@@ -9,8 +9,10 @@ import { useRouter } from "next/navigation";
 import PageHeading from "@/app/components/PageHeading";
 import RecipeDetailsContent from "../RecipeDetailsContent";
 import RecipeBatchResults from "./RecipeBatchResults";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export default function RecipeNotesPage({ params }: { params: { id: string } }) {
+  const { t, language } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [recipe, setRecipe] = useState<any>(null);
   const [sourceCopyrightFree, setSourceCopyrightFree] = useState<boolean | null>(null);
@@ -59,7 +61,7 @@ export default function RecipeNotesPage({ params }: { params: { id: string } }) 
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
-        Loading recipe…
+        {t("Loading recipe…")}
       </main>
     );
   }
@@ -67,7 +69,7 @@ export default function RecipeNotesPage({ params }: { params: { id: string } }) 
   if (!recipe) {
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
-        <h1 className="text-2xl font-bold">Recipe not found</h1>
+        <h1 className="text-2xl font-bold">{t("Recipe not found")}</h1>
       </main>
     );
   }
@@ -80,15 +82,15 @@ export default function RecipeNotesPage({ params }: { params: { id: string } }) 
 
         <PageHeading
           title={recipe.name.charAt(0).toUpperCase() + recipe.name.slice(1)}
-          subtitle="Full recipe details and brewer’s notes."
+          subtitle={t("Full recipe details and brewer’s notes.")}
         />
 
-        <nav aria-label="Recipe sections" className="mb-6 flex justify-center">
+        <nav aria-label={t("Recipe sections")} className="mb-6 flex justify-center">
           <a
             href="#recipe-batch-results"
             className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-green-200 hover:bg-white/10"
           >
-            Results from this recipe
+            {t("Results from this recipe")}
           </a>
         </nav>
 
@@ -97,33 +99,33 @@ export default function RecipeNotesPage({ params }: { params: { id: string } }) 
             href={`/my-recipes/${encodeURIComponent(recipe.id)}/versions`}
             className="font-semibold text-amber-200 underline"
           >
-            Recipe history and comparison
+            {t("Recipe history and comparison")}
           </Link>
           <a
             href={`/api/recipes/${encodeURIComponent(recipe.id)}/export?format=json`}
             className="text-amber-200 underline"
           >
-            Export JSON
+            {t("Export JSON")}
           </a>
           <a
             href={`/api/recipes/${encodeURIComponent(recipe.id)}/export?format=csv`}
             className="text-amber-200 underline"
           >
-            Export CSV
+            {t("Export CSV")}
           </a>
           {["Beer", "Braggot"].includes(recipe.type) ? (
             <a
               href={`/api/recipes/${encodeURIComponent(recipe.id)}/export?format=beerxml`}
               className="text-amber-200 underline"
             >
-              Export BeerXML
+              {t("Export BeerXML")}
             </a>
           ) : null}
           <a
             href={`/api/recipes/${encodeURIComponent(recipe.id)}/export?format=beerjson`}
             className="text-amber-200 underline"
           >
-            Export BeerJSON
+            {t("Export BeerJSON")}
           </a>
         </div>
 
@@ -133,20 +135,20 @@ export default function RecipeNotesPage({ params }: { params: { id: string } }) 
         </div>
 
         <p className="mt-6 text-center text-xs text-white/45">
-          Created{" "}
+          {t("Created")}{" "}
           {recipe.created_at
-            ? new Date(recipe.created_at).toLocaleDateString("en-GB")
-            : "date unavailable"}{" "}
+            ? new Date(recipe.created_at).toLocaleDateString(language === "nb" ? "nb-NO" : "en-GB")
+            : t("date unavailable")}{" "}
           ·{" "}
           {recipe.source_recipe_id
             ? sourceCopyrightFree === true
-              ? "Marked copyright-free by the original author."
+              ? t("Marked copyright-free by the original author.")
               : sourceCopyrightFree === false
-                ? "Copyright belongs to the original recipe author."
-                : "Copyright status belongs to the original recipe author."
+                ? t("Copyright belongs to the original recipe author.")
+                : t("Copyright status belongs to the original recipe author.")
             : recipe.copyright_free === true
-              ? "Marked copyright-free by you."
-              : "Copyright belongs to you as the recipe uploader."}
+              ? t("Marked copyright-free by you.")
+              : t("Copyright belongs to you as the recipe uploader.")}
         </p>
       </div>
     </main>

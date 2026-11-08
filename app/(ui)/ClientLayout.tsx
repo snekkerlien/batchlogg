@@ -23,6 +23,8 @@ import BatchGuide from "../components/BatchGuide";
 import SiteAnnouncementBanner from "../components/SiteAnnouncementBanner";
 import MuteCountdownBanner from "../components/MuteCountdownBanner";
 import { UnitsProvider } from "../components/Units";
+import { LanguageProvider } from "../components/LanguageProvider";
+import TranslatedText from "../components/TranslatedText";
 import SiteStatusBanner from "../components/SiteStatusBanner";
 import SiteFooter from "../components/SiteFooter";
 import {
@@ -287,9 +289,10 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
   return (
     <AuthProvider>
       <UserAccentTheme>
+        <LanguageProvider>
         <UnitsProvider>
     <a href="#main-content" className="skip-to-content">
-      Skip to main content
+      <TranslatedText text="Skip to main content" />
     </a>
     {!isBannedPage && <FirstLoginSetup />}
         {!isBannedPage && <PremiumWelcome />}
@@ -331,18 +334,20 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
             data-route-path={pathname}
             id="main-content"
             tabIndex={-1}
-            aria-label="Main content"
+            aria-labelledby="main-content-label"
             initial={reducedMotion ? false : { opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={reducedMotion ? undefined : { opacity: 0, y: -10 }}
             transition={{ duration: reducedMotion ? 0 : 0.25, ease: "easeOut" }}
             className="relative z-0 focus:outline-none"
           >
+            <span id="main-content-label" className="sr-only"><TranslatedText text="Main content" /></span>
             {children}
           </motion.div>
         </AnimatePresence>
         {!isBannedPage && <SiteFooter />}
         </UnitsProvider>
+        </LanguageProvider>
       </UserAccentTheme>
     </AuthProvider>
   );

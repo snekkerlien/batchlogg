@@ -1,6 +1,7 @@
 "use client";
 
-const RECIPE_TYPES = ["All", "Mead", "Beer", "Cider", "Wine", "Seltzer", "Braggot", "Other"];
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { RECIPE_TYPES } from "@/lib/recipes/recipeTypes";
 
 export type RecipeSort = "newest" | "oldest" | "name" | "style";
 
@@ -19,35 +20,37 @@ export default function RecipeFilters({
   sort: RecipeSort;
   onSortChange: (sort: RecipeSort) => void;
 }) {
+  const { t } = useTranslation();
+
   return (
-    <section aria-label="Filter recipes" className="mx-auto mb-6 max-w-full space-y-3 sm:w-fit">
+    <section aria-label={t("Filter recipes")} className="mx-auto mb-6 max-w-full space-y-3 sm:w-fit">
       <div className="flex flex-col gap-3 sm:flex-row">
         <label className="min-w-0 flex-1">
-          <span className="sr-only">Search recipes</span>
+          <span className="sr-only">{t("Search recipes")}</span>
           <input
             type="search"
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}
-            placeholder="Search recipes"
+            placeholder={t("Search recipes")}
             className="w-full rounded-lg border border-white/20 bg-black/40 p-3 text-sm"
           />
         </label>
         <label>
-          <span className="sr-only">Sort recipes</span>
+          <span className="sr-only">{t("Sort recipes")}</span>
           <select
             value={sort}
             onChange={(event) => onSortChange(event.target.value as RecipeSort)}
             className="w-full rounded-lg border border-white/20 bg-black/40 p-3 text-sm sm:w-auto"
           >
-            <option value="newest">Newest first</option>
-            <option value="oldest">Oldest first</option>
-            <option value="name">Name A–Z</option>
-            {type === "Beer" && <option value="style">Style A–Z</option>}
+            <option value="newest">{t("Newest first")}</option>
+            <option value="oldest">{t("Oldest first")}</option>
+            <option value="name">{t("Name A–Z")}</option>
+            {type === "Beer" && <option value="style">{t("Style A–Z")}</option>}
           </select>
         </label>
       </div>
       <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:justify-center">
-        {RECIPE_TYPES.map((recipeType) => (
+        {["All", ...RECIPE_TYPES].map((recipeType) => (
           <button
             key={recipeType}
             type="button"
@@ -59,7 +62,7 @@ export default function RecipeFilters({
                 : "border-white/20 bg-white/10 hover:bg-white/20"
             }`}
           >
-            {recipeType}
+            {t(recipeType)}
           </button>
         ))}
       </div>

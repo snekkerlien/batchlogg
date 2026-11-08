@@ -93,7 +93,7 @@ export async function POST(request: Request) {
         });
       }
       return NextResponse.json(
-        { error: error?.message ?? "Could not create account." },
+        { error: error?.message ?? "Could not create account.", ...(error?.code ? { code: error.code } : {}) },
         { status: error?.status ?? 400 }
       );
     }

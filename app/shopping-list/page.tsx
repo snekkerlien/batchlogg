@@ -8,6 +8,9 @@ import ConfirmDialog from "@/app/components/ConfirmDialog";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 import PageGuide from "@/app/components/PageGuide";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { SHOPPING_LIST_ERROR_KEYS, translateApiError } from "@/lib/i18n/apiErrors";
+import { isKnownRecipeType } from "@/lib/recipes/recipeTypes";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import {
   getSavedRecipeShoppingRequirements,
@@ -36,7 +39,8 @@ type ShoppingItemInput = Omit<ShoppingItem, "id" | "is_checked"> & {
 async function requestShoppingList(
   method: "POST" | "PATCH" | "DELETE",
   body?: Record<string, unknown>,
-  id?: string
+  id?: string,
+  t?: (key: string) => string
 ) {
   const url = id ? `/api/shopping-list?id=${encodeURIComponent(id)}` : "/api/shopping-list";
   const response = await fetch(url, {
@@ -50,12 +54,16 @@ async function requestShoppingList(
     items?: ShoppingItem[];
     deleted_ids?: string[];
   } = await response.json();
-  if (!response.ok) throw new Error(result.error || "Shopping-list request failed");
+  if (!response.ok) {
+    const message = result.error || "Shopping-list request failed";
+    throw new Error(t && result.error ? translateApiError(message, t, SHOPPING_LIST_ERROR_KEYS) : t?.(message) || message);
+  }
   return result;
 }
 
 export default function ShoppingListPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [items, setItems] = useState<ShoppingItem[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
@@ -118,7 +126,7 @@ export default function ShoppingListPage() {
     ]);
     if (!listResponse.ok) {
       const result: { error?: string } = await listResponse.json();
-      throw new Error(result.error || "Could not load shopping list");
+      throw new Error(result.error || t("Could not load shopping list."));
     }
     const listResult: { items?: ShoppingItem[] } = await listResponse.json();
     if (recipesResult.error) throw recipesResult.error;
@@ -132,14 +140,14 @@ export default function ShoppingListPage() {
         minimum_amount: Number(item.minimum_amount ?? 0),
       }))
     );
-  }, [router]);
+  }, [router, t]);
 
   useEffect(() => {
     let active = true;
     load()
       .catch((loadError) => {
         console.error("Could not load shopping list", loadError);
-        if (active) setError("Your shopping list could not be loaded. Please try again.");
+        if (active) setError(t("Your shopping list could not be loaded. Please try again."));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -147,17 +155,17 @@ export default function ShoppingListPage() {
     return () => {
       active = false;
     };
-  }, [load]);
+  }, [load, t]);
 
   if (premiumRequired) {
     return (
       <main className="min-h-screen px-4 py-10 text-white sm:px-6">
         <div className="relative mx-auto max-w-3xl rounded-xl border border-white/10 bg-black/60 p-6 pt-16 text-center backdrop-blur-md sm:p-8">
           <div className="absolute right-4 top-3"><MenuOverlay current="shopping-list" /></div>
-          <PageHeading title="Shopping list" subtitle="Plan ingredients for your next brew." />
-          <p className="text-white/75">The shopping list is part of Batchlogg Premium.</p>
+          <PageHeading title={t("Shopping list")} subtitle={t("Plan ingredients for your next brew.")} />
+          <p className="text-white/75">{t("The shopping list is part of Batchlogg Premium.")}</p>
           <Link href="/premium" className="mt-5 inline-block rounded-lg bg-green-700 px-5 py-3 font-semibold hover:bg-green-600">
-            Explore Premium
+            {t("Explore Premium")}
           </Link>
         </div>
       </main>
@@ -181,15 +189,15 @@ export default function ShoppingListPage() {
           unit: item.unit,
         }));
       if (!missing.length) {
-        setMessage("Your inventory covers every measured ingredient in this recipe.");
+        setMessage(t("Your inventory covers every measured ingredient in this recipe."));
         return;
       }
-      const result = await requestShoppingList("POST", { items: missing });
+      const result = await requestShoppingList("POST", { items: missing }, undefined, t);
       applyAddedShoppingItems(result);
-      setMessage(`Added ${missing.length} ingredient${missing.length === 1 ? "" : "s"} from ${recipe.name}.`);
+      setMessage(`${t("Added")} ${missing.length} ${missing.length === 1 ? t("ingredient") : t("ingredients")} ${t("from")} ${recipe.name}.`);
     } catch (addError) {
       console.error("Could not add recipe ingredients to shopping list", addError);
-      setError(addError instanceof Error ? addError.message : "Could not add recipe ingredients.");
+      setError(addError instanceof Error ? addError.message : t("Could not add recipe ingredients."));
     } finally {
       setBusy(false);
     }
@@ -203,22 +211,22 @@ export default function ShoppingListPage() {
     try {
       const amount = newAmount.trim() ? Number(newAmount.replace(",", ".")) : 0;
       if (!Number.isFinite(amount) || amount < 0) {
-        throw new Error("Enter a valid amount.");
+        throw new Error(t("Enter a valid amount."));
       }
       const result = await requestShoppingList("POST", {
         name: newName,
         amount,
         unit: newUnit,
         recipe_id: null,
-      });
+      }, undefined, t);
       applyAddedShoppingItems(result);
       setNewName("");
       setNewAmount("");
       setNewUnit("");
-      setMessage("Item added.");
+      setMessage(t("Item added."));
     } catch (addError) {
       console.error("Could not add shopping-list item", addError);
-      setError(addError instanceof Error ? addError.message : "Could not add item.");
+      setError(addError instanceof Error ? addError.message : t("Could not add item."));
     } finally {
       setBusy(false);
     }
@@ -227,7 +235,7 @@ export default function ShoppingListPage() {
   async function toggleItem(item: ShoppingItem) {
     setError("");
     try {
-      await requestShoppingList("PATCH", { id: item.id, is_checked: !item.is_checked });
+      await requestShoppingList("PATCH", { id: item.id, is_checked: !item.is_checked }, undefined, t);
       setItems((current) =>
         current.map((entry) =>
           entry.id === item.id ? { ...entry, is_checked: !entry.is_checked } : entry
@@ -235,18 +243,18 @@ export default function ShoppingListPage() {
       );
     } catch (updateError) {
       console.error("Could not update shopping-list item", updateError);
-      setError(updateError instanceof Error ? updateError.message : "Could not update item.");
+      setError(updateError instanceof Error ? updateError.message : t("Could not update item."));
     }
   }
 
   async function removeItem(item: ShoppingItem) {
     setError("");
     try {
-      await requestShoppingList("DELETE", undefined, item.id);
+      await requestShoppingList("DELETE", undefined, item.id, t);
       setItems((current) => current.filter((entry) => entry.id !== item.id));
     } catch (deleteError) {
       console.error("Could not remove shopping-list item", deleteError);
-      setError(deleteError instanceof Error ? deleteError.message : "Could not remove item.");
+      setError(deleteError instanceof Error ? deleteError.message : t("Could not remove item."));
     }
   }
 
@@ -256,13 +264,13 @@ export default function ShoppingListPage() {
     setError("");
     setMessage("");
     try {
-      await requestShoppingList("DELETE");
+      await requestShoppingList("DELETE", undefined, undefined, t);
       setItems([]);
-      setMessage("Shopping list cleared.");
+      setMessage(t("Shopping list cleared."));
       return true;
     } catch (clearError) {
       console.error("Could not clear shopping list", clearError);
-      setError(clearError instanceof Error ? clearError.message : "Could not clear shopping list.");
+      setError(clearError instanceof Error ? clearError.message : t("Could not clear shopping list."));
       return false;
     } finally {
       setBusy(false);
@@ -282,53 +290,53 @@ export default function ShoppingListPage() {
           <MenuOverlay current="shopping-list" />
         </div>
         <PageHeading
-          title="Shopping list"
-          subtitle="Add recipe ingredients you’re short on, then check them off as you shop."
+          title={t("Shopping list")}
+          subtitle={t("Plan ingredients for your next brew.")}
         />
         <PageGuide
-          buttonLabel="Shopping list guide"
-          eyebrow="Get ready for your next brew"
-          title="Gather ingredients without losing track."
-          description="Build a list from a saved recipe or add items yourself, then check them off as you shop."
-          sectionHeading="Using your list"
+          buttonLabel={t("Shopping list guide")}
+          eyebrow={t("Get ready for your next brew")}
+          title={t("Gather ingredients without losing track.")}
+          description={t("Build a list from a saved recipe or add items yourself, then check them off as you shop.")}
+          sectionHeading={t("Using your list")}
           sections={[
             {
-              title: "Add recipe ingredients",
-              description: "Choose a recipe to add measured ingredients you are short on. Matching inventory is taken into account, and repeated ingredients are combined.",
+              title: t("Add recipe ingredients"),
+              description: t("Choose a recipe to add measured ingredients you are short on. Matching inventory is taken into account, and repeated ingredients are combined."),
             },
             {
-              title: "Add items manually",
-              description: "Enter an ingredient or supply, with an optional amount and unit, to keep other brewing needs on the list too.",
+              title: t("Add items manually"),
+              description: t("Enter an ingredient or supply, with an optional amount and unit, to keep other brewing needs on the list too."),
             },
             {
-              title: "Keep track while shopping",
-              description: "Check items off as you find them. Remove individual entries, or clear the whole list when you want to start over.",
+              title: t("Keep track while shopping"),
+              description: t("Check items off as you find them. Remove individual entries, or clear the whole list when you want to start over."),
             },
           ]}
           illustration="shopping"
-          footer="Recipe quantities are compared with matching inventory items when adding missing ingredients."
+          footer={t("Recipe quantities are compared with matching inventory items when adding missing ingredients.")}
         />
 
         {error && <p role="alert" className="mb-4 rounded-lg bg-red-950/50 p-3 text-center text-red-200">{error}</p>}
         {message && <p role="status" className="mb-4 rounded-lg bg-green-950/40 p-3 text-center text-green-200">{message}</p>}
 
         <section id="add-recipe-ingredients" className="mb-8 rounded-xl border border-white/10 bg-white/5 p-4">
-          <h2 className="mb-3 text-lg font-semibold text-green-300">Add ingredients from a recipe</h2>
+          <h2 className="mb-3 text-lg font-semibold text-green-300">{t("Add ingredients from a recipe")}</h2>
           <p className="mb-3 text-sm text-white/60">
-            Repeated ingredients are combined, and quantities are compared with matching inventory items. Ingredients with no recorded amount are added with an empty quantity for you to fill in.
+            {t("Repeated ingredients are combined, and quantities are compared with matching inventory items. Ingredients with no recorded amount are added with an empty quantity for you to fill in.")}
           </p>
           <div className="flex flex-col gap-3 sm:flex-row">
             <label className="flex-1">
-              <span className="sr-only">Choose recipe</span>
+              <span className="sr-only">{t("Choose recipe")}</span>
               <select
                 value={recipeId}
                 onChange={(event) => setRecipeId(event.target.value)}
                 className="w-full rounded-lg border border-white/20 bg-black/40 p-3"
               >
-                <option value="">Choose a recipe</option>
+                <option value="">{t("Choose a recipe")}</option>
                 {recipes.map((recipe) => (
                   <option key={recipe.id} value={recipe.id}>
-                    {recipe.name} · {recipe.type}
+                    {recipe.name} · {isKnownRecipeType(recipe.type) ? t(recipe.type) : recipe.type}
                   </option>
                 ))}
               </select>
@@ -339,30 +347,30 @@ export default function ShoppingListPage() {
               disabled={!recipeId || busy}
               className="rounded-lg border border-green-500/50 bg-green-700/70 px-4 py-3 font-semibold hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {busy ? "Adding…" : "Add missing ingredients"}
+              {busy ? t("Adding…") : t("Add missing ingredients")}
             </button>
           </div>
           {recipes.length === 0 && !loading && (
             <p className="mt-3 text-sm text-white/60">
-              You don’t have any saved recipes yet. <Link href="/my-recipes" className="text-green-300 underline">Create a recipe</Link>.
+              {t("You don’t have any saved recipes yet.")} <Link href="/my-recipes" className="text-green-300 underline">{t("Create a recipe")}</Link>.
             </p>
           )}
         </section>
 
         <section className="mb-8 rounded-xl border border-white/10 bg-white/5 p-4">
-          <h2 className="mb-3 text-lg font-semibold text-green-300">Add an item</h2>
+          <h2 className="mb-3 text-lg font-semibold text-green-300">{t("Add an item")}</h2>
           <form onSubmit={addManualItem} className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr_auto]">
-            <label className="sr-only" htmlFor="shopping-item-name">Item name</label>
+            <label className="sr-only" htmlFor="shopping-item-name">{t("Item name")}</label>
             <input
               id="shopping-item-name"
               value={newName}
               onChange={(event) => setNewName(event.target.value)}
               maxLength={200}
               required
-              placeholder="Ingredient or supply"
+              placeholder={t("Ingredient or supply")}
               className="rounded-lg border border-white/20 bg-black/40 p-3"
             />
-            <label className="sr-only" htmlFor="shopping-item-amount">Amount</label>
+            <label className="sr-only" htmlFor="shopping-item-amount">{t("Amount")}</label>
             <input
               id="shopping-item-amount"
               value={newAmount}
@@ -370,16 +378,16 @@ export default function ShoppingListPage() {
               type="number"
               min="0"
               step="any"
-              placeholder="Amount"
+              placeholder={t("Amount")}
               className="rounded-lg border border-white/20 bg-black/40 p-3"
             />
-            <label className="sr-only" htmlFor="shopping-item-unit">Unit</label>
+            <label className="sr-only" htmlFor="shopping-item-unit">{t("Unit")}</label>
             <input
               id="shopping-item-unit"
               value={newUnit}
               onChange={(event) => setNewUnit(event.target.value)}
               maxLength={32}
-              placeholder="Unit"
+              placeholder={t("Unit")}
               className="rounded-lg border border-white/20 bg-black/40 p-3"
             />
             <button
@@ -387,24 +395,24 @@ export default function ShoppingListPage() {
               disabled={busy}
               className="rounded-lg border border-white/20 bg-white/10 px-4 py-3 font-semibold hover:bg-white/20 disabled:opacity-50"
             >
-              Add
+              {t("Add")}
             </button>
           </form>
         </section>
 
         {loading ? (
-          <p className="py-8 text-center text-white/60">Loading your list…</p>
+          <p className="py-8 text-center text-white/60">{t("Loading your list…")}</p>
         ) : items.length === 0 ? (
           <section className="rounded-xl border border-white/10 bg-white/5 p-6 text-center">
-            <h2 className="font-semibold text-white">Your shopping list is empty.</h2>
+            <h2 className="font-semibold text-white">{t("Your shopping list is empty.")}</h2>
             <p className="mt-2 text-sm text-white/60">
-              Add missing ingredients from a recipe or create a list item manually.
+              {t("Add missing ingredients from a recipe or create a list item manually.")}
             </p>
             <Link
               href="#add-recipe-ingredients"
               className="mt-4 inline-flex min-h-10 items-center rounded-lg border border-green-400/50 bg-green-700 px-4 py-2 text-sm font-semibold text-white hover:bg-green-600"
             >
-              Add ingredients from a recipe
+              {t("Add ingredients from a recipe")}
             </Link>
           </section>
         ) : (
@@ -416,20 +424,20 @@ export default function ShoppingListPage() {
                 disabled={busy}
                 className="rounded-lg border border-red-400/30 bg-red-950/30 px-3 py-2 text-sm font-medium text-red-200 hover:bg-red-950/50 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Clear shopping list
+                {t("Clear shopping list")}
               </button>
             </div>
-            <ShoppingItems title="To buy" items={uncheckedItems} onToggle={toggleItem} onRemove={removeItem} />
+            <ShoppingItems title={t("To buy")} items={uncheckedItems} onToggle={toggleItem} onRemove={removeItem} />
             {checkedItems.length > 0 && (
-              <ShoppingItems title="In your basket" items={checkedItems} onToggle={toggleItem} onRemove={removeItem} />
+              <ShoppingItems title={t("In your basket")} items={checkedItems} onToggle={toggleItem} onRemove={removeItem} />
             )}
           </div>
         )}
         <ConfirmDialog
           open={confirmClearOpen}
-          title="Clear shopping list?"
-          message="This will permanently remove every item from your shopping list. This action cannot be undone."
-          confirmLabel="Clear list"
+          title={t("Clear shopping list?")}
+          message={t("This will permanently remove every item from your shopping list. This action cannot be undone.")}
+          confirmLabel={t("Clear list")}
           onConfirm={clearShoppingList}
           onCancel={() => setConfirmClearOpen(false)}
         />
@@ -449,6 +457,8 @@ function ShoppingItems({
   onToggle: (item: ShoppingItem) => void;
   onRemove: (item: ShoppingItem) => void;
 }) {
+  const { t } = useTranslation();
+
   return (
     <section>
       <h2 className="mb-2 text-lg font-semibold text-green-300">{title}</h2>
@@ -459,22 +469,22 @@ function ShoppingItems({
               type="checkbox"
               checked={item.is_checked}
               onChange={() => onToggle(item)}
-              aria-label={`${item.is_checked ? "Uncheck" : "Check off"} ${item.name}`}
+              aria-label={`${item.is_checked ? t("Uncheck") : t("Check off")} ${item.name}`}
               className="h-5 w-5 accent-green-500"
             />
             <div className={`min-w-0 flex-1 ${item.is_checked ? "text-white/45 line-through" : ""}`}>
               <p className="break-words font-medium">{item.name}</p>
               <p className="text-sm text-white/55">
-                {item.amount > 0 ? `${item.amount} ${item.unit}`.trim() : "Amount not specified"}
+                {item.amount > 0 ? `${item.amount} ${item.unit}`.trim() : t("Amount not specified")}
               </p>
             </div>
             <button
               type="button"
               onClick={() => onRemove(item)}
-              aria-label={`Remove ${item.name}`}
+              aria-label={`${t("Remove")} ${item.name}`}
               className="rounded border border-white/15 px-3 py-1.5 text-sm text-white/70 hover:bg-white/10"
             >
-              Remove
+              {t("Remove")}
             </button>
           </li>
         ))}

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePageGuidesEnabled } from "@/lib/accessibility/usePageGuidesEnabled";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 function InventoryIllustration() {
   return (
@@ -30,8 +31,14 @@ function InventoryIllustration() {
 
 export default function InventoryGuide() {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const { t } = useTranslation();
   const guidesEnabled = usePageGuidesEnabled();
   const dialogRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!guidesEnabled) setOpen(false);
@@ -54,20 +61,20 @@ export default function InventoryGuide() {
   return (
     <>
       {guidesEnabled &&
-        typeof document !== "undefined" &&
+        mounted &&
         createPortal(
           <button
             type="button"
             onClick={() => setOpen(true)}
             className="fixed bottom-4 right-4 z-[90] rounded-full border border-white/15 bg-zinc-950/95 px-4 py-2 text-sm font-semibold text-white/75 shadow-lg hover:border-green-300/40 hover:text-white"
           >
-            Inventory guide
+            {t("Inventory guide")}
           </button>,
           document.body
         )}
       {guidesEnabled &&
         open &&
-        typeof document !== "undefined" &&
+        mounted &&
         createPortal(
           <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/80 p-3 backdrop-blur-sm sm:p-6">
             <section
@@ -112,11 +119,11 @@ export default function InventoryGuide() {
             >
               <div className="flex items-center justify-between border-b border-white/10 px-5 py-4 sm:px-8">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-green-300">
-                  Inventory guide
+                  {t("Inventory guide")}
                 </p>
                 <button
                   type="button"
-                  aria-label="Close inventory guide"
+                  aria-label={t("Close inventory guide")}
                   onClick={() => setOpen(false)}
                   className="rounded-lg px-3 py-2 text-lg leading-none text-white/60 hover:bg-white/10 hover:text-white"
                 >
@@ -128,13 +135,13 @@ export default function InventoryGuide() {
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className="text-xs font-medium uppercase tracking-widest text-green-300">
-                      Keep your brewing supplies in view
+                      {t("Keep your brewing supplies in view")}
                     </p>
                     <h2
                       id="inventory-guide-title"
                       className="mt-3 max-w-lg text-2xl font-bold leading-tight sm:text-3xl"
                     >
-                      Your inventory, explained.
+                      {t("Your inventory, explained.")}
                     </h2>
                   </div>
                   <div className="hidden min-[400px]:block">
@@ -142,8 +149,7 @@ export default function InventoryGuide() {
                   </div>
                 </div>
                 <p className="mt-4 max-w-2xl text-sm leading-7 text-white/65 sm:text-base">
-                  Track what you have, find items quickly, and see what may need
-                  restocking.
+                  {t("Track what you have, find items quickly, and see what may need restocking.")}
                 </p>
 
                 <section aria-labelledby="inventory-guide-tools" className="mt-7">
@@ -151,53 +157,47 @@ export default function InventoryGuide() {
                     id="inventory-guide-tools"
                     className="mb-3 text-xs font-semibold uppercase tracking-widest text-white/45"
                   >
-                    Inventory tools
+                    {t("Inventory tools")}
                   </h3>
                   <ul className="grid gap-3 text-sm leading-6 text-white/65 sm:grid-cols-2">
                     <li className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                       <strong className="text-sm font-semibold text-green-200">
-                        Add and update stock
+                        {t("Add and update stock")}
                       </strong>
                       <p className="mt-1">
-                        Add items with a category, amount, unit, and minimum.
-                        Update current stock to match what you have on hand.
+                        {t("Add items with a category, amount, unit, and minimum. Update current stock to match what you have on hand.")}
                       </p>
                     </li>
                     <li className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                       <strong className="text-sm font-semibold text-green-200">
-                        Search and filter
+                        {t("Search and filter")}
                       </strong>
                       <p className="mt-1">
-                        Search by item or category, then filter by category or
-                        stock level.
+                        {t("Search by item or category, then filter by category or stock level.")}
                       </p>
                     </li>
                     <li className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                       <strong className="text-sm font-semibold text-green-200">
-                        Categories
+                        {t("Categories")}
                       </strong>
                       <p className="mt-1">
-                        Open a category card to browse its items and make
-                        changes.
+                        {t("Open a category card to browse its items and make changes.")}
                       </p>
                     </li>
                     <li className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                       <strong className="text-sm font-semibold text-green-200">
-                        Low stock and restocking
+                        {t("Low stock and restocking")}
                       </strong>
                       <p className="mt-1">
-                        Items at or below their minimum appear under Low stock.
-                        Premium can add them to your shopping list without
-                        changing the recorded amount.
+                        {t("Items at or below their minimum appear under Low stock. Premium can add them to your shopping list without changing the recorded amount.")}
                       </p>
                     </li>
                     <li className="rounded-xl border border-white/10 bg-white/[0.03] p-4 sm:col-span-2">
                       <strong className="text-sm font-semibold text-green-200">
-                        Recent stock history
+                        {t("Recent stock history")}
                       </strong>
                       <p className="mt-1">
-                        Expand the history at the bottom to review stock
-                        increases, adjustments, and ingredient use.
+                        {t("Expand the history at the bottom to review stock increases, adjustments, and ingredient use.")}
                       </p>
                     </li>
                   </ul>
@@ -205,14 +205,14 @@ export default function InventoryGuide() {
 
                 <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-5">
                   <p className="text-xs text-white/40">
-                    Keep your stock record up to date as you brew.
+                    {t("Keep your stock record up to date as you brew.")}
                   </p>
                   <button
                     type="button"
                     onClick={() => setOpen(false)}
                     className="rounded-lg border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-semibold hover:bg-white/10"
                   >
-                    Back to inventory
+                    {t("Back to inventory")}
                   </button>
                 </div>
               </div>

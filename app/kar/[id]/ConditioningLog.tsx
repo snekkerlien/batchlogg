@@ -5,6 +5,8 @@ import { createClient } from "@supabase/supabase-js";
 import * as Actions from "./actions";
 import PublicMentionTextarea from "@/app/components/PublicMentionTextarea";
 import PublicMentionText from "@/app/components/PublicMentionText";
+import { translateBatchError } from "@/lib/i18n/apiErrors";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -87,19 +89,20 @@ function Field({
   placeholder?: string;
   help?: string;
 }) {
+  const { t } = useTranslation();
   return (
     <label className="flex flex-col gap-1.5 text-sm">
-      <span>{label}{required ? " *" : ""}</span>
+      <span>{t(label)}{required ? " *" : ""}</span>
       <input
         name={name}
         type={type}
         required={required}
         step={step}
         min={min}
-        placeholder={placeholder}
+        placeholder={placeholder ? t(placeholder) : undefined}
         className="rounded border border-white/20 bg-black/40 p-3"
       />
-      {help && <span className="text-xs text-white/50">{help}</span>}
+      {help && <span className="text-xs text-white/50">{t(help)}</span>}
     </label>
   );
 }
@@ -177,13 +180,18 @@ function ActionFields({ type }: { type: EntryType }) {
   }
 }
 
-function formatDetailValue(key: string, value: string, details: Record<string, string>) {
+function formatDetailValue(
+  key: string,
+  value: string,
+  details: Record<string, string>,
+  t: (key: string) => string
+) {
   if (key === "amount" || key === "volume") {
     const unit = details.unit ? ` ${details.unit}` : key === "volume" ? " L" : "";
     return `${value}${unit}`;
   }
   if (key === "volume_loss_l") return `${value} L`;
-  if (key === "wait_hours") return `${value} hours`;
+  if (key === "wait_hours") return `${value} ${t("hours")}`;
   if (key === "target_date") return new Date(`${value}T12:00:00`).toLocaleDateString();
   return value;
 }
@@ -197,6 +205,7 @@ export default function ConditioningLog({
   karId: string;
   canContribute: boolean;
 }) {
+  const { t } = useTranslation();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [entryType, setEntryType] = useState<EntryType>("rack");
   const [occurredAt, setOccurredAt] = useState(localDateTime);
@@ -217,18 +226,18 @@ export default function ConditioningLog({
         .order("created_at", { ascending: false });
       if (loadError) {
         console.error("Could not load conditioning entries", loadError);
-        setLoadError("Could not load conditioning entries. Please try again.");
+        setLoadError(t("Could not load conditioning entries. Please try again."));
       } else {
         setEntries((data ?? []) as Entry[]);
         setLoadError("");
       }
     } catch (loadError) {
       console.error("Could not load conditioning entries", loadError);
-      setLoadError("Could not load conditioning entries. Please try again.");
+      setLoadError(t("Could not load conditioning entries. Please try again."));
     } finally {
       setLoading(false);
     }
-  }, [batchId]);
+  }, [batchId, t]);
 
   useEffect(() => {
     void loadEntries();
@@ -250,8 +259,8 @@ export default function ConditioningLog({
       console.error("Could not save conditioning entry", saveError);
       setError(
         saveError instanceof Error
-          ? saveError.message
-          : "Could not save conditioning entry. Please try again."
+          ? translateBatchError(saveError.message, t)
+          : t("Could not save conditioning entry. Please try again.")
       );
     } finally {
       setSaving(false);
@@ -260,16 +269,16 @@ export default function ConditioningLog({
 
   return (
     <section id="conditioning-activity" className="mb-5 mt-5 scroll-mt-6 rounded-xl border border-white/10 bg-white/[0.04] p-5">
-      <h3 className="mb-2 text-lg font-semibold text-green-300">Conditioning activity</h3>
+      <h3 className="mb-2 text-lg font-semibold text-green-300">{t("Conditioning activity")}</h3>
       <p className="mb-4 text-sm text-white/65">
-        Keep a dated record of transfers, treatments, aging, tasting, and other conditioning steps.
+        {t("Keep a dated record of transfers, treatments, aging, tasting, and other conditioning steps.")}
       </p>
 
       {canContribute && (
         <form onSubmit={handleSubmit} className="mb-6 rounded-lg border border-white/10 bg-black/20 p-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="flex flex-col gap-1.5 text-sm">
-              <span>Action</span>
+              <span>{t("Action")}</span>
               <select
                 name="entry_type"
                 value={entryType}
@@ -277,12 +286,12 @@ export default function ConditioningLog({
                 className="rounded border border-white/20 bg-black/40 p-3"
               >
                 {entryTypes.map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
+                  <option key={value} value={value}>{t(label)}</option>
                 ))}
               </select>
             </label>
             <label className="flex flex-col gap-1.5 text-sm">
-              <span>Date and time</span>
+              <span>{t("Date and time")}</span>
               <input
                 name="occurred_at"
                 type="datetime-local"
@@ -306,7 +315,7 @@ export default function ConditioningLog({
             <ActionFields type={entryType} />
           </div>
           <label className="mt-4 flex w-full flex-col gap-1.5 text-sm">
-            <span>Notes (optional)</span>
+            <span>{t("Notes (optional)")}</span>
             <PublicMentionTextarea
               name="notes"
               maxLength={3000}
@@ -314,13 +323,13 @@ export default function ConditioningLog({
               className="min-h-32 w-full resize-y rounded border border-white/20 bg-black/40 p-3"
             />
           </label>
-          {error && <p role="alert" className="mt-3 text-sm text-red-300">{error}</p>}
+          {error && <p role="alert" className="mt-3 text-sm text-red-300">{translateBatchError(error, t)}</p>}
           <button
             type="submit"
             disabled={saving}
             className="mt-4 rounded-lg border border-green-500 bg-green-700 px-4 py-3 font-semibold hover:bg-green-600 disabled:cursor-wait disabled:opacity-50"
           >
-            {saving ? "Saving…" : "Add conditioning entry"}
+            {saving ? t("Saving…") : t("Add conditioning entry")}
           </button>
         </form>
       )}
@@ -329,14 +338,14 @@ export default function ConditioningLog({
         <div className="mb-4 text-sm text-red-300">
           <p role="alert">{loadError}</p>
           <button type="button" onClick={() => void loadEntries()} className="mt-1 underline">
-            Try again
+            {t("Try again")}
           </button>
         </div>
       )}
       {loading ? (
-        <p className="text-sm text-white/60">Loading conditioning history…</p>
+        <p className="text-sm text-white/60">{t("Loading conditioning history…")}</p>
       ) : loadError ? null : entries.length === 0 ? (
-        <p className="text-sm text-white/60">No conditioning activity has been recorded yet.</p>
+        <p className="text-sm text-white/60">{t("No conditioning activity has been recorded yet.")}</p>
       ) : (
         <ol className="space-y-3">
           {entries.map((entry) => {
@@ -347,7 +356,7 @@ export default function ConditioningLog({
             return (
               <li key={entry.id} className="rounded-lg border border-white/10 bg-black/20 p-4">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                  <h4 className="font-semibold text-white">{entryLabels[entry.entry_type] ?? "Conditioning action"}</h4>
+                  <h4 className="font-semibold text-white">{t(entryLabels[entry.entry_type] ?? "Conditioning action")}</h4>
                   <time className="text-sm text-white/55" dateTime={entry.occurred_at}>
                     {new Date(entry.occurred_at).toLocaleString()}
                   </time>
@@ -356,9 +365,9 @@ export default function ConditioningLog({
                   <dl className="mt-3 grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
                     {detailRows.map(([key, value]) => (
                       <div key={key}>
-                        <dt className="text-xs text-white/50">{detailLabels[key] ?? key}</dt>
+                        <dt className="text-xs text-white/50">{detailLabels[key] ? t(detailLabels[key]) : key}</dt>
                         <dd className="whitespace-pre-wrap text-white/85">
-                          {formatDetailValue(key, value, details)}
+                          {formatDetailValue(key, value, details, t)}
                         </dd>
                       </div>
                     ))}

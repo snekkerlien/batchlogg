@@ -11,6 +11,7 @@ import ReportContentButton from "@/app/components/ReportContentButton";
 import { Qty, UnitAwareText } from "@/app/components/Units";
 import PublicMentionText from "@/app/components/PublicMentionText";
 import { formatSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
+import TranslatedText from "@/app/components/TranslatedText";
 
 type KarDetailParams = {
   username: string;
@@ -52,7 +53,7 @@ export default async function KarDetailPage({
   if (!user) {
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
-        <h1 className="text-2xl font-bold">You must be logged in</h1>
+        <h1 className="text-2xl font-bold"><TranslatedText text="You must be logged in" /></h1>
       </main>
     );
   }
@@ -67,7 +68,7 @@ export default async function KarDetailPage({
   if (!profile) {
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
-        <h1 className="text-2xl font-bold">Profile not found</h1>
+        <h1 className="text-2xl font-bold"><TranslatedText text="Profile not found" /></h1>
       </main>
     );
   }
@@ -84,7 +85,7 @@ export default async function KarDetailPage({
   if (!kar) {
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
-        <h1 className="text-2xl font-bold">Vessel not found</h1>
+        <h1 className="text-2xl font-bold"><TranslatedText text="Vessel not found" /></h1>
       </main>
     );
   }
@@ -120,15 +121,15 @@ batch = translateOldRecipe(batch);
 
         {/* HEADER */}
         <PageHeading
-          title="Vessel"
+          title={<TranslatedText text="Vessel" />}
           subtitle={
             !batch
-              ? "This vessel is currently empty."
+              ? <TranslatedText text="This vessel is currently empty." />
               : batch.status === "Conditioning"
-                ? "Conditioning"
+                ? <TranslatedText text="Conditioning" />
                 : ["Sekundær", "secondary"].includes(batch.status)
-                  ? "Secondary fermentation"
-                  : "Primary fermentation"
+                  ? <TranslatedText text="Secondary fermentation" />
+                  : <TranslatedText text="Primary fermentation" />
           }
         />
 
@@ -136,7 +137,7 @@ batch = translateOldRecipe(batch);
         {!batch && (
           <>
             <p className="text-center opacity-70 mb-10">
-              This vessel is currently empty.
+              <TranslatedText text="This vessel is currently empty." />
             </p>
           </>
         )}
@@ -158,45 +159,45 @@ batch = translateOldRecipe(batch);
               {batch.name}
             </h3>
 
-            <p className="opacity-80">Batch number: {batch.batchnummer}</p>
+            <p className="opacity-80"><TranslatedText text="Batch number:" /> {batch.batchnummer}</p>
             <p className="opacity-80">
-                Start date: {new Date(batch.startdato).toLocaleDateString("en-US")}
+                <TranslatedText text="Start date:" /> {new Date(batch.startdato).toLocaleDateString("en-US")}
                 <span className="ml-2 opacity-70">
-                  ({daysSince(batch.startdato)} {dayLabel(daysSince(batch.startdato))})
+                  ({daysSince(batch.startdato)} <TranslatedText text={dayLabel(daysSince(batch.startdato))} />)
                 </span>
               </p>
-            <p className="opacity-80">Volume: <Qty kind="volume" value={batch.volume_l} /></p>
+            <p className="opacity-80"><TranslatedText text="Volume:" /> <Qty kind="volume" value={batch.volume_l} /></p>
             <p className="opacity-80">OG: {batch.og}</p>
 
             {["Sekundær", "secondary"].includes(batch.status) && (
               <p className="opacity-80 mt-2">
-                Secondary since:{" "}
+                <TranslatedText text="Secondary since:" />{" "}
                 {new Date(batch.secondary_startdate).toLocaleDateString("en-US")}
               </p>
             )}
 
             {batch.status === "Conditioning" && batch.conditioning_startdate && (
               <p className="opacity-80 mt-2">
-                Conditioning since:{" "}
+                <TranslatedText text="Conditioning since:" />{" "}
                 {new Date(batch.conditioning_startdate).toLocaleDateString("en-US")}
               </p>
             )}
 
             {batch.secondary_additions && (
               <p className="opacity-80 mt-2 whitespace-pre-wrap">
-                Additions:<br /><UnitAwareText text={formatSecondaryAdditions(batch.secondary_additions)} />
+                <TranslatedText text="Additions:" /><br /><UnitAwareText text={formatSecondaryAdditions(batch.secondary_additions)} />
               </p>
             )}
 
             {batch.secondary_notes && (
               <p className="opacity-80 mt-2 whitespace-pre-wrap">
-                Notes:<br /><PublicMentionText text={batch.secondary_notes} unitAware />
+                <TranslatedText text="Notes:" /><br /><PublicMentionText text={batch.secondary_notes} unitAware />
               </p>
             )}
 
             {/* ⭐ UNIVERSAL RECIPE RENDERER */}
 <div className="mt-6 p-4 bg-white/5 border border-white/10 rounded-lg">
-  <h3 className="text-xl font-bold mb-3 text-green-300">Recipe</h3>
+  <h3 className="text-xl font-bold mb-3 text-green-300"><TranslatedText text="Recipe" /></h3>
 
   <div className="space-y-4 text-sm whitespace-pre-wrap">
 
@@ -208,30 +209,30 @@ batch = translateOldRecipe(batch);
     {/* ⭐ MEAD */}
     {batch.type === "Mead" && (
       <>
-        <p><strong>Honey:</strong> {batch.honey_type || "Unknown"} – <Qty kind="kg" value={batch.honey_amount} fallback="?" /></p>
+        <p><strong><TranslatedText text="Honey:" /></strong> {batch.honey_type || <TranslatedText text="Unknown" />} – <Qty kind="kg" value={batch.honey_amount} fallback="?" /></p>
 
         {batch.fruits?.length > 0 && (
           <div>
-            <strong>Fruits:</strong>
+            <strong><TranslatedText text="Fruits:" /></strong>
             {batch.fruits.map((f: any, i: number) => (
               <p key={i}>{f.name}: {f.amount}{f.unit}</p>
             ))}
           </div>
         )}
 
-        <p className="whitespace-pre-line"><strong>Additives:</strong><br /><UnitAwareText text={batch.additives || "None"} /></p>
-        <p className="whitespace-pre-line"><strong>Full process:</strong><br /><PublicMentionText text={batch.full_process || "No process described"} unitAware /></p>
-        <p className="whitespace-pre-line"><strong>Notes:</strong><br /><PublicMentionText text={batch.notes || "No notes"} unitAware /></p>
+        <p className="whitespace-pre-line"><strong><TranslatedText text="Additives:" /></strong><br />{batch.additives ? <UnitAwareText text={batch.additives} /> : <TranslatedText text="None" />}</p>
+        <p className="whitespace-pre-line"><strong><TranslatedText text="Full process:" /></strong><br />{batch.full_process ? <PublicMentionText text={batch.full_process} unitAware /> : <TranslatedText text="No process described" />}</p>
+        <p className="whitespace-pre-line"><strong><TranslatedText text="Notes:" /></strong><br />{batch.notes ? <PublicMentionText text={batch.notes} unitAware /> : <TranslatedText text="No notes" />}</p>
       </>
     )}
 
     {/* ⭐ BEER */}
     {batch.type === "Beer" && (
       <>
-        {batch.beer_style && <p><strong>Beer style:</strong> {batch.beer_style}</p>}
+        {batch.beer_style && <p><strong><TranslatedText text="Beer style:" /></strong> {batch.beer_style}</p>}
         {batch.malts?.length > 0 && (
           <div>
-            <strong>Malt additions:</strong>
+            <strong><TranslatedText text="Malt additions:" /></strong>
             {batch.malts.map((m: any, i: number) => (
               <p key={i}>{m.name}: <Qty kind="kg" value={m.amount} /></p>
             ))}
@@ -240,7 +241,7 @@ batch = translateOldRecipe(batch);
 
         {batch.hops?.length > 0 && (
           <div>
-            <strong>Hop schedule:</strong>
+            <strong><TranslatedText text="Hop schedule:" /></strong>
             {batch.hops.map((h: any, i: number) => (
               <p key={i}>{h.name}: <Qty kind="g" value={h.amount} maxDecimals={0} /> @ {h.boil} min</p>
             ))}
@@ -249,17 +250,17 @@ batch = translateOldRecipe(batch);
 
         {batch.dry_hops?.length > 0 && (
           <div>
-            <strong>Dry hops:</strong>
+            <strong><TranslatedText text="Dry hops:" /></strong>
             {batch.dry_hops.map((h: any, i: number) => (
-              <p key={i}>{h.name}: <Qty kind="g" value={h.amount} maxDecimals={0} /> — {h.contact} days</p>
+              <p key={i}>{h.name}: <Qty kind="g" value={h.amount} maxDecimals={0} /> — {h.contact} <TranslatedText text={Number(h.contact) === 1 ? "day" : "days"} /></p>
             ))}
           </div>
         )}
 
-        <p><strong>Total boil time:</strong> {batch.boil_time || "Unknown"} min</p>
-        <p className="whitespace-pre-line"><strong>Additives:</strong><br /><UnitAwareText text={batch.additives || "None"} /></p>
-        <p className="whitespace-pre-line"><strong>Full process:</strong><br /><PublicMentionText text={batch.full_process || "No process described"} unitAware /></p>
-        <p className="whitespace-pre-line"><strong>Notes:</strong><br /><PublicMentionText text={batch.notes || "No notes"} unitAware /></p>
+        <p><strong><TranslatedText text="Total boil time:" /></strong> {batch.boil_time || <TranslatedText text="Unknown" />} <TranslatedText text={batch.boil_time === 1 ? "minute" : "minutes"} /></p>
+        <p className="whitespace-pre-line"><strong><TranslatedText text="Additives:" /></strong><br />{batch.additives ? <UnitAwareText text={batch.additives} /> : <TranslatedText text="None" />}</p>
+        <p className="whitespace-pre-line"><strong><TranslatedText text="Full process:" /></strong><br />{batch.full_process ? <PublicMentionText text={batch.full_process} unitAware /> : <TranslatedText text="No process described" />}</p>
+        <p className="whitespace-pre-line"><strong><TranslatedText text="Notes:" /></strong><br />{batch.notes ? <PublicMentionText text={batch.notes} unitAware /> : <TranslatedText text="No notes" />}</p>
       </>
     )}
 
@@ -268,18 +269,18 @@ batch = translateOldRecipe(batch);
       <>
         {batch.malts?.length > 0 && (
           <div>
-            <strong>Malt additions:</strong>
+            <strong><TranslatedText text="Malt additions:" /></strong>
             {batch.malts.map((m: any, i: number) => (
               <p key={i}>{m.name}: <Qty kind="kg" value={m.amount} /></p>
             ))}
           </div>
         )}
 
-        <p><strong>Boil time:</strong> {batch.boil_time || "Unknown"} min</p>
-        <p><strong>Honey:</strong> <Qty kind="kg" value={batch.honey_amount} fallback="?" /></p>
-        <p className="whitespace-pre-line"><strong>Additives:</strong><br /><UnitAwareText text={batch.additives || "None"} /></p>
-        <p className="whitespace-pre-line"><strong>Full process:</strong><br /><PublicMentionText text={batch.full_process || "No process described"} unitAware /></p>
-        <p className="whitespace-pre-line"><strong>Notes:</strong><br /><PublicMentionText text={batch.notes || "No notes"} unitAware /></p>
+        <p><strong><TranslatedText text="Boil time:" /></strong> {batch.boil_time || <TranslatedText text="Unknown" />} <TranslatedText text={batch.boil_time === 1 ? "minute" : "minutes"} /></p>
+        <p><strong><TranslatedText text="Honey:" /></strong> <Qty kind="kg" value={batch.honey_amount} fallback="?" /></p>
+        <p className="whitespace-pre-line"><strong><TranslatedText text="Additives:" /></strong><br />{batch.additives ? <UnitAwareText text={batch.additives} /> : <TranslatedText text="None" />}</p>
+        <p className="whitespace-pre-line"><strong><TranslatedText text="Full process:" /></strong><br />{batch.full_process ? <PublicMentionText text={batch.full_process} unitAware /> : <TranslatedText text="No process described" />}</p>
+        <p className="whitespace-pre-line"><strong><TranslatedText text="Notes:" /></strong><br />{batch.notes ? <PublicMentionText text={batch.notes} unitAware /> : <TranslatedText text="No notes" />}</p>
       </>
     )}
 
@@ -288,11 +289,11 @@ batch = translateOldRecipe(batch);
       batch.type === "Wine" ||
       batch.type === "Seltzer") && (
       <>
-        <p><strong>Juice type:</strong> {batch.juice_type || "Unknown"}</p>
-        <p><strong>Sugar added:</strong> <Qty kind="kg" value={batch.sugar_amount} fallback="?" /></p>
-        <p className="whitespace-pre-line"><strong>Additives:</strong><br /><UnitAwareText text={batch.additives || "None"} /></p>
-        <p className="whitespace-pre-line"><strong>Full process:</strong><br /><PublicMentionText text={batch.full_process || "No process described"} unitAware /></p>
-        <p className="whitespace-pre-line"><strong>Notes:</strong><br /><PublicMentionText text={batch.notes || "No notes"} unitAware /></p>
+        <p><strong><TranslatedText text="Juice type:" /></strong> {batch.juice_type || <TranslatedText text="Unknown" />}</p>
+        <p><strong><TranslatedText text="Sugar added:" /></strong> <Qty kind="kg" value={batch.sugar_amount} fallback="?" /></p>
+        <p className="whitespace-pre-line"><strong><TranslatedText text="Additives:" /></strong><br />{batch.additives ? <UnitAwareText text={batch.additives} /> : <TranslatedText text="None" />}</p>
+        <p className="whitespace-pre-line"><strong><TranslatedText text="Full process:" /></strong><br />{batch.full_process ? <PublicMentionText text={batch.full_process} unitAware /> : <TranslatedText text="No process described" />}</p>
+        <p className="whitespace-pre-line"><strong><TranslatedText text="Notes:" /></strong><br />{batch.notes ? <PublicMentionText text={batch.notes} unitAware /> : <TranslatedText text="No notes" />}</p>
       </>
     )}
 
@@ -300,11 +301,11 @@ batch = translateOldRecipe(batch);
     {batch.type === "Other" && (
       <>
         {batch.other_style && (
-          <p><strong>Style or type:</strong> {batch.other_style}</p>
+          <p><strong><TranslatedText text="Style or type:" /></strong> {batch.other_style}</p>
         )}
         {batch.ingredients?.length > 0 && (
           <div>
-            <strong>Ingredients:</strong>
+            <strong><TranslatedText text="Ingredients:" /></strong>
             {batch.ingredients.map((ing: any, idx: number) => (
               <p key={idx}>{ing.name}: {ing.amount}{ing.unit}</p>
             ))}
@@ -313,15 +314,15 @@ batch = translateOldRecipe(batch);
 
         {batch.steps?.length > 0 && (
           <div>
-            <strong>Process steps:</strong>
+            <strong><TranslatedText text="Process steps:" /></strong>
             {batch.steps.map((s: string, idx: number) => (
               <p key={idx}>{idx + 1}. {s}</p>
             ))}
           </div>
         )}
 
-        <p className="whitespace-pre-line"><strong>Additives:</strong><br /><UnitAwareText text={batch.additives || "None"} /></p>
-        <p className="whitespace-pre-line"><strong>Notes:</strong><br /><PublicMentionText text={batch.notes || "No notes"} unitAware /></p>
+        <p className="whitespace-pre-line"><strong><TranslatedText text="Additives:" /></strong><br />{batch.additives ? <UnitAwareText text={batch.additives} /> : <TranslatedText text="None" />}</p>
+        <p className="whitespace-pre-line"><strong><TranslatedText text="Notes:" /></strong><br />{batch.notes ? <PublicMentionText text={batch.notes} unitAware /> : <TranslatedText text="No notes" />}</p>
       </>
     )}
 

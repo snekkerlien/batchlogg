@@ -11,6 +11,7 @@ import PublicPageNavigation from "@/app/components/PublicPageNavigation";
 import RecipePresentation from "@/app/components/RecipePresentation";
 import StartPublicRecipeButton from "@/app/components/StartPublicRecipeButton";
 import PublicMentionText from "@/app/components/PublicMentionText";
+import TranslatedText from "@/app/components/TranslatedText";
 
 export default async function RecipeNotesPage({
   params,
@@ -164,17 +165,20 @@ export default async function RecipeNotesPage({
         <PublicPageNavigation current="profiles" />
         <PageHeading
           title={recipe.name.charAt(0).toUpperCase() + recipe.name.slice(1)}
-          subtitle={`Created by ${profile.username} · ${
-            recipe.created_at
+          subtitle={<>
+            <TranslatedText text="Created by" /> {profile.username} ·{" "}
+            {recipe.created_at
               ? new Date(recipe.created_at).toLocaleDateString("en-GB")
-              : "date unavailable"
-          }. Recipe details${viewingOwnProfile ? " and note log" : ""}.`}
+              : <TranslatedText text="date unavailable" />}
+            . <TranslatedText text="Recipe details" />
+            {viewingOwnProfile && <> <TranslatedText text="and note log" /></>}.
+          </>}
         />
 
         <p className="mb-6 text-center text-sm text-white/60">
           {recipe.copyright_free === true
-            ? `Marked copyright-free by ${profile.username}.`
-            : `Copyright © ${recipe.created_at ? new Date(recipe.created_at).getFullYear() : new Date().getFullYear()} ${profile.username}. All rights reserved.`}
+            ? <><TranslatedText text="Marked copyright-free by" /> {profile.username}.</>
+            : <><TranslatedText text="Copyright ©" /> {recipe.created_at ? new Date(recipe.created_at).getFullYear() : new Date().getFullYear()} {profile.username}. <TranslatedText text="All rights reserved." /></>}
         </p>
 
         {user && recipe.is_public && profile.is_public && (
@@ -187,17 +191,16 @@ export default async function RecipeNotesPage({
         {recipe.is_public && (
           <section className="mt-8 rounded-xl border border-white/10 bg-white/[0.04] p-5 sm:p-6">
             <h2 className="mb-2 border-b border-white/10 pb-3 text-lg font-semibold text-green-300">
-              Community brew results
+              <TranslatedText text="Community brew results" />
             </h2>
             <p className="mb-4 text-sm text-white/60">
-              Results shared by brewers who made this recipe. Tasting notes appear
-              only when the brewer has opted to share them.
+              <TranslatedText text="Results shared by brewers who made this recipe. Tasting notes appear only when the brewer has opted to share them." />
             </p>
             {communityOutcomes.length === 0 ? (
               <p className="text-sm text-white/60">
                 {outcomesMigrationRequired
-                  ? "Community results will be available after the batch lifecycle database migration is applied."
-                  : "No community results have been shared for this recipe yet."}
+                  ? <TranslatedText text="Community results will be available after the batch lifecycle database migration is applied." />
+                  : <TranslatedText text="No community results have been shared for this recipe yet." />}
               </p>
             ) : (
               <div className="space-y-4">
@@ -216,7 +219,7 @@ export default async function RecipeNotesPage({
                       className="rounded-lg border border-white/10 bg-black/20 p-4"
                     >
                       <p className="text-sm text-white/65">
-                        Brewed by{" "}
+                        <TranslatedText text="Brewed by" />{" "}
                         <Link
                           href={`/members/${encodeURIComponent(outcome.brewerUsername)}`}
                           className="font-semibold text-green-200 underline"
@@ -234,9 +237,9 @@ export default async function RecipeNotesPage({
                             <dt className="text-white/50">OG</dt>
                             <dd className="font-medium">
                               {plannedOg !== null && Number.isFinite(plannedOg)
-                                ? `${plannedOg.toFixed(3)} target · `
+                                ? <><TranslatedText text="Target:" /> {plannedOg.toFixed(3)} · </>
                                 : ""}
-                              {Number(outcome.og).toFixed(3)} actual
+                              {Number(outcome.og).toFixed(3)} <TranslatedText text="actual" />
                             </dd>
                           </div>
                         )}
@@ -251,15 +254,15 @@ export default async function RecipeNotesPage({
                             <dt className="text-white/50">ABV</dt>
                             <dd className="font-medium">
                               {plannedAbv !== null && Number.isFinite(plannedAbv)
-                                ? `${plannedAbv.toFixed(1)}% target · `
+                                ? <><TranslatedText text="Target:" /> {plannedAbv.toFixed(1)}% · </>
                                 : ""}
-                              {Number(outcome.abv).toFixed(1)}% actual
+                              {Number(outcome.abv).toFixed(1)}% <TranslatedText text="actual" />
                             </dd>
                           </div>
                         )}
                         {outcome.packaged_volume_l != null && (
                           <div>
-                            <dt className="text-white/50">Packaged</dt>
+                            <dt className="text-white/50"><TranslatedText text="Packaged" /></dt>
                             <dd className="font-medium">
                               {Number(outcome.packaged_volume_l).toFixed(1)} L
                             </dd>
@@ -291,21 +294,21 @@ export default async function RecipeNotesPage({
 
         {sourceRecipe && sourceAuthor && (
           <p className="mt-5 text-sm text-white/65">
-            A version of{" "}
+            <TranslatedText text="A version of" />{" "}
             <Link
               href={`/members/${encodeURIComponent(sourceAuthor.username)}/recipes/${sourceRecipe.id}`}
               className="text-green-200 underline"
             >
               {sourceRecipe.name}
             </Link>
-            {" "}by {sourceAuthor.username}
+            {" "}<TranslatedText text="by" /> {sourceAuthor.username}
           </p>
         )}
 
         {publicForks.length > 0 && (
           <section className="mt-8 rounded-xl border border-white/10 bg-white/[0.04] p-5 sm:p-6">
             <h2 className="mb-4 border-b border-white/10 pb-3 text-lg font-semibold text-green-300">
-              Community versions
+              <TranslatedText text="Community versions" />
             </h2>
             <ul className="space-y-2">
               {publicForks.map((fork) => (
@@ -316,7 +319,7 @@ export default async function RecipeNotesPage({
                   >
                     {fork.name}
                   </Link>
-                  <span className="text-white/60"> by {fork.author}</span>
+                  <span className="text-white/60"> <TranslatedText text="by" /> {fork.author}</span>
                 </li>
               ))}
             </ul>
@@ -326,7 +329,7 @@ export default async function RecipeNotesPage({
         {viewingOwnProfile && (
           <section className="mt-8 rounded-xl border border-white/10 bg-white/[0.04] p-5 sm:p-6">
             <h2 className="mb-4 border-b border-white/10 pb-3 text-lg font-semibold text-green-300">
-              Recipe note log
+              <TranslatedText text="Recipe note log" />
             </h2>
             {notes.length > 0 ? (
               <div className="space-y-4">
@@ -336,23 +339,29 @@ export default async function RecipeNotesPage({
                       {new Date(note.created_at).toLocaleDateString("en-GB")}
                     </p>
                     {note.note_type === "image" && note.image_url && (
-                      <Image
-                        src={note.image_url}
-                        alt="Recipe note"
-                        width={960}
-                        height={720}
-                        sizes="(max-width: 768px) 100vw, 768px"
-                        unoptimized
-                        loading="lazy"
-                        className="mt-3 rounded-lg"
-                      />
+                      <>
+                        <span id={`recipe-note-${note.id}`} className="sr-only">
+                          <TranslatedText text="Recipe note" />
+                        </span>
+                        <Image
+                          src={note.image_url}
+                          alt=""
+                          aria-labelledby={`recipe-note-${note.id}`}
+                          width={960}
+                          height={720}
+                          sizes="(max-width: 768px) 100vw, 768px"
+                          unoptimized
+                          loading="lazy"
+                          className="mt-3 rounded-lg"
+                        />
+                      </>
                     )}
                     {note.note && <p className="mt-3 whitespace-pre-line"><PublicMentionText text={note.note} unitAware /></p>}
                   </article>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-white/60">No recipe notes yet.</p>
+              <p className="text-sm text-white/60"><TranslatedText text="No recipe notes yet." /></p>
             )}
           </section>
         )}

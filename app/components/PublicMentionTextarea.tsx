@@ -4,6 +4,8 @@ import { Fragment, useEffect, useId, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import Link from "next/link";
 import { parsePublicMentions } from "@/lib/community/mentions";
+import { translateCommunityError } from "@/lib/i18n/apiErrors";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface MentionChoice {
   type: "recipe" | "batch";
@@ -156,6 +158,7 @@ export default function PublicMentionTextarea({
   required?: boolean;
   onKeyDown?: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
 }) {
+  const { t } = useTranslation();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const listboxId = useId();
   const [uncontrolledValue, setUncontrolledValue] = useState(defaultValue);
@@ -191,7 +194,7 @@ export default function PublicMentionTextarea({
           signal: controller.signal,
         });
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Could not load public tags.");
+        if (!response.ok) throw new Error(data.error || t("Could not load public tags."));
         setChoices(data.mentions);
         setSelectedIndex(0);
       } catch (error) {
@@ -199,7 +202,11 @@ export default function PublicMentionTextarea({
         console.error("Could not load public mention suggestions", error);
         setChoices([]);
         setSuggestionError(
-          error instanceof Error ? error.message : "Could not load public tags."
+          error instanceof Error &&
+            !(error instanceof TypeError) &&
+            !(error instanceof SyntaxError)
+            ? error.message
+            : t("Could not load public tags.")
         );
       } finally {
         if (!controller.signal.aborted) setLoading(false);
@@ -209,7 +216,7 @@ export default function PublicMentionTextarea({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [trigger]);
+  }, [trigger, t]);
 
   function updateTrigger(value: string, caret: number) {
     setTrigger(findTrigger(value, caret));
@@ -310,7 +317,7 @@ export default function PublicMentionTextarea({
       />
       {selectedMentions.length > 0 && (
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-white/55">Tagged:</span>
+          <span className="text-white/55">{t("Tagged:")}</span>
           {selectedMentions.map((mention, index) => (
             <Fragment key={`${mention.type}:${mention.id}:${index}`}>
             <Link
@@ -342,25 +349,25 @@ export default function PublicMentionTextarea({
           <div className="flex items-center justify-between border-b border-white/10 px-2 pb-2">
             <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
               <span className="h-1.5 w-1.5 rounded-full bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.7)]" />
-              Public {trigger.type === "recipe" ? "recipes" : "batches"}
+              {t(trigger.type === "recipe" ? "Public recipes" : "Public batches")}
             </span>
-            <span className="text-[10px] text-white/35">↑↓ navigate · ↵ select · esc close</span>
+            <span className="text-[10px] text-white/35">{t("↑↓ navigate · ↵ select · esc close")}</span>
           </div>
           <ul
             id={listboxId}
             role="listbox"
-            aria-label={trigger.type === "recipe" ? "Public recipes" : "Public batches"}
+            aria-label={t(trigger.type === "recipe" ? "Public recipes" : "Public batches")}
             className="max-h-56 space-y-1 overflow-y-auto pt-1"
           >
             {loading && (
               <li className="flex items-center gap-2 px-3 py-3 text-sm text-white/60">
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-green-300" />
-                Finding public {trigger.type === "recipe" ? "recipes" : "batches"}…
+                {t(trigger.type === "recipe" ? "Finding public recipes…" : "Finding public batches…")}
               </li>
             )}
             {suggestionError && (
               <li role="alert" className="rounded-lg bg-amber-400/10 px-3 py-2 text-sm text-amber-200">
-                {suggestionError}
+                {translateCommunityError(suggestionError, t)}
               </li>
             )}
             {choices.map((choice, index) => (
@@ -424,7 +431,7 @@ export default function PublicMentionTextarea({
             ))}
             {!loading && !suggestionError && choices.length === 0 && (
               <li className="px-3 py-4 text-sm text-white/55">
-                No public {trigger.type === "recipe" ? "recipes" : "batches"} found.
+                {t(trigger.type === "recipe" ? "No public recipes found." : "No public batches found.")}
               </li>
             )}
           </ul>
@@ -432,12 +439,11 @@ export default function PublicMentionTextarea({
       )}
       {!trigger && suggestionError && (
         <p role="alert" className="mt-1 text-xs text-amber-200">
-          {suggestionError}
+          {translateCommunityError(suggestionError, t)}
         </p>
       )}
       <p className="mt-1 text-xs text-white/45">
-        Type <kbd className="rounded border border-white/20 px-1">@r</kbd> for public recipes or{" "}
-        <kbd className="rounded border border-white/20 px-1">@b</kbd> for public batches. Use ↑↓ to select, Enter to tag, Esc to close.
+        {t("Type @r for public recipes or @b for public batches. Use ↑↓ to select, Enter to tag, Esc to close.")}
       </p>
     </div>
   );

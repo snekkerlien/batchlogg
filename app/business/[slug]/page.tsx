@@ -6,8 +6,10 @@ import { businessTypeLabel } from "@/lib/brewery/business";
 import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
+import TranslatedText from "@/app/components/TranslatedText";
 import ProductCardTitle from "../ProductCardTitle";
 import { isBeerKitProductCategory } from "@/lib/brewery/products";
+import { breweryProductCategoryLabel } from "@/lib/brewery/productCategories";
 
 export const dynamic = "force-dynamic";
 
@@ -87,40 +89,46 @@ export default async function BreweryPublicPage({
         <div className="absolute right-4 top-3 z-40"><MenuOverlay current="brewery" /></div>
         <div className="absolute left-4 top-3 z-40"><BackButton /></div>
         <div className="mb-8">
-          {brewery.logo_url && <img src={brewery.logo_url} alt={`${brewery.name} logo`} className="mx-auto mb-5 h-28 max-w-full rounded-xl object-contain" />}
-          <PageHeading title={brewery.name} subtitle={[businessTypeLabel(brewery.business_type, brewery.business_type_other), brewery.location].filter(Boolean).join(" · ")} />
+          {brewery.logo_url && <img src={brewery.logo_url} alt="" className="mx-auto mb-5 h-28 max-w-full rounded-xl object-contain" />}
+          <PageHeading
+            title={brewery.name}
+            subtitle={<>{brewery.business_type === "other" && brewery.business_type_other
+              ? brewery.business_type_other
+              : <TranslatedText text={businessTypeLabel(brewery.business_type)} />}{brewery.location && <> · {brewery.location}</>}</>}
+          />
           {brewery.description && <p className="mx-auto mt-5 max-w-3xl whitespace-pre-line text-center leading-7 text-white/75">{brewery.description}</p>}
-          {brewery.website_url && <p className="mt-4 text-center"><a href={brewery.website_url} target="_blank" rel="noreferrer" className="text-green-200 underline underline-offset-4">Visit website</a></p>}
+          {brewery.website_url && <p className="mt-4 text-center"><a href={brewery.website_url} target="_blank" rel="noreferrer" className="text-green-200 underline underline-offset-4"><TranslatedText text="Visit website" /></a></p>}
         </div>
         <section aria-labelledby="brewery-products-heading">
-          <h2 id="brewery-products-heading" className="mb-5 text-center text-2xl font-semibold text-green-200">Products</h2>
+          <h2 id="brewery-products-heading" className="mb-5 text-center text-2xl font-semibold text-green-200"><TranslatedText text="Products" /></h2>
           {sortedProducts.length > 0 && (
             <form method="get" className="mb-5 flex flex-wrap items-end justify-end gap-3">
               <label htmlFor="product-sort" className="text-sm text-white/75">
-                Sort by
+                <TranslatedText text="Sort by" />
                 <select
                   id="product-sort"
                   name="sort"
                   defaultValue={sortBy}
                   className="ml-2 rounded-lg border border-white/20 bg-zinc-900 px-3 py-2 text-white"
                 >
-                  <option value="date">Date · newest first</option>
-                  <option value="name">Name · A–Z</option>
-                  <option value="rating">Rating · highest first</option>
+                  <option value="date"><TranslatedText text="Date · newest first" /></option>
+                  <option value="name"><TranslatedText text="Name · A–Z" /></option>
+                  <option value="rating"><TranslatedText text="Rating · highest first" /></option>
                 </select>
               </label>
               <button
                 type="submit"
                 className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold text-white hover:bg-white/15"
               >
-                Apply
+                <TranslatedText text="Apply" />
               </button>
             </form>
           )}
-          {!sortedProducts.length ? <p className="text-center text-white/60">No products have been published yet.</p> : (
+          {!sortedProducts.length ? <p className="text-center text-white/60"><TranslatedText text="No products have been published yet." /></p> : (
             <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {sortedProducts.map((product) => {
                 const summary = ratingSummary.get(product.id);
+                const categoryLabel = breweryProductCategoryLabel(product.category);
                 const kitSpecs = [
                   product.ebc != null ? `${Number(product.ebc).toLocaleString()} EBC` : null,
                   product.ibu != null ? `${Number(product.ibu).toLocaleString()} IBU` : null,
@@ -130,19 +138,19 @@ export default async function BreweryPublicPage({
                     <Link href={`/business/${brewery.slug}/${product.slug}`} className="product-card block h-full min-w-0 overflow-hidden rounded-xl border border-white/10 bg-white/5 transition hover:border-green-400/40 hover:bg-white/10">
                       {product.image_url && <img src={product.image_url} alt="" className="h-48 w-full bg-black/20 object-contain" />}
                       <div className="min-w-0 p-4">
-                        <p className="text-xs uppercase tracking-wider text-green-300">{product.category.replace(/-/g, " ")}</p>
+                        <p className="text-xs uppercase tracking-wider text-green-300">{categoryLabel ? <TranslatedText text={categoryLabel} /> : product.category.replace(/-/g, " ")}</p>
                         <ProductCardTitle name={product.name} />
                         {product.price != null && product.price_currency && (
                           <p className="mt-2 text-lg font-semibold text-green-100">
                             {product.price_currency} {Number(product.price).toFixed(2)}
-                            <span className="ml-2 text-xs font-normal text-white/50">listed price</span>
+                            <span className="ml-2 text-xs font-normal text-white/50"><TranslatedText text="listed price" /></span>
                           </p>
                         )}
                         {product.style && <p className="mt-1 text-sm text-white/55">{product.style}</p>}
-                        {product.abv != null && <p className="mt-2 text-sm text-white/70">{isBeerKitProductCategory(product.category) ? "Target " : ""}{Number(product.abv).toFixed(1)}% ABV</p>}
+                        {product.abv != null && <p className="mt-2 text-sm text-white/70">{isBeerKitProductCategory(product.category) && <><TranslatedText text="Target" /> </>}{Number(product.abv).toFixed(1)}% ABV</p>}
                         {isBeerKitProductCategory(product.category) && product.batch_size_l != null && (
                           <p className="mt-1 text-sm text-white/60">
-                            Batch size · {Number(product.batch_size_l).toLocaleString()} L
+                            <TranslatedText text="Batch size" /> · {Number(product.batch_size_l).toLocaleString()} L
                           </p>
                         )}
                         {isBeerKitProductCategory(product.category) && kitSpecs && (
@@ -151,12 +159,13 @@ export default async function BreweryPublicPage({
                           </p>
                         )}
                         {summary ? (
-                          <p className="mt-2 text-sm text-amber-200" aria-label={`${(summary.total / summary.count).toFixed(1)} out of 5 from ${summary.count} reviews`}>
-                            ★ {(summary.total / summary.count).toFixed(1)} <span className="text-white/55">({summary.count} review{summary.count === 1 ? "" : "s"})</span>
+                          <p className="mt-2 text-sm text-amber-200">
+                            <span className="sr-only"><TranslatedText text="Rated" /> {(summary.total / summary.count).toFixed(1)} / 5 · {summary.count} <TranslatedText text={summary.count === 1 ? "review" : "reviews"} /></span>
+                            <span aria-hidden="true">★ {(summary.total / summary.count).toFixed(1)} <span className="text-white/55">({summary.count} <TranslatedText text={summary.count === 1 ? "review" : "reviews"} />)</span></span>
                           </p>
-                        ) : <p className="mt-2 text-xs text-white/45">No reviews yet</p>}
+                        ) : <p className="mt-2 text-xs text-white/45"><TranslatedText text="No reviews yet" /></p>}
                         {product.description && <p className="mt-2 line-clamp-3 text-sm leading-6 text-white/65">{product.description}</p>}
-                        <span className="mt-4 inline-block text-sm font-semibold text-green-200">Product details →</span>
+                        <span className="mt-4 inline-block text-sm font-semibold text-green-200"><TranslatedText text="Product details →" /></span>
                       </div>
                     </Link>
                   </li>

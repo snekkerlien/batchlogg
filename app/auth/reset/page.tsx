@@ -4,8 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
 import FormField from "@/app/components/FormField";
+import AuthRequiredLabel from "../AuthRequiredLabel";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export default function ResetPasswordPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -15,8 +18,8 @@ export default function ResetPasswordPage() {
   const [saving, setSaving] = useState(false);
 
   function validatePassword(pw: string) {
-    if (pw.length < 8) return "Password must be at least 8 characters.";
-    if (!/[A-Z]/.test(pw)) return "Password must contain at least one uppercase letter.";
+    if (pw.length < 8) return t("Password must be at least 8 characters.");
+    if (!/[A-Z]/.test(pw)) return t("Password must contain at least one uppercase letter.");
     return "";
   }
 
@@ -27,7 +30,7 @@ export default function ResetPasswordPage() {
     setMsg("");
 
     if (password !== confirm) {
-      setError("Passwords do not match.");
+      setError(t("Passwords do not match."));
       setErrorField("confirm");
       return;
     }
@@ -46,15 +49,16 @@ export default function ResetPasswordPage() {
       });
 
       if (updateError) {
-        setError("Could not update password. Please try again.");
+        console.error("Could not update password", { code: updateError.code, status: updateError.status });
+        setError(t("Could not update password. Please try again."));
         return;
       }
 
-      setMsg("Password updated successfully.");
+      setMsg(t("Password updated successfully."));
       setTimeout(() => router.replace("/auth/login"), 1500);
     } catch (updateError) {
       console.error("Could not update password", updateError);
-      setError("Could not update password. Please check your connection and try again.");
+      setError(t("Could not update password. Please check your connection and try again."));
     } finally {
       setSaving(false);
     }
@@ -66,16 +70,15 @@ export default function ResetPasswordPage() {
         onSubmit={handleSubmit}
         className="bg-black/60 backdrop-blur-md p-8 rounded-xl w-full max-w-sm border border-white/10 space-y-4"
       >
-        <h2 className="text-2xl font-bold text-center">Set new password</h2>
+        <h2 className="text-2xl font-bold text-center">{t("Set new password")}</h2>
 
         {msg && <p role="status" className="text-green-400 text-center">{msg}</p>}
         {error && <p id="reset-password-error" role="alert" className="text-red-400 text-center">{error}</p>}
 
         <FormField
           id="reset-password"
-          label="New password"
-          required
-          hint="At least 8 characters and one uppercase letter."
+          label={<AuthRequiredLabel text="New password" />}
+          hint={t("At least 8 characters and one uppercase letter.")}
         >
           <input
             id="reset-password"
@@ -91,7 +94,7 @@ export default function ResetPasswordPage() {
           />
         </FormField>
 
-        <FormField id="confirm-reset-password" label="Confirm password" required>
+        <FormField id="confirm-reset-password" label={<AuthRequiredLabel text="Confirm password" />}>
           <input
             id="confirm-reset-password"
             type="password"
@@ -111,7 +114,7 @@ export default function ResetPasswordPage() {
           disabled={saving}
           className="w-full rounded-lg bg-green-600 p-3 font-semibold hover:bg-green-700 disabled:cursor-wait disabled:opacity-60"
         >
-          {saving ? "Updating…" : "Update password"}
+          {saving ? t("Updating…") : t("Update password")}
         </button>
       </form>
     </main>

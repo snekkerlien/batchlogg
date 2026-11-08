@@ -15,6 +15,7 @@ import {
   InventoryPreferenceFallback,
   InventoryIngredientSelect,
 } from "@/app/components/InventoryUsageFields";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export default function NewMeadPage({
   params,
@@ -23,6 +24,7 @@ export default function NewMeadPage({
   params: { id: string };
   searchParams?: { recipe?: string };
 }) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const { recipe, loading: recipeLoading, error: recipeError } =
     useRecipePrefill(searchParams?.recipe, "Mead");
@@ -69,9 +71,9 @@ export default function NewMeadPage({
                 </div>
 
         {/* HEADER */}
-        <h1 className="text-4xl font-bold mb-2 text-center">New Mead Batch</h1>
+        <h1 className="text-4xl font-bold mb-2 text-center">{t("New Mead Batch")}</h1>
         <p className="text-center opacity-80 mb-10">
-          Fill out the details below to start a new mead batch.
+          {t("Fill out the details below to start a new mead batch.")}
         </p>
 
         {recipeError && <p role="alert" className="text-red-300 mb-4">{recipeError}</p>}
@@ -93,11 +95,11 @@ export default function NewMeadPage({
 
           {/* Batch name */}
           <div>
-            <label className="block mb-1 font-semibold">Batch name</label>
+            <label className="block mb-1 font-semibold">{t("Batch name")}</label>
             <input
               name="name"
               defaultValue={recipe?.name ?? ""}
-              placeholder="Example: Mango Melomel"
+              placeholder={t("Example: Mango Melomel")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
             />
@@ -105,12 +107,12 @@ export default function NewMeadPage({
 
           {/* Volume */}
           <div>
-            <label className="block mb-1 font-semibold">Volume (<UnitSymbol kind="volume" />)</label>
+            <label className="block mb-1 font-semibold">{t("Volume")} (<UnitSymbol kind="volume" />)</label>
             <UnitInput
               name="volume_l"
               kind="volume"
               defaultValue={recipe?.volume == null ? "" : String(recipe.volume)}
-              placeholder="Example: 10"
+              placeholder={t("Example: 10")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
             />
@@ -118,7 +120,7 @@ export default function NewMeadPage({
 
           {/* Start date */}
           <div>
-            <label className="block mb-1 font-semibold">Start date</label>
+            <label className="block mb-1 font-semibold">{t("Start date")}</label>
             <input
               name="startdato"
               type="date"
@@ -130,13 +132,13 @@ export default function NewMeadPage({
 
           {/* OG */}
           <div>
-            <label className="block mb-1 font-semibold">Original Gravity (OG)</label>
+            <label className="block mb-1 font-semibold">{t("Original Gravity (OG)")}</label>
             <input
               name="og"
               defaultValue={recipe?.og ?? ""}
               type="number"
               step="0.001"
-              placeholder="Example: 1.110"
+              placeholder={t("Example: 1.110")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
             />
@@ -146,7 +148,7 @@ export default function NewMeadPage({
 
           {/* Honey */}
           <div>
-            <label className="block mb-1 font-semibold">Honey type</label>
+            <label className="block mb-1 font-semibold">{t("Honey type")}</label>
             <input type="hidden" name="honey_type" value={honeyType} />
             <InventoryIngredientSelect
               selectionKey="honey"
@@ -156,7 +158,7 @@ export default function NewMeadPage({
               defaultAmountUnit="kg"
               value={honeyType}
               onChange={setHoneyType}
-              placeholder="Honey type"
+              placeholder={t("Honey type")}
               category="fermentables"
               subcategory="Honey"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
@@ -165,12 +167,12 @@ export default function NewMeadPage({
 
           <InventoryPreferenceFallback>
             <div>
-              <label className="block mb-1 font-semibold">Honey amount (<UnitSymbol kind="kg" />)</label>
+              <label className="block mb-1 font-semibold">{t("Honey amount")} (<UnitSymbol kind="kg" />)</label>
               <UnitInput
                 name="honey_amount"
                 kind="kg"
                 defaultValue={recipe?.honey_amount == null ? "" : String(recipe.honey_amount)}
-                placeholder="Example: 3.5"
+                placeholder={t("Example: 3.5")}
                 className="w-full p-3 rounded bg-black/40 border border-white/20"
               />
             </div>
@@ -178,7 +180,7 @@ export default function NewMeadPage({
 
           {/* Dynamic fruit additions */}
           <div>
-  <label className="block mb-2 font-semibold">Fruit additions</label>
+  <label className="block mb-2 font-semibold">{t("Fruit additions")}</label>
 
   {fruits.map((f, i) => (
     <div
@@ -187,7 +189,7 @@ export default function NewMeadPage({
     >
       <InventoryIngredientSelect
         selectionKey={`fruit:${i}`}
-        placeholder="Fruit"
+        placeholder={t("Fruit")}
         inventoryFilters={[
           { category: "fruit" },
           { category: "flavorings", subcategory: "Fruit" },
@@ -211,8 +213,8 @@ export default function NewMeadPage({
       />
 
       <input
-        aria-label={`Fruit ${i + 1} amount`}
-        placeholder="Amount"
+        aria-label={`${t("Fruit")} ${i + 1} ${t("amount")}`}
+        placeholder={t("Amount")}
         type="number"
         min="0"
         step="any"
@@ -226,8 +228,8 @@ export default function NewMeadPage({
       />
 
       <input
-        aria-label={`Fruit ${i + 1} unit`}
-        placeholder="Unit"
+        aria-label={`${t("Fruit")} ${i + 1} ${t("unit")}`}
+        placeholder={t("Unit")}
         className="min-w-0 rounded border border-white/20 bg-black/40 p-3"
         value={f.unit}
         onChange={(e) => {
@@ -242,7 +244,7 @@ export default function NewMeadPage({
         onClick={() => removeFruit(i)}
         className="col-span-2 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm hover:bg-white/20 sm:col-span-1"
       >
-        Remove
+        {t("Remove")}
       </button>
     </div>
   ))}
@@ -252,7 +254,7 @@ export default function NewMeadPage({
     onClick={addFruit}
     className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
   >
-    + Add fruit
+    + {t("Add fruit")}
   </button>
 </div>
 
@@ -262,13 +264,13 @@ export default function NewMeadPage({
 
           {/* Yeast */}
           <div>
-            <label className="block mb-1 font-semibold">Yeast strain</label>
+            <label className="block mb-1 font-semibold">{t("Yeast strain")}</label>
             <InventoryIngredientSelect
               name="yeast"
               selectionKey="yeast"
               trackAmount
               defaultValue={recipe?.yeast ?? ""}
-              placeholder="Yeast strain"
+              placeholder={t("Yeast strain")}
               category="yeast"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
@@ -276,28 +278,28 @@ export default function NewMeadPage({
 
           {/* Additives */}
           <div>
-            <label className="block mb-1 font-semibold">Additives</label>
+            <label className="block mb-1 font-semibold">{t("Additives")}</label>
             <InventoryAdditiveFields defaultValue={recipe?.additives ?? ""} />
           </div>
 
           {/* Full process */}
           <div>
-            <label className="block mb-1 font-semibold">Full process</label>
+            <label className="block mb-1 font-semibold">{t("Full process")}</label>
             <PublicMentionTextarea
               name="full_process"
               defaultValue={recipe?.full_process ?? ""}
-              placeholder="Rehydration, pitching, degassing schedule, fermentation notes..."
+              placeholder={t("Rehydration, pitching, degassing schedule, fermentation notes...")}
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-40"
             />
           </div>
 
           {/* Notes */}
           <div>
-            <label className="block mb-1 font-semibold">Notes</label>
+            <label className="block mb-1 font-semibold">{t("Notes")}</label>
             <PublicMentionTextarea
               name="notes"
               defaultValue={recipe?.notes ?? ""}
-              placeholder="Any additional notes about the batch..."
+              placeholder={t("Any additional notes about the batch...")}
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
             />
           </div>
@@ -307,7 +309,7 @@ export default function NewMeadPage({
             disabled={loading || recipeLoading}
             className="w-full rounded-lg border border-green-500 bg-green-500/10 px-4 py-3 font-semibold text-green-300 transition hover:bg-green-500/20 disabled:opacity-50"
           >
-            {loading ? "Creating..." : "Create batch"}
+            {loading ? t("Creating...") : t("Create batch")}
           </button>
           </BatchInventoryProvider>
         </form>

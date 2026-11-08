@@ -4,10 +4,12 @@ import { hasBreweryAccess } from "@/lib/brewery/access";
 import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
+import TranslatedText from "@/app/components/TranslatedText";
 import BreweryProductReviews from "../../BreweryProductReviews";
 import BreweryBeerMetrics from "../../BreweryBeerMetrics";
 import BreweryProductLink from "../../BreweryProductLink";
 import { isBeerKitProductCategory } from "@/lib/brewery/products";
+import { breweryProductCategoryLabel } from "@/lib/brewery/productCategories";
 
 export const dynamic = "force-dynamic";
 
@@ -67,6 +69,7 @@ export default async function BreweryProductPage({
   const qrSource = searchParams?.source === "qr";
   const productPath = `/business/${encodeURIComponent(params.slug)}/${encodeURIComponent(params.productSlug)}${qrSource ? "?source=qr" : ""}#product-reviews-heading`;
   const loginHref = `/auth/login?redirect=${encodeURIComponent(productPath)}`;
+  const categoryLabel = breweryProductCategoryLabel(product.category);
 
   return (
     <main className="min-h-screen px-4 py-10 text-white sm:px-6">
@@ -74,32 +77,32 @@ export default async function BreweryProductPage({
         <div className="absolute right-4 top-3 z-40"><MenuOverlay current="brewery" /></div>
         <div className="absolute left-4 top-3 z-40"><BackButton /></div>
         {product.image_url && <img src={product.image_url} alt="" className="mb-6 max-h-96 w-full rounded-xl bg-black/20 object-contain" />}
-        <p className={`text-sm uppercase tracking-widest text-green-300${isBeerKitProductCategory(product.category) ? " text-center" : ""}`}>{product.category.replace(/-/g, " ")}</p>
+        <p className={`text-sm uppercase tracking-widest text-green-300${isBeerKitProductCategory(product.category) ? " text-center" : ""}`}>{categoryLabel ? <TranslatedText text={categoryLabel} /> : product.category.replace(/-/g, " ")}</p>
         <PageHeading title={product.name} subtitle={brewery.name} />
         {averageRating !== null && (
           <div
             className="mt-2 text-center text-sm text-amber-200"
-            aria-label={`Rated ${averageRating.toFixed(1)} out of 5 from ${reviewCount} review${reviewCount === 1 ? "" : "s"}`}
           >
+            <span className="sr-only"><TranslatedText text="Rated" /> {averageRating.toFixed(1)} / 5 · {reviewCount} <TranslatedText text={reviewCount === 1 ? "review" : "reviews"} /></span>
             <span aria-hidden="true" className="block text-2xl">
               {"★".repeat(Math.round(averageRating))}
               {"☆".repeat(5 - Math.round(averageRating))}
             </span>
             <span className="mt-1 block">
-              {averageRating.toFixed(1)} / 5 · {reviewCount} review{reviewCount === 1 ? "" : "s"}
+              {averageRating.toFixed(1)} / 5 · {reviewCount} <TranslatedText text={reviewCount === 1 ? "review" : "reviews"} />
             </span>
           </div>
         )}
         {product.product_url && <p className="mt-3 text-center"><BreweryProductLink productId={product.id} href={product.product_url} /></p>}
         <dl className="my-6 flex flex-wrap justify-center gap-6 text-center text-sm">
-          {product.style && <div><dt className="text-white/50">Style</dt><dd className="mt-1">{product.style}</dd></div>}
-          {beverageCategories.includes(product.category) && brewedBy && <div><dt className="text-white/50">Brewed by</dt><dd className="mt-1">{brewedBy}</dd></div>}
-          {product.abv != null && <div><dt className="text-white/50">{isBeerKitProductCategory(product.category) ? "Target ABV" : "ABV"}</dt><dd className="mt-1">{Number(product.abv).toFixed(1)}%</dd></div>}
-          {product.batch_size_l != null && <div><dt className="text-white/50">Batch size</dt><dd className="mt-1">{Number(product.batch_size_l).toLocaleString()} L</dd></div>}
-          {product.package_size && <div><dt className="text-white/50">Package</dt><dd className="mt-1">{product.package_size}</dd></div>}
+          {product.style && <div><dt className="text-white/50"><TranslatedText text="Style" /></dt><dd className="mt-1">{product.style}</dd></div>}
+          {beverageCategories.includes(product.category) && brewedBy && <div><dt className="text-white/50"><TranslatedText text="Brewed by" /></dt><dd className="mt-1">{brewedBy}</dd></div>}
+          {product.abv != null && <div><dt className="text-white/50"><TranslatedText text={isBeerKitProductCategory(product.category) ? "Target ABV" : "ABV"} /></dt><dd className="mt-1">{Number(product.abv).toFixed(1)}%</dd></div>}
+          {product.batch_size_l != null && <div><dt className="text-white/50"><TranslatedText text="Batch size" /></dt><dd className="mt-1">{Number(product.batch_size_l).toLocaleString()} L</dd></div>}
+          {product.package_size && <div><dt className="text-white/50"><TranslatedText text="Package" /></dt><dd className="mt-1">{product.package_size}</dd></div>}
           {product.price != null && product.price_currency && (
             <div>
-              <dt className="text-white/50">Listed price</dt>
+              <dt className="text-white/50"><TranslatedText text="Listed price" /></dt>
               <dd className="mt-1 text-lg font-semibold text-green-100">
                 {product.price_currency} {Number(product.price).toFixed(2)}
               </dd>
@@ -108,12 +111,12 @@ export default async function BreweryProductPage({
         </dl>
         {product.product_url && (
           <p className="mb-6 text-center text-xs text-white/50">
-            Check the product page for current availability.
+            <TranslatedText text="Check the product page for current availability." />
           </p>
         )}
         {product.price != null && (
           <p className="mb-6 text-center text-xs text-white/50">
-            Price supplied by the business; check the product page for the latest price.
+            <TranslatedText text="Price supplied by the business; check the product page for the latest price." />
           </p>
         )}
         <BreweryBeerMetrics

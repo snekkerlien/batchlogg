@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import * as Actions from "../../actions/createRecipe";
+import { submitRecipe } from "../submitRecipe";
 import MenuOverlay from "../../MenuOverlay";
 import BackButton from "../../BackButton";
 import FormField from "@/app/components/FormField";
@@ -14,9 +14,12 @@ import RecipeSecondaryFields from "../RecipeSecondaryFields";
 import { calcDryHopIBU, calcEBC, calcIBU } from "@/lib/brewing/beerCalculators";
 import BeerColorGlass from "@/app/components/BeerColorGlass";
 import BitternessMeter from "@/app/components/BitternessMeter";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { translateRecipeError } from "@/lib/i18n/apiErrors";
 
 export default function NewBeerRecipePage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const { label } = useUnits();
   const [beerSubtype, setBeerSubtype] = useState("");
@@ -124,12 +127,12 @@ function removeDryHop(index: number) {
   setError("");
 
   const formData = new FormData(e.currentTarget as HTMLFormElement);
-  const result = await Actions.createRecipe(formData);
+  const result = await submitRecipe(formData);
 
   // ❌ Feil maltnavn → stopp lagring
   if (result?.success === false) {
     setWarnings(result.maltWarnings ?? []);
-    setError(result.error ?? "");
+    setError(result.error ?? (result.maltWarnings?.length ? "" : "Could not save the recipe."));
     setLoading(false);
     return;
   }
@@ -157,21 +160,21 @@ function removeDryHop(index: number) {
         </div>
 
         {/* HEADER */}
-        <h1 className="text-4xl font-bold mb-2 text-center">New Beer Recipe</h1>
+        <h1 className="text-4xl font-bold mb-2 text-center">{t("New Beer Recipe")}</h1>
         <p className="text-center opacity-80 mb-10">
-          Fill out the details below to create a new beer recipe.
+          {t("Fill out the details below to create a new beer recipe.")}
         </p>
 
         {/* ⭐ WARNINGS */}
         {warnings.length > 0 && (
           <div className="bg-red-600 text-white p-4 rounded-md mb-6">
-            <strong>⚠️ Malt EBC is missing:</strong>
+            <strong>{t("⚠️ Malt EBC is missing:")}</strong>
             <ul className="mt-2 list-disc list-inside">
               {warnings.map((w) => (
                 <li key={w}>{w}</li>
               ))}
             </ul>
-            <p className="mt-2">Enter the EBC value for each malt before saving.</p>
+            <p className="mt-2">{t("Enter the EBC value for each malt before saving.")}</p>
           </div>
         )}
 
@@ -184,7 +187,7 @@ function removeDryHop(index: number) {
 
           <div>
             <label htmlFor="beer-subtype" className="mb-1 block font-semibold">
-              Brewing method
+              {t("Brewing method")}
             </label>
             <select
               id="beer-subtype"
@@ -194,10 +197,10 @@ function removeDryHop(index: number) {
               required
               className="w-full rounded border border-white/20 bg-zinc-900 p-3"
             >
-              <option value="">Choose a brewing method</option>
-              <option value="all_grain">All-grain</option>
-              <option value="fresh_wort_kit">Fresh wort kit</option>
-              <option value="malt_extract_kit">Malt extract kit</option>
+              <option value="">{t("Choose a brewing method")}</option>
+              <option value="all_grain">{t("All-grain")}</option>
+              <option value="fresh_wort_kit">{t("Fresh wort kit")}</option>
+              <option value="malt_extract_kit">{t("Malt extract kit")}</option>
             </select>
           </div>
 
@@ -211,7 +214,7 @@ function removeDryHop(index: number) {
 
           {error && (
             <p role="alert" className="rounded border border-red-400/40 bg-red-950/50 p-3 text-red-200">
-              {error}
+              {translateRecipeError(error, t)}
             </p>
           )}
 
@@ -220,20 +223,20 @@ function removeDryHop(index: number) {
           {/* Recipe name */}
           <FormField
             id="recipe-name"
-            label={beerSubtype === "all_grain" ? "Recipe name" : "Kit name"}
+            label={beerSubtype === "all_grain" ? t("Recipe name") : t("Kit name")}
             required
           >
             <input
               id="recipe-name"
               name="name"
-              placeholder={beerSubtype === "all_grain" ? "Example: Pale Ale, IPA, Stout" : "Name of the kit"}
+              placeholder={beerSubtype === "all_grain" ? t("Example: Pale Ale, IPA, Stout") : t("Name of the kit")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
             />
           </FormField>
 
           {beerSubtype !== "all_grain" && (
-            <FormField id="recipe-kit-url" label="Kit link (optional)">
+            <FormField id="recipe-kit-url" label={t("Kit link (optional)")}>
               <input
                 id="recipe-kit-url"
                 name="kit_url"
@@ -245,15 +248,15 @@ function removeDryHop(index: number) {
           )}
 
           {/* Volume */}
-          <FormField id="recipe-volume" label={<>Volume (<UnitSymbol kind="volume" />)</>} required={beerSubtype !== "all_grain"}>
+          <FormField id="recipe-volume" label={<>{t("Volume")} (<UnitSymbol kind="volume" />)</>} required={beerSubtype !== "all_grain"}>
             <UnitInput
               id="recipe-volume"
               name="volume"
               kind="volume"
               placeholder={
                 beerSubtype === "all_grain"
-                  ? "Final batch size after the boil (e.g., 20 L)"
-                  : "Final kit volume (e.g., 20 L)"
+                  ? t("Final batch size after the boil (e.g., 20 L)")
+                  : t("Final kit volume (e.g., 20 L)")
               }
               value={volume}
               onValueChange={setVolume}
@@ -265,12 +268,12 @@ function removeDryHop(index: number) {
           {beerSubtype === "all_grain" && (
           <>
           {/* Boil Volume */}
-          <FormField id="recipe-boil-volume" label={<>Boil Volume (<UnitSymbol kind="volume" />)</>}>
+          <FormField id="recipe-boil-volume" label={<>{t("Boil Volume")} (<UnitSymbol kind="volume" />)</>}>
             <UnitInput
               id="recipe-boil-volume"
               name="boil_volume_l"
               kind="volume"
-              placeholder="Total wort volume before the boil"
+              placeholder={t("Total wort volume before the boil")}
               value={boilVolume}
               onValueChange={setBoilVolume}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
@@ -280,12 +283,12 @@ function removeDryHop(index: number) {
           )}
 
           {/* OG */}
-          <FormField id="recipe-og" label="Original Gravity (OG)" required={beerSubtype !== "all_grain"}>
+          <FormField id="recipe-og" label={t("Original Gravity (OG)")} required={beerSubtype !== "all_grain"}>
             <input
               id="recipe-og"
               name="og"
               type="text"
-              placeholder="Example: 1.050"
+              placeholder={t("Example: 1.050")}
               value={og}
               onChange={(event) => setOg(event.target.value)}
               required={beerSubtype !== "all_grain"}
@@ -299,14 +302,14 @@ function removeDryHop(index: number) {
               className="rounded-lg border border-white/15 bg-white/[0.04] p-4 text-center"
             >
               <h2 id="recipe-estimates-title" className="font-semibold text-white/85">
-                Live recipe estimates
+                {t("Live recipe estimates")}
               </h2>
               {recipeEstimates ? (
                 <>
                   <dl className="mx-auto mt-3 grid max-w-lg grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="min-w-0 rounded-lg border border-white/10 bg-black/10 p-3 text-left">
                       <dt className="mb-2 text-xs font-medium text-white/55">
-                        Bitterness
+                        {t("Bitterness")}
                       </dt>
                       <dd>
                         <BitternessMeter ibu={recipeEstimates.ibu} />
@@ -314,7 +317,7 @@ function removeDryHop(index: number) {
                     </div>
                     <div className="min-w-0 rounded-lg border border-white/10 bg-black/10 p-3 text-left">
                       <dt className="mb-2 text-xs font-medium text-white/55">
-                        Color
+                        {t("Color")}
                       </dt>
                       <dd>
                         <span className="flex min-h-[5.5rem] items-start">
@@ -335,17 +338,16 @@ function removeDryHop(index: number) {
                   </dl>
                   {recipeEstimates.maltWarnings.length > 0 && (
                     <p role="status" className="mt-3 text-sm text-amber-200">
-                      Enter EBC values for all malt additions to complete the color estimate.
+                      {t("Enter EBC values for all malt additions to complete the color estimate.")}
                     </p>
                   )}
                   <p className="mt-3 text-xs text-white/50">
-                    Estimated values update as you edit ingredients. Bitterness is a guide;
-                    sweetness and style affect perception. Color is a model-based estimate.
+                    {t("Estimated values update as you edit ingredients. Bitterness is a guide; sweetness and style affect perception. Color is a model-based estimate.")}
                   </p>
                 </>
               ) : (
                 <p className="mt-2 text-sm text-white/60">
-                  Enter a valid original gravity and final volume to see estimates.
+                  {t("Enter a valid original gravity and final volume to see estimates.")}
                 </p>
               )}
             </section>
@@ -354,7 +356,7 @@ function removeDryHop(index: number) {
           {beerSubtype === "fresh_wort_kit" && (
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block font-semibold">
-                IBU (from kit)
+                {t("IBU (from kit)")}
                 <input
                   name="ibu"
                   type="number"
@@ -365,7 +367,7 @@ function removeDryHop(index: number) {
                 />
               </label>
               <label className="block font-semibold">
-                EBC (from kit)
+                {t("EBC (from kit)")}
                 <input
                   name="ebc"
                   type="number"
@@ -381,12 +383,12 @@ function removeDryHop(index: number) {
           {beerSubtype === "all_grain" && (
           <>
           {/* FG */}
-          <FormField id="recipe-fg" label="Final Gravity (FG)">
+          <FormField id="recipe-fg" label={t("Final Gravity (FG)")}>
             <input
               id="recipe-fg"
               name="fg"
               type="text"
-              placeholder="Example: 1.010"
+              placeholder={t("Example: 1.010")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </FormField>
@@ -394,12 +396,12 @@ function removeDryHop(index: number) {
           )}
 
           {/* Yeast */}
-          <FormField id="recipe-yeast" label="Yeast" required={beerSubtype !== "all_grain"}>
+          <FormField id="recipe-yeast" label={t("Yeast")} required={beerSubtype !== "all_grain"}>
             <input
               id="recipe-yeast"
               name="yeast"
               type="text"
-              placeholder="Example: US-05"
+              placeholder={t("Example: US-05")}
               required={beerSubtype !== "all_grain"}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
@@ -409,13 +411,13 @@ function removeDryHop(index: number) {
           <>
           {/* MALTS */}
           <div>
-            <label className="block mb-2 font-semibold">Malt additions</label>
+            <label className="block mb-2 font-semibold">{t("Malt additions")}</label>
 
             {malts.map((m, i) => (
               <div key={i} className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full">
                 <input
-                  aria-label={`Malt ${i + 1} name`}
-                  placeholder="Malt type"
+                  aria-label={`${t("Malt")} ${i + 1} ${t("name")}`}
+                  placeholder={t("Malt type")}
                   className="p-3 rounded bg-black/40 border border-white/20 w-full md:flex-1"
                   value={m.name}
                   onChange={(e) => {
@@ -430,7 +432,7 @@ function removeDryHop(index: number) {
                   min="0"
                   step="any"
                   placeholder="EBC"
-                  aria-label={`Malt ${i + 1} EBC`}
+                  aria-label={`${t("Malt")} ${i + 1} EBC`}
                   required
                   className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-24"
                   value={m.ebc}
@@ -443,8 +445,8 @@ function removeDryHop(index: number) {
 
                 <UnitInput
                   kind="kg"
-                  aria-label={`Malt ${i + 1} amount`}
-                  placeholder={`Amount (${label("kg")})`}
+                  aria-label={`${t("Malt")} ${i + 1} ${t("Amount").toLowerCase()}`}
+                  placeholder={`${t("Amount")} (${label("kg")})`}
                   className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-32"
                   value={m.amount}
                   onValueChange={(value) => {
@@ -459,7 +461,7 @@ function removeDryHop(index: number) {
                   onClick={() => removeMalt(i)}
                   className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
                 >
-                  Remove
+                  {t("Remove")}
                 </button>
               </div>
             ))}
@@ -469,7 +471,7 @@ function removeDryHop(index: number) {
               onClick={addMalt}
               className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
             >
-              + Add malt
+              + {t("Add")} {t("malt")}
             </button>
           </div>
 
@@ -481,13 +483,13 @@ function removeDryHop(index: number) {
           <>
           {/* HOPS */}
           <div>
-            <label className="block mb-2 font-semibold">Hop additions</label>
+            <label className="block mb-2 font-semibold">{t("Hop additions")}</label>
 
             {hops.map((h, i) => (
               <div key={i} className="mb-4 w-full space-y-2">
                 <input
-                  aria-label={`Hop addition ${i + 1} name`}
-                  placeholder="Hop type"
+                  aria-label={`${t("Hop addition")} ${i + 1} ${t("name")}`}
+                  placeholder={t("Hop type")}
                   className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
                   value={h.name}
                   onChange={(e) => {
@@ -498,7 +500,7 @@ function removeDryHop(index: number) {
                 />
 
                 <select
-                  aria-label={`Hop addition ${i + 1} type`}
+                  aria-label={`${t("Hop addition")} ${i + 1} ${t("type")}`}
                   value={h.addition_type}
                   onChange={(e) => {
                     const updated = [...hops];
@@ -507,14 +509,14 @@ function removeDryHop(index: number) {
                   }}
                   className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
                 >
-                  <option value="boil">Boil addition</option>
-                  <option value="whirlpool">Whirlpool / hop stand</option>
+                  <option value="boil">{t("Boil addition")}</option>
+                  <option value="whirlpool">{t("Whirlpool / hop stand")}</option>
                 </select>
 
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(6.5rem,0.8fr)_minmax(5rem,0.6fr)_minmax(7rem,1fr)_minmax(9rem,1.4fr)_auto]">
                 <input
-                  aria-label={`Hop addition ${i + 1} alpha acid percentage`}
-                  placeholder="Alpha (%)"
+                  aria-label={`${t("Hop addition")} ${i + 1} ${t("Alpha acid (%)")}`}
+                  placeholder={t("Alpha (%)")}
                   type="number"
                   min="0"
                   step="any"
@@ -529,8 +531,8 @@ function removeDryHop(index: number) {
 
 
 <input
-  aria-label={`Hop addition ${i + 1} harvest year`}
-  placeholder="Year"
+  aria-label={`${t("Hop addition")} ${i + 1} ${t("Year")}`}
+  placeholder={t("Year")}
   type="number"
   min="1900"
   step="1"
@@ -545,8 +547,8 @@ function removeDryHop(index: number) {
 
                 <UnitInput
                   kind="g"
-                  aria-label={`Hop addition ${i + 1} amount`}
-                  placeholder={`Amount (${label("g")})`}
+                  aria-label={`${t("Hop addition")} ${i + 1} ${t("Amount").toLowerCase()}`}
+                  placeholder={`${t("Amount")} (${label("g")})`}
                   className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
                   value={h.amount}
                   onValueChange={(value) => {
@@ -557,11 +559,11 @@ function removeDryHop(index: number) {
                 />
 
                 <input
-                  aria-label={`Hop addition ${i + 1} time in minutes`}
+                  aria-label={`${t("Hop addition")} ${i + 1} ${t("time in minutes")}`}
                   placeholder={
                     h.addition_type === "whirlpool"
-                      ? "Stand time (min)"
-                      : "Boil time (min)"
+                      ? t("Stand time (min)")
+                      : t("Boil time (min)")
                   }
                   type="number"
                   min="0"
@@ -578,8 +580,8 @@ function removeDryHop(index: number) {
 
                 {h.addition_type === "whirlpool" && (
                   <input
-                    aria-label={`Hop addition ${i + 1} whirlpool temperature in Celsius`}
-                    placeholder="Temperature (°C)"
+                    aria-label={`${t("Hop addition")} ${i + 1} ${t("whirlpool temperature in Celsius")}`}
+                    placeholder={t("Temperature (°C)")}
                     type="number"
                     min="0"
                     max="100"
@@ -600,16 +602,14 @@ function removeDryHop(index: number) {
                   onClick={() => removeHop(i)}
                   className="col-span-2 justify-self-end rounded-lg border border-white/20 bg-white/10 px-4 py-3 text-sm hover:bg-white/20 sm:col-span-1 sm:justify-self-auto"
                 >
-                  Remove
+                  {t("Remove")}
                 </button>
                 </div>
               </div>
             ))}
 
             <p className="mb-3 text-sm opacity-70">
-              For whirlpool additions, enter the hop-stand duration and temperature.
-              Whirlpool IBU is estimated from the temperature and may differ from the
-              recipe&apos;s measured or published value.
+              {t("For whirlpool additions, enter the hop-stand duration and temperature. Whirlpool IBU is estimated from the temperature and may differ from the recipe's measured or published value.")}
             </p>
 
             <button
@@ -617,7 +617,7 @@ function removeDryHop(index: number) {
               onClick={addHop}
               className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
             >
-              + Add hop
+              + {t("Add")} {t("hop")}
             </button>
           </div>
 
@@ -634,15 +634,15 @@ function removeDryHop(index: number) {
 <>
 <div>
   <label className="mb-2 block font-semibold">
-    Dry hop additions
+    {t("Dry hop additions")}
   </label>
 
   {dryHops.map((h, i) => (
     <div key={i} className="mb-4 w-full space-y-2">
 
       <input
-        aria-label={`Dry hop addition ${i + 1} name`}
-        placeholder="Hop type"
+        aria-label={`${t("Dry hop")} ${i + 1} ${t("name")}`}
+        placeholder={t("Hop type")}
         className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
         value={h.name}
         onChange={(e) => {
@@ -654,8 +654,8 @@ function removeDryHop(index: number) {
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(6.5rem,0.8fr)_minmax(5rem,0.6fr)_minmax(7rem,1fr)_minmax(9rem,1.4fr)_auto]">
       <input
-        aria-label={`Dry hop addition ${i + 1} alpha acid percentage`}
-        placeholder="Alpha (%)"
+        aria-label={`${t("Dry hop")} ${i + 1} ${t("Alpha acid (%)")}`}
+        placeholder={t("Alpha (%)")}
         type="number"
         min="0"
         step="any"
@@ -669,8 +669,8 @@ function removeDryHop(index: number) {
       />
 
       <input
-        aria-label={`Dry hop addition ${i + 1} harvest year`}
-        placeholder="Year"
+        aria-label={`${t("Dry hop")} ${i + 1} ${t("Year")}`}
+        placeholder={t("Year")}
         type="number"
         min="1900"
         step="1"
@@ -685,8 +685,8 @@ function removeDryHop(index: number) {
 
       <UnitInput
         kind="g"
-        aria-label={`Dry hop addition ${i + 1} amount`}
-        placeholder={`Amount (${label("g")})`}
+        aria-label={`${t("Dry hop")} ${i + 1} ${t("Amount").toLowerCase()}`}
+        placeholder={`${t("Amount")} (${label("g")})`}
         className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
         value={h.amount}
         onValueChange={(value) => {
@@ -697,8 +697,8 @@ function removeDryHop(index: number) {
       />
 
       <input
-        aria-label={`Dry hop addition ${i + 1} contact time in days`}
-        placeholder="Contact time (days)"
+        aria-label={`${t("Dry hop")} ${i + 1} ${t("contact time in days")}`}
+        placeholder={t("Contact time (days)")}
         type="text"
         className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
         value={h.contact}
@@ -714,7 +714,7 @@ function removeDryHop(index: number) {
         onClick={() => removeDryHop(i)}
         className="col-span-2 justify-self-end rounded-lg border border-white/20 bg-white/10 px-4 py-3 text-sm hover:bg-white/20 sm:col-span-1 sm:justify-self-auto"
       >
-        Remove
+        {t("Remove")}
       </button>
       </div>
     </div>
@@ -725,7 +725,7 @@ function removeDryHop(index: number) {
     onClick={addDryHop}
     className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
   >
-    + Add dry hop
+    + {t("Add")} {t("dry hop")}
   </button>
 </div>
 
@@ -739,14 +739,14 @@ function removeDryHop(index: number) {
           {beerSubtype === "all_grain" && (
           <>
           {/* Boil time */}
-          <FormField id="recipe-boil-time" label="Total boil time (minutes)">
+          <FormField id="recipe-boil-time" label={t("Total boil time (minutes)")}>
             <input
               id="recipe-boil-time"
               name="boil_time"
               type="number"
               min="0"
               step="1"
-              placeholder="Length of the boil"
+              placeholder={t("Length of the boil")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </FormField>
@@ -755,25 +755,25 @@ function removeDryHop(index: number) {
 
           {/* Additives */}
           <div>
-            <label className="block mb-1 font-semibold">Additives</label>
+            <label className="block mb-1 font-semibold">{t("Additives")}</label>
             <RecipeAdditiveFields />
           </div>
           {/* Full process */}
-          <FormField id="recipe-process" label="Full process">
+          <FormField id="recipe-process" label={t("Full process")}>
             <PublicMentionTextarea
               id="recipe-process"
               name="full_process"
-              placeholder="Mash schedule, hop schedule..."
+              placeholder={t("Mash schedule, hop schedule...")}
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-40"
             />
           </FormField>
 
           {/* Notes */}
-          <FormField id="recipe-notes" label="Notes">
+          <FormField id="recipe-notes" label={t("Notes")}>
             <PublicMentionTextarea
               id="recipe-notes"
               name="notes"
-              placeholder="Any additional notes..."
+              placeholder={t("Any additional notes...")}
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
             />
           </FormField>
@@ -784,7 +784,7 @@ function removeDryHop(index: number) {
             disabled={loading}
             className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold"
           >
-            {loading ? "Saving..." : "Save recipe"}
+            {loading ? t("Saving...") : t("Save recipe")}
           </button>
             </>
           )}

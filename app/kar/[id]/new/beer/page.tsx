@@ -14,6 +14,7 @@ import {
   InventoryAdditiveFields,
   InventoryIngredientSelect,
 } from "@/app/components/InventoryUsageFields";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 
 export default function NewBeerPage({
@@ -23,6 +24,7 @@ export default function NewBeerPage({
   params: { id: string };
   searchParams?: { recipe?: string };
 }) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const { label } = useUnits();
   const { recipe, loading: recipeLoading, error: recipeError } =
@@ -157,9 +159,9 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
                 </div>
 
         {/* HEADER */}
-        <h1 className="text-4xl font-bold mb-2 text-center">New Beer Batch</h1>
+        <h1 className="text-4xl font-bold mb-2 text-center">{t("New Beer Batch")}</h1>
         <p className="text-center opacity-80 mb-10">
-          Fill out the details below to start a new beer batch.
+          {t("Fill out the details below to start a new beer batch.")}
         </p>
 
         
@@ -183,7 +185,7 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
 
           <div>
             <label htmlFor="beer-subtype" className="mb-2 block font-semibold">
-              Brewing method
+              {t("Brewing method")}
             </label>
             <select
               id="beer-subtype"
@@ -193,10 +195,10 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
               required
               className="w-full rounded-lg border border-white/20 bg-zinc-900 p-3"
             >
-              <option value="">Choose a brewing method</option>
-              <option value="all_grain">All-grain</option>
-              <option value="fresh_wort_kit">Fresh wort kit</option>
-              <option value="malt_extract_kit">Malt extract kit</option>
+              <option value="">{t("Choose a brewing method")}</option>
+              <option value="all_grain">{t("All-grain")}</option>
+              <option value="fresh_wort_kit">{t("Fresh wort kit")}</option>
+              <option value="malt_extract_kit">{t("Malt extract kit")}</option>
             </select>
           </div>
 
@@ -213,12 +215,12 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
           {/* Batch name */}
           <div>
             <label className="mb-2 block font-semibold">
-              {beerSubtype === "all_grain" ? "Batch name" : "Batch / kit name"}
+              {beerSubtype === "all_grain" ? t("Batch name") : t("Batch / kit name")}
             </label>
             <input
               name="name"
               defaultValue={recipe?.name ?? ""}
-              placeholder="Example: Pale Ale, IPA, Stout"
+              placeholder={t("Example: Pale Ale, IPA, Stout")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
             />
@@ -226,7 +228,7 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
 
           {beerSubtype !== "all_grain" && (
             <div>
-              <label className="mb-2 block font-semibold">Kit link (optional)</label>
+              <label className="mb-2 block font-semibold">{t("Kit link (optional)")}</label>
               <input
                 name="kit_url"
                 type="url"
@@ -243,11 +245,11 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
 
           {/* Volume */}
           <div>
-            <label className="mb-2 block font-semibold">Volume (<UnitSymbol kind="volume" />)</label>
+            <label className="mb-2 block font-semibold">{t("Volume")} (<UnitSymbol kind="volume" />)</label>
             <UnitInput
               name="volume_l"
               kind="volume"
-              placeholder="Final batch volume"
+              placeholder={t("Final batch volume")}
               value={volume}
               onValueChange={setVolume}
               required
@@ -258,11 +260,11 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
 
           {beerSubtype === "all_grain" && (
           <div>
-            <label className="mb-2 block font-semibold">Boil Volume (<UnitSymbol kind="volume" />)</label>
+            <label className="mb-2 block font-semibold">{t("Boil Volume")} (<UnitSymbol kind="volume" />)</label>
             <UnitInput
               name="boil_volume_l"
               kind="volume"
-              placeholder="Volume before boil"
+              placeholder={t("Volume before boil")}
               value={boilVolume}
               onValueChange={setBoilVolume}
               required
@@ -274,7 +276,7 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
 
           {/* Start date */}
           <div>
-            <label className="mb-2 block font-semibold">Start date</label>
+            <label className="mb-2 block font-semibold">{t("Start date")}</label>
             <input
               name="startdato"
               type="date"
@@ -286,13 +288,13 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
 
           {/* OG */}
           <div>
-            <label className="mb-2 block font-semibold">Original Gravity (OG)</label>
+            <label className="mb-2 block font-semibold">{t("Original Gravity (OG)")}</label>
             <input
               name="og"
               defaultValue={recipe?.og ?? ""}
               type="number"
               step="0.001"
-              placeholder="Example: 1.050"
+              placeholder={t("Example: 1.050")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
             />
@@ -301,7 +303,7 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
           {beerSubtype === "fresh_wort_kit" && (
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block font-semibold">
-                IBU (from kit)
+                IBU ({t("from kit")})
                 <input
                   name="ibu"
                   type="number"
@@ -319,7 +321,7 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
                 />
               </label>
               <label className="block font-semibold">
-                EBC (from kit)
+                EBC ({t("from kit")})
                 <input
                   name="ebc"
                   type="number"
@@ -341,7 +343,7 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
 
           {beerSubtype === "all_grain" && (
           <div>
-  <label className="block mb-2 font-semibold">Malt additions</label>
+  <label className="block mb-2 font-semibold">{t("Malt additions")}</label>
 
   {malts.map((m, i) => (
   <div
@@ -351,7 +353,7 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
     {/* Malt type */}
     <InventoryIngredientSelect
       selectionKey={`malt:${i}`}
-      placeholder="Malt type"
+      placeholder={t("Malt type")}
       category="malts"
       className="p-3 rounded bg-black/40 border border-white/20 flex-1 min-w-[240px]"
       value={m.name}
@@ -375,7 +377,7 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
     {/* Amount */}
     <UnitInput
       kind="kg"
-      placeholder={`Amount (${label("kg")})`}
+      placeholder={`${t("Amount")} (${label("kg")})`}
       className="p-3 rounded bg-black/40 border border-white/20 w-32"
       value={m.amount}
       onValueChange={(value) => {
@@ -389,8 +391,8 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
       type="number"
       min="0"
       step="any"
-      placeholder="EBC"
-      aria-label={`Malt ${i + 1} EBC`}
+      placeholder={t("EBC")}
+      aria-label={`${t("Malt")} ${i + 1} EBC`}
       required
       className="w-24 rounded-lg border border-white/20 bg-black/40 p-3"
       value={m.ebc}
@@ -407,7 +409,7 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
       onClick={() => removeMalt(i)}
       className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
     >
-      Remove
+      {t("Remove")}
     </button>
   </div>
 ))}
@@ -419,7 +421,7 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
     onClick={addMalt}
     className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
   >
-    + Add malt
+    + {t("Add malt")}
   </button>
 </div>
 )}
@@ -434,7 +436,7 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
           {/* Dynamic hop additions */}
           {beerSubtype === "all_grain" && (
           <div>
-  <label className="block mb-2 font-semibold">Hop additions</label>
+  <label className="block mb-2 font-semibold">{t("Hop additions")}</label>
 
   {hops.map((h, i) => (
   <div
@@ -444,7 +446,7 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
     {/* Hop type */}
     <InventoryIngredientSelect
       selectionKey={`hop:${i}`}
-      placeholder="Hop type"
+      placeholder={t("Hop type")}
       category="hops"
       className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
       value={h.name}
@@ -470,7 +472,7 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
     />
 
 <select
-  aria-label={`Hop ${i + 1} addition type`}
+  aria-label={`${t("Hop")} ${i + 1} ${t("addition type")}`}
   value={h.addition_type}
   onChange={(event) => {
     const updated = [...hops];
@@ -479,14 +481,14 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
   }}
   className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
 >
-  <option value="boil">Boil addition</option>
-  <option value="whirlpool">Whirlpool / hop stand</option>
+  <option value="boil">{t("Boil addition")}</option>
+  <option value="whirlpool">{t("Whirlpool / hop stand")}</option>
 </select>
 
 <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-[minmax(6.5rem,0.8fr)_minmax(5rem,0.6fr)_minmax(7rem,1fr)_minmax(9rem,1.4fr)_auto]">
 
     <input
-  placeholder="Alpha (%)"
+  placeholder={t("Alpha (%)")}
       type="number"
       min="0.1"
       max="100"
@@ -503,7 +505,7 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
 
 
 <input
-  placeholder="Year"
+  placeholder={t("Year")}
   type="text"
   className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
   value={h.year}
@@ -518,7 +520,7 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
     {/* Amount */}
     <UnitInput
       kind="g"
-      placeholder={`Amount (${label("g")})`}
+      placeholder={`${t("Amount")} (${label("g")})`}
       className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
       value={h.amount}
       onValueChange={(value) => {
@@ -530,7 +532,7 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
 
     {/* Boil time */}
     <input
-      placeholder={h.addition_type === "whirlpool" ? "Stand time (min)" : "Boil time (min)"}
+      placeholder={h.addition_type === "whirlpool" ? t("Stand time (min)") : t("Boil time (min)")}
       type="text"
       required={Boolean(h.name || h.amount || h.alpha)}
       className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
@@ -544,8 +546,8 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
 
     {h.addition_type === "whirlpool" && (
       <input
-        aria-label={`Hop ${i + 1} whirlpool temperature in Celsius`}
-        placeholder="Temperature (°C)"
+        aria-label={`${t("Hop")} ${i + 1} ${t("whirlpool temperature in Celsius")}`}
+        placeholder={t("Temperature (°C)")}
         type="number"
         min="0"
         max="100"
@@ -567,7 +569,7 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
       onClick={() => removeHop(i)}
       className="col-span-2 justify-self-end rounded-lg border border-white/20 bg-white/10 px-4 py-3 text-sm hover:bg-white/20 sm:col-span-1 sm:justify-self-auto"
     >
-      Remove
+      {t("Remove")}
     </button>
 </div>
   </div>
@@ -579,7 +581,7 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
     onClick={addHop}
     className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
   >
-    + Add hop
+    + {t("Add hop")}
   </button>
 </div>
 )}
@@ -588,7 +590,7 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
 {beerSubtype && (
 <div>
   <label className="mb-2 block font-semibold">
-    Dry hop additions
+    {t("Dry hop additions")}
   </label>
 
   {dryHops.map((h, i) => (
@@ -599,7 +601,7 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
       {/* Hop type */}
       <InventoryIngredientSelect
         selectionKey={`dryhop:${i}`}
-        placeholder="Hop type"
+        placeholder={t("Hop type")}
         category="hops"
         className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
         value={h.name}
@@ -628,7 +630,7 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
 
       {/* Alpha (%) */}
       <input
-        placeholder="Alpha (%)"
+        placeholder={t("Alpha (%)")}
         type="number"
         min="0.1"
         max="100"
@@ -645,7 +647,7 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
 
       {/* Year */}
       <input
-        placeholder="Year"
+        placeholder={t("Year")}
         type="text"
         className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
         value={h.year}
@@ -659,7 +661,7 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
       {/* Amount */}
       <UnitInput
         kind="g"
-        placeholder={`Amount (${label("g")})`}
+        placeholder={`${t("Amount")} (${label("g")})`}
         className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
         value={h.amount}
         onValueChange={(value) => {
@@ -671,7 +673,7 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
 
       {/* Contact time */}
       <input
-        placeholder="Contact time (days)"
+        placeholder={t("Contact time (days)")}
         type="text"
         className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
         value={h.contact}
@@ -688,7 +690,7 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
         onClick={() => removeDryHop(i)}
         className="col-span-2 justify-self-end rounded-lg border border-white/20 bg-white/10 px-4 py-3 text-sm hover:bg-white/20 sm:col-span-1 sm:justify-self-auto"
       >
-        Remove
+        {t("Remove")}
       </button>
 </div>
     </div>
@@ -699,7 +701,7 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
     onClick={addDryHop}
     className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
   >
-    + Add dry hop
+    + {t("Add dry hop")}
   </button>
 </div>
 )}
@@ -726,13 +728,13 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
           {/* Boil time */}
           {beerSubtype === "all_grain" && (
           <div>
-            <label className="mb-2 block font-semibold">Total boil time (minutes)</label>
+            <label className="mb-2 block font-semibold">{t("Total boil time (minutes)")}</label>
             <input
               name="boil_time"
               defaultValue={recipe?.boil_time ?? ""}
               type="number"
               step="1"
-              placeholder="Example: 60"
+              placeholder={t("Example: 60")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
@@ -740,13 +742,13 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
 
           {/* Yeast */}
           <div>
-            <label className="mb-2 block font-semibold">Yeast strain</label>
+            <label className="mb-2 block font-semibold">{t("Yeast strain")}</label>
             <InventoryIngredientSelect
               name="yeast"
               selectionKey="yeast"
               trackAmount
               defaultValue={recipe?.yeast ?? ""}
-              placeholder="Yeast strain"
+              placeholder={t("Yeast strain")}
               category="yeast"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
@@ -754,28 +756,28 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
 
           {/* Additives */}
           <div>
-            <label className="mb-2 block font-semibold">Additives</label>
+            <label className="mb-2 block font-semibold">{t("Additives")}</label>
             <InventoryAdditiveFields defaultValue={recipe?.additives ?? ""} />
           </div>
 
           {/* Full process */}
           <div>
-            <label className="mb-2 block font-semibold">Full process</label>
+            <label className="mb-2 block font-semibold">{t("Full process")}</label>
             <PublicMentionTextarea
               name="full_process"
               defaultValue={recipe?.full_process ?? ""}
-              placeholder="Mash schedule, hop schedule, fermentation plan..."
+              placeholder={t("Mash schedule, hop schedule, fermentation plan...")}
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-40"
             />
           </div>
 
           {/* Notes */}
           <div>
-            <label className="mb-2 block font-semibold">Notes</label>
+            <label className="mb-2 block font-semibold">{t("Notes")}</label>
             <PublicMentionTextarea
               name="notes"
               defaultValue={recipe?.notes ?? ""}
-              placeholder="Any additional notes about the batch..."
+              placeholder={t("Any additional notes about the batch...")}
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
             />
           </div>
@@ -785,7 +787,7 @@ setVolume(recipe.volume == null ? "" : String(recipe.volume));
             disabled={loading || recipeLoading}
             className="w-full rounded-lg border border-green-500 bg-green-500/10 px-4 py-3 font-semibold text-green-300 transition hover:bg-green-500/20 disabled:opacity-50"
           >
-            {loading ? "Creating..." : "Create batch"}
+            {loading ? t("Creating...") : t("Create batch")}
           </button>
             </>
           )}

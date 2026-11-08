@@ -1,6 +1,7 @@
 "use client";
 
 import AddItemForm from "./AddItemForm";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type AddItemModalProps = {
   open: boolean;
@@ -17,6 +18,7 @@ export default function AddItemModal({
   onAddItem,
   fixedCategory,
 }: AddItemModalProps) {
+  const { t } = useTranslation();
   if (!open) return null;
 
   return (
@@ -30,10 +32,10 @@ export default function AddItemModal({
         </button>
         <h2 className="mb-4 text-center text-2xl font-bold">
           {fixedCategory === "malts"
-            ? "Add malt"
+            ? t("Add malt")
             : fixedCategory === "hops"
-              ? "Add hop"
-              : "Add new item"}
+              ? t("Add hop")
+              : t("Add new item")}
         </h2>
         <AddItemForm
           onSubmitComplete={onClose}

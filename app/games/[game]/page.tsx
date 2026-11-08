@@ -9,6 +9,12 @@ import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 import { useUnits } from "@/app/components/Units";
 import type { UnitSystem } from "@/lib/units";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { LEARNING_PROGRESS_ERROR_KEYS, translateApiError } from "@/lib/i18n/apiErrors";
+import {
+  formatAcademyMathMessage,
+  type AcademyMathTranslation,
+} from "@/lib/i18n/academyMath";
 
 type Answer = {
   text: string;
@@ -21,6 +27,7 @@ type Question = {
   answers: Answer[];
   source?: string;
   hint?: string;
+  mathTranslation?: AcademyMathTranslation;
 };
 
 type LearningGame = {
@@ -39,6 +46,7 @@ type QuestionSeed = [
   wrongAnswerTwo: string,
   wrongAnswerThree: string,
   source?: string,
+  mathTranslation?: AcademyMathTranslation,
 ];
 
 type AuthoredQuestionSeed = {
@@ -47,6 +55,7 @@ type AuthoredQuestionSeed = {
   explanation: string;
   wrongAnswers: [string, string, string];
   source?: string;
+  mathTranslation?: AcademyMathTranslation;
 };
 
 type QuestionInput = QuestionSeed | AuthoredQuestionSeed;
@@ -57,9 +66,12 @@ type MissedAnswerReview = {
   correctAnswer: string;
   explanation: string;
   source?: string;
+  mathTranslation?: AcademyMathTranslation;
 };
 
 function SourceCitation({ source }: { source: string }) {
+  const { language, t } = useTranslation();
+  const label = displaySource(source, language, t);
   if (source.startsWith("Wikipedia:")) {
     return (
       <a
@@ -68,11 +80,15 @@ function SourceCitation({ source }: { source: string }) {
         rel="noreferrer"
         className="underline underline-offset-2 hover:text-white/80"
       >
-        {source.replace("Wikipedia: ", "Wikipedia — ")}
+        {label}
       </a>
     );
   }
-  return <>{source}</>;
+  return <>{label}</>;
+}
+
+function displaySource(source: string, language: string, t: (key: string) => string): string {
+  return language === "en" ? source.replace("Wikipedia: ", "Wikipedia — ") : t(source);
 }
 
 function mathQuestionHint(prompt: string): string | undefined {
@@ -123,6 +139,38 @@ function plainLanguageAnswer(answer: string): string {
   return answer;
 }
 
+function displayAnswer(answer: string, language: string, t: (key: string) => string): string {
+  if (language === "en" || /^\s*-?\d+(?:\.\d+)?(?:\s*(?:L|gal|kg|lb|g|oz|%))?\s*$/i.test(answer)) {
+    return plainLanguageAnswer(answer);
+  }
+  return t(answer);
+}
+
+function displayQuestion(question: Question | MissedAnswerReview, language: string, t: (key: string) => string): string {
+  if (language === "en") return plainLanguageQuestion(question.prompt);
+  if (question.mathTranslation) return formatAcademyMathMessage(question.mathTranslation, "prompt", t);
+  return t(question.prompt);
+}
+
+function displayExplanation(question: Question | MissedAnswerReview, explanation: string, language: string, t: (key: string) => string): string {
+  if (language === "en") return explanation;
+  if (question.mathTranslation) return formatAcademyMathMessage(question.mathTranslation, "explanation", t);
+  return t(explanation);
+}
+
+function displayFeedback(question: Question, answer: Answer, language: string, t: (key: string) => string): string {
+  if (language === "en") return answer.feedback;
+  if (answer.correct) return displayExplanation(question, answer.feedback, language, t);
+  const correct = question.answers.find((choice) => choice.correct);
+  if (!correct) throw new Error(`Academy question has no correct answer: ${question.prompt}`);
+  if (answer.feedback !== `The best answer is: ${correct.text}. ${correct.feedback}`) {
+    return t(answer.feedback);
+  }
+  return t("The best answer is: {answer}. {explanation}")
+    .replace("{answer}", displayAnswer(correct.text, language, t))
+    .replace("{explanation}", displayExplanation(question, correct.feedback, language, t));
+}
+
 function hasNumericAnswer(answer: string): boolean {
   return /^\s*-?\d+(?:\.\d+)?(?:\s*[a-z%]+)?\s*$/i.test(answer);
 }
@@ -135,6 +183,7 @@ function buildQuestions(seeds: QuestionInput[]): Question[] {
       explanation,
       wrongAnswers,
       source,
+      mathTranslation,
     } = Array.isArray(seed)
       ? {
           prompt: seed[0],
@@ -142,6 +191,7 @@ function buildQuestions(seeds: QuestionInput[]): Question[] {
           explanation: seed[2],
           wrongAnswers: [seed[3], seed[4], seed[5]] as [string, string, string],
           source: seed[6],
+          mathTranslation: seed[7],
         }
       : seed;
     const hint = hasNumericAnswer(correctAnswer) ? mathQuestionHint(prompt) : undefined;
@@ -150,6 +200,7 @@ function buildQuestions(seeds: QuestionInput[]): Question[] {
       prompt,
       ...(hint ? { hint } : {}),
       ...(source ? { source } : {}),
+      ...(mathTranslation ? { mathTranslation } : {}),
       answers: [
         {
           text: correctAnswer,
@@ -173,7 +224,7 @@ function createBrewDayPracticeQuestions(): QuestionSeed[] {
     ["The mash contains a few dry pockets after dough-in. What should you do?", "Stir until the grain is evenly wetted and the clumps are broken up", "Even wetting helps prevent dough balls and supports consistent conversion.", "Add more dry grain before breaking up the clumps", "Raise the temperature without mixing the dry pockets", "Begin runoff while some grain remains unwetted"],
     ["The mash is at its target temperature. Why cover the vessel during the rest?", "To help maintain a stable mash temperature", "Insulation or a lid reduces heat loss during the planned rest.", "To keep the mash from contacting any air at all", "To make the mash reach boiling temperature", "To prevent enzymes from converting starch"],
     ["You are checking whether mash conversion has progressed. Which test is commonly used?", "An iodine test on a cooled sample", "Iodine can indicate whether starch remains, though it does not replace gravity or process checks.", "A hydrometer test for finished-beer alcohol", "A pH test to confirm all starch is gone", "A temperature reading to measure dissolved sugar"],
-    ["The mash rest is complete and you are ready to drain. What helps start runoff smoothly?", "Open the outlet gradually and establish a steady flow", "A controlled runoff helps avoid disturbing or compacting the grain bed.", "Open the outlet fully and stir the grain bed as wort drains", "Drain the first wort, then add all sparge water at once without mixing", "Keep the outlet closed until the grain bed dries"],
+    ["The mash rest is complete and you are ready to drain. What helps start runoff smoothly?", "Open the outlet gradually and establish a steady flow", "A controlled runoff helps avoid disturbing or compacting the grain bed.", "Open the outlet fully and stir the grain bed as wort drains", "Compact the grain bed firmly before opening the outlet", "Keep the outlet closed until the grain bed dries"],
     ["Your lauter tun has a false bottom. What is its purpose?", "Support the grain bed while allowing wort to drain", "The false bottom separates the grain bed from the outlet and supports runoff.", "Measure wort gravity beneath the grain bed", "Keep the mash at its target temperature by heating it", "Prevent sparge water from reaching the grain"],
     ["Runoff has slowed to a trickle. What should you check?", "Whether the grain bed is compacted or the outlet is obstructed", "A compacted bed or blocked outlet can restrict wort flow.", "Whether the grain bed is draining too quickly", "Whether the sparge water is still being heated", "Whether the wort has reached its boil"],
     ["You are collecting first runnings. What are they?", "The initial wort drained from the mash before or during sparging", "First runnings are typically more concentrated than later runoff.", "The wort collected after all sparge water has passed through the grain", "The water added to the grain for the first sparge", "The wort left in the kettle after the boil"],
@@ -223,12 +274,12 @@ function createFermentationPracticeQuestions(): QuestionSeed[] {
     ["The gravity reading is stable across appropriate checks. What should you still consider before packaging?", "Whether the beer has had adequate time to finish and condition", "Stable gravity is a key check, but yeast may need time to complete cleanup and conditioning.", "Whether the beer has been cold-crashed, regardless of the recipe", "Whether yeast has completely disappeared from the beer", "Whether the beer has reached the recipe's exact expected gravity"],
     ["A beer develops an unexpected pellicle or fuzzy growth. What is a careful response?", "Avoid tasting it and assess the contamination safely", "Visible growth can indicate contamination; do not taste beer with clear warning signs.", "Remove the growth and assume the beer is safe without further assessment", "Bottle it before checking whether the growth returns", "Stir the surface growth into the beer to hide it"],
     ["You notice a vinegar-like aroma in a fermenter. What should you investigate?", "Possible oxygen exposure or microbial contamination", "Acetic acidity can be associated with oxygen and certain microbial activity; inspect the process.", "Whether the beer was fermented too cold", "Whether the yeast has flocculated too quickly", "Whether the mash temperature was slightly low"],
-    ["A solvent-like flavor is stronger than expected. Which fermentation factor should you review?", "Fermentation temperature and yeast stress", "Warm or stressful fermentation can increase harsh higher alcohol character.", "Whether the yeast was pitched at an appropriate rate", "Whether the wort gravity was unusually high", "Whether the strain was fermented within its recommended range"],
+    ["A solvent-like flavor is stronger than expected. Which fermentation factor should you review?", "Fermentation temperature and yeast stress", "Warm or stressful fermentation can increase harsh higher alcohol character.", "Whether the bottle label matches the beer color", "Whether the serving glass has a stem", "Whether the fermenter is taller than the kettle"],
     ["A beer has a medicinal or plastic-like character. What process input is worth checking?", "Chlorine or chloramine in brewing water and sanitation practice", "Chlorine compounds can contribute medicinal phenolic flavors when they react with beer compounds.", "Whether the beer was exposed to oxygen after fermentation", "Whether fermentation temperature was higher than planned", "Whether the yeast strain is known for clove-like phenols"],
     ["Fermentation is active and the airlock is bubbling. Should you open the vessel to smell it?", "Avoid unnecessary opening and use measurements to monitor progress", "Opening the fermenter can introduce contamination or oxygen; airlock activity alone is not a diagnosis.", "Open it to smell the beer whenever the bubble rate changes", "Use aroma alone instead of checking gravity or temperature", "Open it and stir in air to confirm fermentation is active"],
     ["The beer is fermenting more slowly than a previous batch. What should you compare?", "Yeast type, amount of yeast added, wort strength, and temperature", "These factors can all affect fermentation pace; compare them before intervening.", "Airlock bubbling rate alone", "Elapsed time alone without comparing gravity readings", "Room temperature alone without checking the beer temperature"],
     ["The yeast package was stored warm before pitching. What is a useful concern?", "Viability may be reduced; check package handling and fermentation progress", "Storage affects yeast viability, so assess the product and monitor rather than assuming a healthy pitch.", "The yeast's recommended range has necessarily increased", "The beer's gravity has already reached its final value", "The yeast will always ferment more vigorously after warm storage"],
-    ["A high-gravity wort is fermenting slowly. What yeast-related factor matters?", "Whether the pitch and strain are suitable for the wort's gravity", "High-gravity wort can place greater demands on yeast; pitch rate and strain suitability matter.", "Whether the pitch rate accounts for the higher wort gravity", "Whether the yeast strain tolerates the planned alcohol level", "Whether fermentation temperature is within the strain's range"],
+    ["A high-gravity wort is fermenting slowly. What yeast-related factor matters?", "Whether the pitch and strain are suitable for the wort's gravity", "High-gravity wort can place greater demands on yeast; pitch rate and strain suitability matter.", "The color of the yeast packet alone", "Whether the fermenter label is legible", "The shape of the serving glass"],
     ["The fermenter is exposed to strong light. What is a better storage condition?", "Keep it shaded and at a stable, yeast-appropriate temperature", "Light protection and stable temperature help protect the beer during fermentation.", "Keep it under strong light but lower its temperature", "Move it to a warmer location to offset light exposure", "Change the mash temperature after fermentation has begun"],
     ["A foam blow-off tube is bubbling actively. What should you ensure?", "The tube remains clear and drains into a clean, suitable vessel", "A clear blow-off path lets foam and gas escape safely during vigorous fermentation.", "Clamp the tube to keep krausen inside the fermenter", "Allow the receiving vessel to fill until it blocks the tube", "Remove the tube and seal the fermenter while it is active"],
     ["The beer is finished fermenting and you will bottle-condition it. What is important?", "Calculate priming sugar for the beer volume and carbonation target", "Appropriate priming avoids under-carbonation and excessive bottle pressure.", "Use the same unmeasured priming amount for every batch", "Calculate the sugar from original gravity alone without using beer volume", "Add priming sugar before confirming fermentation is complete"],
@@ -240,12 +291,12 @@ function createRecipePracticeQuestions(): QuestionSeed[] {
   const decisions: QuestionSeed[] = [
     ["You want a pale color and clean malt profile. Which base should dominate the grain bill?", "Use pale base malt for most of the extract and keep colored specialty malts restrained", "A pale base malt supplies most of the extract while a modest specialty-malt share preserves a light, clean profile.", "Use pale malt with a larger share of Vienna malt for a richer bread-like profile", "Use pale malt with a measured crystal-malt addition for more caramel character", "Use pale malt with a small roasted-malt addition for a hint of roast"],
     ["You want a restrained caramel note in the malt profile. Which specialty malt should you use sparingly?", "Crystal malt", "A measured amount of crystal malt can add caramel-like flavor and color.", "Light Munich malt for a bready malt note", "Carapils or dextrin malt for foam and body", "A small amount of toasted malt for a biscuit-like note"],
-    ["You want a smooth roast character rather than sharp roast bitterness. Which malt choice fits?", "A restrained amount of a smooth-roasting dark malt", "A carefully chosen dark malt and modest proportion can add roast without overwhelming the beer.", "A small amount of dehusked roasted malt for softer roast character", "A modest portion of chocolate malt for cocoa and roast notes", "A larger share of black patent malt for a sharper, more assertive roast"],
+    ["You want a smooth roast character rather than sharp roast bitterness. Which malt choice fits?", "A restrained amount of a smooth-roasting dark malt", "A carefully chosen dark malt and modest proportion can add roast without overwhelming the beer.", "A very large amount of heavily roasted malt", "Replace all base malt with black malt", "A larger share of black patent malt for a sharper, more assertive roast"],
     ["You want stronger biscuit-like malt flavor. Which grain-bill change is most direct?", "Add a measured portion of biscuit or toasted malt", "Biscuit and toasted malts contribute bread-like, toasty flavors.", "Increase light Munich malt for a rounder, bread-like malt character", "Increase crystal malt for more caramel sweetness", "Add a small amount of roasted malt for a darker toast character"],
-    ["You want more fermentable extract without changing the beer's color much. Which adjustment fits?", "Increase the pale base malt while recalculating the batch gravity", "Pale base malt adds fermentable extract with less color impact than dark specialty malts.", "Increase pale malt and reduce the batch volume to concentrate the wort", "Replace some pale malt with light crystal malt for additional extract and color", "Increase the malt bill but keep the same water volume and final batch size"],
+    ["You want more fermentable extract without changing the beer's color much. Which adjustment fits?", "Increase the pale base malt while recalculating the batch gravity", "Pale base malt adds fermentable extract with less color impact than dark specialty malts.", "Reduce the amount of pale base malt", "Replace some pale malt with light crystal malt for additional extract and color", "Add plain water without adding fermentable ingredients"],
     ["You want a fuller body and a sweeter finish. Which mash profile is a sensible starting point?", "Mash toward the warmer end of the recipe's suitable range", "A warmer mash often leaves more dextrins, which can contribute body and sweetness.", "Mash toward the cooler end and rely on a highly attenuative yeast", "Keep the mash temperature and increase the proportion of highly fermentable base malt", "Mash warmer but use a highly attenuative yeast to offset the fuller wort"],
     ["You want a drier finish without changing the recipe's target gravity. What is a useful first adjustment?", "Mash toward the cooler end of a suitable range", "A cooler mash often produces more fermentable wort and can support a drier finish.", "Mash warmer to leave more dextrins in the wort", "Keep the mash profile and choose a lower-attenuation yeast", "Increase crystal malt while keeping the same mash profile"],
-    ["You want more body without adding a strong flavor. Which ingredient could help in a restrained amount?", "Dextrin malt", "Dextrin malt is commonly used to add body and foam support with limited strong flavor.", "Light wheat malt for protein and foam support", "Light Munich malt for a more noticeable bready flavor", "A more attenuative yeast strain for a drier finish"],
+    ["You want more body without adding a strong flavor. Which ingredient could help in a restrained amount?", "Dextrin malt", "Dextrin malt is commonly used to add body and foam support with limited strong flavor.", "A large amount of heavily roasted malt", "Light Munich malt for a more noticeable bready flavor", "A more attenuative yeast strain for a drier finish"],
     [
       "Fermentation is complete. You want more hop aroma without adding hops to hot wort. What should you do?",
       "Dry-hop with a suitable aroma hop",
@@ -254,16 +305,16 @@ function createRecipePracticeQuestions(): QuestionSeed[] {
       "Add hops to hot wort in a whirlpool",
       "Add hops near the end of the boil",
     ],
-    ["You want more bitterness while keeping the late-hop aroma unchanged. What should you adjust?", "Increase the calculated early-boil bittering addition", "An appropriately sized early addition contributes bitterness; keep the aroma additions as planned.", "Use a higher-alpha hop at the same early-boil timing and recalculate the amount", "Move some of the late addition earlier while keeping the total hop mass constant", "Increase the late-hop amount and leave the bittering addition unchanged"],
+    ["You want more bitterness while keeping the late-hop aroma unchanged. What should you adjust?", "Increase the calculated early-boil bittering addition", "An appropriately sized early addition contributes bitterness; keep the aroma additions as planned.", "Reduce the early-boil bittering addition", "Move some of the late addition earlier while keeping the total hop mass constant", "Increase the late-hop amount and leave the bittering addition unchanged"],
     ["You want hop aroma but minimal additional bitterness. Which change is most suitable?", "Increase a suitable dry-hop addition", "Dry hopping extracts hop aroma and flavor without a long boil.", "Increase a whirlpool addition while keeping its temperature and contact time controlled", "Move the aroma addition to a short late-boil addition", "Increase the early bittering addition while reducing late hops"],
-    ["You want a softer bitterness while preserving late-hop character. What should you review?", "Reduce or adjust the early bittering addition", "The early addition contributes much of the bitterness; late additions can be retained for aroma and flavor.", "Use a lower-alpha hop for the early addition and recalculate its amount", "Move some of the early charge later while accounting for the changed bitterness", "Reduce the late-hop charge and leave the bittering schedule unchanged"],
-    ["You want a fruit-forward fermentation profile. Which yeast selection is most relevant?", "Choose a strain known for producing suitable fruity esters", "Yeast strain and fermentation conditions influence ester production; choose a profile suited to the beer.", "Choose a relatively neutral strain and emphasize fruit character with suitable hops", "Choose a phenolic strain for a more spice-forward profile", "Choose a strain with a suitable ester profile but ferment it at the cool end of its range"],
+    ["You want a softer bitterness while preserving late-hop character. What should you review?", "Reduce or adjust the early bittering addition", "The early addition contributes much of the bitterness; late additions can be retained for aroma and flavor.", "Increase the early bittering addition", "Move the late hop charge earlier in the boil", "Reduce the late-hop charge and leave the bittering schedule unchanged"],
+    ["You want a fruit-forward fermentation profile. Which yeast selection is most relevant?", "Choose a strain known for producing suitable fruity esters", "Yeast strain and fermentation conditions influence ester production; choose a profile suited to the beer.", "Choose a relatively neutral strain and emphasize fruit character with suitable hops", "Choose a phenolic strain for a more spice-forward profile", "Choose yeast without considering its flavor profile"],
     ["You want a clean, restrained yeast profile so hops remain prominent. What should guide yeast choice?", "Select a compatible strain with a relatively neutral profile", "A neutral strain can let malt and hop character stand out when fermented appropriately.", "Select a compatible strain with moderate esters for a more expressive fermentation", "Select a phenolic strain to add clove and spice alongside the hops", "Select a neutral strain but ferment it outside its recommended range"],
     ["You want a clove-like note typical of some wheat beers. What yeast character should you seek?", "A suitable phenolic wheat-beer yeast", "Some wheat-beer strains produce clove-like phenols as part of their characteristic profile.", "A wheat-beer strain known mainly for banana-like esters", "A clean, neutral wheat strain for a restrained yeast character", "A strain with a strong sulfur profile rather than clove-like phenols"],
     ["You are increasing a recipe from 20 L to 30 L. What is the best starting approach?", "Scale ingredient amounts by 1.5, then review gravity, bitterness, and system losses", "The volume ratio is 30 ÷ 20 = 1.5; efficiency, hop utilization, and equipment losses may still change the result.", "Scale only the fermentables and keep the hop schedule unchanged", "Use a factor of 0.67 because the original batch is smaller", "Scale every amount by 1.5 and assume the original gravity and bitterness will match exactly"],
-    ["Your recipe estimate is below its target original gravity at the planned volume. Which change directly raises extract?", "Increase fermentable malt or extract and recalculate the recipe", "More fermentable ingredient increases extract; account for batch volume and system efficiency.", "Reduce the batch volume while keeping the fermentable amount fixed", "Improve expected mash efficiency and update the gravity estimate", "Add specialty malt with a lower extract potential and recalculate the grain bill"],
-    ["You want a lighter color without changing hop character. What should you change first?", "Use a paler malt bill and reduce dark specialty malts", "The grain bill largely determines wort color, so choose malts that fit the intended shade.", "Replace a portion of dark crystal malt with a lighter crystal malt", "Reduce the amount of roasted malt while keeping the hop schedule fixed", "Use a lighter base malt but retain the same proportion of dark specialty malt"],
-    ["You want a more stable foam without adding much malt flavor. Which grain choice is a sensible starting point?", "A modest amount of dextrin malt", "Dextrin malt can support foam and body while contributing relatively little strong flavor.", "A modest amount of wheat malt for protein and a light grain character", "A larger share of crystal malt for body and caramel notes", "A restrained amount of roasted malt for body and roast character"],
+    ["Your recipe estimate is below its target original gravity at the planned volume. Which change directly raises extract?", "Increase fermentable malt or extract and recalculate the recipe", "More fermentable ingredient increases extract; account for batch volume and system efficiency.", "Reduce the fermentable malt while keeping the planned volume", "Add water while keeping the fermentable amount fixed", "Remove fermentable extract from the recipe"],
+    ["You want a lighter color without changing hop character. What should you change first?", "Use a paler malt bill and reduce dark specialty malts", "The grain bill largely determines wort color, so choose malts that fit the intended shade.", "Increase the amount of dark roasted malt", "Add more dark crystal malt while keeping the hop schedule fixed", "Use a darker base malt and retain the same dark specialty malt"],
+    ["You want a more stable foam without adding much malt flavor. Which grain choice is a sensible starting point?", "A modest amount of dextrin malt", "Dextrin malt can support foam and body while contributing relatively little strong flavor.", "A large amount of heavily roasted malt", "A larger share of crystal malt for body and caramel notes", "A large amount of black malt for intense roast character"],
     ["You want a crisp, dry finish in a lager. Which yeast trait is useful?", "Choose a lager strain with attenuation suited to a crisp, dry finish", "A strain with suitable attenuation can consume enough fermentable extract to support the intended finish.", "Choose a lager strain with lower attenuation to retain more body", "Choose a strain with suitable attenuation but a more expressive ester profile", "Choose a highly flocculent strain without checking its attenuation"],
     ["You want a rich, bready malt note without adding caramel sweetness. Which malt is the most direct choice?", "Use a suitable Munich-style malt in a balanced proportion", "Munich-style malt can contribute rich bready malt character without relying on crystal sweetness.", "Use Vienna malt for a lighter, more toasted malt character", "Use light crystal malt for a mild caramel note", "Use biscuit malt for a drier, cracker-like impression"],
     ["You want less astringency from a grain bill with husked malt. What process choice helps?", "Avoid excessively hot, high-pH sparging", "Careful sparge temperature and pH help limit extraction of harsh husk compounds.", "Keep sparge pH controlled but extend runoff to a very low final gravity", "Use a finer crush while maintaining the same sparge conditions", "Use cooler sparge water but allow runoff pH to rise unchecked"],
@@ -401,6 +452,8 @@ function createMathPracticeQuestions(system: UnitSystem): QuestionSeed[] {
       `${formatNumber(finalVolume - 2)} ${volumeUnit}`,
       `${formatNumber(finalVolume + 1)} ${volumeUnit}`,
       `${formatNumber(finalVolume + 2)} ${volumeUnit}`,
+      undefined,
+      { family: "dilutionVolume", values: { volume, volumeUnit, finalVolume } },
     ]);
 
     const water = index + 2;
@@ -412,6 +465,8 @@ function createMathPracticeQuestions(system: UnitSystem): QuestionSeed[] {
       formatGravity(resultingPoints + 3),
       formatGravity(resultingPoints - 3),
       "1.060",
+      undefined,
+      { family: "dilutionGravity", values: { water, volume, volumeUnit, resultingPoints, gravity: formatGravity(resultingPoints) } },
     ]);
 
     const baseVolume = metric ? 10 + index : 3 + index;
@@ -425,6 +480,8 @@ function createMathPracticeQuestions(system: UnitSystem): QuestionSeed[] {
       `${Number((scaledMalt - 1).toFixed(2))} ${massUnit}`,
       `${Number((scaledMalt + 1).toFixed(2))} ${massUnit}`,
       `${Number((scaledMalt + 2).toFixed(2))} ${massUnit}`,
+      undefined,
+      { family: "scaleMalt", values: { baseVolume, targetVolume, volumeUnit, baseMalt, scaledMalt, massUnit } },
     ]);
 
     const originalPoints = 40 + index;
@@ -449,6 +506,8 @@ function createMathPracticeQuestions(system: UnitSystem): QuestionSeed[] {
       `${attenuation}%`,
       `The gravity drop is ${originalPoints} - ${finalPoints} = ${fermentedPoints} points. ${fermentedPoints} ÷ ${originalPoints} × 100 = ${attenuation}%.`,
       ...wrongAttenuationAnswers,
+      undefined,
+      { family: "attenuation", values: { originalGravity: formatGravity(originalPoints), finalGravity: formatGravity(finalPoints), originalPoints, finalPoints, fermentedPoints, attenuation } },
     ]);
   }
   return questions;
@@ -489,7 +548,7 @@ function createFlavorPracticeQuestions(): QuestionSeed[] {
       compound: "Fusel alcohols",
       explanation: "Elevated fusel alcohols can produce hot, harsh, or solvent-like aromas and flavors.",
       clue: "a hot, solvent-like aroma",
-      alternatives: ["Ethyl acetate", "Acetaldehyde", "Diacetyl"],
+      alternatives: ["Hydrogen sulfide", "Acetaldehyde", "Diacetyl"],
     },
     {
       compound: "Isoamyl acetate",
@@ -806,14 +865,14 @@ const LEARNING_GAMES: Record<string, LearningGame> = {
             feedback: "Lautering separates wort from the grain bed; sparging rinses remaining sugars from the grain.",
           },
           {
-            text: "Raise the mash to mash-out temperature, then begin runoff",
+            text: "Pitch yeast into the mash before separating the wort",
             correct: false,
-            feedback: "A mash-out may be part of the process, but first establish runoff and separate wort from the grain.",
+            feedback: "Separate the wort and follow the planned boil and cooling steps before pitching yeast.",
           },
           {
-            text: "Recirculate the first cloudy runoff, then collect the wort",
+            text: "Bottle the mash before collecting the wort",
             correct: false,
-            feedback: "Recirculation is a lautering step, but the grain bed must first be set for runoff after the mash rest.",
+            feedback: "The wort must be separated and fermented before the beer can be bottled.",
           },
           {
             text: "Add all sparge water and drain it without separating the first wort",
@@ -832,9 +891,9 @@ const LEARNING_GAMES: Record<string, LearningGame> = {
             feedback: "The boil helps sanitize wort and is when many hop additions are made. Follow the recipe's timing.",
           },
           {
-            text: "Check pre-boil volume and gravity, then bring the wort to a boil",
+            text: "Pitch yeast into the unboiled wort instead of following the planned boil",
             correct: false,
-            feedback: "Those checks happen before the boil. Once wort is collected and measured, follow the boil and hop schedule.",
+            feedback: "Follow the planned boil and cooling steps before pitching yeast.",
           },
           {
             text: "Transfer the wort to the fermenter and begin cooling it there",
@@ -858,9 +917,9 @@ const LEARNING_GAMES: Record<string, LearningGame> = {
             feedback: "Cooling prepares the wort for yeast. The target depends on the yeast and recipe.",
           },
           {
-            text: "Whirlpool or settle the wort, then chill it to pitching temperature",
+            text: "Add yeast while the wort is still at boiling temperature",
             correct: false,
-            feedback: "Whirlpooling or settling may follow the boil, but the wort still needs to reach a suitable pitching temperature.",
+            feedback: "Cool the wort to a temperature suitable for the yeast before adding it.",
           },
           {
             text: "Transfer the wort while hot and rely on the fermenter to cool it",
@@ -883,9 +942,9 @@ const LEARNING_GAMES: Record<string, LearningGame> = {
             feedback: "Once cooled, transfer with clean, sanitized equipment and pitch suitable yeast according to its instructions.",
           },
           {
-            text: "Measure the cooled wort and aerate or oxygenate it as the process calls for",
+            text: "Leave the cooled wort uncovered without pitching yeast",
             correct: false,
-            feedback: "That can be part of the next steps, but transfer to a sanitized fermenter and pitch suitable yeast.",
+            feedback: "Transfer the cooled wort to a sanitized fermenter and pitch suitable yeast rather than leaving it exposed.",
           },
           {
             text: "Transfer the wort to a sanitized fermenter and wait for visible airlock activity before pitching",
@@ -945,7 +1004,7 @@ const LEARNING_GAMES: Record<string, LearningGame> = {
         ["A recipe calls for a bittering hop addition at the start of the boil. When should it be added?", "At the recipe's specified early-boil timing", "Longer boil time generally increases isomerization and bitterness contribution.", "At flameout so it receives no boil time", "During the mash before the wort is collected", "After fermentation when bitterness can no longer be extracted"],
         ["A recipe calls for a late-boil hop addition. Why follow its stated timing?", "Timing influences the balance of bitterness, flavor, and aroma", "Later additions receive less boil time and often retain more volatile hop character.", "Timing determines the wort's original gravity", "Late hops replace the need for an early bittering addition in every recipe", "Timing affects only the mash temperature, not hop character"],
         ["The boil is vigorous enough to risk a boil-over. What is the best response?", "Reduce heat temporarily and manage the boil safely", "A controlled boil helps prevent spills and keeps the process safe.", "Add sanitizer to the kettle", "Increase heat and leave the kettle unattended", "Cover and seal the kettle while it boils"],
-        ["Why avoid leaving a kettle unattended during heating and boiling?", "Hot liquids and boil-overs can create burn and fire hazards", "Stay attentive, use stable equipment, and follow safe hot-side practices.", "The wort can foam up and boil over as it approaches a boil", "A kettle can be left uncovered over a flame without checking it", "The boiling wort can be sealed under pressure without a rated vessel"],
+        ["Why avoid leaving a kettle unattended during heating and boiling?", "Hot liquids and boil-overs can create burn and fire hazards", "Stay attentive, use stable equipment, and follow safe hot-side practices.", "Boiling wort cannot foam or spill over", "A kettle can be left uncovered over a flame without checking it", "The boiling wort can be sealed under pressure without a rated vessel"],
         ["A recipe includes a whirlfloc or kettle fining addition. When is it commonly used?", "Near the end of the boil, according to product and recipe directions", "Kettle finings are typically added late in the boil to aid hot-break and trub settling.", "At the start of fermentation after the wort has cooled", "During the mash before the wort is collected", "After packaging when the beer is ready to serve"],
         ["Why might a brewer use a whirlpool after the boil?", "To gather hop matter and trub into a more concentrated area", "Whirlpooling can help separate solids from wort; the method and rest depend on the recipe.", "To return cloudy first runoff through the grain bed", "To mix sparge water into the mash", "To bring the wort to a boil more quickly"],
         ["The boil is over. What should happen before transferring cooled wort?", "Use clean, sanitized equipment on surfaces that contact post-boil wort", "After the boil, contamination control becomes important; clean and sanitize contact surfaces.", "Use hot-side equipment without checking that it is clean", "Rinse the fermenter but skip sanitizer on beer-contact surfaces", "Sanitize the equipment before removing visible soil"],
@@ -958,7 +1017,7 @@ const LEARNING_GAMES: Record<string, LearningGame> = {
         ["You are using liquid yeast and unsure whether it is enough for a large or strong wort. What should you do?", "Use a suitable pitching-rate estimate and follow yeast guidance", "Required cell count depends on wort volume, gravity, strain, and yeast condition.", "Assume a single pack provides the same cell count regardless of age or size", "Add yeast before the wort has cooled to its pitching range", "Use the same yeast amount for every batch volume and gravity"],
         ["Why might a brewer take an original-gravity reading after collecting and boiling wort?", "To compare wort strength with the recipe target", "OG records the starting density and supports later process and alcohol estimates.", "To measure the expected final gravity before fermentation", "To determine how much carbonation is already in a keg", "To estimate hop aroma without tasting the beer"],
         ["The original gravity is lower than the recipe target. What is a useful first step?", "Check measurement temperature, volume, and process notes before adjusting", "Verify readings and batch volume first; any correction depends on the recipe and stage.", "Add yeast to raise the wort's gravity", "Add sanitizer to increase dissolved extract", "Change the recipe's recorded target to match the measurement"],
-        ["Why record the actual mash and boil volumes?", "They help diagnose process losses and improve future recipe consistency", "Good records help tune equipment profiles and repeat successful batches.", "They show whether the batch reached the expected volume without measuring gravity", "They determine the yeast strain's attenuation", "They replace the need to record ingredient amounts"],
+        ["Why record the actual mash and boil volumes?", "They help diagnose process losses and improve future recipe consistency", "Good records help tune equipment profiles and repeat successful batches.", "They prove that no liquid was lost during the process", "They determine the yeast strain's attenuation", "They replace the need to record ingredient amounts"],
         ["Why keep notes about hop additions and their timing?", "Timing and amount influence bitterness, flavor, and aroma", "Accurate hop records make recipe results easier to understand and reproduce.", "Hop timing determines the mash temperature", "The notes show whether fermentation has reached final gravity", "The notes show how much grain extract was collected"],
         ["Fermentation has begun. What should you do with the fermenter?", "Maintain conditions appropriate for the yeast and keep it protected", "Stable, suitable fermentation conditions support yeast performance and reduce contamination risk.", "Make large temperature changes whenever the airlock slows", "Open the fermenter frequently to check the beer's aroma", "Move it between warm and cool locations each day"],
         ["Why keep fermentation records such as temperature and gravity?", "They help track progress and troubleshoot deviations", "Measurements provide more reliable information than appearance or airlock activity alone.", "They show only the beer's color, not fermentation progress", "They determine the hop variety needed for the next batch", "They replace checking whether gravity is stable"],
@@ -1131,11 +1190,11 @@ const LEARNING_GAMES: Record<string, LearningGame> = {
       ...buildQuestions([
         ["Your airlock is quiet twelve hours after pitching. What is the best first move?", "Check the fermenter seal and monitor temperature and gravity", "A leak or normal lag can explain a quiet airlock; gravity and temperature provide better clues.", "Bottle the beer immediately", "Add sanitizer to the wort", "Discard the batch without checking"],
         ["There is no visible activity after one day, but the wort is within the yeast range. What should you do?", "Give the yeast time and keep monitoring", "Lag time varies with yeast, pitching rate, and wort; visible bubbles are not the only sign of fermentation.", "Pitch a second packet every hour", "Heat the fermenter above the strain's range", "Open it and stir with an unclean spoon"],
-        ["The airlock is not bubbling, but gravity has fallen since pitching. What does that suggest?", "Fermentation is occurring even if the airlock is quiet", "A leaky seal can prevent airlock activity; gravity change is evidence that extract is being consumed.", "The sample temperature or reading technique may need checking before drawing a conclusion", "The beer has reached final gravity because its reading is lower", "The airlock may not show activity even while gravity is still changing"],
-        ["The airlock bubbles steadily. Does that prove fermentation is healthy and complete?", "No; check gravity, temperature, and the recipe's expected progress", "Bubbles show gas is escaping, but do not establish fermentation health or completion by themselves.", "Check whether gravity is stable before interpreting the airlock activity", "A steady airlock can coexist with a fermentation issue or leak", "Use the yeast's expected timeline alongside gravity and temperature"],
+        ["The airlock is not bubbling, but gravity has fallen since pitching. What does that suggest?", "Fermentation is occurring even if the airlock is quiet", "A leaky seal can prevent airlock activity; gravity change is evidence that extract is being consumed.", "Fermentation cannot occur without visible airlock bubbles", "The beer has reached final gravity because its reading is lower", "Gravity must remain unchanged during active fermentation"],
+        ["The airlock bubbles steadily. Does that prove fermentation is healthy and complete?", "No; check gravity, temperature, and the recipe's expected progress", "Bubbles show gas is escaping, but do not establish fermentation health or completion by themselves.", "Yes; steady bubbling proves the gravity is stable", "Yes; bubbling rules out every fermentation problem", "Yes; airlock activity alone establishes fermentation is complete"],
         ["The fermenter is warmer than the room during active fermentation. What best explains the difference?", "Yeast activity releases heat, so the beer can run warmer than the room", "Active fermentation can raise the beer temperature above ambient.", "The fermenter is insulated, so the beer cannot exchange heat with its surroundings", "Fermentation consumes heat, so a warmer reading means activity has stopped", "Only the airlock can create a temperature difference between beer and room"],
         ["A temperature probe attached to the fermenter reads above the yeast's recommended range. What next?", "Use a controlled cooling method and monitor the beer temperature", "Gently return the beer toward the strain's range and avoid abrupt swings.", "Add ice directly into the fermenter", "Move it next to a heater", "Open it to release heat"],
-        ["The beer is colder than the yeast's recommended range and gravity is unchanged. What is sensible?", "Gently bring it toward the strain's range and monitor for activity", "Cold can slow some yeast; adjust gradually and recheck gravity rather than assuming a failure.", "Warm it gradually within the strain's range and recheck gravity", "Package it if the airlock is quiet, without confirming gravity stability", "Raise it well above the strain's range to restart activity quickly"],
+        ["The beer is colder than the yeast's recommended range and gravity is unchanged. What is sensible?", "Gently bring it toward the strain's range and monitor for activity", "Cold can slow some yeast; adjust gradually and recheck gravity rather than assuming a failure.", "Cool it further below the yeast's recommended range", "Package it if the airlock is quiet, without confirming gravity stability", "Raise it well above the strain's range to restart activity quickly"],
         ["Fermentation temperature rose quickly after vigorous activity began. What should you consider?", "Use temperature control to avoid sustained excessive warmth", "Fermentation heat can raise beer temperature; follow the yeast's recommended range.", "Raise the temperature further above the strain's range", "Cool the beer far below the strain's range all at once", "Ignore the beer temperature and rely only on room temperature"],
         ["The fermenter is in direct sunlight. What is a better location?", "A shaded place with stable, suitable temperature", "Stable temperature and protection from light are generally preferable for fermentation.", "A location with the same temperature but stronger sunlight", "A warm location with large temperature swings", "A cold location outside the yeast's recommended range"],
         ["The yeast package says to ferment within a specific range. Which temperature should guide you?", "The yeast supplier's range and the recipe's intended profile", "Strain-specific guidance is more useful than a universal temperature for every beer.", "The room temperature regardless of the beer temperature", "The mash temperature used before the wort was boiled", "A single temperature used for every yeast strain"],
@@ -1147,7 +1206,7 @@ const LEARNING_GAMES: Record<string, LearningGame> = {
         ["The airlock stopped after vigorous bubbling. What should you do before packaging?", "Take gravity readings over time and confirm they are stable", "Airlock activity often slows before fermentation is verified complete; stable gravity is a better check.", "Treat the airlock stopping as proof that final gravity is stable", "Use the krausen's appearance instead of taking gravity readings", "Package the beer after a fixed number of days without checking gravity"],
         ["Gravity is still dropping between readings. What does that mean for packaging?", "Wait; fermentation may still be active", "Changing gravity indicates extract is still being consumed, so packaging may be premature.", "Bottle the beer while gravity is falling", "Use the latest reading as final gravity without checking it again", "Assume the airlock stopping means fermentation has ended"],
         ["Two gravity readings taken too close together differ slightly. What is a careful next step?", "Take another reading after an appropriate interval using consistent technique", "Small measurement variation can occur; compare readings over time with a suitable instrument.", "Treat the small difference as proof of a stuck fermentation", "Change the hydrometer calibration temperature to match the result", "Use the airlock bubble rate to decide which reading is correct"],
-        ["Your gravity reading seems unexpectedly high, but the beer looks normal. What should you verify before changing the process?", "Instrument calibration, sample temperature, and reading technique", "Temperature and technique can affect a hydrometer reading; verify before intervening.", "Compare it with the original-gravity reading without checking the sample", "Check whether the hydrometer is touching the sample jar", "Check whether bubbles are clinging to the instrument"],
+        ["Your gravity reading seems unexpectedly high, but the beer looks normal. What should you verify before changing the process?", "Instrument calibration, sample temperature, and reading technique", "Temperature and technique can affect a hydrometer reading; verify before intervening.", "Compare it with the original-gravity reading without checking the sample", "Change the recipe target without checking the instrument", "Assume clear beer cannot have a high gravity"],
         ["A refractometer reading after fermentation seems unexpectedly high. Why might that be?", "Alcohol affects refractive readings, so a post-fermentation correction is needed", "Use the original reading and an appropriate correction method, or confirm with a hydrometer.", "Use the refractometer's pre-fermentation scale without correction", "Treat the reading as a direct measure of alcohol percentage", "Apply a hydrometer temperature correction without accounting for alcohol"],
         ["The hydrometer has bubbles clinging to it in the sample. What should you do?", "Remove bubbles and read the instrument carefully at its calibrated temperature", "Bubbles can affect buoyancy and the reading; use clean, consistent technique.", "Take a second reading with bubbles still attached", "Read the scale at the top of the meniscus", "Use the sample temperature as the calibration temperature even when they differ"],
         ["A gravity sample is much warmer than the hydrometer calibration temperature. What is appropriate?", "Apply a suitable temperature correction or cool the sample safely", "Hydrometer readings depend on temperature; use the instrument's calibration guidance.", "Read it without correction even though the temperatures differ", "Apply the correction in the opposite direction", "Use the original-gravity value as the final-gravity reading"],
@@ -1159,7 +1218,7 @@ const LEARNING_GAMES: Record<string, LearningGame> = {
         ["The beer smells buttery during fermentation. What can help yeast reduce diacetyl?", "Allow suitable time and conditions for the yeast to finish", "Some yeast can reabsorb diacetyl during conditioning; follow strain and recipe guidance.", "Cold-crash the beer before the yeast can finish conditioning", "Package it as soon as the buttery aroma appears", "Transfer it away from the yeast before gravity is stable"],
         ["The beer smells like green apple during fermentation. What should you do?", "Allow fermentation and conditioning time, then reassess", "Acetaldehyde can be a fermentation byproduct that yeast may reduce with time; do not rush packaging.", "Transfer it off the yeast before fermentation is complete", "Package it while gravity is still falling", "Aerate the beer after fermentation has begun"],
         ["A sulfur-like aroma is present during fermentation. What is a reasonable response?", "Follow yeast guidance and allow time for fermentation and conditioning", "Some strains produce sulfur aromas that may diminish; assess the beer after suitable conditioning.", "Remove the beer from yeast before it has finished fermenting", "Add oxygen repeatedly during active fermentation", "Bottle the beer without confirming stable gravity"],
-        ["The beer smells solvent-like after fermenting warm. What process factor is worth reviewing?", "Fermentation temperature and yeast health", "Some unwanted higher alcohol flavors can be associated with stressed or warm fermentation, though diagnosis depends on the beer.", "Whether the wort gravity was unusually high", "Whether the yeast was pitched at an appropriate rate", "Whether fermentation stayed within the strain's recommended range"],
+        ["The beer smells solvent-like after fermenting warm. What process factor is worth reviewing?", "Fermentation temperature and yeast health", "Some unwanted higher alcohol flavors can be associated with stressed or warm fermentation, though diagnosis depends on the beer.", "The color of the bottle label", "The shape of the serving glass", "The height of the fermenter relative to the kettle"],
         ["A medicinal, plastic-like flavor appears in the finished beer. Which brewing issue could be investigated?", "Chlorine or chloramine in brewing water or sanitation practices", "These disinfectants can react with phenolic compounds and create medicinal off-flavors.", "Yeast-derived clove phenols from the strain", "Warm fermentation that produced solvent-like alcohols", "Oxygen exposure that caused stale or papery notes"],
         ["The beer has a strong vinegar-like aroma and a surface film. What should you do?", "Avoid tasting if there are concerning signs and assess sanitation and contamination risk", "Acetic aromas and surface growth can indicate contamination; use caution and review process controls.", "Assume the film is harmless without considering the beer or process", "Skim the film and package the beer without further assessment", "Treat the surface as normal yeast krausen even if it formed after fermentation"],
         ["You see fuzzy growth on the beer surface. What is the safest choice?", "Do not consume it; discard carefully and review sanitation", "Fuzzy growth is a warning sign. Avoid disturbing it or trying to salvage the batch by skimming.", "Skim the growth and assume the beer beneath it is safe", "Stir the growth into the beer before packaging", "Taste the beer to identify the type of growth"],
@@ -1170,7 +1229,7 @@ const LEARNING_GAMES: Record<string, LearningGame> = {
         ["You forgot to sanitize a spoon that touched the cooled wort. What is the best response?", "Avoid further handling, monitor carefully, and recognize contamination risk", "Contamination cannot be reversed reliably with a later addition; keep records and assess the batch cautiously.", "Add sanitizer to the wort after fermentation has begun", "Continue using the same unsanitized spoon for sampling", "Open the fermenter repeatedly to check for signs of contamination"],
         ["A sample thief was used and returned to the fermenter. What is the concern?", "The sample may have introduced contaminants", "Sampling tools should be clean and sanitized, and measured samples should not be returned.", "The sample changes the yeast strain", "The sample raises the beer's alcohol content", "The sample makes the original gravity increase"],
         ["The fermentation temperature controller reads a constant value, but a separate thermometer differs. What should you do?", "Check probe placement and verify instruments before adjusting", "Probe location and calibration can explain differences; confirm the beer temperature with a reliable method.", "Set the controller to the wort's boiling temperature", "Change the controller setting before checking either instrument", "Use the room temperature as the only measurement"],
-        ["A heating belt warms one spot on the fermenter. What should you monitor?", "The beer temperature and the controller's sensor placement", "Localized heating can make the probe reading differ from the beer; use suitable placement and equipment guidance.", "The temperature at the belt alone without checking the beer", "The room temperature instead of the fermenter temperature", "Whether the belt has raised the beer above the yeast's range"],
+        ["A heating belt warms one spot on the fermenter. What should you monitor?", "The beer temperature and the controller's sensor placement", "Localized heating can make the probe reading differ from the beer; use suitable placement and equipment guidance.", "The temperature at the belt alone without checking the beer", "The room temperature instead of the fermenter temperature", "Only the color of the heating belt"],
         ["The room temperature falls overnight. What is a useful response?", "Check the beer temperature and maintain a suitable stable range", "Beer temperature can lag behind room changes; use a suitable control method and strain guidance.", "Change the controller based only on the room temperature", "Raise the fermenter well above the yeast's recommended range", "Assume fermentation will maintain the same temperature without checking"],
         ["A warm spell raises the room temperature during fermentation. What should you monitor?", "The actual fermenting beer temperature", "Active fermentation generates heat, so beer may be warmer than the surrounding air.", "The room temperature alone instead of the beer temperature", "The airlock temperature instead of the fermenter", "The mash temperature from brew day"],
         ["The fermenter appears inactive after cold storage. What might be happening?", "Low temperature may have slowed yeast activity", "Some yeast activity slows in cold conditions; check gravity and follow the strain's guidance before intervening.", "The yeast has necessarily reached final gravity", "The airlock has stopped because the beer is fully carbonated", "The cold temperature proves the yeast is no longer viable"],
@@ -1191,7 +1250,7 @@ const LEARNING_GAMES: Record<string, LearningGame> = {
         ["A fermented beer has little aroma while cold. What should you consider?", "Serving temperature can affect how aromas are perceived", "Cold beer can seem less aromatic; assess it at an appropriate serving temperature as well.", "Assume the beer has no aroma because it is cold", "Raise it above its intended serving temperature before every assessment", "Use original gravity to estimate its aroma intensity"],
         ["A sample tastes harshly bitter during active fermentation. What is sensible?", "Wait until fermentation and conditioning are complete before judging", "Young beer can taste unbalanced; assess the finished beer before making conclusions.", "Add priming sugar to reduce the beer's bitterness", "Increase hop additions before the beer is finished", "Use a sweetener before checking the finished beer's balance"],
         ["A finished beer is unexpectedly flat in the keg. What should you check?", "CO₂ supply, connections, temperature, and carbonation time", "Keg carbonation depends on gas supply, leaks, temperature, pressure, and time.", "The mash pH only", "The yeast packet date only", "The bottle-cap color"],
-        ["Bottle-conditioned beer is overcarbonated. What is a key safety concern?", "Excess pressure can cause bottles to break", "Handle cautiously and cool the bottles; investigate fermentation completion and priming calculations.", "The beer may gush or foam excessively when opened", "The carbonation proves the beer is safe to open warm", "The beer has lost all of its alcohol"],
+        ["Bottle-conditioned beer is overcarbonated. What is a key safety concern?", "Excess pressure can cause bottles to break", "Handle cautiously and cool the bottles; investigate fermentation completion and priming calculations.", "Excess pressure cannot damage a bottle", "The carbonation proves the beer is safe to open warm", "The beer has lost all of its alcohol"],
         ["Bottle-conditioned beer is undercarbonated. What should you review?", "Priming-sugar measurement, yeast activity, temperature, and conditioning time", "Carbonation depends on measured sugar, viable yeast, seal, temperature, and time.", "Increase the priming amount without checking the batch volume", "Warm the bottles beyond the yeast's range without checking its viability", "Assume the beer contains no yeast because it is undercarbonated"],
         ["After fermentation, the beer tastes stale or papery. What process issue might you review?", "Oxygen exposure during transfer or packaging", "Oxidation can create stale flavors; review splashing, headspace, and packaging practices.", "Yeast strain choice that produced a clove-like phenolic note", "Fermentation temperature that produced a buttery diacetyl note", "Mash profile that left a fuller, sweeter finish"],
         ["The beer is cloudy after fermentation. What should you check before deciding it is a fault?", "Style expectations, yeast settling, temperature, and any recipe additions", "Some beers are intentionally hazy; cloudiness can also come from yeast or other process factors.", "Assume haze always indicates contamination", "Use clarity alone to decide whether gravity is stable", "Add an unmeasured fining dose before checking the recipe"],
@@ -1250,8 +1309,8 @@ const LEARNING_GAMES: Record<string, LearningGame> = {
       ["Your beer should have a more pronounced bitterness. Which recipe change most directly supports that goal?", "Increase the appropriately calculated early-boil bittering addition", "An early-boil addition gives alpha acids more time to isomerize; calculate the amount for the recipe and target.", "Use a lower-alpha hop at the same early-boil amount and timing", "Move part of the bittering charge to a late or whirlpool addition", "Increase the dry-hop charge without changing the boil schedule"],
       ["You want a fuller malt impression and caramel notes in an amber ale. Which adjustment is most appropriate?", "Add a measured portion of a suitable crystal malt", "Crystal malts can add caramel-like flavors and color; keep the amount balanced with the base malt.", "Increase light Munich malt for a richer bread-like malt note", "Add more pale base malt while keeping the specialty-malt share unchanged", "Use a small amount of toasted malt for a drier, biscuit-like impression"],
       ["You want a drier, more fermentable wort while keeping the grain bill similar. Which mash adjustment is a sensible starting point?", "Mash toward the lower end of the recipe's suitable temperature range", "A lower mash temperature generally favors more fermentable wort, though yeast strain and process also affect the finish.", "Mash toward the upper end of the suitable temperature range", "Use more dextrin malt to increase unfermentable extract", "Extend the mash at the same temperature without changing the grain bill"],
-      ["You are choosing yeast for a beer where malt and hop character should stay prominent. What is a useful selection criterion?", "Choose a strain with a compatible fermentation range and a relatively neutral profile", "A suitable neutral strain can let the recipe's malt and hop character come through; match it to the beer and process.", "Choose a strain with moderate esters that complement rather than dominate the hops", "Choose a phenolic strain to add clove and spice alongside the malt", "Choose a neutral strain whose fermentation range fits the planned temperature"],
-      ["The recipe's target original gravity is higher than your current recipe estimate. What is the most direct ingredient adjustment?", "Increase the fermentable grain or extract while keeping the target batch volume in mind", "More fermentable ingredient can raise wort strength; update the recipe and account for expected system efficiency.", "Increase the fermentable amount and reduce batch volume to concentrate the wort", "Replace some pale base malt with an equal weight of lower-extract specialty malt", "Improve expected mash efficiency and update the estimated gravity before changing ingredients"],
+      ["You are choosing yeast for a beer where malt and hop character should stay prominent. What is a useful selection criterion?", "Choose a strain with a compatible fermentation range and a relatively neutral profile", "A suitable neutral strain can let the recipe's malt and hop character come through; match it to the beer and process.", "Choose a strain with intense esters that dominate the malt and hops", "Choose a phenolic strain to add clove and spice alongside the malt", "Choose a strain without considering its flavor or temperature range"],
+      ["The recipe's target original gravity is higher than your current recipe estimate. What is the most direct ingredient adjustment?", "Increase the fermentable grain or extract while keeping the target batch volume in mind", "More fermentable ingredient can raise wort strength; update the recipe and account for expected system efficiency.", "Reduce the fermentable amount at the same batch volume", "Replace some pale base malt with an equal weight of lower-extract specialty malt", "Add plain water without adding fermentable ingredients"],
       ["You want a lighter-colored beer without lowering its target gravity. Which recipe decision most directly helps?", "Replace some dark specialty malt with pale base malt and recalculate to maintain gravity", "The malt bill is the main recipe choice for wort color; replacing darker malt with pale base malt can retain extract while reducing color.", "Reduce the dark malt without replacing its extract contribution", "Choose a lighter base malt but retain the same dark specialty-malt proportions", "Increase the crystal-malt share while reducing the pale base malt"],
       ["You want to keep hop flavor while reducing bitterness. Which change most directly targets the bitterness contribution?", "Reduce the calculated early-boil bittering addition while keeping late hops unchanged", "The early addition contributes much of the bitterness; retaining late additions helps preserve flavor and aroma.", "Move some of the late hop charge to an earlier boil addition", "Replace the early bittering hop with a higher-alpha variety at the same amount", "Increase the early-boil addition and shorten the dry-hop contact time"],
       ["You are adapting a recipe to a different batch volume. What should you do with ingredient amounts?", "Scale ingredients by the volume ratio, then review gravity, bitterness, and system losses", "Volume scaling is a starting point; efficiency, hop utilization, and equipment losses can change the final recipe.", "Scale the water but leave the grain and hop amounts unchanged", "Scale by the inverse of the volume ratio", "Scale the grain bill but leave the hop schedule unchanged"],
@@ -1280,7 +1339,7 @@ const LEARNING_GAMES: Record<string, LearningGame> = {
       ["A beer tastes buttery or like butterscotch. Which brewing compound is commonly associated with this flavor?", "Diacetyl", "Diacetyl can give beer butter or butterscotch notes; whether a small amount is welcome depends on the style.", "Acetaldehyde", "Fusel alcohols", "Oxidized compounds", "How to Brew, Chapter 6 — yeast compounds"],
       ["A beer has a green-apple aroma. Which fermentation compound may be responsible?", "Acetaldehyde", "Acetaldehyde is associated with green-apple aroma or flavor, and yeast can reduce it later in fermentation.", "Diacetyl", "Fusel alcohols", "Hydrogen sulfide", "How to Brew, Chapter 10 — fermentation byproducts"],
       ["An old beer tastes papery or like cardboard. Which process issue could explain it?", "Oxygen exposure during aging or packaging", "Oxidation of fatty acids in old beers can produce cardboard-like and soapy off-flavors.", "Light exposure that can cause a skunky character", "Warm fermentation that can create solvent-like flavors", "Chlorine exposure that can create medicinal flavors", "How to Brew, Chapter 6 — oxidation and off-flavors"],
-      ["A lager has a sulfur smell during fermentation. What should you keep in mind?", "Lager-yeast sulfur may fade during conditioning", "Lager yeast can produce more sulfur compounds during primary fermentation, and sulfur smells are not necessarily bad.", "Dimethyl sulfide may create a cooked-corn note", "Hydrogen sulfide may smell like rotten eggs", "Sulfur dioxide may smell like struck matches", "How to Brew, Chapters 6 and 10 — yeast and lager fermentation"],
+      ["A lager has a sulfur smell during fermentation. What should you keep in mind?", "Lager-yeast sulfur may fade during conditioning", "Lager yeast can produce more sulfur compounds during primary fermentation, and sulfur smells are not necessarily bad.", "Sulfur aromas always mean the beer must be discarded immediately", "Lager yeast cannot produce sulfur compounds", "All sulfur aromas get stronger during conditioning", "How to Brew, Chapters 6 and 10 — yeast and lager fermentation"],
       ["A beer has a sharp, solvent-like aroma. Which fermentation byproduct is a likely cause?", "Fusel alcohols", "Fusel alcohols can produce sharp or solvent-like aromas, and their levels are affected by fermentation conditions.", "Acetaldehyde", "Diacetyl", "Hydrogen sulfide", "How to Brew, Chapter 10 — fusel alcohols"],
       ...createFlavorPracticeQuestions(),
     ]),
@@ -1339,6 +1398,7 @@ function LearningGameFrame({
 type CalculatorOperator = "+" | "-" | "×" | "÷";
 
 function BrewMathCalculator({ resetKey }: { resetKey: number }) {
+  const { t } = useTranslation();
   const [display, setDisplay] = useState("0");
   const [storedValue, setStoredValue] = useState<number | null>(null);
   const [operator, setOperator] = useState<CalculatorOperator | null>(null);
@@ -1506,7 +1566,7 @@ function BrewMathCalculator({ resetKey }: { resetKey: number }) {
       className="mx-auto mt-5 max-w-xl rounded-xl border border-white/10 bg-white/5 p-5 text-left sm:p-6"
     >
       <h2 id="brew-math-calculator-title" className="font-semibold text-green-100">
-        Calculator
+        {t("Calculator")}
       </h2>
       <div
         className={`mx-auto mt-4 grid w-full gap-3 ${
@@ -1515,7 +1575,7 @@ function BrewMathCalculator({ resetKey }: { resetKey: number }) {
             : "max-w-xs grid-cols-1"
         }`}
         onKeyDown={handleKeyDown}
-        aria-label="Basic calculator. Use the buttons or keyboard."
+        aria-label={t("Basic calculator. Use the buttons or keyboard.")}
       >
         <div className="min-w-0">
           <div className="mb-3 flex gap-2">
@@ -1527,7 +1587,7 @@ function BrewMathCalculator({ resetKey }: { resetKey: number }) {
             </output>
             <button
               type="button"
-              aria-label={historyOpen ? "Hide calculator history" : "Show calculator history"}
+              aria-label={t(historyOpen ? "Hide calculator history" : "Show calculator history")}
               aria-expanded={historyOpen}
               onClick={() => setHistoryOpen((open) => !open)}
               className={`flex min-h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-white/10 transition hover:bg-white/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-300 ${
@@ -1557,7 +1617,7 @@ function BrewMathCalculator({ resetKey }: { resetKey: number }) {
               <button
                 key={button.label}
                 type="button"
-                aria-label={button.ariaLabel ?? button.label}
+                aria-label={button.ariaLabel ? t(button.ariaLabel) : button.label}
                 aria-pressed={
                   button.operator
                     ? operator === button.operator && waitingForOperand
@@ -1578,12 +1638,12 @@ function BrewMathCalculator({ resetKey }: { resetKey: number }) {
         {historyOpen && (
           <div
             role="region"
-            aria-label="Calculator history"
+            aria-label={t("Calculator history")}
             className="h-[21.25rem] max-h-[21.25rem] min-h-0 overflow-y-auto rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-right text-xs text-white/60"
           >
             {operator !== null && storedValue !== null && (
               <p aria-live="polite" className="mb-2 text-green-200">
-                Current: {storedValue} {operator}
+                {t("Current")}: {storedValue} {operator}
                 {!waitingForOperand ? ` ${display}` : ""}
               </p>
             )}
@@ -1596,7 +1656,7 @@ function BrewMathCalculator({ resetKey }: { resetKey: number }) {
                 ))}
               </ol>
             ) : operator === null ? (
-              <p>No calculations yet.</p>
+              <p>{t("No calculations yet.")}</p>
             ) : null}
           </div>
         )}
@@ -1606,6 +1666,7 @@ function BrewMathCalculator({ resetKey }: { resetKey: number }) {
 }
 
 export default function LearningGamePage() {
+  const { t, language } = useTranslation();
   const params = useParams<{ game: string }>();
   const game = LEARNING_GAMES[params.game];
   const { system: unitSystem } = useUnits();
@@ -1628,7 +1689,7 @@ export default function LearningGamePage() {
   const [savedMissedQuestions, setSavedMissedQuestions] = useState<
     Record<string, number>
   >({});
-  const [progressMessage, setProgressMessage] = useState("");
+  const [progressMessage, setProgressMessage] = useState<{ key: string; detail?: string } | null>(null);
   const [savingProgress, setSavingProgress] = useState(false);
   const [calculatorResetKey, setCalculatorResetKey] = useState(0);
   const lastQuestionByGame = useRef<Record<string, string>>({});
@@ -1643,7 +1704,7 @@ export default function LearningGamePage() {
         });
         if (response.status === 401) {
           if (active) {
-            setProgressMessage("Sign in to save scores and practice missed questions across devices.");
+            setProgressMessage({ key: "Sign in to save scores and practice missed questions across devices." });
           }
           return;
         }
@@ -1656,16 +1717,15 @@ export default function LearningGamePage() {
         );
         if (active && row?.missed_question_counts) {
           setSavedMissedQuestions(row.missed_question_counts);
-          setProgressMessage("");
+          setProgressMessage(null);
         }
       } catch (loadError) {
         console.error("Could not load saved Brewing Academy misses", loadError);
         if (active) {
-          setProgressMessage(
-            loadError instanceof Error
-              ? `Progress tracker unavailable: ${loadError.message}`
-              : "Progress tracker unavailable."
-          );
+          setProgressMessage({
+            key: "Progress tracker unavailable.",
+            ...(loadError instanceof Error ? { detail: loadError.message } : {}),
+          });
         }
       }
     }
@@ -1709,7 +1769,7 @@ export default function LearningGamePage() {
     setFinished(false);
     setMissedAnswers([]);
     setIsRetryRound(retry);
-    setProgressMessage("");
+    setProgressMessage(null);
     setStarted(true);
   }
 
@@ -1731,6 +1791,7 @@ export default function LearningGamePage() {
             correctAnswer: plainLanguageAnswer(correctAnswer.text),
             explanation: correctAnswer.feedback,
             source: question.source ?? game.source,
+            ...(question.mathTranslation ? { mathTranslation: question.mathTranslation } : {}),
           },
         ]);
       }
@@ -1739,7 +1800,7 @@ export default function LearningGamePage() {
 
   async function saveAttempt() {
     setSavingProgress(true);
-    setProgressMessage("");
+    setProgressMessage(null);
     try {
       const response = await fetch("/api/learning-progress", {
         method: "POST",
@@ -1753,7 +1814,7 @@ export default function LearningGamePage() {
       });
       const result = await response.json();
       if (response.status === 401) {
-        setProgressMessage("Sign in to save your score and practice missed questions next time.");
+        setProgressMessage({ key: "Sign in to save your score and practice missed questions next time." });
         return;
       }
       if (!response.ok) {
@@ -1764,14 +1825,13 @@ export default function LearningGamePage() {
         updatedMisses[missed.prompt] = (updatedMisses[missed.prompt] ?? 0) + 1;
       }
       setSavedMissedQuestions(updatedMisses);
-      setProgressMessage("Progress saved to your private account tracker.");
+      setProgressMessage({ key: "Progress saved to your private account tracker." });
     } catch (saveError) {
       console.error("Could not save Brewing Academy attempt", saveError);
-      setProgressMessage(
-        saveError instanceof Error
-          ? `Progress could not be saved: ${saveError.message}`
-          : "Progress could not be saved."
-      );
+      setProgressMessage({
+        key: "Progress could not be saved.",
+        ...(saveError instanceof Error ? { detail: saveError.message } : {}),
+      });
     } finally {
       setSavingProgress(false);
     }
@@ -1784,7 +1844,7 @@ export default function LearningGamePage() {
       setFinished(true);
       setStarted(false);
       if (isRetryRound) {
-        setProgressMessage("Practice round complete. This retry does not change your saved stats.");
+        setProgressMessage({ key: "Practice round complete. This retry does not change your saved stats." });
       } else {
         void saveAttempt();
       }
@@ -1797,10 +1857,10 @@ export default function LearningGamePage() {
 
   if (!game) {
     return (
-      <LearningGameFrame title="Challenge not found" subtitle="Choose a brewing lesson from the learning hub.">
+      <LearningGameFrame title={t("Challenge not found")} subtitle={t("Choose a brewing lesson from the learning hub.")}>
         <div className="text-center">
           <Link href="/games" className="text-green-200 underline underline-offset-4">
-            Browse learning games
+            {t("Browse learning games")}
           </Link>
         </div>
       </LearningGameFrame>
@@ -1819,17 +1879,17 @@ export default function LearningGamePage() {
     selectedAnswer !== null && question?.answers[selectedAnswer].correct;
 
   return (
-    <LearningGameFrame title={game.title} subtitle={game.subtitle}>
+    <LearningGameFrame title={t(game.title)} subtitle={t(game.subtitle)}>
       <section className="mx-auto max-w-xl rounded-xl border border-white/10 bg-white/5 p-5 sm:p-6">
         {!started && !finished && (
           <>
-            <p className="text-center leading-7 text-white/75">{game.intro}</p>
+            <p className="text-center leading-7 text-white/75">{t(game.intro)}</p>
             <p className="mt-3 text-center text-sm text-white/50">
-              {activeQuestions.length} questions · 7 random questions per attempt
+              {t("{count} questions · 7 random questions per attempt").replace("{count}", String(activeQuestions.length))}
             </p>
             {params.game === "brew-math-lab" && (
               <p className="mt-2 text-center text-xs text-white/55">
-                Question measurements use {unitSystem === "metric" ? "metric (L, kg, g)" : "imperial (gal, lb, oz)"} units.
+                {t("Question measurements use {units} units.").replace("{units}", t(unitSystem === "metric" ? "metric (L, kg, g)" : "imperial (gal, lb, oz)"))}
               </p>
             )}
             {progressMessage && (
@@ -1837,7 +1897,7 @@ export default function LearningGamePage() {
                 role="status"
                 className="mt-3 text-center text-xs leading-5 text-white/55"
               >
-                {progressMessage}
+                {t(progressMessage.key)}{progressMessage.detail ? ` ${translateApiError(progressMessage.detail, t, LEARNING_PROGRESS_ERROR_KEYS)}` : ""}
               </p>
             )}
             <button
@@ -1845,7 +1905,7 @@ export default function LearningGamePage() {
               onClick={() => startGame()}
               className="mt-6 min-h-11 w-full rounded-lg bg-green-700 px-4 py-2 font-semibold hover:bg-green-600"
             >
-              Start challenge
+              {t("Start challenge")}
             </button>
             {savedMissQuestions.length > 0 && (
               <button
@@ -1853,7 +1913,7 @@ export default function LearningGamePage() {
                 onClick={() => startGame(savedMissQuestions, true)}
                 className="mt-3 min-h-11 w-full rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-green-100 hover:bg-white/10"
               >
-                Practice saved misses ({savedMissQuestions.length})
+                {t("Practice saved misses ({count})").replace("{count}", String(savedMissQuestions.length))}
               </button>
             )}
           </>
@@ -1862,8 +1922,8 @@ export default function LearningGamePage() {
         {started && (
           <>
             <div className="flex items-center justify-between gap-4 text-sm text-white/55">
-              <span>Question {questionIndex + 1} of {attemptQuestions.length}</span>
-              <span aria-live="polite">Score: {score}</span>
+              <span>{t("Question {current} of {total}").replace("{current}", String(questionIndex + 1)).replace("{total}", String(attemptQuestions.length))}</span>
+              <span aria-live="polite">{t("Score: {score}").replace("{score}", String(score))}</span>
             </div>
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
               <div
@@ -1872,7 +1932,7 @@ export default function LearningGamePage() {
               />
             </div>
             <h2 className="mt-6 text-center text-lg font-semibold leading-7 text-green-100">
-              {plainLanguageQuestion(question.prompt)}
+              {displayQuestion(question, language, t)}
             </h2>
             {params.game === "brew-math-lab" && question.hint && (
               <div className="mt-3 text-center">
@@ -1882,11 +1942,11 @@ export default function LearningGamePage() {
                   onClick={() => setHintVisible((visible) => !visible)}
                   className="min-h-10 rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-amber-100 hover:bg-white/10"
                 >
-                  {hintVisible ? "Hide hint" : "Show hint"}
+                  {t(hintVisible ? "Hide hint" : "Show hint")}
                 </button>
                 {hintVisible && (
                   <p className="mt-2 rounded-lg border border-amber-200/15 bg-amber-950/20 p-3 text-left text-sm leading-6 text-amber-100/90">
-                    Hint: {question.hint}
+                    {t("Hint")}: {language === "en" ? question.hint : t(question.hint)}
                   </p>
                 )}
               </div>
@@ -1910,7 +1970,7 @@ export default function LearningGamePage() {
                           : "border-white/15 bg-white/5 hover:border-green-300/40 hover:bg-white/10"
                     }`}
                   >
-                    {plainLanguageAnswer(answer.text)}
+                    {displayAnswer(answer.text, language, t)}
                   </button>
                 );
               })}
@@ -1925,20 +1985,20 @@ export default function LearningGamePage() {
                 }`}
               >
                 <p className="font-semibold">
-                  {answeredCorrectly ? "That's right." : "Not quite."}
+                  {t(answeredCorrectly ? "That's right." : "Not quite.")}
                 </p>
                 <p className="mt-2 text-sm leading-6 text-white/75">
-                  {question.answers[selectedAnswer].feedback}
+                  {displayFeedback(question, question.answers[selectedAnswer], language, t)}
                 </p>
                 <p className="mt-3 text-xs text-white/50">
-                  Source: <SourceCitation source={question.source ?? game.source} />
+                  {t("Source")}: <SourceCitation source={question.source ?? game.source} />
                 </p>
                 <button
                   type="button"
                   onClick={continueGame}
                   className="mt-4 min-h-10 rounded-lg bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20"
                 >
-                  {questionIndex + 1 === attemptQuestions.length ? "See your results" : "Next question"}
+                  {t(questionIndex + 1 === attemptQuestions.length ? "See your results" : "Next question")}
                 </button>
               </div>
             )}
@@ -1947,21 +2007,23 @@ export default function LearningGamePage() {
 
         {finished && (
           <div className="text-center">
-            <p className="text-2xl font-semibold text-green-200">Challenge complete!</p>
+            <p className="text-2xl font-semibold text-green-200">{t("Challenge complete!")}</p>
             <p className="mt-3 text-white/75">
-              You got {score} out of {attemptQuestions.length} correct.
+              {t("You got {score} out of {total} correct.").replace("{score}", String(score)).replace("{total}", String(attemptQuestions.length))}
             </p>
             <p className="mt-2 text-sm leading-6 text-white/55">
-              {isRetryRound
+              {t(isRetryRound
                 ? "Try another round or return to the full challenge."
-                : "Review missed answers or try another round to strengthen what you learned."}
+                : "Review missed answers or try another round to strengthen what you learned.")}
             </p>
             <p
               role="status"
               className="mt-3 min-h-5 text-xs text-white/55"
               aria-live="polite"
             >
-              {savingProgress ? "Saving progress…" : progressMessage}
+              {savingProgress ? t("Saving progress…") : progressMessage && (
+                <>{t(progressMessage.key)}{progressMessage.detail ? ` ${translateApiError(progressMessage.detail, t, LEARNING_PROGRESS_ERROR_KEYS)}` : ""}</>
+              )}
             </p>
             {missedAnswers.length > 0 ? (
               <section
@@ -1972,7 +2034,7 @@ export default function LearningGamePage() {
                   id="missed-answers-title"
                   className="font-semibold text-amber-100"
                 >
-                  Review missed answers
+                  {t("Review missed answers")}
                 </h2>
                 <ol className="mt-3 space-y-4">
                   {missedAnswers.map((missed, index) => (
@@ -1981,19 +2043,19 @@ export default function LearningGamePage() {
                       className="border-t border-white/10 pt-3 first:border-0 first:pt-0"
                     >
                       <p className="text-sm font-medium leading-6 text-white/85">
-                        {plainLanguageQuestion(missed.prompt)}
+                        {displayQuestion(missed, language, t)}
                       </p>
                       <p className="mt-1 text-xs text-amber-100/75">
-                        Your answer: {missed.selected}
+                        {t("Your answer")}: {displayAnswer(missed.selected, language, t)}
                       </p>
                       <p className="mt-1 text-sm text-green-100">
-                        Correct answer: {missed.correctAnswer}
+                        {t("Correct answer")}: {displayAnswer(missed.correctAnswer, language, t)}
                       </p>
                       <p className="mt-1 text-xs leading-5 text-white/60">
-                        {missed.explanation}
+                        {displayExplanation(missed, missed.explanation, language, t)}
                       </p>
                       <p className="mt-1 text-xs text-white/45">
-                        Source: <SourceCitation source={missed.source ?? game.source} />
+                        {t("Source")}: <SourceCitation source={missed.source ?? game.source} />
                       </p>
                     </li>
                   ))}
@@ -2008,12 +2070,12 @@ export default function LearningGamePage() {
                   )}
                   className="mt-4 min-h-10 w-full rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/15"
                 >
-                  Practice missed questions
+                  {t("Practice missed questions")}
                 </button>
               </section>
             ) : (
               <p className="mt-4 text-sm text-green-200">
-                Great work—you got every question in this round right.
+                {t("Great work—you got every question in this round right.")}
               </p>
             )}
             <button
@@ -2021,7 +2083,7 @@ export default function LearningGamePage() {
               onClick={() => startGame()}
               className="mt-3 min-h-11 w-full rounded-lg bg-green-700 px-4 py-2 font-semibold hover:bg-green-600"
             >
-              {isRetryRound ? "Start full challenge" : "Play again"}
+              {t(isRetryRound ? "Start full challenge" : "Play again")}
             </button>
           </div>
         )}
@@ -2031,7 +2093,7 @@ export default function LearningGamePage() {
       )}
       <div className="mt-5 text-center">
         <Link href="/games" className="text-sm text-white/55 underline underline-offset-4 hover:text-green-200">
-          Back to learning challenges
+          {t("Back to learning challenges")}
         </Link>
       </div>
     </LearningGameFrame>

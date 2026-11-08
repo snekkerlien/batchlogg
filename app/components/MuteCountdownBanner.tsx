@@ -1,22 +1,26 @@
 "use client";
 
+"use client";
+
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface MuteDetails {
   ends_at: string | null;
   reason: string | null;
 }
 
-function formatCountdown(milliseconds: number) {
+function formatCountdown(milliseconds: number, t: (key: string) => string) {
   const seconds = Math.max(0, Math.floor(milliseconds / 1000));
   const days = Math.floor(seconds / 86_400);
   const hours = Math.floor((seconds % 86_400) / 3_600);
   const minutes = Math.floor((seconds % 3_600) / 60);
   const remainingSeconds = seconds % 60;
-  return `${days}d ${hours}h ${minutes}m ${remainingSeconds}s`;
+  return `${days}${t("d")} ${hours}${t("h")} ${minutes}${t("min")} ${remainingSeconds}${t("s")}`;
 }
 
 export default function MuteCountdownBanner() {
+  const { t } = useTranslation();
   const [mute, setMute] = useState<MuteDetails | null>(null);
   const [remaining, setRemaining] = useState<number | null>(null);
 
@@ -76,25 +80,25 @@ export default function MuteCountdownBanner() {
 
   return (
     <aside
-      aria-label="Account restriction status"
+      aria-label={t("Account restriction status")}
       className="rounded-xl border border-amber-300/20 bg-black/60 px-4 py-2 text-center text-sm text-amber-100 backdrop-blur-md"
     >
       {mute.ends_at ? (
         <>
-          <span className="font-semibold">Muted until:</span>{" "}
+          <span className="font-semibold">{t("Muted until:")}</span>{" "}
           <time dateTime={mute.ends_at}>
             {new Date(mute.ends_at).toLocaleString("en-GB")}
           </time>
           {remaining !== null && (
             <span className="ml-2 font-semibold">
-              Unmute in {formatCountdown(remaining)}
+              {t("Unmute in {countdown}").replace("{countdown}", formatCountdown(remaining, t))}
             </span>
           )}
         </>
       ) : (
-        <span className="font-semibold">Muted indefinitely</span>
+        <span className="font-semibold">{t("Muted indefinitely")}</span>
       )}
-      {mute.reason && <p className="mt-1 text-white/70">Reason: {mute.reason}</p>}
+      {mute.reason && <p className="mt-1 text-white/70">{t("Reason:")} {mute.reason}</p>}
     </aside>
   );
 }

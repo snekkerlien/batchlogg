@@ -2,6 +2,7 @@
 
 import { useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import Image, { type ImageProps } from "next/image";
 import {
   getAccessibleAccentStyle,
@@ -150,12 +151,12 @@ const CATEGORIES: {
   },
 ];
 
-const HOW_TO: Record<keyof ProfileStats, (goal: number) => string> = {
-  totalBatches: (n) => `Brew and log ${n} ${n === 1 ? "batch" : "batches"} in Batchlog.`,
-  totalRecipes: (n) => `Create ${n} ${n === 1 ? "recipe" : "recipes"} in your recipe library.`,
-  publicRecipes: (n) => `Make ${n} of your ${n === 1 ? "recipe" : "recipes"} public so others can see ${n === 1 ? "it" : "them"}.`,
-  forumPosts: (n) => `Write ${n} ${n === 1 ? "post" : "posts"} in the community forum.`,
-  totalRatings: (n) => `Rate and review ${n} ${n === 1 ? "brewery product" : "brewery products"}.`,
+const HOW_TO: Record<keyof ProfileStats, [string, string]> = {
+  totalBatches: ["Brew and log {count} batch in Batchlogg.", "Brew and log {count} batches in Batchlogg."],
+  totalRecipes: ["Create {count} recipe in your recipe library.", "Create {count} recipes in your recipe library."],
+  publicRecipes: ["Make {count} of your recipes public so others can see it.", "Make {count} of your recipes public so others can see them."],
+  forumPosts: ["Write {count} post in the community forum.", "Write {count} posts in the community forum."],
+  totalRatings: ["Rate and review {count} brewery product.", "Rate and review {count} brewery products."],
 };
 
 function ProgressionIcon({
@@ -553,24 +554,25 @@ function ProgressRing({
   );
 }
 export default function ProfileOverview({ stats }: { stats: ProfileStats }) {
+  const { t } = useTranslation();
   return (
     <section className="mb-10">
       <h2 className="mb-3 text-center text-2xl font-semibold text-green-300">
-        Brewing overview
+        {t("Brewing overview")}
       </h2>
       <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {[
+        {([
           ["Batches brewed", stats.totalBatches],
           ["Recipes created", stats.totalRecipes],
           ["Public recipes", stats.publicRecipes],
           ["Forum posts", stats.forumPosts],
           ["Ratings given", stats.totalRatings],
-        ].map(([label, value]) => (
+        ] as const).map(([label, value]) => (
           <div
             key={label}
             className="rounded-xl border border-white/10 bg-white/5 p-4 text-center"
           >
-            <dt className="text-xs text-white/55">{label}</dt>
+            <dt className="text-xs text-white/55">{t(label)}</dt>
             <dd className="mt-1 break-words text-lg font-semibold text-white">
               {value}
             </dd>
@@ -592,6 +594,7 @@ export function ProfileAchievements({
   accentColor?: string | null;
   categoryPercentiles?: Record<string, number | null> | null;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].name);
@@ -651,14 +654,14 @@ export function ProfileAchievements({
         className="flex w-full items-center justify-between gap-3 text-left"
       >
         <div>
-          <h3 className="text-lg font-semibold text-green-200">Achievements</h3>
+          <h3 className="text-lg font-semibold text-green-200">{t("Achievements")}</h3>
           <span className="mt-1 block text-xs text-white/50">
-            {unlockedCount} earned
-            {showProgress ? ` · ${achievements.length - unlockedCount} to go` : ""}
+            {t("{count} earned").replace("{count}", String(unlockedCount))}
+            {showProgress ? ` · ${t("{count} to go").replace("{count}", String(achievements.length - unlockedCount))}` : ""}
           </span>
         </div>
         <span aria-hidden className="text-sm text-white/60">
-          {open ? "Hide" : "Explore"}
+          {t(open ? "Hide" : "Explore")}
         </span>
       </button>
       {!open && earnedHighlights.length > 0 && (
@@ -676,15 +679,15 @@ export function ProfileAchievements({
               />
               <span className="min-w-0 flex-1">
                 <span className="block text-[10px] font-medium uppercase tracking-wider text-white/50">
-                  {achievement.category}
+                  {t(achievement.category)}
                 </span>
                 <span className="mt-0.5 flex min-w-0 items-center justify-between gap-2">
                   <span className="min-w-0 text-xs font-semibold leading-snug text-white/90">
-                    {achievement.name}
+                    {t(achievement.name)}
                   </span>
                   {typeof categoryPercentiles?.[achievement.category] === "number" && (
                     <span className="shrink-0 rounded-full border border-green-300/20 bg-green-300/10 px-2 py-1 text-[9px] font-semibold uppercase tracking-wide text-green-200">
-                      Top {categoryPercentiles[achievement.category]}%
+                      {t("Top")} {categoryPercentiles[achievement.category]}%
                     </span>
                   )}
                 </span>
@@ -705,7 +708,7 @@ export function ProfileAchievements({
             {!!visibleCategories.length && (
               <div
                 role="group"
-                aria-label="Achievement categories"
+                aria-label={t("Achievement categories")}
                 className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5"
               >
                 {visibleCategories.map((category) => {
@@ -727,17 +730,17 @@ export function ProfileAchievements({
                       }`}
                     >
                       <span className="block truncate text-xs font-semibold text-white/90">
-                        {category.name}
+                        {t(category.name)}
                       </span>
                       <span className="mt-1 block text-[11px] text-white/50">
                         {showProgress
-                          ? `${category.earned} / ${total} earned`
-                          : `${category.earned} earned`}
+                          ? t("{earned} / {total} earned").replace("{earned}", String(category.earned)).replace("{total}", String(total))
+                          : t("{count} earned").replace("{count}", String(category.earned))}
                       </span>
                       <span
                         className="mt-2 block h-1 overflow-hidden rounded-full bg-white/10"
                         role="progressbar"
-                        aria-label={`${category.name} achievements`}
+                        aria-label={t("{category} achievements").replace("{category}", t(category.name))}
                         aria-valuemin={0}
                         aria-valuemax={total}
                         aria-valuenow={category.earned}
@@ -756,12 +759,12 @@ export function ProfileAchievements({
               <div id="achievement-category-list">
                 <div className="mb-2 flex items-baseline justify-between gap-2">
                   <h4 className="text-sm font-semibold text-white/85">
-                    {currentCategory.name}
+                    {t(currentCategory.name)}
                   </h4>
                   <span className="text-xs text-white/45">
                     {showProgress
-                      ? `${currentCategory.earned} / ${currentCategory.tiers.length} earned`
-                      : `${currentCategory.earned} earned`}
+                      ? t("{earned} / {total} earned").replace("{earned}", String(currentCategory.earned)).replace("{total}", String(currentCategory.tiers.length))
+                      : t("{count} earned").replace("{count}", String(currentCategory.earned))}
                   </span>
                 </div>
                 <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
@@ -771,7 +774,7 @@ export function ProfileAchievements({
                         type="button"
                         onClick={() => setSelected(achievement.name)}
                         tabIndex={open ? 0 : -1}
-                        title={`${achievement.name} · ${achievement.progress} / ${achievement.goal}`}
+                        title={`${t(achievement.name)} · ${achievement.progress} / ${achievement.goal}`}
                         className={`flex h-full w-full flex-col items-center justify-start gap-2 rounded-lg border p-2 text-center transition hover:bg-white/10 sm:p-3 ${
                           achievement.unlocked
                             ? "border-green-300/15 bg-green-300/5"
@@ -786,7 +789,7 @@ export function ProfileAchievements({
                         />
                         <span className="min-w-0">
                           <span className="line-clamp-2 block text-[10px] font-semibold leading-tight text-white/90 sm:text-xs">
-                            {achievement.name}
+                            {t(achievement.name)}
                           </span>
                           {showProgress && !achievement.unlocked && (
                             <span className="mt-1 block text-[10px] text-white/50">
@@ -802,7 +805,7 @@ export function ProfileAchievements({
             )}
           {!visibleAchievements.length && (
             <p className="text-sm text-white/55">
-              No achievements earned yet. Start brewing, sharing recipes, posting, or rating products.
+              {t("No achievements earned yet. Start brewing, sharing recipes, posting, or rating products.")}
             </p>
           )}
           </div>
@@ -812,7 +815,7 @@ export function ProfileAchievements({
         <div
           role="dialog"
           aria-modal="true"
-          aria-label={active.name}
+          aria-label={t(active.name)}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6"
           onClick={() => setSelected(null)}
         >
@@ -833,23 +836,23 @@ export function ProfileAchievements({
                 />
               }
             />
-            <h4 className="text-xl font-semibold text-white">{active.name}</h4>
+            <h4 className="text-xl font-semibold text-white">{t(active.name)}</h4>
             <span
               className={`rounded-full px-2 py-1 text-[11px] font-semibold ${
                 active.unlocked ? "bg-green-400/15 text-green-200" : "bg-white/5 text-white/50"
               }`}
             >
-              {active.unlocked ? "Earned" : "In progress"}
+              {active.unlocked ? t("Earned") : t("In progress")}
             </span>
             <p className="text-sm text-white/75">
               <span className="font-semibold text-white/90">
-                {active.unlocked ? "Milestone: " : "How to earn: "}
+                {active.unlocked ? t("Milestone: ") : t("How to earn: ")}
               </span>
-              {HOW_TO[active.stat](active.goal)}
+              {t(HOW_TO[active.stat][active.goal === 1 ? 0 : 1]).replace("{count}", String(active.goal))}
             </p>
             {showProgress && (
               <p className="text-xs text-white/50">
-                Progress: {Math.min(active.progress, active.goal)} / {active.goal}
+                {t("Progress: {progress} / {goal}").replace("{progress}", String(Math.min(active.progress, active.goal))).replace("{goal}", String(active.goal))}
               </p>
             )}
             <button
@@ -857,7 +860,7 @@ export function ProfileAchievements({
               onClick={() => setSelected(null)}
               className="mt-2 rounded-lg border border-white/20 px-4 py-2 text-sm hover:bg-white/10"
             >
-              Close
+              {t("Close")}
             </button>
           </div>
         </div>,

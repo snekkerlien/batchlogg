@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export default function SiteStatusBanner() {
+  const { t } = useTranslation();
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -39,7 +41,7 @@ export default function SiteStatusBanner() {
       role="status"
       className="rounded-xl border border-green-300/20 bg-black/60 px-4 py-2 text-center text-sm text-green-100 backdrop-blur-md"
     >
-      <span className="font-semibold">Service notice:</span> {message}
+      <span className="font-semibold">{t("Service notice:")}</span> {message}
     </aside>
   );
 }

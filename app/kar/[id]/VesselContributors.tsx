@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { translateBatchError } from "@/lib/i18n/apiErrors";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type Contributor = { id: string; username: string };
 type Friend = { id: string; username: string };
@@ -12,6 +14,7 @@ export default function VesselContributors({
   karId: string;
   onSharingChange?: (isShared: boolean) => void;
 }) {
+  const { t } = useTranslation();
   const [contributors, setContributors] = useState<Contributor[]>([]);
   const [canShare, setCanShare] = useState<boolean | null>(null);
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -32,19 +35,19 @@ export default function VesselContributors({
       });
       const result: { contributors?: Contributor[]; canShare?: boolean; error?: string } =
         await response.json();
-      if (!response.ok) throw new Error(result.error ?? "Could not load contributors.");
+      if (!response.ok) throw new Error(result.error ?? t("Could not load contributors."));
       setContributors(result.contributors ?? []);
       onSharingChange?.((result.contributors?.length ?? 0) > 0);
       setCanShare(result.canShare === true);
     } catch (loadError) {
       console.error("Could not load vessel contributors", loadError);
       setError(
-        loadError instanceof Error ? loadError.message : "Could not load contributors."
+        loadError instanceof Error ? translateBatchError(loadError.message, t) : t("Could not load contributors.")
       );
     } finally {
       setLoading(false);
     }
-  }, [karId, onSharingChange]);
+  }, [karId, onSharingChange, t]);
 
   useEffect(() => {
     void loadContributors();
@@ -59,12 +62,12 @@ export default function VesselContributors({
           cache: "no-store",
         });
         const result: { friends?: Friend[]; error?: string } = await response.json();
-        if (!response.ok) throw new Error(result.error ?? "Could not load friends.");
+        if (!response.ok) throw new Error(result.error ?? t("Could not load friends."));
         setFriends(result.friends ?? []);
       } catch (loadError) {
         console.error("Could not load friends for vessel sharing", loadError);
         setError(
-          loadError instanceof Error ? loadError.message : "Could not load friends."
+          loadError instanceof Error ? translateBatchError(loadError.message, t) : t("Could not load friends.")
         );
       } finally {
         setFriendsLoading(false);
@@ -72,7 +75,7 @@ export default function VesselContributors({
     }
 
     void loadFriends();
-  }, []);
+  }, [t]);
 
   async function addContributor(friend: Friend) {
     setSaving(true);
@@ -87,7 +90,7 @@ export default function VesselContributors({
       });
       const result: { contributor?: Contributor; error?: string; activityWarning?: string } =
         await response.json();
-      if (!response.ok) throw new Error(result.error ?? "Could not add contributor.");
+      if (!response.ok) throw new Error(result.error ?? t("Could not add contributor."));
       const addedContributor = result.contributor;
       if (
         addedContributor &&
@@ -96,11 +99,11 @@ export default function VesselContributors({
         setContributors((current) => [...current, addedContributor]);
         onSharingChange?.(true);
       }
-      setMessage(result.activityWarning ?? "Contributor added.");
+      setMessage(result.activityWarning ? translateBatchError(result.activityWarning, t) : t("Contributor added."));
     } catch (addError) {
       console.error("Could not add vessel contributor", addError);
       setError(
-        addError instanceof Error ? addError.message : "Could not add contributor."
+        addError instanceof Error ? translateBatchError(addError.message, t) : t("Could not add contributor.")
       );
     } finally {
       setSaving(false);
@@ -118,19 +121,19 @@ export default function VesselContributors({
         body: JSON.stringify({ userId: contributor.id }),
       });
       const result: { error?: string; activityWarning?: string } = await response.json();
-      if (!response.ok) throw new Error(result.error ?? "Could not remove contributor.");
+      if (!response.ok) throw new Error(result.error ?? t("Could not remove contributor."));
       const remainingContributors = contributors.filter(
         (currentContributor) => currentContributor.id !== contributor.id
       );
       setContributors(remainingContributors);
       onSharingChange?.(remainingContributors.length > 0);
-      setMessage(result.activityWarning ?? "Contributor removed.");
+      setMessage(result.activityWarning ? translateBatchError(result.activityWarning, t) : t("Contributor removed."));
     } catch (removeError) {
       console.error("Could not remove vessel contributor", removeError);
       setError(
         removeError instanceof Error
-          ? removeError.message
-          : "Could not remove contributor."
+          ? translateBatchError(removeError.message, t)
+          : t("Could not remove contributor.")
       );
     }
   }
@@ -142,15 +145,14 @@ export default function VesselContributors({
   return (
     <section className="mb-8 rounded-xl border border-white/10 bg-white/5 p-4">
       <p className="mb-4 text-center text-sm text-zinc-300">
-        Friends you add can manage batches, notes, and gravity readings. Only you
-        can manage sharing or delete the vessel.
+        {t("Friends you add can manage batches, notes, and gravity readings. Only you can manage sharing or delete the vessel.")}
       </p>
       <div className="mx-auto mb-5 max-w-md">
-        <h3 className="mb-2 text-sm font-semibold text-zinc-200">Contributors</h3>
+        <h3 className="mb-2 text-sm font-semibold text-zinc-200">{t("Contributors")}</h3>
         {loading ? (
-          <p className="text-sm text-zinc-400">Loading contributors…</p>
+          <p className="text-sm text-zinc-400">{t("Loading contributors…")}</p>
         ) : contributors.length === 0 ? (
-          <p className="text-sm text-zinc-400">No contributors yet.</p>
+          <p className="text-sm text-zinc-400">{t("No contributors yet.")}</p>
         ) : (
           <ul className="space-y-2">
             {contributors.map((contributor) => (
@@ -163,9 +165,9 @@ export default function VesselContributors({
                   type="button"
                   onClick={() => void removeContributor(contributor)}
                   className="text-sm text-red-300 hover:text-red-200"
-                  aria-label={`Remove ${contributor.username} as contributor`}
+                  aria-label={`${t("Remove")} ${contributor.username} ${t("as contributor")}`}
                 >
-                  Remove
+                  {t("Remove")}
                 </button>
               </li>
             ))}
@@ -174,39 +176,39 @@ export default function VesselContributors({
       </div>
 
       <label className="mx-auto mb-3 block max-w-md">
-        <span className="sr-only">Search your friends</span>
+        <span className="sr-only">{t("Search your friends")}</span>
         <input
           type="search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          aria-label="Search your friends"
-          placeholder="Search your friends"
+          aria-label={t("Search your friends")}
+          placeholder={t("Search your friends")}
           className="w-full rounded border border-white/20 bg-black/40 px-3 py-2"
         />
       </label>
 
-      {error && <p role="alert" className="mt-3 text-center text-sm text-red-300">{error}</p>}
-      {message && <p role="status" className="mt-3 text-center text-sm text-green-300">{message}</p>}
+      {error && <p role="alert" className="mt-3 text-center text-sm text-red-300">{translateBatchError(error, t)}</p>}
+      {message && <p role="status" className="mt-3 text-center text-sm text-green-300">{translateBatchError(message, t)}</p>}
 
       <div className="mx-auto mt-4 max-w-md">
         <h3 className="mb-2 text-sm font-semibold text-zinc-200">
-          Friends
+          {t("Friends")}
         </h3>
         {canShare === null ? (
-          <p className="text-sm text-zinc-400">Loading sharing access…</p>
+          <p className="text-sm text-zinc-400">{t("Loading sharing access…")}</p>
         ) : !canShare ? (
           <p className="text-sm text-white/70">
-            Vessel collaboration is a Premium feature.{" "}
-            <a href="/premium" className="text-green-200 underline">Explore Premium</a>
+            {t("Vessel collaboration is a Premium feature.")}{" "}
+            <a href="/premium" className="text-green-200 underline">{t("Explore Premium")}</a>
           </p>
         ) : friendsLoading ? (
-          <p className="text-sm text-zinc-400">Loading friends…</p>
+          <p className="text-sm text-zinc-400">{t("Loading friends…")}</p>
         ) : friends.length === 0 ? (
           <p className="text-sm text-zinc-400">
-            You need to add friends before you can share a vessel.
+            {t("You need to add friends before you can share a vessel.")}
           </p>
         ) : filteredFriends.length === 0 ? (
-          <p className="text-sm text-zinc-400">No friends match your search.</p>
+          <p className="text-sm text-zinc-400">{t("No friends match your search.")}</p>
         ) : (
           <ul className="max-h-56 space-y-2 overflow-y-auto">
             {filteredFriends.map((friend) => {
@@ -220,7 +222,7 @@ export default function VesselContributors({
                 >
                   <span>{friend.username}</span>
                   {isContributor ? (
-                    <span className="text-sm text-green-300">Shared</span>
+                    <span className="text-sm text-green-300">{t("Shared")}</span>
                   ) : (
                     <button
                       type="button"
@@ -228,7 +230,7 @@ export default function VesselContributors({
                       onClick={() => void addContributor(friend)}
                       className="text-sm font-semibold text-green-300 hover:text-green-200 disabled:opacity-60"
                     >
-                      {saving ? "Adding…" : "Add"}
+                      {saving ? t("Adding…") : t("Add")}
                     </button>
                   )}
                 </li>

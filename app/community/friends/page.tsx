@@ -8,6 +8,8 @@ import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
+import { translateCommunityError } from "@/lib/i18n/apiErrors";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface Person {
   id: string;
@@ -25,6 +27,7 @@ interface FriendData {
 }
 
 export default function FriendsPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [data, setData] = useState<FriendData | null>(null);
   const [search, setSearch] = useState("");
@@ -52,18 +55,18 @@ export default function FriendsPage() {
       credentials: "include",
     });
     const result = await response.json();
-    if (!response.ok) throw new Error(result.error || "Could not load friends");
+    if (!response.ok) throw new Error(result.error || t("Could not load friends"));
     setData(result);
-  }, [router]);
+  }, [router, t]);
 
   useEffect(() => {
     load()
       .catch((loadError) => {
         console.error("Could not load community friends", loadError);
-        setError("Could not load friends and requests.");
+        setError(t("Could not load friends and requests."));
       })
       .finally(() => setLoading(false));
-  }, [load]);
+  }, [load, t]);
 
   async function perform(action: string, values: Record<string, unknown> = {}) {
     setBusyId(String(values.userId || values.requestId || action));
@@ -77,19 +80,19 @@ export default function FriendsPage() {
         body: JSON.stringify({ action, ...values }),
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Could not complete action");
+      if (!response.ok) throw new Error(result.error || t("Could not complete action"));
       setSuccess(
         action === "request"
-          ? "Friend request sent."
+          ? t("Friend request sent.")
           : action === "privacy"
-            ? "Friend request privacy saved."
-            : "Updated."
+            ? t("Friend request privacy saved.")
+            : t("Updated.")
       );
       await load();
       return true;
     } catch (actionError) {
       console.error("Could not update community friends", actionError);
-      setError(actionError instanceof Error ? actionError.message : "Could not complete action.");
+      setError(actionError instanceof Error ? actionError.message : t("Could not complete action."));
       return false;
     } finally {
       setBusyId("");
@@ -103,7 +106,7 @@ export default function FriendsPage() {
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center text-white">
-        Loading friends…
+        {t("Loading friends…")}
       </main>
     );
   }
@@ -115,25 +118,25 @@ export default function FriendsPage() {
           <MenuOverlay current="friends" />
         </div>
         <PageHeading
-          title="Friends"
-          subtitle="Manage friend requests, find brewers, and control who can contact you."
+          title={t("Friends")}
+          subtitle={t("Manage friend requests, find brewers, and control who can contact you.")}
         />
-        {error && <p role="alert" className="mb-4 text-sm text-amber-300">{error}</p>}
+        {error && <p role="alert" className="mb-4 text-sm text-amber-300">{translateCommunityError(error, t)}</p>}
         {success && <p role="status" className="mb-4 text-sm text-green-300">{success}</p>}
 
         {data && (
           <div className="mb-8 flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-white/5 p-4">
             <div className="text-sm">
-              <strong className="block">Accept friend requests</strong>
+              <strong className="block">{t("Accept friend requests")}</strong>
               <span className="text-white/60">
-                Turn this off to stop new requests and remove yourself from the Find brewers list.
+                {t("Turn this off to stop new requests and remove yourself from the Find brewers list.")}
               </span>
             </div>
             <button
               type="button"
               role="switch"
               aria-checked={data.allowFriendRequests}
-              aria-label="Accept friend requests"
+              aria-label={t("Accept friend requests")}
               disabled={busyId === "privacy"}
               onClick={() =>
                 perform("privacy", {
@@ -157,7 +160,7 @@ export default function FriendsPage() {
 
         <section className="mb-8">
           <h2 className="mb-3 text-xl font-semibold text-green-300">
-            Incoming requests {data?.incoming.length ? `(${data.incoming.length})` : ""}
+            {t("Incoming requests")} {data?.incoming.length ? `(${data.incoming.length})` : ""}
           </h2>
           {data?.incoming.length ? (
             <ul className="space-y-2">
@@ -171,7 +174,7 @@ export default function FriendsPage() {
                       onClick={() => perform("respond", { requestId: id, reason: "accept" })}
                       className="rounded-lg bg-green-700 px-3 py-2 text-sm font-semibold hover:bg-green-600 disabled:opacity-50"
                     >
-                      Accept
+                      {t("Accept")}
                     </button>
                     <button
                       type="button"
@@ -179,17 +182,17 @@ export default function FriendsPage() {
                       onClick={() => perform("respond", { requestId: id, reason: "decline" })}
                       className="rounded-lg border border-white/20 px-3 py-2 text-sm hover:bg-white/10 disabled:opacity-50"
                     >
-                      Decline
+                      {t("Decline")}
                     </button>
                   </div>
                 </li>
               ))}
             </ul>
-          ) : <p className="text-sm text-white/55">No incoming requests.</p>}
+          ) : <p className="text-sm text-white/55">{t("No incoming requests.")}</p>}
         </section>
 
         <section className="mb-8">
-          <h2 className="mb-3 text-xl font-semibold text-green-300">Your friends</h2>
+          <h2 className="mb-3 text-xl font-semibold text-green-300">{t("Your friends")}</h2>
           {data?.friends.length ? (
             <ul className="space-y-2">
               {data.friends.map((person) => (
@@ -201,7 +204,7 @@ export default function FriendsPage() {
                       onClick={() => router.push(`/community/messages?peer_id=${person.id}`)}
                       className="rounded-lg border border-green-500/40 bg-green-800/50 px-3 py-2 text-sm font-semibold hover:bg-green-700"
                     >
-                      Message
+                      {t("Message")}
                     </button>
                     <button
                       type="button"
@@ -209,7 +212,7 @@ export default function FriendsPage() {
                       onClick={() => setPendingAction({ action: "remove", person })}
                       className="rounded-lg border border-white/20 px-3 py-2 text-sm hover:bg-white/10 disabled:opacity-50"
                     >
-                      Unfriend
+                      {t("Unfriend")}
                     </button>
                     <button
                       type="button"
@@ -217,17 +220,17 @@ export default function FriendsPage() {
                       onClick={() => setPendingAction({ action: "block", person })}
                       className="rounded-lg border border-red-500/30 px-3 py-2 text-sm text-red-200 hover:bg-red-950/50 disabled:opacity-50"
                     >
-                      Block
+                      {t("Block")}
                     </button>
                   </div>
                 </li>
               ))}
             </ul>
-          ) : <p className="text-sm text-white/55">No friends yet.</p>}
+          ) : <p className="text-sm text-white/55">{t("No friends yet.")}</p>}
         </section>
 
         <section className="mb-8">
-          <h2 className="mb-3 text-xl font-semibold text-green-300">Sent requests</h2>
+          <h2 className="mb-3 text-xl font-semibold text-green-300">{t("Sent requests")}</h2>
           {data?.outgoing.length ? (
             <ul className="space-y-2">
               {data.outgoing.map(({ id, person }) => (
@@ -239,21 +242,21 @@ export default function FriendsPage() {
                     onClick={() => perform("cancel", { requestId: id })}
                     className="rounded-lg border border-white/20 px-3 py-2 text-sm hover:bg-white/10 disabled:opacity-50"
                   >
-                    Cancel request
+                    {t("Cancel request")}
                   </button>
                 </li>
               ))}
             </ul>
-          ) : <p className="text-sm text-white/55">No sent requests.</p>}
+          ) : <p className="text-sm text-white/55">{t("No sent requests.")}</p>}
         </section>
 
         <section className="mb-8">
-          <h2 className="mb-3 text-xl font-semibold text-green-300">Find brewers</h2>
+          <h2 className="mb-3 text-xl font-semibold text-green-300">{t("Find brewers")}</h2>
           <input
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search public members"
+            placeholder={t("Search public members")}
             className="mb-3 w-full rounded-lg border border-white/20 bg-black/40 p-3"
           />
           <ul className="space-y-2">
@@ -266,18 +269,18 @@ export default function FriendsPage() {
                   onClick={() => perform("request", { userId: person.id })}
                   className="rounded-lg border border-white/20 px-3 py-2 text-sm font-semibold hover:bg-white/10 disabled:opacity-50"
                 >
-                  Add friend
+                  {t("Add friend")}
                 </button>
               </li>
             ))}
             {discoverable.length === 0 && (
-              <li className="py-3 text-center text-sm text-white/55">No members found.</li>
+              <li className="py-3 text-center text-sm text-white/55">{t("No members found.")}</li>
             )}
           </ul>
         </section>
 
         <section>
-          <h2 className="mb-3 text-xl font-semibold text-green-300">Blocked users</h2>
+          <h2 className="mb-3 text-xl font-semibold text-green-300">{t("Blocked users")}</h2>
           {data?.blocked.length ? (
             <ul className="space-y-2">
               {data.blocked.map((person) => (
@@ -289,23 +292,23 @@ export default function FriendsPage() {
                     onClick={() => perform("unblock", { userId: person.id })}
                     className="rounded-lg border border-white/20 px-3 py-2 text-sm hover:bg-white/10 disabled:opacity-50"
                   >
-                    Unblock
+                    {t("Unblock")}
                   </button>
                 </li>
               ))}
             </ul>
-          ) : <p className="text-sm text-white/55">No blocked users.</p>}
+          ) : <p className="text-sm text-white/55">{t("No blocked users.")}</p>}
         </section>
       </div>
       <ConfirmDialog
         open={pendingAction !== null}
-        title={pendingAction?.action === "block" ? "Block this user?" : "Unfriend this user?"}
+        title={pendingAction?.action === "block" ? t("Block this user?") : t("Unfriend this user?")}
         message={
           pendingAction?.action === "block"
-            ? `${pendingAction.person.username} will be removed from your friends, and neither of you will be able to message or send friend requests to the other.`
-            : `Remove ${pendingAction?.person.username} from your friends? Your conversation history will be kept, but messaging stops until you become friends again.`
+            ? `${pendingAction.person.username} ${t("will be removed from your friends, and neither of you will be able to message or send friend requests to the other.")}`
+            : `${t("Remove")} ${pendingAction?.person.username} ${t("from your friends? Your conversation history will be kept, but messaging stops until you become friends again.")}`
         }
-        confirmLabel={pendingAction?.action === "block" ? "Block user" : "Unfriend"}
+        confirmLabel={pendingAction?.action === "block" ? t("Block user") : t("Unfriend")}
         onConfirm={async () => {
           if (!pendingAction) return false;
           return perform(pendingAction.action, { userId: pendingAction.person.id });

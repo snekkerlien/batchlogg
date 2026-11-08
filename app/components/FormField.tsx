@@ -1,4 +1,5 @@
 import { cloneElement, type ReactElement, type ReactNode } from "react";
+import TranslatedText from "@/app/components/TranslatedText";
 
 type FormFieldControlProps = {
   id?: string;
@@ -42,7 +43,7 @@ export default function FormField({
         {required && (
           <>
             <span aria-hidden="true"> *</span>
-            <span className="sr-only"> (required)</span>
+            <span className="sr-only"> <TranslatedText text="(required)" /></span>
           </>
         )}
       </label>

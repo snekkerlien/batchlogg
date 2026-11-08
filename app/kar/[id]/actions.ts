@@ -1469,6 +1469,15 @@ const requiredConditioningEntryFields: Partial<
   other: ["description"],
 };
 
+const conditioningNumberErrorMessages: Record<string, string> = {
+  amount: "Enter a valid amount",
+  volume: "Enter a valid volume",
+  volume_loss_l: "Enter a valid volume loss",
+  gravity: "Enter a valid gravity",
+  temperature: "Enter a valid temperature",
+  wait_hours: "Enter a valid wait time",
+};
+
 export async function addConditioningEntry(
   batchId: string,
   karId: string,
@@ -1532,7 +1541,7 @@ export async function addConditioningEntry(
       (field !== "temperature" && number < 0) ||
       (!["wait_hours", "temperature", "volume_loss_l"].includes(field) && number === 0)
     ) {
-      throw new Error(`Enter a valid ${field.replace("_", " ")}`);
+      throw new Error(conditioningNumberErrorMessages[field]);
     }
   }
   if (details.target_date) {

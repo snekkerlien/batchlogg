@@ -1,6 +1,7 @@
 "use client";
 
 import { Qty } from "@/app/components/Units";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type ActiveBatchProps = {
   karId: string;
@@ -19,18 +20,19 @@ type ActiveBatchProps = {
 };
 
 export function ActiveBatch({ karId, batch }: ActiveBatchProps) {
+  const { t } = useTranslation();
   return (
     <div className="p-4 bg-green-900/40 rounded-lg border border-green-600 text-white space-y-2">
-      <h2 className="text-xl font-bold">Active batch</h2>
+      <h2 className="text-xl font-bold">{t("Active batch")}</h2>
 
-      <p><strong>Batch ID:</strong> {batch.batchnummer}</p>
-      <p><strong>Name:</strong> {batch.name}</p>
-      <p><strong>Volume:</strong> <Qty kind="volume" value={batch.volume_l} /></p>
-      <p><strong>Brew date:</strong> {batch.startdato}</p>
-      <p><strong>Original Gravity (OG):</strong> {batch.og}</p>
+      <p><strong>{t("Batch ID")}:</strong> {batch.batchnummer}</p>
+      <p><strong>{t("Name")}:</strong> {batch.name}</p>
+      <p><strong>{t("Volume")}:</strong> <Qty kind="volume" value={batch.volume_l} /></p>
+      <p><strong>{t("Brew date")}:</strong> {batch.startdato}</p>
+      <p><strong>{t("Original Gravity (OG)")}:</strong> {batch.og}</p>
 
       <p className="whitespace-pre-wrap">
-        <strong>Recipe:</strong>{"\n"}
+        <strong>{t("Recipe")}:</strong>{"\n"}
         {batch.oppskrift}
       </p>
     </div>

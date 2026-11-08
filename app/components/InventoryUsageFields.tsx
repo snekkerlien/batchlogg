@@ -32,6 +32,7 @@ import {
   type AdditionItem,
 } from "@/lib/recipes/additions";
 import RecipeAdditiveFields from "@/app/my-recipes/new/RecipeAdditiveFields";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type InventoryUsage = {
   inventory_item_id: string;
@@ -61,6 +62,7 @@ export function BatchInventoryProvider({
   recipe?: Record<string, unknown> | null;
   className?: string;
 }) {
+  const { t } = useTranslation();
   const [enabled, setEnabled] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [bypassInventory, setBypassInventory] = useState(false);
@@ -129,7 +131,7 @@ export function BatchInventoryProvider({
       } catch (loadError) {
         console.error("Could not load inventory for batch creation", loadError);
         if (active) {
-          setError("Inventory could not be loaded. Refresh before creating this batch.");
+          setError(t("Inventory could not be loaded. Refresh before creating this batch."));
         }
       } finally {
         if (active) setLoaded(true);
@@ -140,7 +142,7 @@ export function BatchInventoryProvider({
     return () => {
       active = false;
     };
-  }, []);
+  }, [t]);
 
   const setSelection = useCallback((key: string, itemId: string) => {
     setSelections((current) => {
@@ -180,7 +182,7 @@ export function BatchInventoryProvider({
       event.stopPropagation();
       event.stopImmediatePropagation();
       setInventoryIssues([
-        "Inventory is still loading. Wait for it to finish, then try again.",
+        t("Inventory is still loading. Wait for it to finish, then try again."),
       ]);
       return;
     }
@@ -200,7 +202,7 @@ export function BatchInventoryProvider({
       event.stopPropagation();
       event.stopImmediatePropagation();
       setInventoryIssues([
-        "The recipe ingredient list could not be checked. Reload the recipe and try again.",
+        t("The recipe ingredient list could not be checked. Reload the recipe and try again."),
       ]);
       return;
     }
@@ -212,7 +214,7 @@ export function BatchInventoryProvider({
       event.stopImmediatePropagation();
       setInventoryIssues(issues);
     }
-  }, [enabled, error, items, loaded, recipeId, selections]);
+  }, [enabled, error, items, loaded, recipeId, selections, t]);
 
   useEffect(() => {
     const form = inventoryFormContent.current?.closest("form");
@@ -254,9 +256,7 @@ export function BatchInventoryProvider({
         />
         {enabled && (
           <p className="mb-4 rounded-lg border border-green-400/20 bg-green-500/[0.06] p-3 text-sm text-white/70">
-            Matched ingredient amounts are deducted when you create this batch.
-            Enter the amounts you actually use; if they differ, update the
-            remaining stock in Inventory afterward.
+            {t("Matched ingredient amounts are deducted when you create this batch. Enter the amounts you actually use; if they differ, update the remaining stock in Inventory afterward.")}
           </p>
         )}
         {error && (
@@ -269,9 +269,9 @@ export function BatchInventoryProvider({
             role="alert"
             className="mb-4 rounded-lg border border-amber-400/50 bg-amber-950/50 p-4 text-amber-100"
           >
-            <p className="font-semibold">This recipe needs ingredients you don’t have enough of.</p>
+            <p className="font-semibold">{t("This recipe needs ingredients you don’t have enough of.")}</p>
             <p className="mt-1 text-sm">
-              Add or select the missing inventory items before creating the batch.
+              {t("Add or select the missing inventory items before creating the batch.")}
             </p>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
               {recipeInventoryWarnings.map((warning, index) => (
@@ -282,13 +282,13 @@ export function BatchInventoryProvider({
         )}
         {enabled && secondaryInventoryRequirements.length > 0 && (
           <div className="space-y-3 rounded-lg border border-white/10 bg-white/5 p-4">
-            <p className="font-semibold">Secondary additions</p>
+            <p className="font-semibold">{t("Secondary additions")}</p>
             {secondaryInventoryRequirements.map((requirement) => (
               <InventoryIngredientSelect
                 key={requirement.selectionKey}
                 selectionKey={requirement.selectionKey}
                 defaultValue={requirement.name}
-                placeholder={requirement.subcategory ?? "Additive"}
+                placeholder={requirement.subcategory ?? t("Additive")}
                 category={requirement.category}
                 subcategory={requirement.subcategory}
                 className="w-full rounded border border-white/20 bg-black/40 p-3"
@@ -304,7 +304,7 @@ export function BatchInventoryProvider({
               onClick={() => setShowInventoryCreator((current) => !current)}
               className="w-full rounded-lg border border-white/20 bg-white/10 px-4 py-3 font-semibold hover:bg-white/20"
             >
-              {showInventoryCreator ? "Cancel adding inventory items" : "Add missing inventory items"}
+              {showInventoryCreator ? t("Cancel adding inventory items") : t("Add missing inventory items")}
             </button>
             {showInventoryCreator && (
               <InventoryItemCreator
@@ -328,11 +328,10 @@ export function BatchInventoryProvider({
               className="w-full max-w-lg rounded-xl border border-amber-400/30 bg-zinc-900 p-6 shadow-2xl"
             >
               <h2 id="recipe-inventory-title" className="mb-3 text-xl font-bold">
-                Recipe ingredients need attention
+                {t("Recipe ingredients need attention")}
               </h2>
               <p className="mb-3 text-sm text-zinc-300">
-                This batch has not been created. Match the recipe ingredients to inventory items
-                and make sure there is enough stock, then try again.
+                {t("This batch has not been created. Match the recipe ingredients to inventory items and make sure there is enough stock, then try again.")}
               </p>
               <ul className="mb-6 list-disc space-y-1 pl-5 text-sm text-amber-200">
                 {inventoryIssues.map((issue, index) => (
@@ -346,7 +345,7 @@ export function BatchInventoryProvider({
                   onClick={() => setInventoryIssues(null)}
                   className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold hover:bg-white/20"
                 >
-                  Review ingredients
+                  {t("Review ingredients")}
                 </button>
               </div>
             </section>
@@ -395,6 +394,7 @@ export function InventoryIngredientSelect({
   defaultAmount?: string;
   defaultAmountUnit?: string;
 }) {
+  const { t } = useTranslation();
   const contextValue = useContext(BatchInventoryContext);
   if (!contextValue) {
     throw new Error("Inventory ingredient selector must be inside BatchInventoryProvider");
@@ -510,18 +510,18 @@ export function InventoryIngredientSelect({
           >
             <option value="">
               {error
-                ? "Inventory unavailable"
+                ? t("Inventory unavailable")
                 : !loaded
-                  ? "Loading inventory…"
+                  ? t("Loading inventory…")
                   : options.length
-                    ? `Select ${placeholder.toLowerCase()}`
-                    : `No ${placeholder.toLowerCase()} in inventory`}
+                    ? t("Select {ingredient}").replace("{ingredient}", placeholder.toLowerCase())
+                    : t("No {ingredient} in inventory").replace("{ingredient}", placeholder.toLowerCase())}
             </option>
             {options.map((item) => {
               const isLow = item.amount <= item.minimum_amount;
               return (
                 <option key={item.id} value={item.id}>
-                  {item.name} · {item.amount} {item.unit} · {isLow ? "Low stock" : "In stock"}
+                  {item.name} · {item.amount} {item.unit} · {isLow ? t("Low stock") : t("In stock")}
                 </option>
               );
             })}
@@ -532,8 +532,8 @@ export function InventoryIngredientSelect({
                 type="number"
                 min="0"
                 step="any"
-                aria-label={`${placeholder} amount`}
-                placeholder="Amount"
+                aria-label={t("{ingredient} amount").replace("{ingredient}", placeholder)}
+                placeholder={t("Amount")}
                 value={amount}
                 required={!!selected}
                 disabled={!selected}
@@ -556,8 +556,8 @@ export function InventoryIngredientSelect({
                   : "text-green-300"
               }`}
             >
-              {selected.amount <= selected.minimum_amount ? "Low stock" : "In stock"}:{" "}
-              {selected.amount} {selected.unit} available
+              {selected.amount <= selected.minimum_amount ? t("Low stock") : t("In stock")}:{" "}
+              {t("{amount} {unit} available").replace("{amount}", String(selected.amount)).replace("{unit}", selected.unit)}
             </span>
           )}
         </div>
@@ -603,6 +603,7 @@ function InventoryItemCreator({
   onAdded: (item: InventoryItem) => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const context = useContext(BatchInventoryContext);
   if (!context) {
     throw new Error("Inventory item creator must be inside BatchInventoryProvider");
@@ -631,23 +632,23 @@ function InventoryItemCreator({
 
   async function saveItem() {
     if (!itemName.trim() || !stockAmount.trim() || !unit.trim() || !minimumAmount.trim()) {
-      setError("Enter the item name, starting amount, minimum amount, and unit.");
+      setError(t("Enter the item name, starting amount, minimum amount, and unit."));
       return;
     }
     if (/\bwater\b/i.test(itemName)) {
-      setError("Water is not tracked as an inventory item.");
+      setError(t("Water is not tracked as an inventory item."));
       return;
     }
     if (isHop && !alphaAcid.trim()) {
-      setError("Enter the alpha acid percentage for this hop.");
+      setError(t("Enter the alpha acid percentage for this hop."));
       return;
     }
     if (isMalt && !ebc.trim()) {
-      setError("Enter the EBC color value for this malt.");
+      setError(t("Enter the EBC color value for this malt."));
       return;
     }
     if (isBottle && !bottleType) {
-      setError("Choose a bottle type.");
+      setError(t("Choose a bottle type."));
       return;
     }
     const startingAmount = Number(stockAmount);
@@ -658,7 +659,7 @@ function InventoryItemCreator({
       !Number.isFinite(minimumStock) ||
       minimumStock < 0
     ) {
-      setError("Starting and minimum amounts must be zero or greater.");
+      setError(t("Starting and minimum amounts must be zero or greater."));
       return;
     }
     const formData = new FormData();
@@ -683,7 +684,7 @@ function InventoryItemCreator({
       setError(
         saveError instanceof Error
           ? saveError.message
-          : "Could not add this item to inventory."
+          : t("Could not add this item to inventory.")
       );
     } finally {
       setSaving(false);
@@ -701,24 +702,24 @@ function InventoryItemCreator({
       }}
     >
       <input
-        aria-label="New inventory item name"
+        aria-label={t("New inventory item name")}
         autoFocus
         required
         value={itemName}
         onChange={(event) => setItemName(event.target.value)}
-        placeholder="Item name"
+        placeholder={t("Item name")}
         className="rounded border border-white/20 bg-black/40 p-3"
       />
       {fixedCategory ? (
         <input
-          aria-label="Inventory category"
+          aria-label={t("Inventory category")}
           readOnly
           value={selectedCategory?.label ?? fixedCategory}
           className="rounded border border-white/20 bg-black/40 p-3 opacity-75"
         />
       ) : (
         <select
-          aria-label="Inventory category"
+          aria-label={t("Inventory category")}
           value={itemCategory}
           onChange={(event) => {
             setItemCategory(event.target.value);
@@ -736,7 +737,7 @@ function InventoryItemCreator({
       )}
       {fixedSubcategory ? (
         <input
-          aria-label="Inventory subcategory"
+          aria-label={t("Inventory subcategory")}
           readOnly
           value={fixedSubcategory}
           className="rounded border border-white/20 bg-black/40 p-3 opacity-75"
@@ -744,7 +745,7 @@ function InventoryItemCreator({
       ) : (
         !!selectedCategory?.subcategories.length && (
           <select
-            aria-label="Inventory subcategory"
+            aria-label={t("Inventory subcategory")}
             value={itemSubcategory}
             onChange={(event) => {
               setItemSubcategory(event.target.value);
@@ -752,7 +753,7 @@ function InventoryItemCreator({
             }}
             className="rounded border border-white/20 bg-zinc-900 p-3"
           >
-            <option value="">Choose a subcategory (optional)</option>
+            <option value="">{t("Choose a subcategory (optional)")}</option>
             {getInventorySubcategoryOptions(selectedCategory.id).map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -763,56 +764,56 @@ function InventoryItemCreator({
       )}
       {itemCategory === "packaging" && itemSubcategory === "Bottles" && (
         <select
-          aria-label="Bottle type"
+          aria-label={t("Bottle type")}
           required
           value={bottleType}
           onChange={(event) => setBottleType(event.target.value)}
           className="rounded border border-white/20 bg-zinc-900 p-3"
         >
-          <option value="">Choose a bottle type</option>
+          <option value="">{t("Choose a bottle type")}</option>
           {INVENTORY_BOTTLE_TYPES.map((type) => (
             <option key={type} value={type}>{type}</option>
           ))}
         </select>
       )}
       <p className="text-xs text-white/60 sm:col-span-2">
-        Enter the amount you currently have; you can then select how much this batch uses.
+        {t("Enter the amount you currently have; you can then select how much this batch uses.")}
       </p>
       <label className="flex items-center gap-2 rounded border border-white/20 px-3">
         <input
-          aria-label="Starting inventory amount"
+          aria-label={t("Starting inventory amount")}
           required
           type="number"
           min="0"
           step="any"
           value={stockAmount}
           onChange={(event) => setStockAmount(event.target.value)}
-          placeholder="Starting amount"
+          placeholder={t("Starting amount")}
           className="min-w-0 w-full bg-transparent py-3 outline-none"
         />
       </label>
       <input
-        aria-label="Inventory unit"
+        aria-label={t("Inventory unit")}
         required
         value={unit}
         onChange={(event) => setUnit(event.target.value)}
-        placeholder="Unit (kg, g, pcs...)"
+        placeholder={t("Unit (kg, g, pcs...)")}
         className="rounded border border-white/20 bg-black/40 p-3"
       />
       <input
-        aria-label="Minimum stock amount"
+        aria-label={t("Minimum stock amount")}
         required
         type="number"
         min="0"
         step="any"
         value={minimumAmount}
         onChange={(event) => setMinimumAmount(event.target.value)}
-        placeholder="Minimum stock amount"
+        placeholder={t("Minimum stock amount")}
         className="rounded border border-white/20 bg-black/40 p-3"
       />
       {isHop && (
         <input
-          aria-label="Alpha acid percentage"
+          aria-label={t("Alpha acid percentage")}
           required
           type="number"
           min="0"
@@ -820,33 +821,33 @@ function InventoryItemCreator({
           step="any"
           value={alphaAcid}
           onChange={(event) => setAlphaAcid(event.target.value)}
-          placeholder="Alpha acid (%)"
+          placeholder={t("Alpha acid (%)")}
           className="rounded border border-white/20 bg-black/40 p-3"
         />
       )}
       {isHop && (
         <input
-          aria-label="Hop harvest year"
+          aria-label={t("Hop harvest year")}
           type="number"
           min="1900"
           max="2200"
           step="1"
           value={hopYear}
           onChange={(event) => setHopYear(event.target.value)}
-          placeholder="Harvest year (optional)"
+          placeholder={t("Harvest year (optional)")}
           className="rounded border border-white/20 bg-black/40 p-3"
         />
       )}
       {isMalt && (
         <input
-          aria-label="Color in EBC"
+          aria-label={t("Color in EBC")}
           required
           type="number"
           min="0"
           step="any"
           value={ebc}
           onChange={(event) => setEbc(event.target.value)}
-          placeholder="Color (EBC)"
+          placeholder={t("Color (EBC)")}
           className="rounded border border-white/20 bg-black/40 p-3"
         />
       )}
@@ -857,7 +858,7 @@ function InventoryItemCreator({
           onClick={() => void saveItem()}
           className="rounded-lg border border-green-500 bg-green-700 px-4 py-2 font-semibold hover:bg-green-600 disabled:opacity-50"
         >
-          {saving ? "Adding..." : "Add to inventory"}
+          {saving ? t("Adding…") : t("Add to inventory")}
         </button>
         <button
           type="button"
@@ -865,7 +866,7 @@ function InventoryItemCreator({
           onClick={onCancel}
           className="rounded-lg border border-white/20 px-4 py-2"
         >
-          Cancel
+          {t("Cancel")}
         </button>
       </div>
       {error && (
@@ -887,6 +888,7 @@ export function InventoryAdditiveFields({
 }: {
   defaultValue?: string;
 }) {
+  const { t } = useTranslation();
   const context = useContext(BatchInventoryContext);
   if (!context) {
     throw new Error("Inventory additive fields must be inside BatchInventoryProvider");
@@ -971,7 +973,7 @@ export function InventoryAdditiveFields({
             className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(7rem,0.4fr)_auto]"
           >
             <select
-              aria-label={`Additive ${index + 1}`}
+              aria-label={t("Additive {number}").replace("{number}", String(index + 1))}
               value={additive.inventory_item_id}
               disabled={!context.loaded || !!context.error}
               onChange={(event) =>
@@ -983,15 +985,15 @@ export function InventoryAdditiveFields({
             >
               <option value="">
                 {context.error
-                  ? "Inventory unavailable"
+                  ? t("Inventory unavailable")
                   : !context.loaded
-                    ? "Loading additives…"
-                    : "Select an additive"}
+                    ? t("Loading additives…")
+                    : t("Select an additive")}
               </option>
               {items.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name} · {item.amount} {item.unit} ·{" "}
-                  {item.amount <= item.minimum_amount ? "Low stock" : "In stock"}
+                  {item.amount <= item.minimum_amount ? t("Low stock") : t("In stock")}
                 </option>
               ))}
             </select>
@@ -1000,8 +1002,8 @@ export function InventoryAdditiveFields({
                 type="number"
                 min="0"
                 step="any"
-                aria-label={`Additive ${index + 1} amount`}
-                placeholder="Amount"
+                aria-label={t("Additive {number} amount").replace("{number}", String(index + 1))}
+                placeholder={t("Amount")}
                 value={additive.amount}
                 onChange={(event) =>
                   updateAdditive(index, { amount: event.target.value })
@@ -1009,7 +1011,7 @@ export function InventoryAdditiveFields({
                 className="min-w-0 w-full bg-transparent py-3 outline-none"
               />
               <span className="whitespace-nowrap text-sm text-white/60">
-                {selectedItem?.unit ?? "unit"}
+                {selectedItem?.unit ?? t("unit")}
               </span>
             </label>
             <button
@@ -1020,9 +1022,9 @@ export function InventoryAdditiveFields({
                 )
               }
               className="rounded-lg border border-white/20 px-3 py-2 text-sm"
-              aria-label={`Remove additive ${index + 1}`}
+              aria-label={t("Remove additive {number}").replace("{number}", String(index + 1))}
             >
-              Remove
+              {t("Remove")}
             </button>
             {selectedItem && (
               <span
@@ -1033,9 +1035,9 @@ export function InventoryAdditiveFields({
                 }`}
               >
                 {selectedItem.amount <= selectedItem.minimum_amount
-                  ? "Low stock"
-                  : "In stock"}
-                : {selectedItem.amount} {selectedItem.unit} available
+                  ? t("Low stock")
+                  : t("In stock")}
+                : {selectedItem.amount} {selectedItem.unit} {t("available")}
               </span>
             )}
           </div>
@@ -1051,7 +1053,7 @@ export function InventoryAdditiveFields({
         }
         className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm hover:bg-white/20"
       >
-        + Add additive
+        + {t("Add additive")}
       </button>
     </div>
   );

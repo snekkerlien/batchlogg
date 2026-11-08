@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { membershipLabel } from "@/lib/auth/membership";
 import { supabaseBrowser } from "../../lib/supabase/supabaseBrowser";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export default function ProfilesList({
   profiles,
@@ -13,6 +14,7 @@ export default function ProfilesList({
   profiles: any[];
   favorites: { favorite_profile_id: string }[] | null;
 }) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [favoriteIds, setFavoriteIds] = useState<string[]>(
     favorites?.map((f) => f.favorite_profile_id) ?? []
@@ -93,7 +95,7 @@ export default function ProfilesList({
       <div className="w-full flex justify-center mb-6">
         <input
           type="text"
-          placeholder="Search users..."
+          placeholder={t("Search users...")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full max-w-xl px-4 py-3 rounded-lg bg-black/40 border border-white/20 text-white"
@@ -109,6 +111,8 @@ export default function ProfilesList({
             >
               {/* STJERNE */}
               <button
+                type="button"
+                aria-label={t(favoriteIds.includes(p.id) ? "Remove from favorites" : "Add to favorites")}
                 onClick={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
@@ -157,14 +161,14 @@ export default function ProfilesList({
                   {p.username.charAt(0).toUpperCase() + p.username.slice(1)}
                 </span>
                 <span className="-mt-2                 text-xs text-white/50">
-                                  {membershipLabel(p.membership_status)}
+                                  {t(membershipLabel(p.membership_status))}
                 </span>
               </Link>
             </div>
           ))
         ) : (
           <p className="opacity-60 text-center col-span-full">
-            No public users found.
+            {t("No public users found.")}
           </p>
         )}
       </div>

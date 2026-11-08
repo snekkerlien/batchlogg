@@ -7,10 +7,12 @@ import {
   deleteInventoryItem,
 } from "@/app/actions/inventoryActions";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 const snusCategories = ["snus", "snusessens"];
 
 export function useInventory() {
+  const { t } = useTranslation();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -37,11 +39,11 @@ export function useInventory() {
       setItems(visibleItems);
     } catch (error) {
       console.error("Could not load inventory items", error);
-      setLoadError("Inventory could not be loaded. Please try again.");
+      setLoadError(t("Inventory could not be loaded. Please try again."));
     } finally {
       setLoading(false);
     }
-  }, [profile]);
+  }, [profile, t]);
 
   useEffect(() => {
     let active = true;
@@ -81,7 +83,7 @@ export function useInventory() {
       } catch (error) {
         console.error("Could not load inventory profile", error);
         if (active) {
-          setLoadError("Inventory profile could not be loaded. Please try again.");
+          setLoadError(t("Inventory profile could not be loaded. Please try again."));
           setLoading(false);
         }
       }
@@ -91,7 +93,7 @@ export function useInventory() {
     return () => {
       active = false;
     };
-  }, [profileAttempt]);
+  }, [profileAttempt, t]);
 
   useEffect(() => {
     if (profileLoaded) void loadItems();

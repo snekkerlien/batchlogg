@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePageGuidesEnabled } from "@/lib/accessibility/usePageGuidesEnabled";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export type PageGuideSection = {
   title: string;
@@ -96,6 +97,7 @@ export default function PageGuide({
   illustration,
   footer,
 }: PageGuideProps) {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const guidesEnabled = usePageGuidesEnabled();
@@ -189,7 +191,7 @@ export default function PageGuide({
                 </p>
                 <button
                   type="button"
-                  aria-label={`Close ${buttonLabel}`}
+                  aria-label={`${t("Close")} ${buttonLabel}`}
                   onClick={() => setOpen(false)}
                   className="rounded-lg px-3 py-2 text-lg leading-none text-white/60 hover:bg-white/10 hover:text-white"
                 >
@@ -241,7 +243,7 @@ export default function PageGuide({
                     onClick={() => setOpen(false)}
                     className="rounded-lg border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-semibold hover:bg-white/10"
                   >
-                    Got it
+                    {t("Got it")}
                   </button>
                 </div>
               </div>

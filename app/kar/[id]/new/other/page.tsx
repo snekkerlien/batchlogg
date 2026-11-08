@@ -13,6 +13,7 @@ import {
   InventoryAdditiveFields,
   InventoryIngredientSelect,
 } from "@/app/components/InventoryUsageFields";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import {
   getOtherRecipeIngredients,
   getOtherRecipeStyle,
@@ -26,6 +27,7 @@ export default function NewOtherPage({
   params: { id: string };
   searchParams?: { recipe?: string };
 }) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const { recipe, loading: recipeLoading, error: recipeError } =
     useRecipePrefill(searchParams?.recipe, "Other");
@@ -71,9 +73,9 @@ export default function NewOtherPage({
                 </div>
 
         {/* HEADER */}
-        <h1 className="text-4xl font-bold mb-2 text-center">New Other Batch</h1>
+        <h1 className="text-4xl font-bold mb-2 text-center">{t("New Other Batch")}</h1>
         <p className="text-center opacity-80 mb-10">
-          Use this page for experimental batches or anything that doesn&apos;t fit other categories.
+          {t("Use this page for experimental batches or anything that doesn&apos;t fit other categories.")}
         </p>
 
         {recipeError && <p role="alert" className="text-red-300 mb-4">{recipeError}</p>}
@@ -95,11 +97,11 @@ export default function NewOtherPage({
 
           {/* Batch name */}
           <div>
-            <label className="block mb-1 font-semibold">Batch name</label>
+            <label className="block mb-1 font-semibold">{t("Batch name")}</label>
             <input
               name="name"
               defaultValue={recipe?.name ?? ""}
-              placeholder="Example: Experimental Blend #1"
+              placeholder={t("Example: Experimental Blend #1")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
             />
@@ -107,26 +109,26 @@ export default function NewOtherPage({
 
           <div>
             <label htmlFor="other-style" className="block mb-1 font-semibold">
-              Style or type (optional)
+              {t("Style or type (optional)")}
             </label>
             <input
               id="other-style"
               name="other_style"
               maxLength={80}
               defaultValue={getOtherRecipeStyle(recipe?.ingredients)}
-              placeholder="Example: Kombucha"
+              placeholder={t("Example: Kombucha")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
 
           {/* Volume */}
           <div>
-            <label className="block mb-1 font-semibold">Volume (<UnitSymbol kind="volume" />)</label>
+            <label className="block mb-1 font-semibold">{t("Volume")} (<UnitSymbol kind="volume" />)</label>
             <UnitInput
               name="volume_l"
               kind="volume"
               defaultValue={recipe?.volume == null ? "" : String(recipe.volume)}
-              placeholder="Example: 5"
+              placeholder={t("Example: 5")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
             />
@@ -134,7 +136,7 @@ export default function NewOtherPage({
 
           {/* Start date */}
           <div>
-            <label className="block mb-1 font-semibold">Start date</label>
+            <label className="block mb-1 font-semibold">{t("Start date")}</label>
             <input
               name="startdato"
               type="date"
@@ -146,13 +148,13 @@ export default function NewOtherPage({
 
           {/* OG */}
           <div>
-            <label className="block mb-1 font-semibold">Original Gravity (OG)</label>
+            <label className="block mb-1 font-semibold">{t("Original Gravity (OG)")}</label>
             <input
               name="og"
               defaultValue={recipe?.og ?? ""}
               type="number"
               step="0.001"
-              placeholder="Example: 1.060"
+              placeholder={t("Example: 1.060")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
             />
@@ -160,13 +162,13 @@ export default function NewOtherPage({
 
           {/* Dynamic ingredients */}
           <div>
-            <label className="block mb-2 font-semibold">Ingredients</label>
+            <label className="block mb-2 font-semibold">{t("Ingredients")}</label>
 
             {ingredients.map((ing, i) => (
               <div key={i} className="flex gap-2 mb-2 items-center">
                 <InventoryIngredientSelect
                   selectionKey={`ingredient:${i}`}
-                  placeholder="Ingredient name"
+                  placeholder={t("Ingredient name")}
                   className="flex-1 p-3 rounded bg-black/40 border border-white/20"
                   value={ing.name}
                   onChange={(value) => {
@@ -177,7 +179,7 @@ export default function NewOtherPage({
                 />
 
                 <input
-                  placeholder="Amount"
+                  placeholder={t("Amount")}
                   className="w-24 p-3 rounded bg-black/40 border border-white/20"
                   value={ing.amount}
                   onChange={(e) => {
@@ -188,7 +190,7 @@ export default function NewOtherPage({
                 />
 
                 <input
-                  placeholder="Unit"
+                  placeholder={t("Unit")}
                   className="w-20 p-3 rounded bg-black/40 border border-white/20"
                   value={ing.unit}
                   onChange={(e) => {
@@ -203,7 +205,7 @@ export default function NewOtherPage({
                   onClick={() => removeIngredient(i)}
                   className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
                 >
-                  Remove
+                  {t("Remove")}
                 </button>
               </div>
             ))}
@@ -213,7 +215,7 @@ export default function NewOtherPage({
               onClick={addIngredient}
               className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
             >
-              + Add ingredient
+              + {t("Add ingredient")}
             </button>
           </div>
 
@@ -222,28 +224,28 @@ export default function NewOtherPage({
 
           {/* Additives */}
           <div>
-            <label className="block mb-1 font-semibold">Additives</label>
+            <label className="block mb-1 font-semibold">{t("Additives")}</label>
             <InventoryAdditiveFields defaultValue={recipe?.additives ?? ""} />
           </div>
 
           {/* Full process */}
           <div>
-            <label className="block mb-1 font-semibold">Full process</label>
+            <label className="block mb-1 font-semibold">{t("Full process")}</label>
             <PublicMentionTextarea
               name="full_process"
               defaultValue={recipe?.full_process ?? ""}
-              placeholder="Describe the full process..."
+              placeholder={t("Describe the full process...")}
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-40"
             />
           </div>
 
           {/* Notes */}
           <div>
-            <label className="block mb-1 font-semibold">Notes</label>
+            <label className="block mb-1 font-semibold">{t("Notes")}</label>
             <PublicMentionTextarea
               name="notes"
               defaultValue={recipe?.notes ?? ""}
-              placeholder="Any additional notes about the batch..."
+              placeholder={t("Any additional notes about the batch...")}
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
             />
           </div>
@@ -253,7 +255,7 @@ export default function NewOtherPage({
             disabled={loading || recipeLoading}
             className="w-full rounded-lg border border-green-500 bg-green-500/10 px-4 py-3 font-semibold text-green-300 transition hover:bg-green-500/20 disabled:opacity-50"
           >
-            {loading ? "Creating..." : "Create batch"}
+            {loading ? t("Creating...") : t("Create batch")}
           </button>
           </BatchInventoryProvider>
         </form>

@@ -61,6 +61,7 @@ export async function POST(req: Request) {
     username: username.trim().toLowerCase(),
     email: email.trim(),
     onboarding_completed: false,
+    preferred_language: "en",
     signup_source: getAcquisitionSource(user.user_metadata?.signup_source),
   };
   const { data: updatedProfile, error: updateError } = await serviceRole

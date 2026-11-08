@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePageGuidesEnabled } from "@/lib/accessibility/usePageGuidesEnabled";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 function RecipesIllustration() {
   return (
@@ -26,6 +27,7 @@ function RecipesIllustration() {
 
 export default function RecipesGuide() {
   const [open, setOpen] = useState(false);
+  const { t } = useTranslation();
   const guidesEnabled = usePageGuidesEnabled();
   const dialogRef = useRef<HTMLElement>(null);
 
@@ -57,7 +59,7 @@ export default function RecipesGuide() {
             onClick={() => setOpen(true)}
             className="fixed bottom-4 right-4 z-[90] rounded-full border border-white/15 bg-zinc-950/95 px-4 py-2 text-sm font-semibold text-white/75 shadow-lg hover:border-green-300/40 hover:text-white"
           >
-            My recipes guide
+            {t("My recipes guide")}
           </button>,
           document.body
         )}
@@ -108,11 +110,11 @@ export default function RecipesGuide() {
             >
               <div className="flex items-center justify-between border-b border-white/10 px-5 py-4 sm:px-8">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-green-300">
-                  My recipes guide
+                  {t("My recipes guide")}
                 </p>
                 <button
                   type="button"
-                  aria-label="Close My recipes guide"
+                  aria-label={t("Close My recipes guide")}
                   onClick={() => setOpen(false)}
                   className="rounded-lg px-3 py-2 text-lg leading-none text-white/60 hover:bg-white/10 hover:text-white"
                 >
@@ -124,13 +126,13 @@ export default function RecipesGuide() {
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className="text-xs font-medium uppercase tracking-widest text-green-300">
-                      Save ideas and brew from your plans
+                      {t("Save ideas and brew from your plans")}
                     </p>
                     <h2
                       id="recipes-guide-title"
                       className="mt-3 max-w-lg text-2xl font-bold leading-tight sm:text-3xl"
                     >
-                      Your recipes, explained.
+                      {t("Your recipes, explained.")}
                     </h2>
                   </div>
                   <div className="hidden min-[400px]:block">
@@ -138,8 +140,7 @@ export default function RecipesGuide() {
                   </div>
                 </div>
                 <p className="mt-4 max-w-2xl text-sm leading-7 text-white/65 sm:text-base">
-                  Create and organize recipes, then use one to start a batch
-                  when you’re ready.
+                  {t("Create and organize recipes, then use one to start a batch when you’re ready.")}
                 </p>
 
                 <section aria-labelledby="recipes-guide-tools" className="mt-7">
@@ -147,53 +148,47 @@ export default function RecipesGuide() {
                     id="recipes-guide-tools"
                     className="mb-3 text-xs font-semibold uppercase tracking-widest text-white/45"
                   >
-                    Recipe tools
+                    {t("Recipe tools")}
                   </h3>
                   <ul className="grid gap-3 text-sm leading-6 text-white/65 sm:grid-cols-2">
                     <li className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                       <strong className="text-sm font-semibold text-green-200">
-                        Create a recipe
+                        {t("Create a recipe")}
                       </strong>
                       <p className="mt-1">
-                        Choose New recipe, select a beverage type, and enter
-                        your ingredients and process.
+                        {t("Choose New recipe, select a beverage type, and enter your ingredients and process.")}
                       </p>
                     </li>
                     <li className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                       <strong className="text-sm font-semibold text-green-200">
-                        Import a recipe
+                        {t("Import a recipe")}
                       </strong>
                       <p className="mt-1">
-                        Import CSV, BeerXML, or BeerJSON files. Imported
-                        recipes stay private.
+                        {t("Import CSV, BeerXML, or BeerJSON files. Imported recipes stay private.")}
                       </p>
                     </li>
                     <li className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                       <strong className="text-sm font-semibold text-green-200">
-                        Find and compare
+                        {t("Find and compare")}
                       </strong>
                       <p className="mt-1">
-                        Search, filter by beverage type, or sort your recipes.
-                        Open a recipe to see its details.
+                        {t("Search, filter by beverage type, or sort your recipes. Open a recipe to see its details.")}
                       </p>
                     </li>
                     <li className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                       <strong className="text-sm font-semibold text-green-200">
-                        Start a batch
+                        {t("Start a batch")}
                       </strong>
                       <p className="mt-1">
-                        Choose a recipe and an empty vessel to start brewing.
-                        You can review any inventory warnings before continuing.
+                        {t("Choose a recipe and an empty vessel to start brewing. You can review any inventory warnings before continuing.")}
                       </p>
                     </li>
                     <li className="rounded-xl border border-white/10 bg-white/[0.03] p-4 sm:col-span-2">
                       <strong className="text-sm font-semibold text-green-200">
-                        Manage and share
+                        {t("Manage and share")}
                       </strong>
                       <p className="mt-1">
-                        Expand a recipe to edit it, change its visibility, or
-                        delete it. Recipes are private unless you make them
-                        public.
+                        {t("Expand a recipe to edit it, change its visibility, or delete it. Recipes are private unless you make them public.")}
                       </p>
                     </li>
                   </ul>
@@ -201,14 +196,14 @@ export default function RecipesGuide() {
 
                 <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-5">
                   <p className="text-xs text-white/40">
-                    Build a collection you can brew from again.
+                    {t("Build a collection you can brew from again.")}
                   </p>
                   <button
                     type="button"
                     onClick={() => setOpen(false)}
                     className="rounded-lg border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-semibold hover:bg-white/10"
                   >
-                    Back to my recipes
+                    {t("Back to my recipes")}
                   </button>
                 </div>
               </div>

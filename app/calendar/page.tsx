@@ -9,6 +9,7 @@ import PageHeading from "@/app/components/PageHeading";
 import PageGuide from "@/app/components/PageGuide";
 import PremiumFeaturePrompt from "@/app/components/PremiumFeaturePrompt";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type CalendarBatch = {
   id: string;
@@ -67,6 +68,7 @@ function reminderDateKey(value: string) {
 
 export default function CalendarPage() {
   const router = useRouter();
+  const { t, language } = useTranslation();
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [batches, setBatches] = useState<CalendarBatch[]>([]);
   const [reminders, setReminders] = useState<CalendarReminder[]>([]);
@@ -125,14 +127,14 @@ export default function CalendarPage() {
       isPremium?: boolean;
     } = await response.json();
     if (signal.aborted) return;
-    if (!response.ok) throw new Error(result.error || "Could not load calendar");
+    if (!response.ok) throw new Error(result.error || t("Could not load calendar"));
     if (typeof result.isPremium !== "boolean") {
-      throw new Error("Calendar response did not include the account plan");
+      throw new Error(t("Calendar response did not include the account plan"));
     }
     setIsPremium(result.isPremium);
     setBatches(result.batches ?? []);
     setReminders(result.reminders ?? []);
-  }, [from, to, router]);
+  }, [from, to, router, t]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -142,7 +144,7 @@ export default function CalendarPage() {
       .catch((loadError) => {
         if (controller.signal.aborted) return;
         console.error("Could not load brewing calendar", loadError);
-        setError("Calendar events could not be loaded. Please try again.");
+        setError(t("Calendar events could not be loaded. Please try again."));
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
@@ -169,7 +171,7 @@ export default function CalendarPage() {
         result.push({
           id: `${batch.id}:start`,
           date: batch.startdato.slice(0, 10),
-          title: `${name} started`,
+          title: `${name} ${t("started")}`,
           kind: "start",
           href,
         });
@@ -178,7 +180,7 @@ export default function CalendarPage() {
         result.push({
           id: `${batch.id}:finish`,
           date: batch.finished_date.slice(0, 10),
-          title: `${name} finished`,
+          title: `${name} ${t("finished")}`,
           kind: "finish",
           href,
         });
@@ -205,7 +207,7 @@ export default function CalendarPage() {
       .sort((left, right) => left.date.localeCompare(right.date) ||
         (left.timestamp ?? "").localeCompare(right.timestamp ?? "") ||
         left.title.localeCompare(right.title));
-  }, [batches, reminders, from, to]);
+  }, [batches, reminders, from, to, t]);
 
   const eventsByDate = useMemo(() => {
     const grouped = new Map<string, CalendarEvent[]>();
@@ -235,31 +237,31 @@ export default function CalendarPage() {
           <MenuOverlay current="calendar" />
         </div>
         <PageHeading
-          title="Brew calendar"
-          subtitle="See batch milestones and scheduled reminders in one place."
+          title={t("Brew calendar")}
+          subtitle={t("See batch milestones and scheduled reminders in one place.")}
         />
         <PageGuide
-          buttonLabel="Calendar guide"
-          eyebrow="Plan your brewing schedule"
-          title="Your batches and reminders, by date."
-          description="Use the calendar to see when batches started or finished and when you planned a reminder."
-          sectionHeading="Using the calendar"
+          buttonLabel={t("Calendar guide")}
+          eyebrow={t("Plan your brewing schedule")}
+          title={t("Your batches and reminders, by date.")}
+          description={t("Use the calendar to see when batches started or finished and when you planned a reminder.")}
+          sectionHeading={t("Using the calendar")}
           sections={[
             {
-              title: "Choose a view",
-              description: "Free accounts can review the upcoming seven days in an agenda. Premium also includes a full monthly calendar.",
+              title: t("Choose a view"),
+              description: t("Free accounts can review the upcoming seven days in an agenda. Premium also includes a full monthly calendar."),
             },
             {
-              title: "Move through time",
-              description: "Premium members can navigate across weeks and months, or choose Today to return to the current date.",
+              title: t("Move through time"),
+              description: t("Premium members can navigate across weeks and months, or choose Today to return to the current date."),
             },
             {
-              title: "Open an event",
-              description: "Select a batch milestone or reminder to jump to its batch details. Premium members can export the schedule as an .ics file.",
+              title: t("Open an event"),
+              description: t("Select a batch milestone or reminder to jump to its batch details. Premium members can export the schedule as an .ics file."),
             },
           ]}
           illustration="calendar"
-          footer="Reminders appear alongside batch milestones, so you can see what is coming up."
+          footer={t("Reminders appear alongside batch milestones, so you can see what is coming up.")}
         />
         {isPremium && !loading && !error && (
           <div className="mb-5 text-center">
@@ -268,15 +270,15 @@ export default function CalendarPage() {
               download="batchlogg-calendar.ics"
               className="text-sm font-semibold text-green-200 underline"
             >
-              Export calendar for external apps (.ics)
+              {t("Export calendar for external apps (.ics)")}
             </a>
           </div>
         )}
 
-        <section aria-label="Calendar" className="mt-8">
+        <section aria-label={t("Calendar")} className="mt-8">
           {isPremium && (
             <>
-              <div role="group" aria-label="Calendar view" className="mb-4 flex flex-wrap justify-center gap-2">
+              <div role="group" aria-label={t("Calendar view")} className="mb-4 flex flex-wrap justify-center gap-2">
                 {(["agenda", "month"] as const).map(option => (
                   <button
                     key={option}
@@ -287,7 +289,7 @@ export default function CalendarPage() {
                       view === option ? "border-green-400 bg-green-700" : "border-white/20 bg-white/5 hover:bg-white/10"
                     }`}
                   >
-                    {option === "agenda" ? "Agenda" : "Month"}
+                    {option === "agenda" ? t("Agenda") : t("Month")}
                   </button>
                 ))}
               </div>
@@ -296,7 +298,7 @@ export default function CalendarPage() {
                   <button
                     type="button"
                     onClick={() => changePeriod(-1)}
-                    aria-label={view === "agenda" ? "Previous week" : "Previous month"}
+                    aria-label={view === "agenda" ? t("Previous week") : t("Previous month")}
                     className="min-h-11 min-w-11 rounded-lg border border-white/20 bg-white/10 px-3 py-2 hover:bg-white/20"
                   >
                     ←
@@ -311,12 +313,12 @@ export default function CalendarPage() {
                     }}
                     className="min-h-11 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm hover:bg-white/20"
                   >
-                    Today
+                    {t("Today")}
                   </button>
                   <button
                     type="button"
                     onClick={() => changePeriod(1)}
-                    aria-label={view === "agenda" ? "Next week" : "Next month"}
+                    aria-label={view === "agenda" ? t("Next week") : t("Next month")}
                     className="min-h-11 min-w-11 rounded-lg border border-white/20 bg-white/10 px-3 py-2 hover:bg-white/20"
                   >
                     →
@@ -327,7 +329,7 @@ export default function CalendarPage() {
           )}
           <h2 aria-live="polite" className="mb-4 w-full break-words text-center text-sm font-semibold text-green-300 sm:text-xl">
             {isPremium !== true
-              ? "Upcoming 7 days"
+              ? t("Upcoming 7 days")
               : view === "agenda"
                 ? `${agendaDays[0].toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })} – ${agendaDays[6].toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`
                 : month.toLocaleDateString(undefined, { month: "long", year: "numeric" })
@@ -338,33 +340,33 @@ export default function CalendarPage() {
             <div role="alert" className="mb-4 rounded-lg border border-red-500/40 bg-red-950/40 p-4 text-center">
               <p>{error}</p>
               <button type="button" onClick={() => setRetry(value => value + 1)} className="mt-2 min-h-11 underline">
-                Try again
+                {t("Try again")}
               </button>
             </div>
           ) : null}
 
           {loading ? (
-            <p role="status" className="py-6 text-center text-sm text-white/60">Loading calendar…</p>
+            <p role="status" className="py-6 text-center text-sm text-white/60">{t("Loading calendar…")}</p>
           ) : !error && view === "agenda" ? (
-            <section aria-label="Weekly agenda" className="space-y-3">
+            <section aria-label={t("Weekly agenda")} className="space-y-3">
               {agendaDays.map(day => {
                 const key = dateKey(day);
                 const dayEvents = eventsByDate.get(key) ?? [];
                 return (
                   <section key={key} aria-labelledby={`agenda-${key}`} className={`rounded-lg border p-4 ${key === today ? "border-green-400/40 bg-green-400/5" : "border-white/10 bg-white/5"}`}>
                     <h3 id={`agenda-${key}`} className="font-semibold text-green-200">
-                      {key === today ? "Today · " : ""}
-                      <time dateTime={key}>{day.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}</time>
+                      {key === today ? `${t("Today")} · ` : ""}
+                      <time dateTime={key}>{day.toLocaleDateString(language === "nb" ? "nb-NO" : undefined, { weekday: "long", month: "short", day: "numeric" })}</time>
                     </h3>
                     {dayEvents.length === 0 ? (
-                      <p className="mt-2 text-sm text-white/50">Nothing scheduled.</p>
+                      <p className="mt-2 text-sm text-white/50">{t("Nothing scheduled.")}</p>
                     ) : (
                       <ul className="mt-3 space-y-2">
                         {dayEvents.map(event => (
                           <li key={event.id}>
                             <Link href={event.href} className="block min-h-11 rounded-lg border border-white/10 bg-black/20 p-3 hover:bg-white/10">
                               <span className={`block text-xs font-medium ${event.kind === "reminder" ? "text-amber-200" : event.kind === "finish" ? "text-blue-200" : "text-green-200"}`}>
-                                {event.kind === "reminder" ? "Reminder" : event.kind === "finish" ? "Batch finished" : "Batch started"}
+                                {event.kind === "reminder" ? t("Reminder") : event.kind === "finish" ? t("Batch finished") : t("Batch started")}
                               </span>
                               <span className="mt-1 block break-words">{event.title}</span>
                               {event.detail && <span className="mt-1 block break-words text-sm text-white/65">{event.detail}</span>}
@@ -382,8 +384,8 @@ export default function CalendarPage() {
           {!error && !loading && view === "month" && <div className="grid grid-cols-7 overflow-hidden rounded-lg border border-white/10">
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((weekday) => (
               <div key={weekday} className="border-b border-white/10 bg-white/5 p-2 text-center text-xs text-white/60">
-                <span className="hidden sm:inline">{weekday}</span>
-                <span className="sm:hidden">{weekday.slice(0, 1)}</span>
+                <span className="hidden sm:inline">{t(weekday)}</span>
+                <span className="sm:hidden">{t(weekday).slice(0, 1)}</span>
               </div>
             ))}
             {days.map((day) => {
@@ -396,11 +398,11 @@ export default function CalendarPage() {
                   key={key}
                   onClick={() => setSelectedDate(key)}
                   aria-pressed={selectedDate === key}
-                  aria-label={`${day.toLocaleDateString(undefined, {
+                  aria-label={`${day.toLocaleDateString(language === "nb" ? "nb-NO" : undefined, {
                     weekday: "long",
                     month: "long",
                     day: "numeric",
-                  })}${dayEvents.length ? `, ${dayEvents.length} events` : ""}`}
+                  })}${dayEvents.length ? `, ${dayEvents.length} ${t("events")}` : ""}`}
                   className={`min-h-20 border-b border-r border-white/10 p-1.5 text-left transition sm:min-h-24 sm:p-2 ${
                     inMonth ? "bg-black/20" : "bg-black/40 text-white/35"
                   } ${selectedDate === key ? "ring-2 ring-inset ring-green-400" : "hover:bg-white/10"} ${
@@ -424,7 +426,7 @@ export default function CalendarPage() {
                       </span>
                     ))}
                     {dayEvents.length > 2 && (
-                      <span className="text-[10px] text-white/50">+{dayEvents.length - 2} more</span>
+                      <span className="text-[10px] text-white/50">+{dayEvents.length - 2} {t("more")}</span>
                     )}
                   </span>
                 </button>
@@ -435,12 +437,12 @@ export default function CalendarPage() {
           {isPremium === false && !loading && !error && (
             <div className="mt-6">
               <PremiumFeaturePrompt
-                feature="More calendar planning"
-                description="Your upcoming seven-day agenda is included with the free plan."
+                feature={t("More calendar planning")}
+                description={t("Your upcoming seven-day agenda is included with the free plan.")}
                 benefits={[
-                  "See the full month at a glance.",
-                  "Navigate across weeks and months.",
-                  "Export your schedule to calendar apps with an iCalendar (.ics) file.",
+                  t("See the full month at a glance."),
+                  t("Navigate across weeks and months."),
+                  t("Export your schedule to calendar apps with an iCalendar (.ics) file."),
                 ]}
               />
             </div>
@@ -457,9 +459,9 @@ export default function CalendarPage() {
             })}
           </h2>
           {loading ? (
-            <p className="mt-3 text-sm text-white/60">Loading calendar…</p>
+            <p className="mt-3 text-sm text-white/60">{t("Loading calendar…")}</p>
           ) : selectedEvents.length === 0 ? (
-            <p className="mt-3 text-sm text-white/60">No batch milestones or reminders scheduled.</p>
+            <p className="mt-3 text-sm text-white/60">{t("No batch milestones or reminders scheduled.")}</p>
           ) : (
             <ul className="mt-3 space-y-2">
               {selectedEvents.map((event) => (
@@ -479,9 +481,9 @@ export default function CalendarPage() {
 
         {isPremium !== null && !loading && !error && (
         <div className="mt-4 flex flex-wrap justify-center gap-4 text-xs text-white/65">
-          <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-green-300" />Batch started</span>
-          <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-blue-300" />Batch finished</span>
-          <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-amber-300" />Reminder</span>
+          <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-green-300" />{t("Batch started")}</span>
+          <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-blue-300" />{t("Batch finished")}</span>
+          <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-amber-300" />{t("Reminder")}</span>
         </div>
         )}
       </div>

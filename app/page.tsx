@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import HomeAuthActions from "./HomeAuthActions";
+import TranslatedText from "./components/TranslatedText";
 
 export const metadata: Metadata = {
   title: "Batchlogg — Brewing workspace",
@@ -31,8 +32,7 @@ export default function Home() {
       <section className="relative z-10 w-full max-w-3xl space-y-6 rounded-xl border border-white/10 bg-black/40 p-10 text-center backdrop-blur-md">
         <h1 className="text-5xl font-bold">Batchlogg</h1>
         <p className="mx-auto max-w-2xl text-lg opacity-80">
-          The complete brewing workspace for tracking batches, refining recipes,
-          managing inventory, and connecting with the brewers around you.
+          <TranslatedText text="The complete brewing workspace for tracking batches, refining recipes, managing inventory, and connecting with the brewers around you." />
         </p>
         <HomeAuthActions />
       </section>
@@ -43,12 +43,10 @@ export default function Home() {
       >
         <div className="mb-6 text-center">
           <h2 id="explore-heading" className="text-2xl font-bold text-green-300 sm:text-3xl">
-            Explore Batchlogg — no account needed
+            <TranslatedText text="Explore Batchlogg — no account needed" />
           </h2>
           <p className="mx-auto mt-3 max-w-2xl text-white/75">
-            Try the brewing tools, browse recipes people have chosen to share,
-            and see what the community is discussing. Sign in only when you want
-            to join in or manage your own brewing.
+            <TranslatedText text="Try the brewing tools, browse recipes people have chosen to share, and see what the community is discussing. Sign in only when you want to join in or manage your own brewing." />
           </p>
         </div>
         <ul className="public-explore-grid grid gap-4 sm:grid-cols-2">
@@ -57,12 +55,12 @@ export default function Home() {
               href="/recipes"
               className="block h-full rounded-lg border border-white/10 bg-white/5 p-5 transition hover:border-green-300/40 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-300"
             >
-              <h3 className="text-lg font-semibold">Public brewing recipes</h3>
+              <h3 className="text-lg font-semibold"><TranslatedText text="Public brewing recipes" /></h3>
               <p className="mt-2 text-sm text-white/70">
-                Browse recipes their brewers have chosen to share publicly.
+                <TranslatedText text="Browse recipes their brewers have chosen to share publicly." />
               </p>
               <span className="mt-4 inline-block text-sm font-semibold text-green-300">
-                Browse recipes →
+                <TranslatedText text="Browse recipes →" />
               </span>
             </Link>
           </li>
@@ -71,13 +69,12 @@ export default function Home() {
               href="/abv-tools"
               className="block h-full rounded-lg border border-white/10 bg-white/5 p-5 transition hover:border-green-300/40 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-300"
             >
-              <h3 className="text-lg font-semibold">Brewing calculators</h3>
+              <h3 className="text-lg font-semibold"><TranslatedText text="Brewing calculators" /></h3>
               <p className="mt-2 text-sm text-white/70">
-                Calculate ABV, dilution, target strength, original gravity, and
-                sugar or honey requirements.
+                <TranslatedText text="Calculate ABV, dilution, target strength, original gravity, and bottle counts." />
               </p>
               <span className="mt-4 inline-block text-sm font-semibold text-green-300">
-                Open ABV tools →
+                <TranslatedText text="Open ABV tools →" />
               </span>
             </Link>
           </li>
@@ -86,13 +83,12 @@ export default function Home() {
               href="/community/forum"
               className="block h-full rounded-lg border border-white/10 bg-white/5 p-5 transition hover:border-green-300/40 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-300"
             >
-              <h3 className="text-lg font-semibold">Community forum</h3>
+              <h3 className="text-lg font-semibold"><TranslatedText text="Community forum" /></h3>
               <p className="mt-2 text-sm text-white/70">
-                Read brewing discussions without signing in. Create a free
-                account to post or reply.
+                <TranslatedText text="Read brewing discussions without signing in. Create a free account to post or reply." />
               </p>
               <span className="mt-4 inline-block text-sm font-semibold text-green-300">
-                Explore discussions →
+                <TranslatedText text="Explore discussions →" />
               </span>
             </Link>
           </li>
@@ -101,13 +97,12 @@ export default function Home() {
               href="/contact"
               className="block h-full rounded-lg border border-white/10 bg-white/5 p-5 transition hover:border-green-300/40 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-300"
             >
-              <h3 className="text-lg font-semibold">Questions and feedback</h3>
+              <h3 className="text-lg font-semibold"><TranslatedText text="Questions and feedback" /></h3>
               <p className="mt-2 text-sm text-white/70">
-                Find the right way to get in touch, with or without a Batchlogg
-                account.
+                <TranslatedText text="Find the right way to get in touch, with or without a Batchlogg account." />
               </p>
               <span className="mt-4 inline-block text-sm font-semibold text-green-300">
-                Contact Batchlogg →
+                <TranslatedText text="Contact Batchlogg →" />
               </span>
             </Link>
           </li>
@@ -116,29 +111,28 @@ export default function Home() {
 
       <section className="relative z-10 mt-12 w-full max-w-4xl rounded-xl border border-white/10 bg-black/30 p-6 text-center backdrop-blur-md sm:p-8">
         <h2 className="text-2xl font-bold text-green-300 sm:text-3xl">
-          Plan a brew. Track every step. Improve the next.
+          <TranslatedText text="Plan a brew. Track every step. Improve the next." />
         </h2>
         <p className="mx-auto mt-3 max-w-2xl text-white/75">
-          Keep your recipes, batches, and brewing notes together so every brew
-          is easier to manage and learn from.
+          <TranslatedText text="Keep your recipes, batches, and brewing notes together so every brew is easier to manage and learn from." />
         </p>
         <ul className="mt-8 grid gap-4 text-left sm:grid-cols-3">
           <li className="rounded-lg border border-white/10 bg-white/5 p-5">
-            <h3 className="font-semibold text-green-200">Plan</h3>
+            <h3 className="font-semibold text-green-200"><TranslatedText text="Plan" /></h3>
             <p className="mt-2 text-sm text-white/70">
-              Build recipes and keep your ingredients ready for brew day.
+              <TranslatedText text="Build recipes and keep your ingredients ready for brew day." />
             </p>
           </li>
           <li className="rounded-lg border border-white/10 bg-white/5 p-5">
-            <h3 className="font-semibold text-green-200">Brew</h3>
+            <h3 className="font-semibold text-green-200"><TranslatedText text="Brew" /></h3>
             <p className="mt-2 text-sm text-white/70">
-              Track vessels, fermentation stages, measurements, and notes.
+              <TranslatedText text="Track vessels, fermentation stages, measurements, and notes." />
             </p>
           </li>
           <li className="rounded-lg border border-white/10 bg-white/5 p-5">
-            <h3 className="font-semibold text-green-200">Improve</h3>
+            <h3 className="font-semibold text-green-200"><TranslatedText text="Improve" /></h3>
             <p className="mt-2 text-sm text-white/70">
-              Revisit batch history and use what you learned in your next recipe.
+              <TranslatedText text="Revisit batch history and use what you learned in your next recipe." />
             </p>
           </li>
         </ul>

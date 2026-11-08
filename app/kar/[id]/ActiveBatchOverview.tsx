@@ -5,6 +5,7 @@ import type { Batch } from "@/app/types/batchTypes";
 import { Qty } from "@/app/components/Units";
 import BeerColorGlass from "@/app/components/BeerColorGlass";
 import BitternessMeter from "@/app/components/BitternessMeter";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type ActiveBatchOverviewProps = {
   batch: Pick<Batch, "startdato" | "volume_l" | "og" | "type" | "status"> &
@@ -31,6 +32,7 @@ export default function ActiveBatchOverview({
   batch,
   secondary = false,
 }: ActiveBatchOverviewProps) {
+  const { t } = useTranslation();
   const startDate = new Date(batch.startdato);
   const age = daysSince(batch.startdato);
   const status = batch.status.toLocaleLowerCase();
@@ -39,35 +41,35 @@ export default function ActiveBatchOverview({
   const isSecondary = secondary || ["sekundær", "secondary"].includes(status);
 
   return (
-    <section aria-label="Batch overview" className="mb-5">
-      <h3 className="mb-3 text-lg font-semibold text-green-300">Batch at a glance</h3>
+    <section aria-label={t("Batch overview")} className="mb-5">
+      <h3 className="mb-3 text-lg font-semibold text-green-300">{t("Batch at a glance")}</h3>
       <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {batch.batchnummer != null && <Metric label="Batch ID">{batch.batchnummer}</Metric>}
-        <Metric label="Started">
+        {batch.batchnummer != null && <Metric label={t("Batch ID")}>{batch.batchnummer}</Metric>}
+        <Metric label={t("Started")}>
           {startDate.toLocaleDateString("en-US")}
           <span className="block text-xs font-normal text-white/55">
-            {age} {age === 1 ? "day" : "days"} ago
+            {age} {t(age === 1 ? "day" : "days")} {t("ago")}
           </span>
         </Metric>
-        <Metric label="Batch volume"><Qty kind="volume" value={batch.volume_l} /></Metric>
-        <Metric label="Original gravity">{Number(batch.og).toFixed(3)}</Metric>
+        <Metric label={t("Batch volume")}><Qty kind="volume" value={batch.volume_l} /></Metric>
+        <Metric label={t("Original gravity")}>{Number(batch.og).toFixed(3)}</Metric>
         {batch.type === "Beer" && batch.beer_style && (
-          <Metric label="Beer style">{batch.beer_style}</Metric>
+          <Metric label={t("Beer style")}>{batch.beer_style}</Metric>
         )}
-        <Metric label="Fermentation stage">
+        <Metric label={t("Fermentation stage")}>
           {isFinished
-            ? "Finished"
+            ? t("Finished")
             : isConditioning
-            ? "Conditioning"
+            ? t("Conditioning")
               : isSecondary
-                ? "Secondary fermentation"
-                : "Primary fermentation"}
+                ? t("Secondary fermentation")
+                : t("Primary fermentation")}
         </Metric>
         {(batch.type === "Beer" || batch.type === "Braggot") && batch.ibu != null && (
-          <Metric label="Bitterness"><BitternessMeter ibu={Number(batch.ibu)} /></Metric>
+          <Metric label={t("Bitterness")}><BitternessMeter ibu={Number(batch.ibu)} /></Metric>
         )}
         {(batch.type === "Beer" || batch.type === "Braggot") && batch.ebc != null && (
-          <Metric label="Color">
+          <Metric label={t("Color")}>
             <span className="flex min-h-[5.5rem] items-start">
               <span className="flex items-baseline gap-1.5">
                 <span className="text-xl font-bold leading-none tracking-tight text-white">
@@ -84,7 +86,7 @@ export default function ActiveBatchOverview({
       </dl>
       {(batch.type === "Beer" || batch.type === "Braggot") && batch.ibu != null && (
         <p className="mt-3 text-xs text-white/45">
-          Bitterness is a guide; sweetness and style affect perception.
+          {t("Bitterness is a guide; sweetness and style affect perception.")}
         </p>
       )}
     </section>

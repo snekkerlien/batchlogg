@@ -1,9 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 import LearningProgress from "./LearningProgress";
 import PageGuide from "@/app/components/PageGuide";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 const GAMES = [
   {
@@ -57,6 +60,14 @@ const GAMES = [
 ];
 
 export default function BrewingGamesPage() {
+  const { t } = useTranslation();
+  const translatedGames = GAMES.map((game) => ({
+    ...game,
+    title: t(game.title),
+    description: t(game.description),
+    detail: t(game.detail),
+  }));
+
   return (
     <main className="min-h-screen px-4 py-10 text-white sm:px-6">
       <div className="relative mx-auto w-full max-w-3xl rounded-xl border border-white/10 bg-black/60 p-5 pt-16 backdrop-blur-md sm:p-8 sm:pt-16">
@@ -68,19 +79,19 @@ export default function BrewingGamesPage() {
         </div>
 
         <PageHeading
-          title="Brewing Academy"
-          subtitle="Short, interactive challenges to build your brewing knowledge one decision at a time."
+          title={t("Brewing Academy")}
+          subtitle={t("Short, interactive challenges to build your brewing knowledge one decision at a time.")}
         />
 
         <LearningProgress
-          games={GAMES.map((game) => ({
+          games={translatedGames.map((game) => ({
             id: game.href.replace("/games/", ""),
             title: game.title,
           }))}
         />
 
-        <section aria-label="Choose a learning game" className="grid gap-4 sm:grid-cols-2">
-          {GAMES.map((game) => (
+        <section aria-label={t("Choose a learning game")} className="grid gap-4 sm:grid-cols-2">
+          {translatedGames.map((game) => (
             <Link
               key={game.href}
               href={game.href}
@@ -105,29 +116,29 @@ export default function BrewingGamesPage() {
         </section>
       </div>
       <PageGuide
-        buttonLabel="Brewing Academy guide"
-        eyebrow="Practice, learn, and build confidence"
-        title="Your Brewing Academy, explained."
-        description="Pick a short interactive challenge to practise brewing knowledge, process choices, troubleshooting, calculations, and sensory skills."
-        sectionHeading="Make the most of the Academy"
+        buttonLabel={t("Brewing Academy guide")}
+        eyebrow={t("Practice, learn, and build confidence")}
+        title={t("Your Brewing Academy, explained.")}
+        description={t("Pick a short interactive challenge to practise brewing knowledge, process choices, troubleshooting, calculations, and sensory skills.")}
+        sectionHeading={t("Make the most of the Academy")}
         illustration="academy"
-        footer="Learn at your own pace; replay a challenge whenever you like."
+        footer={t("Learn at your own pace; replay a challenge whenever you like.")}
         sections={[
           {
-            title: "Choose a challenge",
-            description: "Each card describes the topic and style of activity before you open it.",
+            title: t("Choose a challenge"),
+            description: t("Each card describes the topic and style of activity before you open it."),
           },
           {
-            title: "Learn from each answer",
-            description: "Challenges explain the reasoning so you can learn, not just score.",
+            title: t("Learn from each answer"),
+            description: t("Challenges explain the reasoning so you can learn, not just score."),
           },
           {
-            title: "Try different skills",
-            description: "Explore brewing basics, brew-day order, fermentation, recipe decisions, math, and flavor.",
+            title: t("Try different skills"),
+            description: t("Explore brewing basics, brew-day order, fermentation, recipe decisions, math, and flavor."),
           },
           {
-            title: "Track your progress",
-            description: "The progress area summarizes your activity across the available challenges.",
+            title: t("Track your progress"),
+            description: t("The progress area summarizes your activity across the available challenges."),
           },
         ]}
       />

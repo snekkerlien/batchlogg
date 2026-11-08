@@ -11,6 +11,8 @@ import ReportContentButton from "@/app/components/ReportContentButton";
 import PublicMentionTextarea from "@/app/components/PublicMentionTextarea";
 import PublicMentionText from "@/app/components/PublicMentionText";
 import { forumDraftKey, forumTopicHref, parseForumReplyDraft } from "@/lib/community/forumDraft";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { translateCommunityError, translateRecipeError } from "@/lib/i18n/apiErrors";
 import {
   encodeForumContent,
   FORUM_CATEGORIES,
@@ -118,11 +120,12 @@ function ForumLikeButton({
   pending: boolean;
   onToggle: (contentType: "topic" | "reply", contentId: string, liked: boolean) => void;
 }) {
+  const { t } = useTranslation();
   if (!userId) {
     return (
       <Link
         href="/auth/login"
-        aria-label={`Sign in to like this ${contentType}`}
+        aria-label={t(contentType === "topic" ? "Sign in to like this discussion" : "Sign in to like this reply")}
         className="inline-flex items-center gap-1.5 text-sm text-white/60 hover:text-white"
       >
         <span aria-hidden="true">♡</span>
@@ -136,7 +139,7 @@ function ForumLikeButton({
       type="button"
       onClick={() => onToggle(contentType, contentId, !liked)}
       disabled={pending}
-      aria-label={`${liked ? "Unlike" : "Like"} ${contentType} (${count})`}
+      aria-label={`${t(liked ? "Unlike" : "Like")} ${t(contentType === "topic" ? "discussionType" : "replyType")} (${count})`}
       aria-pressed={liked}
       className={`inline-flex items-center gap-1.5 text-sm disabled:cursor-wait disabled:opacity-50 ${
         liked ? "text-pink-300" : "text-white/60 hover:text-white"
@@ -178,18 +181,19 @@ function formatDate(date: string) {
   });
 }
 
-function formatCountdown(milliseconds: number) {
+function formatCountdown(milliseconds: number, t: (key: string) => string) {
   const seconds = Math.max(0, Math.floor(milliseconds / 1000));
   const days = Math.floor(seconds / 86_400);
   const hours = Math.floor((seconds % 86_400) / 3_600);
   const minutes = Math.floor((seconds % 3_600) / 60);
   const remainingSeconds = seconds % 60;
-  return `${days}d ${hours}h ${minutes}m ${remainingSeconds}s`;
+  return `${days}${t("d")} ${hours}${t("h")} ${minutes} ${t("m")} ${remainingSeconds}${t("s")}`;
 }
 
 async function submitForumMutation(
   method: "POST" | "PATCH" | "DELETE",
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
+  t: (key: string) => string
 ) {
   const response = await fetch("/api/community/forum/mutations", {
     method,
@@ -199,18 +203,19 @@ async function submitForumMutation(
   });
   const result: { error?: string } = await response.json();
   if (!response.ok) {
-    if (response.status === 401) throw new ForumSignInRequiredError();
-    throw new Error(result.error || "Could not update forum content");
+    if (response.status === 401) throw new ForumSignInRequiredError(t);
+    throw new Error(result.error || t("Could not update forum content"));
   }
 }
 
 class ForumSignInRequiredError extends Error {
-  constructor() {
-    super("Your session has expired. Your reply draft is kept below; sign in to post it.");
+  constructor(t: (key: string) => string) {
+    super(t("Your session has expired. Your reply draft is kept below; sign in to post it."));
   }
 }
 
 function ForumImages({ images }: { images: ForumImage[] }) {
+  const { t } = useTranslation();
   if (!images.length) return null;
   return (
     <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -224,7 +229,7 @@ function ForumImages({ images }: { images: ForumImage[] }) {
         >
           <Image
             src={image.url}
-            alt="Image attached to forum post"
+            alt={t("Image attached to forum post")}
             width={640}
             height={384}
             sizes="(max-width: 640px) 100vw, 50vw"
@@ -251,6 +256,7 @@ function ForumAttachmentCards({
   addedRecipeIds?: Set<string>;
   onMakeVersion?: (recipeId: string, topicId: string) => void;
 }) {
+  const { t } = useTranslation();
   if (!attachments.length) return null;
   return (
     <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -258,13 +264,13 @@ function ForumAttachmentCards({
         const card = (
           <span className="block min-w-0 rounded-lg border border-white/10 bg-black/25 p-3">
             <span className="block text-[10px] font-semibold uppercase tracking-wider text-green-300">
-              {attachment.type}
+              {t(attachment.type === "recipe" ? "Recipe" : "Batch")}
             </span>
             <span className="mt-1 block truncate text-sm font-medium">
               {attachment.name}
             </span>
             {attachment.url && (
-              <span className="mt-1 block text-xs text-white/50">Open attachment →</span>
+              <span className="mt-1 block text-xs text-white/50">{t("Open attachment →")}</span>
             )}
           </span>
         );
@@ -289,10 +295,10 @@ function ForumAttachmentCards({
                 className="mt-2 rounded-lg border border-green-400/30 bg-green-500/10 px-3 py-2 text-sm font-medium text-green-100 transition hover:bg-green-500/20 disabled:opacity-80"
               >
                 {addedRecipeIds?.has(attachment.id)
-                  ? "Added to your recipes"
+                  ? t("Added to your recipes")
                   : forkingRecipeId === attachment.id
-                    ? "Adding to your recipes…"
-                    : "Make my version"}
+                    ? t("Adding to your recipes…")
+                    : t("Make my version")}
               </button>
             )}
           </div>
@@ -313,9 +319,10 @@ function ForumAttachmentPicker({
   onChange: (value: string[]) => void;
   disabled: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <label className="block text-sm font-medium">
-      Attach recipes or active batches
+      {t("Attach recipes or active batches")}
       <select
         multiple
         value={value}
@@ -332,7 +339,7 @@ function ForumAttachmentPicker({
         ))}
       </select>
       <span className="mt-1 block text-xs font-normal text-white/50">
-        Select one or more items. Use Ctrl or Cmd to select multiple.
+        {t("Select one or more items. Use Ctrl or Cmd to select multiple.")}
       </span>
     </label>
   );
@@ -349,10 +356,11 @@ function ForumImagePicker({
   setError: (message: string) => void;
   disabled: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-2">
       <label className="block text-sm font-medium">
-        Attach images (up to {MAX_FORUM_IMAGES}, JPEG/PNG/WebP, {MAX_FORUM_IMAGE_SIZE / (1024 * 1024)} MB each)
+        {t("Attach images")} ({t("up to")} {MAX_FORUM_IMAGES}, JPEG/PNG/WebP, {MAX_FORUM_IMAGE_SIZE / (1024 * 1024)} {t("MB each")})
         <input
           type="file"
           accept="image/jpeg,image/png,image/webp"
@@ -362,15 +370,15 @@ function ForumImagePicker({
             const selected = Array.from(event.currentTarget.files ?? []);
             event.currentTarget.value = "";
             if (files.length + selected.length > MAX_FORUM_IMAGES) {
-              setError(`You can attach up to ${MAX_FORUM_IMAGES} images.`);
+              setError(`${t("You can attach up to")} ${MAX_FORUM_IMAGES} ${t("images.")}`);
               return;
             }
             if (selected.some((file) => !ACCEPTED_FORUM_IMAGE_TYPES.has(file.type))) {
-              setError("Images must be JPEG, PNG, or WebP files.");
+              setError(t("Images must be JPEG, PNG, or WebP files."));
               return;
             }
             if (selected.some((file) => file.size === 0 || file.size > MAX_FORUM_IMAGE_SIZE)) {
-              setError("Each image must be smaller than 5 MB.");
+              setError(t("Each image must be smaller than 5 MB."));
               return;
             }
             setError("");
@@ -390,7 +398,7 @@ function ForumImagePicker({
                 onClick={() => onChange(files.filter((_, fileIndex) => fileIndex !== index))}
                 className="shrink-0 text-white/60 underline hover:text-white disabled:opacity-50"
               >
-                Remove
+                {t("Remove")}
               </button>
             </li>
           ))}
@@ -400,7 +408,7 @@ function ForumImagePicker({
   );
 }
 
-async function uploadForumImages(files: File[]) {
+async function uploadForumImages(files: File[], t: (key: string) => string) {
   if (!files.length) return [] as ForumImage[];
   const formData = new FormData();
   files.forEach((file) => formData.append("images", file));
@@ -410,12 +418,12 @@ async function uploadForumImages(files: File[]) {
     body: formData,
   });
   const result = await response.json();
-  if (response.status === 401) throw new ForumSignInRequiredError();
-  if (!response.ok) throw new Error(result.error || "Could not upload images");
+  if (response.status === 401) throw new ForumSignInRequiredError(t);
+  if (!response.ok) throw new Error(result.error || t("Could not upload images"));
   return result.images as ForumImage[];
 }
 
-async function cleanUpForumImages(images: ForumImage[]) {
+async function cleanUpForumImages(images: ForumImage[], t: (key: string) => string) {
   if (!images.length) return;
   const response = await fetch("/api/community/forum/images", {
     method: "DELETE",
@@ -425,11 +433,12 @@ async function cleanUpForumImages(images: ForumImage[]) {
   });
   if (!response.ok) {
     const result = await response.json();
-    throw new Error(result.error || "Could not clean up uploaded images");
+    throw new Error(result.error || t("Could not clean up uploaded images"));
   }
 }
 
 export default function ForumClient({ threadId }: { threadId?: string }) {
+  const { t } = useTranslation();
   const [topics, setTopics] = useState<ForumTopic[]>([]);
   const [topicPage, setTopicPage] = useState(1);
   const [hasMoreTopics, setHasMoreTopics] = useState(false);
@@ -486,10 +495,10 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
       const key = forumDraftKey(topicId, userId);
       if (!text && attachments.length === 0 && images.length === 0) localStorage.removeItem(key);
       else localStorage.setItem(key, JSON.stringify({ body: text, attachments, hadImages: images.length > 0 }));
-      setDraftMessage("Draft saved on this device. Images must be reselected after leaving this page.");
+      setDraftMessage(t("Draft saved on this device. Images must be reselected after leaving this page."));
     } catch (storageError) {
       console.error("Could not save forum reply draft", storageError);
-      setDraftMessage("This browser could not save your draft. Keep this page open or copy your reply before leaving.");
+      setDraftMessage(t("This browser could not save your draft. Keep this page open or copy your reply before leaving."));
     }
   }
 
@@ -508,13 +517,13 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
       if (draft) {
         setReplyBody(draft.body);
         setReplyAttachments(draft.attachments);
-        setDraftMessage(`Saved draft restored.${draft.hadImages ? " Reselect your images before posting." : ""}`);
+        setDraftMessage(`${t("Saved draft restored.")}${draft.hadImages ? ` ${t("Reselect your images before posting.")}` : ""}`);
       }
     } catch (storageError) {
       console.error("Could not restore forum reply draft", storageError);
-      setDraftMessage("Your saved draft could not be restored. Browser storage may be unavailable.");
+      setDraftMessage(t("Your saved draft could not be restored. Browser storage may be unavailable."));
     }
-  }, [userId]);
+  }, [userId, t]);
 
   async function copyTopicLink(topicId: string) {
     try {
@@ -522,7 +531,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
       setCopiedTopicId(topicId);
     } catch (copyError) {
       console.error("Could not copy discussion link", copyError);
-      setError("The link could not be copied. Use the discussion title's link to open or share it.");
+      setError(t("The link could not be copied. Use the discussion title's link to open or share it."));
     }
   }
   const normalizedTopicSearch = topicSearch.trim().toLocaleLowerCase();
@@ -571,7 +580,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
       : "?page=1";
     const response = await fetch(`/api/community/forum${query}`, { cache: "no-store" });
     if (!response.ok) {
-      throw new Error(`Forum request failed (${response.status})`);
+      throw new Error(t("The forum could not be loaded. Please try again."));
     }
 
     const data: {
@@ -587,7 +596,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
     setCanModerate(data.canModerate === true);
     setMute(data.mute ?? null);
     if (data.mute) setMuteModalOpen(true);
-  }, [threadId]);
+  }, [threadId, t]);
 
   async function loadMoreTopics() {
     if (!hasMoreTopics || loadingMoreTopics) return;
@@ -600,7 +609,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
         { cache: "no-store" }
       );
       if (!response.ok) {
-        throw new Error(`Forum request failed (${response.status})`);
+        throw new Error(t("More discussions could not be loaded. Please try again."));
       }
       const data: { topics: ForumTopic[]; hasMore?: boolean; mute?: ForumMute | null } =
         await response.json();
@@ -617,7 +626,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
       setHasMoreTopics(data.hasMore === true);
     } catch (loadError) {
       console.error("Could not load more forum topics", loadError);
-      setLoadMoreError("More discussions could not be loaded. Please try again.");
+      setLoadMoreError(t("More discussions could not be loaded. Please try again."));
     } finally {
       setLoadingMoreTopics(false);
     }
@@ -647,7 +656,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
         typeof result.likeCount !== "number" ||
         typeof result.liked !== "boolean"
       ) {
-        throw new Error(result.error || "Could not update like");
+        throw new Error(result.error || t("Could not update like"));
       }
 
       setTopics((current) =>
@@ -670,7 +679,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
       );
     } catch (likeError) {
       console.error("Could not update forum like", likeError);
-      setError("Your like could not be updated. Please try again.");
+      setError(t("Your like could not be updated. Please try again."));
     } finally {
       setPendingLikes((current) => {
         const updated = new Set(current);
@@ -697,7 +706,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
         }
       );
       const result: { error?: string } = await response.json();
-      if (!response.ok) throw new Error(result.error || "Could not update saved discussions");
+      if (!response.ok) throw new Error(result.error || t("Could not update saved discussions"));
       setTopics((current) =>
         current.map((entry) =>
           entry.id === topic.id ? { ...entry, bookmarked_by_user: bookmark } : entry
@@ -708,7 +717,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
       setError(
         bookmarkError instanceof Error
           ? bookmarkError.message
-          : "Could not update saved discussions."
+          : t("Could not update saved discussions.")
       );
     }
   }
@@ -771,13 +780,13 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                   type: "recipe" as const,
                   id: recipe.id,
                   key: `recipe:${recipe.id}`,
-                  label: `Recipe · ${recipe.name}`,
+                  label: `${t("Recipe ·")} ${recipe.name}`,
                 })),
                 ...(batches ?? []).map((batch) => ({
                   type: "batch" as const,
                   id: batch.id,
                   key: `batch:${batch.id}`,
-                  label: `Batch · ${batch.name}`,
+                  label: `${t("Batch ·")} ${batch.name}`,
                 })),
               ]);
             }
@@ -785,7 +794,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
             console.error("Could not load attachable recipes or batches", attachmentError);
             if (active) {
               setError(
-                "The forum is available, but attachable recipes and batches could not be loaded."
+                t("The forum is available, but attachable recipes and batches could not be loaded.")
               );
             }
           }
@@ -798,7 +807,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
         );
       } catch (loadError) {
         console.error("Could not load community forum", loadError);
-        if (active) setError("The forum could not be loaded. Please try again.");
+        if (active) setError(t("The forum could not be loaded. Please try again."));
       } finally {
         if (active) setLoading(false);
       }
@@ -808,7 +817,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
     return () => {
       active = false;
     };
-  }, [loadTopics, threadId]);
+  }, [loadTopics, threadId, t]);
 
   useEffect(() => {
     if (loading || isMuted) return;
@@ -888,7 +897,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
     event.preventDefault();
     if (!userId || submitting || isMuted) return;
     if (!body.trim() && topicImages.length === 0 && topicAttachments.length === 0) {
-      setError("Write a message or attach an image, recipe, or batch.");
+      setError(t("Write a message or attach an image, recipe, or batch."));
       return;
     }
 
@@ -897,7 +906,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
     let uploadedImages: ForumImage[] = [];
     let topicCreated = false;
     try {
-      uploadedImages = await uploadForumImages(topicImages);
+      uploadedImages = await uploadForumImages(topicImages, t);
       await submitForumMutation("POST", {
         action: "create_topic",
         title: title.trim(),
@@ -910,7 +919,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
               .filter((choice): choice is ForumAttachmentChoice => !!choice)
               .map(({ type, id }) => ({ type, id }))
           ),
-      });
+      }, t);
 
       topicCreated = true;
       setTitle("");
@@ -924,17 +933,17 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
       console.error("Could not create forum topic or refresh the forum", loadError);
       if (!topicCreated && uploadedImages.length) {
         try {
-          await cleanUpForumImages(uploadedImages);
+          await cleanUpForumImages(uploadedImages, t);
         } catch (cleanupError) {
           console.error("Could not clean up unposted forum images", cleanupError);
         }
       }
       setError(
         topicCreated
-          ? "Your topic was posted, but the forum could not refresh."
+          ? t("Your topic was posted, but the forum could not refresh.")
           : loadError instanceof Error
           ? loadError.message
-          : "Your topic could not be posted. Please try again."
+          : t("Your topic could not be posted. Please try again.")
       );
     } finally {
       setSubmitting(false);
@@ -945,7 +954,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
     event.preventDefault();
     if (!userId || submitting || isMuted) return;
     if (!communityRecipeId) {
-      setError("Choose one of your public recipes.");
+      setError(t("Choose one of your public recipes."));
       return;
     }
 
@@ -961,7 +970,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
           { type: "recipe", id: communityRecipeId },
         ]),
         isCommunityRecipe: true,
-      });
+      }, t);
       topicCreated = true;
       setCommunityRecipeId("");
       setCommunityRecipeTitle("");
@@ -972,10 +981,10 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
       console.error("Could not create community recipe forum post", submitError);
       setError(
         topicCreated
-          ? "Your community recipe was posted, but the forum could not refresh."
+          ? t("Your community recipe was posted, but the forum could not refresh.")
           : submitError instanceof Error
           ? submitError.message
-          : "Your community recipe could not be posted. Please try again."
+          : t("Your community recipe could not be posted. Please try again.")
       );
     } finally {
       setSubmitting(false);
@@ -993,15 +1002,15 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
         body: JSON.stringify({ recipeId, topicId }),
       });
       const result: { recipeId?: string; error?: string } = await response.json();
-      if (!response.ok) throw new Error(result.error || "Could not make a recipe version.");
-      if (!result.recipeId) throw new Error("The recipe version was created without an id.");
+      if (!response.ok) throw new Error(result.error || t("Could not make a recipe version."));
+      if (!result.recipeId) throw new Error(t("The recipe version was created without an id."));
       setAddedRecipeIds((current) => new Set(current).add(recipeId));
     } catch (forkError) {
       console.error("Could not make community recipe version", forkError);
       setError(
         forkError instanceof Error
-          ? forkError.message
-          : "Could not make a recipe version."
+          ? translateRecipeError(forkError.message, t)
+          : t("Could not make a recipe version.")
       );
     } finally {
       setForkingRecipeId(null);
@@ -1012,11 +1021,11 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
     event.preventDefault();
     if (!userId || submitting || isMuted) return;
     if (!replyBody.trim() && replyImages.length === 0 && replyAttachments.length === 0) {
-      setReplyError("Write a reply or attach an image, recipe, or batch.");
+      setReplyError(t("Write a reply or attach an image, recipe, or batch."));
       return;
     }
     if (unavailableReplyAttachments.length > 0) {
-      setReplyError("Some saved attachments are no longer available. Remove them or reselect attachments before posting.");
+      setReplyError(t("Some saved attachments are no longer available. Remove them or reselect attachments before posting."));
       return;
     }
 
@@ -1027,7 +1036,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
     let uploadedImages: ForumImage[] = [];
     let replyCreated = false;
     try {
-      uploadedImages = await uploadForumImages(replyImages);
+      uploadedImages = await uploadForumImages(replyImages, t);
       await submitForumMutation("POST", {
         action: "create_reply",
         topicId,
@@ -1039,7 +1048,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
               .filter((choice): choice is ForumAttachmentChoice => !!choice)
               .map(({ type, id }) => ({ type, id }))
           ),
-      });
+      }, t);
 
       replyCreated = true;
       try {
@@ -1047,7 +1056,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
         localStorage.removeItem(forumDraftKey(topicId, null));
       } catch (storageError) {
         console.error("Could not clear posted forum reply draft", storageError);
-        setError("Your reply was posted, but its local draft could not be removed.");
+        setError(t("Your reply was posted, but its local draft could not be removed."));
       }
       setReplyBody("");
       setReplyImages([]);
@@ -1058,16 +1067,16 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
       console.error("Could not create forum reply or refresh the forum", loadError);
       if (!replyCreated && uploadedImages.length) {
         try {
-          await cleanUpForumImages(uploadedImages);
+          await cleanUpForumImages(uploadedImages, t);
         } catch (cleanupError) {
           console.error("Could not clean up unposted forum images", cleanupError);
         }
       }
       if (loadError instanceof ForumSignInRequiredError) setReplyNeedsSignIn(true);
-      if (replyCreated) setError("Your reply was posted, but the forum could not refresh.");
+      if (replyCreated) setError(t("Your reply was posted, but the forum could not refresh."));
       else setReplyError(loadError instanceof Error
         ? loadError.message
-        : "Your reply could not be posted. Please try again.");
+        : t("Your reply could not be posted. Please try again."));
     } finally {
       setSubmitting(false);
     }
@@ -1101,13 +1110,13 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
           topic?.images.map((image) => image.path) ?? [],
           topic?.attachments.map(({ type, id }) => ({ type, id })) ?? []
         ),
-      });
+      }, t);
     } catch (updateError) {
       console.error("Could not edit forum topic", updateError);
       setError(
         updateError instanceof Error
           ? updateError.message
-          : "The discussion could not be updated. Please try again."
+          : t("The discussion could not be updated. Please try again.")
       );
       setSubmitting(false);
       return;
@@ -1118,7 +1127,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
       await loadTopics();
     } catch (loadError) {
       console.error("Discussion updated but forum refresh failed", loadError);
-      setError("The discussion was updated, but the forum could not refresh.");
+      setError(t("The discussion was updated, but the forum could not refresh."));
     } finally {
       setSubmitting(false);
     }
@@ -1139,13 +1148,13 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
           reply.images.map((image) => image.path),
           reply.attachments.map(({ type, id }) => ({ type, id }))
         ),
-      });
+      }, t);
     } catch (updateError) {
       console.error("Could not edit forum reply", updateError);
       setError(
         updateError instanceof Error
           ? updateError.message
-          : "The reply could not be updated. Please try again."
+          : t("The reply could not be updated. Please try again.")
       );
       setSubmitting(false);
       return;
@@ -1156,7 +1165,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
       await loadTopics();
     } catch (loadError) {
       console.error("Reply updated but forum refresh failed", loadError);
-      setError("The reply was updated, but the forum could not refresh.");
+      setError(t("The reply was updated, but the forum could not refresh."));
     } finally {
       setSubmitting(false);
     }
@@ -1172,18 +1181,18 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
       await submitForumMutation("DELETE", {
         type: isTopic ? "topic" : "reply",
         id: targetId,
-      });
+      }, t);
 
       try {
         await loadTopics();
       } catch (loadError) {
         console.error("Forum content deleted but refresh failed", loadError);
-        setError("The content was deleted, but the forum could not refresh.");
+        setError(t("The content was deleted, but the forum could not refresh."));
       }
       return true;
     } catch (deleteError) {
       console.error("Could not delete forum content", deleteError);
-      setError("The content could not be deleted. Please try again.");
+      setError(t("The content could not be deleted. Please try again."));
       return false;
     } finally {
       setSubmitting(false);
@@ -1196,11 +1205,11 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
     hidden: boolean
   ) {
     const reason = window.prompt(
-      hidden ? "Why is this content being hidden?" : "Why is this content being restored?"
+      hidden ? t("Why is this content being hidden?") : t("Why is this content being restored?")
     );
     if (reason === null) return;
     if (reason.trim().length < 3) {
-      setError("Enter a reason with at least 3 characters.");
+      setError(t("Enter a reason with at least 3 characters."));
       return;
     }
     setSubmitting(true);
@@ -1213,11 +1222,11 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
         body: JSON.stringify({ contentType, contentId, hidden, reason: reason.trim() }),
       });
       const result: { error?: string } = await response.json();
-      if (!response.ok) throw new Error(result.error || "Could not update forum content");
+      if (!response.ok) throw new Error(result.error || t("Could not update forum content"));
       await loadTopics();
     } catch (moderationError) {
       console.error("Could not update forum content visibility", moderationError);
-      setError(moderationError instanceof Error ? moderationError.message : "Could not update forum content.");
+      setError(moderationError instanceof Error ? moderationError.message : t("Could not update forum content."));
     } finally {
       setSubmitting(false);
     }
@@ -1230,8 +1239,8 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
 
         {!threadId && <>
         <PageHeading
-          title="Community forum"
-          subtitle="Ask questions, share what you’ve learned, and talk brewing with the community."
+          title={t("Community forum")}
+          subtitle={t("Ask questions, share what you’ve learned, and talk brewing with the community.")}
         />
 
         <section
@@ -1239,27 +1248,26 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
           className="mb-8 rounded-xl border border-white/10 bg-white/5 p-5 sm:p-6"
         >
           <h2 id="forum-welcome-title" className="mb-3 text-xl font-semibold text-green-300">
-            Welcome to the Batchlogg Forums!
+            {t("Welcome to the Batchlogg Forums!")}
           </h2>
           <div className="space-y-4 text-sm leading-relaxed text-white/80">
-            <p>Welcome to the heart of the Batchlogg community!</p>
+            <p>{t("Welcome to the heart of the Batchlogg community!")}</p>
             <p>
-              This forum is the place where brewers of all levels can come together to share experiences, ask questions, showcase their batches, and learn from one another.
+              {t("This forum is the place where brewers of all levels can come together to share experiences, ask questions, showcase their batches, and learn from one another.")}
             </p>
-            <p>Batchlogg is built on structure, control, and creativity — and this forum is an extension of that philosophy. Here you can:</p>
+            <p>{t("Batchlogg is built on structure, control, and creativity — and this forum is an extension of that philosophy. Here you can:")}</p>
             <ul className="list-disc space-y-2 pl-6">
-              <li>Discuss recipes, techniques, and ingredients</li>
-              <li>Get help when a batch behaves… unexpectedly</li>
-              <li>Share photos, tasting notes, and results</li>
-              <li>Follow what other brewers are creating</li>
-              <li>Build a community where everyone can grow as brewers</li>
+              <li>{t("Discuss recipes, techniques, and ingredients")}</li>
+              <li>{t("Get help when a batch behaves… unexpectedly")}</li>
+              <li>{t("Share photos, tasting notes, and results")}</li>
+              <li>{t("Follow what other brewers are creating")}</li>
+              <li>{t("Build a community where everyone can grow as brewers")}</li>
             </ul>
             <p>
-              Whether you brew mead, beer, cider, hard seltzer, or something entirely your own, you’re welcome here.
-              This forum is made for brewers, by brewers — and we’re excited to see what you create.
+              {t("Whether you brew mead, beer, cider, hard seltzer, or something entirely your own, you’re welcome here. This forum is made for brewers, by brewers — and we’re excited to see what you create.")}
             </p>
             <p>
-              Raise a glass, share your knowledge, and let’s build an amazing brewing community together.
+              {t("Raise a glass, share your knowledge, and let’s build an amazing brewing community together.")}
             </p>
           </div>
         </section>
@@ -1275,7 +1283,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
               disabled={loading}
               className="rounded-lg border border-green-500 bg-green-700 px-5 py-3 font-semibold hover:bg-green-600 disabled:cursor-wait disabled:opacity-50"
             >
-              Start a discussion
+              {t("Start a discussion")}
             </button>
             <button
               type="button"
@@ -1286,39 +1294,39 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
               disabled={loading}
               className="rounded-lg border border-green-400/40 bg-green-500/10 px-5 py-3 font-semibold text-green-100 hover:bg-green-500/20 disabled:cursor-wait disabled:opacity-50"
             >
-              Start a community recipe
+              {t("Start a community recipe")}
             </button>
           </div>
         ) : !userId ? (
           <p className="mb-8 rounded-lg border border-white/10 bg-white/5 p-4 text-center text-white/70">
             <Link href="/auth/login" className="text-green-300 underline">
-              Sign in
+              {t("Sign in")}
             </Link>{" "}
-            to start a discussion or reply.
+            {t("to start a discussion or reply.")}
           </p>
         ) : null}
         </>}
 
         {error && !topicModalOpen && (
           <p role="alert" className="mb-6 text-center text-amber-300">
-            {error}
+            {translateCommunityError(error, t)}
           </p>
         )}
 
-        <section aria-label={threadId ? "Discussion thread" : "Forum discussions"} className="space-y-5">
+        <section aria-label={threadId ? t("Discussion thread") : t("Forum discussions")} className="space-y-5">
           {!threadId && <div className="grid gap-3 sm:grid-cols-2">
             <label className="flex flex-col gap-1 text-sm">
-              <span>Search discussions</span>
+              <span>{t("Search discussions")}</span>
               <input
                 type="search"
                 value={topicSearch}
                 onChange={(event) => setTopicSearch(event.target.value)}
-                placeholder="Search titles, posts, and replies"
+                placeholder={t("Search titles, posts, and replies")}
                 className="rounded-lg border border-white/20 bg-black/40 p-2"
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span>Filter category</span>
+              <span>{t("Filter category")}</span>
               <select
                 value={selectedCategory}
                 onChange={(event) => {
@@ -1331,14 +1339,14 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                 }}
                 className="rounded-lg border border-white/20 bg-black/40 p-2"
               >
-                <option>All categories</option>
+                <option value="All categories">{t("All categories")}</option>
                 {FORUM_CATEGORIES.map((option) => (
-                  <option key={option}>{option}</option>
+                  <option key={option} value={option}>{t(option)}</option>
                 ))}
               </select>
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span>Sort discussions</span>
+              <span>{t("Sort discussions")}</span>
               <select
                 value={topicSort}
                 onChange={(event) =>
@@ -1348,10 +1356,10 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                 }
                 className="rounded-lg border border-white/20 bg-black/40 p-2"
               >
-                <option value="newest">Newest</option>
-                <option value="active">Recently active</option>
-                <option value="popular">Most liked</option>
-                <option value="oldest">Oldest</option>
+                <option value="newest">{t("Newest")}</option>
+                <option value="active">{t("Recently active")}</option>
+                <option value="popular">{t("Most liked")}</option>
+                <option value="oldest">{t("Oldest")}</option>
               </select>
             </label>
             {userId && (
@@ -1366,7 +1374,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                       : "border-white/20 bg-white/10 hover:bg-white/20"
                   }`}
                 >
-                  {savedOnly ? "Showing saved only" : "Show saved only"}
+                  {savedOnly ? t("Showing saved only") : t("Show saved only")}
                 </button>
               </div>
             )}
@@ -1374,24 +1382,24 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
           {!threadId && !loading && (
             <div className="space-y-2 text-sm text-white/60">
               <p role="status" aria-live="polite">
-                {visibleTopics.length} {visibleTopics.length === 1 ? "discussion" : "discussions"} shown · {topics.length} loaded
-                {hasMoreTopics ? " · More available" : ""}
+                {visibleTopics.length} {t(visibleTopics.length === 1 ? "discussion" : "discussions")} {t("shown ·")} {topics.length} {t("loaded")}
+                {hasMoreTopics ? t(" · More available") : ""}
               </p>
-              {hasMoreTopics && <p>Search, category, saved, and sort controls apply to loaded discussions. Load more to include older discussions.</p>}
-              {linkedTopicId && <a href="/community/forum" className="inline-block min-h-11 py-2 text-green-200 underline">Browse all discussions</a>}
+              {hasMoreTopics && <p>{t("Search, category, saved, and sort controls apply to loaded discussions. Load more to include older discussions.")}</p>}
+              {linkedTopicId && <a href="/community/forum" className="inline-block min-h-11 py-2 text-green-200 underline">{t("Browse all discussions")}</a>}
             </div>
           )}
           {loading ? (
-            <p className="py-8 text-center text-white/60">{threadId ? "Loading discussion…" : "Loading discussions…"}</p>
+            <p className="py-8 text-center text-white/60">{t(threadId ? "Loading discussion…" : "Loading discussions…")}</p>
           ) : visibleTopics.length === 0 ? (
             <p className="py-8 text-center text-white/60">
               {linkedTopicId && topics.length === 0
-                ? "This discussion is unavailable or has been removed."
+                ? t("This discussion is unavailable or has been removed.")
                 : topics.length === 0
-                ? "No discussions yet. Start the first one!"
+                ? t("No discussions yet. Start the first one!")
                 : savedOnly
-                  ? "No saved discussions match these filters."
-                  : "No discussions match these filters."}
+                  ? t("No saved discussions match these filters.")
+                  : t("No discussions match these filters.")}
             </p>
           ) : (
             visibleTopics.map((topic) => (
@@ -1410,7 +1418,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                         htmlFor={`edit-topic-body-${topic.id}`}
                         className="block text-sm font-medium"
                       >
-                        Message
+                        {t("Message")}
                       </label>
                       <PublicMentionTextarea
                         id={`edit-topic-body-${topic.id}`}
@@ -1427,7 +1435,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                           disabled={submitting || isMuted}
                           className="rounded-lg border border-green-500 bg-green-700 px-4 py-2 text-sm font-semibold hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          {submitting ? "Saving…" : "Save changes"}
+                          {submitting ? t("Saving…") : t("Save changes")}
                         </button>
                         <button
                           type="button"
@@ -1435,7 +1443,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                           disabled={submitting}
                           className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm hover:bg-white/20"
                         >
-                          Cancel
+                          {t("Cancel")}
                         </button>
                       </div>
                     </form>
@@ -1443,11 +1451,11 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                     <>
                       <div>
                         <span className="inline-block rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-xs text-white/70">
-                          {topic.category}
+                          {t(topic.category)}
                         </span>
                         {topic.is_community_recipe && (
                           <span className="ml-2 inline-block rounded-full border border-green-300/30 bg-green-300/10 px-2.5 py-1 text-xs font-semibold text-green-100">
-                            Community recipe
+                            {t("Community recipe")}
                           </span>
                         )}
                         {userId ? (
@@ -1457,21 +1465,21 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                             aria-pressed={topic.bookmarked_by_user}
                             className="ml-2 rounded-lg border border-white/20 px-2.5 py-1 text-xs font-semibold hover:bg-white/10"
                           >
-                            {topic.bookmarked_by_user ? "Saved" : "Save"}
+                            {topic.bookmarked_by_user ? t("Saved") : t("Save")}
                           </button>
                         ) : (
                           <Link
                             href="/auth/login"
                             className="ml-2 text-xs text-green-300 underline"
                           >
-                            Sign in to save
+                            {t("Sign in to save")}
                           </Link>
                         )}
                         <button
                           type="button"
                           onClick={() => void copyTopicLink(topic.id)}
-                          aria-label={copiedTopicId === topic.id ? "Link copied" : "Share discussion"}
-                          title={copiedTopicId === topic.id ? "Link copied" : "Copy discussion link"}
+                          aria-label={t(copiedTopicId === topic.id ? "Link copied" : "Share discussion")}
+                          title={t(copiedTopicId === topic.id ? "Link copied" : "Copy discussion link")}
                           className="ml-1 inline-flex h-11 w-11 items-center justify-center rounded-lg align-middle text-white/65 hover:bg-white/10 hover:text-white"
                         >
                           <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -1487,7 +1495,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                             )}
                           </svg>
                           <span className="sr-only" role="status">
-                            {copiedTopicId === topic.id ? "Discussion link copied." : ""}
+                            {copiedTopicId === topic.id ? t("Discussion link copied.") : ""}
                           </span>
                         </button>
                         {threadId ? <h1 className="mt-2 text-2xl font-bold text-green-300">{topic.title}</h1> : <h2 className="mt-2 text-xl font-bold text-green-300">
@@ -1504,7 +1512,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                                 disabled={submitting}
                                 className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/20 disabled:opacity-50"
                               >
-                                Edit discussion
+                                {t("Edit discussion")}
                               </button>
                               <button
                                 type="button"
@@ -1512,7 +1520,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                                 disabled={submitting}
                                 className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/20 disabled:opacity-50"
                               >
-                                Delete discussion
+                                {t("Delete discussion")}
                               </button>
                             </>
                           )}
@@ -1525,7 +1533,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                               disabled={submitting}
                               className="rounded-lg border border-blue-300/25 bg-blue-300/10 px-3 py-2 text-sm font-semibold text-blue-100 hover:bg-blue-300/20 disabled:opacity-50"
                             >
-                              {topic.moderation_hidden ? "Restore discussion" : "Hide discussion"}
+                              {t(topic.moderation_hidden ? "Restore discussion" : "Hide discussion")}
                             </button>
                           )}
                         </div>
@@ -1535,7 +1543,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                 </div>
                 {canModerate && topic.moderation_hidden && (
                   <p className="mt-3 rounded-lg border border-amber-300/20 bg-amber-300/5 px-3 py-2 text-xs text-amber-100/80">
-                    Hidden from the community{topic.moderation_hidden_reason ? `: ${topic.moderation_hidden_reason}` : "."}
+                    {t("Hidden from the community")}{topic.moderation_hidden_reason ? `: ${topic.moderation_hidden_reason}` : "."}
                   </p>
                 )}
                 {editingTopic !== topic.id && (
@@ -1565,7 +1573,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                     {new Date(topic.updated_at).getTime() >
                       new Date(topic.created_at).getTime() && (
                       <span className="ml-2 rounded-full border border-white/15 bg-white/10 px-2 py-0.5 text-xs text-white/70">
-                        Edited
+                        {t("Edited")}
                       </span>
                     )}
                   </p>
@@ -1602,7 +1610,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                               showReadableMentions
                               maxLength={2000}
                               rows={3}
-                              aria-label="Edit reply"
+                              aria-label={t("Edit reply")}
                               className="w-full rounded-lg border border-white/20 bg-black/40 p-3"
                             />
                             <div className="flex gap-3">
@@ -1611,7 +1619,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                                 disabled={submitting}
                                 className="rounded-lg border border-green-500 bg-green-700 px-3 py-2 text-sm font-semibold hover:bg-green-600 disabled:opacity-60"
                               >
-                                {submitting ? "Saving…" : "Save"}
+                                {submitting ? t("Saving…") : t("Save")}
                               </button>
                               <button
                                 type="button"
@@ -1619,7 +1627,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                                 disabled={submitting}
                                 className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm hover:bg-white/20"
                               >
-                                Cancel
+                                {t("Cancel")}
                               </button>
                             </div>
                           </form>
@@ -1644,7 +1652,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                                       disabled={submitting}
                                       className="text-xs text-white/60 underline hover:text-white disabled:opacity-50"
                                     >
-                                      Edit
+                                      {t("Edit")}
                                     </button>
                                     <button
                                       type="button"
@@ -1652,7 +1660,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                                       disabled={submitting}
                                       className="text-xs text-white/60 underline hover:text-white disabled:opacity-50"
                                     >
-                                      Delete
+                                      {t("Delete")}
                                     </button>
                                   </>
                                 )}
@@ -1665,7 +1673,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                                     disabled={submitting}
                                     className="text-xs text-blue-200 underline hover:text-blue-100 disabled:opacity-50"
                                   >
-                                    {reply.moderation_hidden ? "Restore" : "Hide"}
+                                    {t(reply.moderation_hidden ? "Restore" : "Hide")}
                                   </button>
                                 )}
                               </div>
@@ -1674,7 +1682,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                         )}
                         {canModerate && reply.moderation_hidden && (
                           <p className="mt-2 text-xs text-amber-100/75">
-                            Hidden from the community{reply.moderation_hidden_reason ? `: ${reply.moderation_hidden_reason}` : "."}
+                            {t("Hidden from the community")}{reply.moderation_hidden_reason ? `: ${reply.moderation_hidden_reason}` : "."}
                           </p>
                         )}
                         <div className="mt-2 flex flex-wrap items-center gap-3">
@@ -1683,7 +1691,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                             {new Date(reply.updated_at).getTime() >
                               new Date(reply.created_at).getTime() && (
                               <span className="ml-2 rounded-full border border-white/15 bg-white/10 px-2 py-0.5 text-xs text-white/70">
-                                Edited
+                                {t("Edited")}
                               </span>
                             )}
                           </p>
@@ -1725,8 +1733,8 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                           showReadableMentions
                           maxLength={2000}
                           rows={3}
-                          placeholder="Write a reply…"
-                          aria-label={`Reply to ${topic.title}`}
+                          placeholder={t("Write a reply…")}
+                          aria-label={`${t("Reply to")} ${topic.title}`}
                           className="w-full rounded-lg border border-white/20 bg-black/40 p-3"
                         />
                         {userId && !replyNeedsSignIn && <ForumImagePicker
@@ -1741,7 +1749,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                         {draftMessage && <p role="status" className="text-xs text-white/60">{draftMessage}</p>}
                         {userId && !replyNeedsSignIn && unavailableReplyAttachments.length > 0 && (
                           <p className="text-sm text-amber-200">
-                            Some saved attachments are no longer available.{" "}
+                            {t("Some saved attachments are no longer available. Remove them or reselect attachments before posting.")}{" "}
                             <button
                               type="button"
                               disabled={submitting}
@@ -1751,22 +1759,22 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                                 setReplyAttachments(attachments);
                                 saveReplyDraft(topic.id, replyBody, attachments, replyImages);
                               }}
-                            >Remove unavailable attachments</button>
+                            >{t("Remove unavailable attachments")}</button>
                           </p>
                         )}
-                        {replyError && <p role="alert" className="text-sm text-amber-200">{replyError}</p>}
+                        {replyError && <p role="alert" className="text-sm text-amber-200">{translateCommunityError(replyError, t)}</p>}
                         <div className="flex flex-wrap gap-3">
                           {userId && !replyNeedsSignIn ? <button
                             type="submit"
                             disabled={submitting}
                             className="rounded-lg border border-green-500 bg-green-700 px-4 py-2 text-sm font-semibold hover:bg-green-600 disabled:cursor-wait disabled:opacity-60"
                           >
-                            {submitting ? "Posting…" : "Post reply"}
+                            {submitting ? t("Posting…") : t("Post reply")}
                           </button> : <Link
                             href={`/auth/login?redirect=${encodeURIComponent(`${forumTopicHref(topic.id)}?reply=1`)}`}
                             onClick={() => saveReplyDraft(topic.id, replyBody, replyAttachments, replyImages)}
                             className="rounded-lg border border-green-500 bg-green-700 px-4 py-2 text-sm font-semibold hover:bg-green-600"
-                          >Sign in to post reply</Link>}
+                          >{t("Sign in to post reply")}</Link>}
                           <button
                             type="button"
                             disabled={submitting}
@@ -1778,7 +1786,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                             }}
                             className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm hover:bg-white/20"
                           >
-                            Close (keep draft)
+                            {t("Close (keep draft)")}
                           </button>
                           <button
                             type="button"
@@ -1790,15 +1798,15 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                                 setReplyBody("");
                                 setReplyImages([]);
                                 setReplyAttachments([]);
-                                setDraftMessage("Draft discarded.");
+                                setDraftMessage(t("Draft discarded."));
                                 setReplyError("");
                               } catch (storageError) {
                                 console.error("Could not discard forum reply draft", storageError);
-                                setReplyError("The saved draft could not be removed. Please try again.");
+                                setReplyError(t("The saved draft could not be removed. Please try again."));
                               }
                             }}
                             className="rounded-lg border border-white/20 px-3 py-2 text-sm text-white/65 hover:bg-white/10"
-                          >Discard draft</button>
+                          >{t("Discard draft")}</button>
                         </div>
                       </form>
                     ) : (
@@ -1810,7 +1818,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                         }}
                         className="text-sm font-semibold text-green-300 hover:text-green-200 disabled:cursor-wait disabled:opacity-50"
                       >
-                        {userId ? "Reply" : "Write a reply"}
+                        {userId ? t("Reply") : t("Write a reply")}
                       </button>
                     )}
                   </div>
@@ -1820,14 +1828,14 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
           )}
           {!loading && hasMoreTopics && (
             <div className="space-y-2 pt-2 text-center">
-              {loadMoreError && <p role="alert" className="text-sm text-amber-200">{loadMoreError}</p>}
+              {loadMoreError && <p role="alert" className="text-sm text-amber-200">{translateCommunityError(loadMoreError, t)}</p>}
               <button
                 type="button"
                 onClick={() => void loadMoreTopics()}
                 disabled={loadingMoreTopics}
                 className="rounded-lg border border-white/20 bg-white/10 px-5 py-3 font-semibold hover:bg-white/20 disabled:cursor-wait disabled:opacity-60"
               >
-                {loadingMoreTopics ? "Loading…" : "Load more discussions"}
+                {loadingMoreTopics ? t("Loading…") : t("Load more discussions")}
               </button>
             </div>
           )}
@@ -1853,20 +1861,20 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
             <button
               type="button"
               onClick={() => setMuteModalOpen(false)}
-              aria-label="Close mute notice"
+              aria-label={t("Close mute notice")}
               className="absolute right-4 top-4 rounded-lg p-2 text-white/60 hover:bg-white/10 hover:text-white"
             >
               ×
             </button>
             <h2 id="forum-mute-title" className="text-2xl font-bold text-amber-300">
-              You are muted
+              {t("You are muted")}
             </h2>
             <p className="mt-3 text-white/80">
-              You cannot start discussions or reply while this mute is active.
+              {t("You cannot start discussions or reply while this mute is active.")}
             </p>
             {mute.reason && (
               <div className="mt-4 rounded-lg border border-white/10 bg-white/5 p-4 text-center text-white/75">
-                <p className="font-semibold text-white">Reason:</p>
+                <p className="font-semibold text-white">{t("Reason:")}</p>
                 <p className="mt-1 whitespace-pre-wrap">{mute.reason}</p>
               </div>
             )}
@@ -1874,19 +1882,19 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
               {mute.ends_at ? (
                 <>
                   <p>
-                    Mute lifts:{" "}
+                    {t("Mute lifts:")}{" "}
                     <time dateTime={mute.ends_at}>
                       {new Date(mute.ends_at).toLocaleString("en-GB")}
                     </time>
                   </p>
                   {muteRemaining !== null && (
                     <p className="mt-2 font-semibold" aria-live="off">
-                      Time remaining: {formatCountdown(muteRemaining)}
+                      {t("Time remaining:")} {formatCountdown(muteRemaining, t)}
                     </p>
                   )}
                 </>
               ) : (
-                <p>Duration: Indefinite</p>
+                <p>{t("Duration: Indefinite")}</p>
               )}
             </div>
             <div className="mt-6 flex justify-end">
@@ -1895,7 +1903,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                 onClick={() => setMuteModalOpen(false)}
                 className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold hover:bg-white/20"
               >
-                Close
+                {t("Close")}
               </button>
             </div>
           </section>
@@ -1920,22 +1928,22 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
               type="button"
               onClick={() => setTopicModalOpen(false)}
               disabled={submitting}
-              aria-label="Close"
+              aria-label={t("Close")}
               className="absolute right-4 top-4 rounded-lg p-2 text-white/60 hover:bg-white/10 hover:text-white disabled:opacity-50"
             >
               ✕
             </button>
             <h2 id="forum-topic-dialog-title" className="mb-5 text-2xl font-semibold">
-              Start a discussion
+              {t("Start a discussion")}
             </h2>
             {error && (
               <p role="alert" className="mb-4 text-sm text-amber-300">
-                {error}
+                {translateCommunityError(error, t)}
               </p>
             )}
             <form onSubmit={createTopic} className="space-y-3">
               <label className="block text-sm font-medium" htmlFor="forum-title">
-                Title
+                {t("Title")}
               </label>
               <input
                 id="forum-title"
@@ -1944,11 +1952,11 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                 minLength={3}
                 maxLength={150}
                 required
-                placeholder="What would you like to discuss?"
+                placeholder={t("What would you like to discuss?")}
                 className="w-full rounded-lg border border-white/20 bg-black/40 p-3"
               />
               <label className="block text-sm font-medium" htmlFor="forum-category">
-                Category
+                {t("Category")}
               </label>
               <select
                 id="forum-category"
@@ -1962,12 +1970,12 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
               >
                 {FORUM_CATEGORIES.map((option) => (
                   <option key={option} value={option}>
-                    {option}
+                    {t(option)}
                   </option>
                 ))}
               </select>
               <label className="block text-sm font-medium" htmlFor="forum-body">
-                Message
+                {t("Message")}
               </label>
               <PublicMentionTextarea
                 id="forum-body"
@@ -1976,7 +1984,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                 showReadableMentions
                 maxLength={5000}
                 rows={5}
-                placeholder="Share some details…"
+                placeholder={t("Share some details…")}
                 className="w-full rounded-lg border border-white/20 bg-black/40 p-3"
               />
               <ForumImagePicker
@@ -1998,14 +2006,14 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                   disabled={submitting}
                   className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold hover:bg-white/20 disabled:opacity-50"
                 >
-                  Cancel
+                  {t("Cancel")}
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
                   className="rounded-lg border border-green-500 bg-green-700 px-4 py-2 font-semibold hover:bg-green-600 disabled:cursor-wait disabled:opacity-60"
                 >
-                  {submitting ? "Posting…" : "Post discussion"}
+                  {submitting ? t("Posting…") : t("Post discussion")}
                 </button>
               </div>
             </form>
@@ -2031,7 +2039,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
               type="button"
               onClick={() => setCommunityRecipeModalOpen(false)}
               disabled={submitting}
-              aria-label="Close"
+              aria-label={t("Close")}
               className="absolute right-4 top-4 rounded-lg p-2 text-white/60 hover:bg-white/10 hover:text-white disabled:opacity-50"
             >
               ✕
@@ -2040,21 +2048,19 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
               id="community-recipe-dialog-title"
               className="mb-2 text-2xl font-semibold text-green-300"
             >
-              Start a community recipe
+              {t("Start a community recipe")}
             </h2>
             <p className="mb-5 text-sm leading-relaxed text-white/65">
-              Share one of your public recipes as a forum post. Other brewers can
-              make their own private, independent version from that post.
-              Your profile must also be public.
+              {t("Share one of your public recipes as a forum post. Other brewers can make their own private, independent version from that post. Your profile must also be public.")}
             </p>
             {error && (
               <p role="alert" className="mb-4 text-sm text-amber-300">
-                {error}
+                {translateCommunityError(error, t)}
               </p>
             )}
             <form onSubmit={createCommunityRecipeTopic} className="space-y-3">
               <label className="block text-sm font-medium" htmlFor="community-recipe-select">
-                Public recipe
+                {t("Public recipe")}
               </label>
               <select
                 id="community-recipe-select"
@@ -2067,7 +2073,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                   );
                   if (recipe) {
                     setCommunityRecipeTitle(
-                      `Community recipe: ${recipe.label.replace(/^Recipe · /, "")}`
+                      `${t("Community recipe:")} ${recipe.label.replace(/^Recipe · /, "")}`
                     );
                   }
                 }}
@@ -2077,8 +2083,8 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
               >
                 <option value="">
                   {attachmentChoices.some((choice) => choice.type === "recipe")
-                    ? "Choose a public recipe"
-                    : "No public recipes available"}
+                    ? t("Choose a public recipe")
+                    : t("No public recipes available")}
                 </option>
                 {attachmentChoices
                   .filter((choice) => choice.type === "recipe")
@@ -2090,15 +2096,14 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
               </select>
               {!attachmentChoices.some((choice) => choice.type === "recipe") && (
                 <p className="text-sm text-white/60">
-                  Make a recipe public in{" "}
+                  {t("First, make a recipe public in")}{" "}
                   <Link href="/my-recipes" className="text-green-300 underline">
-                    My recipes
-                  </Link>{" "}
-                  first.
+                    {t("My recipes")}
+                  </Link>.
                 </p>
               )}
               <label className="block text-sm font-medium" htmlFor="community-recipe-title">
-                Forum post title
+                {t("Forum post title")}
               </label>
               <input
                 id="community-recipe-title"
@@ -2107,11 +2112,11 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                 minLength={3}
                 maxLength={150}
                 required
-                placeholder="Name your community recipe"
+                placeholder={t("Name your community recipe")}
                 className="w-full rounded-lg border border-white/20 bg-black/40 p-3"
               />
               <label className="block text-sm font-medium" htmlFor="community-recipe-message">
-                Message (optional)
+                {t("Message (optional)")}
               </label>
               <PublicMentionTextarea
                 id="community-recipe-message"
@@ -2120,7 +2125,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                 showReadableMentions
                 maxLength={5000}
                 rows={4}
-                placeholder="Tell the community what makes this recipe special…"
+                placeholder={t("Tell the community what makes this recipe special…")}
                 className="w-full rounded-lg border border-white/20 bg-black/40 p-3"
               />
               <div className="flex justify-end gap-3 pt-2">
@@ -2130,7 +2135,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                   disabled={submitting}
                   className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold hover:bg-white/20 disabled:opacity-50"
                 >
-                  Cancel
+                  {t("Cancel")}
                 </button>
                 <button
                   type="submit"
@@ -2140,7 +2145,7 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
                   }
                   className="rounded-lg border border-green-500 bg-green-700 px-4 py-2 font-semibold hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {submitting ? "Posting…" : "Post community recipe"}
+                  {submitting ? t("Posting…") : t("Post community recipe")}
                 </button>
               </div>
             </form>
@@ -2151,19 +2156,19 @@ export default function ForumClient({ threadId }: { threadId?: string }) {
         open={pendingDelete !== null}
         title={
           pendingDelete?.type === "topic"
-            ? "Delete this discussion?"
-            : "Delete this reply?"
+            ? t("Delete this discussion?")
+            : t("Delete this reply?")
         }
         message={
           pendingDelete?.type === "topic"
             ? pendingDelete.topic.author_id !== userId
-              ? "As a moderator, you are about to permanently remove this discussion and all of its replies."
-              : "This will also permanently delete all replies to the discussion."
+              ? t("As a moderator, you are about to permanently remove this discussion and all of its replies.")
+              : t("This will also permanently delete all replies to the discussion.")
             : pendingDelete?.type === "reply" && pendingDelete.reply.author_id !== userId
-              ? "As a moderator, you are about to permanently remove this reply."
-              : "This reply will be permanently deleted."
+              ? t("As a moderator, you are about to permanently remove this reply.")
+              : t("This reply will be permanently deleted.")
         }
-        confirmLabel="Delete"
+        confirmLabel={t("Delete")}
         onConfirm={confirmDelete}
         onCancel={() => setPendingDelete(null)}
       />

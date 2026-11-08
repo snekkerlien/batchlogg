@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import BanNotice from "./BanNotice";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
+import TranslatedText from "@/app/components/TranslatedText";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,7 @@ export default async function BannedPage() {
     return (
       <main className="flex min-h-screen items-center justify-center px-6 text-white">
         <p role="alert" className="max-w-lg rounded-xl border border-red-400/30 bg-black/70 p-6 text-center">
-          We could not load your account restriction details. Please try again later.
+          <TranslatedText text="We could not load your account restriction details. Please try again later." />
         </p>
       </main>
     );
@@ -46,7 +47,7 @@ export default async function BannedPage() {
     return (
       <main className="flex min-h-screen items-center justify-center px-6 text-white">
         <p role="alert" className="max-w-lg rounded-xl border border-red-400/30 bg-black/70 p-6 text-center">
-          We could not load your appeal status. Please try again later.
+          <TranslatedText text="We could not load your appeal status. Please try again later." />
         </p>
       </main>
     );
@@ -64,7 +65,7 @@ export default async function BannedPage() {
     return (
       <main className="flex min-h-screen items-center justify-center px-6 text-white">
         <p role="alert" className="max-w-lg rounded-xl border border-red-400/30 bg-black/70 p-6 text-center">
-          We could not load your appeal messages. Please try again later.
+          <TranslatedText text="We could not load your appeal messages. Please try again later." />
         </p>
       </main>
     );
@@ -84,7 +85,7 @@ export default async function BannedPage() {
             href="/logout"
             className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold hover:bg-white/20"
           >
-            Log out
+            <TranslatedText text="Log out" />
           </Link>
         </div>
       </section>

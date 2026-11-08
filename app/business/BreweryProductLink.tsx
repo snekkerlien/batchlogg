@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslation } from "@/lib/i18n/useTranslation";
+
 export default function BreweryProductLink({
   productId,
   href,
@@ -7,6 +9,7 @@ export default function BreweryProductLink({
   productId: string;
   href: string;
 }) {
+  const { t } = useTranslation();
   function recordClick() {
     void fetch("/api/brewery/analytics", {
       method: "POST",
@@ -30,7 +33,7 @@ export default function BreweryProductLink({
       onClick={recordClick}
       className="text-green-200 underline underline-offset-4"
     >
-      Visit product page
+      {t("Visit product page")}
     </a>
   );
 }

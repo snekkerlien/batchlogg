@@ -10,6 +10,8 @@ import {
   type ChecklistState,
 } from "@/lib/brewing/brewDayChecklist";
 import ExpandArrowButton from "@/app/components/ExpandArrowButton";
+import { translateBatchError } from "@/lib/i18n/apiErrors";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type BrewDayChecklistProps = {
   batchId: string;
@@ -31,7 +33,11 @@ function formatTime(milliseconds: number): string {
 }
 
 function messageFromError(error: unknown, fallback: string): string {
-  return error instanceof Error ? error.message : fallback;
+  return error instanceof Error &&
+    !(error instanceof TypeError) &&
+    !(error instanceof SyntaxError)
+    ? error.message
+    : fallback;
 }
 
 export default function BrewDayChecklist({
@@ -42,6 +48,7 @@ export default function BrewDayChecklist({
   boilMinutes,
   isSecondary = false,
 }: BrewDayChecklistProps) {
+  const { t } = useTranslation();
   const steps = getBrewDaySteps(batchType, beerSubtype);
   const visibleSteps = useMemo(
     () => isSecondary ? [...steps, ...SECONDARY_FERMENTATION_STEPS] : steps,
@@ -79,7 +86,7 @@ export default function BrewDayChecklist({
         const result: { checklist?: unknown; error?: string } =
           await response.json();
         if (!response.ok) {
-          throw new Error(result.error || "Could not load batch checklist.");
+          throw new Error(result.error || t("Could not load batch checklist."));
         }
 
         const loaded =
@@ -99,7 +106,7 @@ export default function BrewDayChecklist({
         console.error("Could not load batch brew-day checklist", error);
         if (!active) return;
         setErrorMessage(
-          messageFromError(error, "Could not load the saved checklist.")
+          messageFromError(error, t("Could not load the saved checklist."))
         );
         setLoadStatus("error");
       }
@@ -108,7 +115,7 @@ export default function BrewDayChecklist({
     return () => {
       active = false;
     };
-  }, [batchId, batchType, beerSubtype, boilMinutes, loadAttempt, stepIds]);
+  }, [batchId, batchType, beerSubtype, boilMinutes, loadAttempt, stepIds, t]);
 
   useEffect(() => {
     if (loadStatus !== "ready" || loadedBatchId !== batchId) return;
@@ -132,7 +139,7 @@ export default function BrewDayChecklist({
           );
           const result: { error?: string } = await response.json();
           if (!response.ok) {
-            throw new Error(result.error || "Could not save batch checklist.");
+            throw new Error(result.error || t("Could not save batch checklist."));
           }
           if (revision === saveRevisionRef.current) {
             setErrorMessage("");
@@ -143,7 +150,7 @@ export default function BrewDayChecklist({
           console.error("Could not save batch brew-day checklist", error);
           if (revision === saveRevisionRef.current) {
             setErrorMessage(
-              messageFromError(error, "Could not save checklist progress.")
+              messageFromError(error, t("Could not save checklist progress."))
             );
             setSaveStatus("error");
           }
@@ -151,7 +158,7 @@ export default function BrewDayChecklist({
     }, 250);
 
     return () => window.clearTimeout(timeout);
-  }, [batchId, checklist, loadStatus, loadedBatchId]);
+  }, [batchId, checklist, loadStatus, loadedBatchId, t]);
 
   useEffect(() => {
     if (!checklist.timer || checklist.timer.endsAt === null) return;
@@ -245,10 +252,10 @@ export default function BrewDayChecklist({
           id={`brew-day-checklist-title-${batchId}`}
           className="text-lg font-semibold text-green-300"
         >
-          Brew-day checklist
+          {t("Brew-day checklist")}
         </h3>
         <p role="status" className="mt-2 text-sm text-white/60">
-          Loading checklist for {batchName}…
+          {t("Loading checklist for")} {batchName}…
         </p>
       </section>
     );
@@ -264,17 +271,17 @@ export default function BrewDayChecklist({
           id={`brew-day-checklist-title-${batchId}`}
           className="text-lg font-semibold text-green-300"
         >
-          Brew-day checklist
+          {t("Brew-day checklist")}
         </h3>
         <p role="alert" className="mt-2 text-sm text-amber-200">
-          {errorMessage}
+          {translateBatchError(errorMessage, t)}
         </p>
         <button
           type="button"
           onClick={() => setLoadAttempt((attempt) => attempt + 1)}
           className="mt-3 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/20"
         >
-          Retry
+          {t("Retry")}
         </button>
       </section>
     );
@@ -292,16 +299,16 @@ export default function BrewDayChecklist({
             id={`brew-day-checklist-title-${batchId}`}
             className="text-lg font-bold text-green-300"
           >
-            Brew-day checklist
+            {t("Brew-day checklist")}
           </h3>
           <p className="mt-1 text-sm text-white/60">
-            {batchName} · {completedCount} of {visibleSteps.length} steps complete
+            {batchName} · {completedCount} {t("of")} {visibleSteps.length} {t("steps complete")}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <ExpandArrowButton
             expanded={checklistOpen}
-            label="brew-day checklist"
+            label={t("Brew-day checklist")}
             controls={`brew-day-checklist-content-${batchId}`}
             onClick={() => setChecklistOpen((open) => !open)}
           />
@@ -315,20 +322,20 @@ export default function BrewDayChecklist({
         >
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-sm">
             <p role="status" className="text-white/70">
-              {completedCount} of {visibleSteps.length} steps complete
+              {completedCount} {t("of")} {visibleSteps.length} {t("steps complete")}
             </p>
             <p className="text-xs text-white/50" aria-live="polite">
               {saveStatus === "saving"
-                ? "Saving to this batch…"
+                ? t("Saving to this batch…")
                 : saveStatus === "error"
-                  ? "Progress not saved"
-                  : "Progress saved to this batch"}
+                  ? t("Progress not saved")
+                  : t("Progress saved to this batch")}
             </p>
           </div>
 
           {errorMessage && (
             <p role="alert" className="mb-4 text-sm text-amber-200">
-              {errorMessage}
+              {translateBatchError(errorMessage, t)}
             </p>
           )}
 
@@ -372,16 +379,16 @@ export default function BrewDayChecklist({
                     <span className="mr-2 text-xs text-white/40">
                       {index + 1}.
                     </span>
-                    {step.title}
+                    {t(step.title)}
                   </label>
                   <p className="mt-1 text-sm leading-5 text-white/60">
-                    {step.description}
+                    {t(step.description)}
                   </p>
 
                   {isTimed && (
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       <label className="flex items-center gap-2 text-xs text-white/60">
-                        Timer
+                        {t("Timer")}
                         <input
                           type="number"
                           min="1"
@@ -394,10 +401,10 @@ export default function BrewDayChecklist({
                           onChange={(event) =>
                             updateDuration(step.id, event.target.value)
                           }
-                          aria-label={`${step.title} timer minutes`}
+                          aria-label={`${t(step.title)} ${t("timer minutes")}`}
                           className="w-20 rounded border border-white/20 bg-black/40 p-2 text-sm text-white disabled:opacity-50"
                         />
-                        min
+                        {t("min")}
                       </label>
                       {stepTimer && (
                         <span
@@ -408,7 +415,7 @@ export default function BrewDayChecklist({
                           }`}
                         >
                           {stepFinished
-                            ? "Done"
+                            ? t("Done")
                             : formatTime(stepRemaining ?? 0)}
                         </span>
                       )}
@@ -418,7 +425,7 @@ export default function BrewDayChecklist({
                           onClick={pauseTimer}
                           className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/20"
                         >
-                          Pause
+                          {t("Pause")}
                         </button>
                       ) : (
                         <button
@@ -428,7 +435,7 @@ export default function BrewDayChecklist({
                           }
                           className="rounded-lg border border-green-500 bg-green-700 px-3 py-2 text-sm font-semibold hover:bg-green-600"
                         >
-                          {stepTimer && !stepFinished ? "Resume" : "Start timer"}
+                          {stepTimer && !stepFinished ? t("Resume") : t("Start timer")}
                         </button>
                       )}
                       {stepTimer && (
@@ -437,7 +444,7 @@ export default function BrewDayChecklist({
                           onClick={resetTimer}
                           className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/20"
                         >
-                          Reset
+                          {t("Reset")}
                         </button>
                       )}
                     </div>
@@ -458,11 +465,10 @@ export default function BrewDayChecklist({
             id={`secondary-checklist-title-${batchId}`}
             className="mb-3 text-lg font-semibold text-green-300"
           >
-            Secondary fermentation
+            {t("Secondary fermentation")}
           </h4>
           <p className="mb-4 text-sm text-white/60">
-            Secondary-specific tasks appear here while this batch is in
-            secondary fermentation.
+            {t("Secondary-specific tasks appear here while this batch is in secondary fermentation.")}
           </p>
           <ol className="space-y-3">
             {SECONDARY_FERMENTATION_STEPS.map((step, index) => {
@@ -492,10 +498,10 @@ export default function BrewDayChecklist({
                         <span className="mr-2 text-xs text-white/40">
                           {index + 1}.
                         </span>
-                        {step.title}
+                        {t(step.title)}
                       </label>
                       <p className="mt-1 text-sm leading-5 text-white/60">
-                        {step.description}
+                        {t(step.description)}
                       </p>
                     </div>
                   </div>
@@ -508,9 +514,7 @@ export default function BrewDayChecklist({
 
           {steps.some((step) => step.timerMinutes !== undefined) && (
             <p className="mt-4 text-xs leading-5 text-white/50">
-              Only one timer runs at a time. The countdown continues through
-              reloads and when you leave this batch; completion is shown when you
-              return.
+              {t("Only one timer runs at a time. The countdown continues through reloads and when you leave this batch; completion is shown when you return.")}
             </p>
           )}
         </div>

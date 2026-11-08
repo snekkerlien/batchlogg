@@ -5,8 +5,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabaseBrowser } from "../../../lib/supabase/supabaseBrowser";
 import FormField from "@/app/components/FormField";
+import AuthRequiredLabel from "../AuthRequiredLabel";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { LOGIN_AUTH_CODE_KEYS, LOGIN_AUTH_MESSAGE_KEYS, translateApiError, translateAuthApiError, translateAuthCode } from "@/lib/i18n/apiErrors";
 
 export default function LoginClient() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -20,7 +24,7 @@ export default function LoginClient() {
     const password = form.get("password")?.toString() ?? "";
 
     if (!email || !password) {
-      setErrorMsg("Please enter your email address and password.");
+      setErrorMsg(t("Please enter your email address and password."));
       return;
     }
 
@@ -35,11 +39,17 @@ export default function LoginClient() {
       });
 
       if (error) {
-        setErrorMsg("Incorrect email or password.");
+        console.error("Could not sign in", { code: error.code, status: error.status });
+        setErrorMsg(
+          translateAuthCode(error.code, t, LOGIN_AUTH_CODE_KEYS) ??
+          (Object.hasOwn(LOGIN_AUTH_MESSAGE_KEYS, error.message)
+            ? translateApiError(error.message, t, LOGIN_AUTH_MESSAGE_KEYS)
+            : t("Could not log in. Please try again."))
+        );
         return;
       }
       if (!data.session) {
-        setErrorMsg("Could not establish a login session. Please try again.");
+        setErrorMsg(t("Could not establish a login session. Please try again."));
         return;
       }
 
@@ -51,13 +61,13 @@ export default function LoginClient() {
       });
       const result: { error?: string } = await sessionResponse.json();
       if (!sessionResponse.ok) {
-        setErrorMsg(result.error || "Could not synchronize your login. Please try again.");
+        setErrorMsg(result.error ? translateAuthApiError(result.error, t) : t("Could not synchronize your login. Please try again."));
         return;
       }
       router.replace(redirect || "/dashboard");
     } catch (loginError) {
       console.error("Could not complete login", loginError);
-      setErrorMsg("Could not log in. Please check your connection and try again.");
+      setErrorMsg(t("Could not log in. Please check your connection and try again."));
     } finally {
       setSubmitting(false);
     }
@@ -75,10 +85,10 @@ export default function LoginClient() {
           prefetch={false}
           className="block text-center text-sm text-blue-300 hover:text-blue-200 mb-2"
         >
-          🏠 Back to homepage
+          🏠 {t("Back to homepage")}
         </Link>
 
-        <h2 className="text-2xl font-bold text-center">Log in</h2>
+        <h2 className="text-2xl font-bold text-center">{t("Log in")}</h2>
 
         {errorMsg && (
           <p id="login-error" role="alert" className="text-red-400 text-center font-semibold">
@@ -86,7 +96,7 @@ export default function LoginClient() {
           </p>
         )}
 
-        <FormField id="login-email" label="Email address" required>
+        <FormField id="login-email" label={<AuthRequiredLabel text="Email address" />}>
           <input
             id="login-email"
             type="email"
@@ -100,7 +110,7 @@ export default function LoginClient() {
           />
         </FormField>
 
-        <FormField id="login-password" label="Password" required>
+        <FormField id="login-password" label={<AuthRequiredLabel text="Password" />}>
           <input
             id="login-password"
             type="password"
@@ -119,7 +129,7 @@ export default function LoginClient() {
           disabled={submitting}
           className="w-full rounded-lg bg-blue-600 p-3 font-semibold hover:bg-blue-700 disabled:cursor-wait disabled:opacity-60"
         >
-          {submitting ? "Logging in…" : "Log in"}
+          {submitting ? t("Logging in…") : t("Log in")}
         </button>
 
         <Link
@@ -127,7 +137,7 @@ export default function LoginClient() {
           prefetch={false}
           className="block text-center text-sm text-blue-300 hover:text-blue-200 mt-2"
         >
-          Create new account
+          {t("Create new account")}
         </Link>
 
         <Link
@@ -135,7 +145,7 @@ export default function LoginClient() {
           prefetch={false}
           className="block text-center text-sm text-blue-300 hover:text-blue-200 mt-1"
         >
-          Forgot password?
+          {t("Forgot password?")}
         </Link>
       </form>
     </main>

@@ -3,6 +3,7 @@ import Link from "next/link";
 import BackButton from "@/app/components/BackButton";
 import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
 import DeleteRoadmapEntryButton from "./DeleteRoadmapEntryButton";
+import { getRoadmapReturnPath } from "@/lib/admin/roadmapNavigation";
 
 export const dynamic = "force-dynamic";
 
@@ -16,8 +17,9 @@ const STATUS_COLUMNS = [
 export default async function RoadmapPage({
   searchParams,
 }: {
-  searchParams?: { error?: string; completed?: string };
+  searchParams?: { error?: string; completed?: string; created?: string; returnTo?: string };
 }) {
+  const returnTo = getRoadmapReturnPath(searchParams?.returnTo);
   const { supabase, serviceRole } = supabaseServer();
   const {
     data: { user },
@@ -64,10 +66,12 @@ export default async function RoadmapPage({
   }, {} as Record<string, any[]>);
 
   return (
-    <main className="min-h-screen px-6 py-12 text-white">
-      <div className="flex items-center justify-between mb-10">
-        <h1 className="text-3xl font-bold text-green-300">Roadmap</h1>
-        <BackButton />
+    <main className="min-h-screen px-4 py-8 text-white sm:px-6 sm:py-12">
+      <div className="relative mx-auto mb-8 max-w-7xl">
+        <h1 className="text-center text-3xl font-bold text-green-300">Roadmap</h1>
+        <div className="absolute right-0 top-1/2 -translate-y-1/2">
+          <BackButton href={returnTo} />
+        </div>
       </div>
 
       {searchParams?.completed === "1" && (
@@ -75,19 +79,102 @@ export default async function RoadmapPage({
           The roadmap entry was marked completed.
         </p>
       )}
+      {searchParams?.created === "1" && (
+        <p role="status" className="mb-6 text-green-300">
+          The roadmap entry was added.
+        </p>
+      )}
       {searchParams?.error && (
         <p role="alert" className="mb-6 text-center text-red-300">
-          {searchParams.error === "notfound"
+          {searchParams.error === "invalid"
+            ? "Enter a category and a description between 3 and 3,000 characters."
+            : searchParams.error === "create"
+              ? "The roadmap entry could not be created. Please try again."
+              : searchParams.error === "forbidden"
+                ? "Only administrators can manage the roadmap."
+                : searchParams.error === "audit"
+                  ? "The roadmap entry was created, but the action could not be added to the audit log."
+              : searchParams.error === "notfound"
             ? "That roadmap entry no longer exists."
-            : searchParams.error === "forbidden"
-              ? "Only administrators can update the roadmap."
-              : searchParams.error === "audit"
-                ? "The roadmap change was made, but it could not be added to the audit log."
               : "The roadmap entry could not be updated. Please try again."}
         </p>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <details className="group mx-auto mb-8 w-full max-w-4xl rounded-xl border border-white/10 bg-black/60 shadow-xl backdrop-blur-md">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-xl px-5 py-4 text-lg font-semibold text-green-200 hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-300 sm:px-7 [&::-webkit-details-marker]:hidden">
+          <span>Add a roadmap item</span>
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            fill="none"
+            className="h-5 w-5 shrink-0 text-white/70 transition-transform group-open:rotate-90"
+          >
+            <path
+              d="m9 18 6-6-6-6"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </summary>
+        <div className="mx-auto max-w-2xl px-5 pb-5 sm:px-7 sm:pb-7">
+          <form action={`/api/admin/roadmap/create?returnTo=${encodeURIComponent(returnTo)}`} method="POST" className="mt-5">
+            <div>
+              <label
+                htmlFor="roadmap-message"
+                className="mb-2 block text-sm font-medium text-white/75"
+              >
+                Description
+              </label>
+              <textarea
+                id="roadmap-message"
+                name="message"
+                required
+                minLength={3}
+                maxLength={3000}
+                rows={4}
+                placeholder="Describe the roadmap item"
+                className="w-full rounded-lg border border-white/20 bg-black/40 px-4 py-3 text-base text-white placeholder:text-white/40"
+              />
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <fieldset aria-label="Category" className="col-span-2 min-w-0 sm:col-span-3">
+                <div className="grid h-full grid-cols-3 gap-2">
+                  {[
+                    ["suggestion", "Suggestion"],
+                    ["bug", "Bug report"],
+                    ["feedback", "General feedback"],
+                  ].map(([value, label], index) => (
+                    <label
+                      key={value}
+                      className="flex min-h-11 min-w-0 cursor-pointer items-center justify-center whitespace-nowrap rounded-lg border border-white/20 bg-white/10 px-1 py-2.5 text-center text-xs font-semibold text-white/75 transition hover:bg-white/15 has-[:checked]:border-green-400/40 has-[:checked]:bg-green-700 has-[:checked]:text-white has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-green-300 sm:px-2 sm:text-sm"
+                    >
+                      <input
+                        type="radio"
+                        name="category"
+                        value={value}
+                        required
+                        defaultChecked={index === 0}
+                        className="sr-only"
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              <button
+                type="submit"
+                className="col-span-2 min-h-11 min-w-0 justify-self-center whitespace-nowrap rounded-lg border border-green-400/40 bg-green-700 px-4 py-2 text-xs font-semibold text-white transition hover:bg-green-600 sm:col-span-1 sm:w-full sm:px-2 sm:text-sm"
+              >
+                Add to planned
+              </button>
+            </div>
+          </form>
+        </div>
+      </details>
+
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 md:grid-cols-4">
         {STATUS_COLUMNS.map((col) => (
           <div
             key={col.key}
@@ -117,7 +204,7 @@ export default async function RoadmapPage({
 
                   <div className="mt-3 flex flex-wrap gap-2">
                     <form
-                      action="/api/admin/roadmap/update"
+                      action={`/api/admin/roadmap/update?returnTo=${encodeURIComponent(returnTo)}`}
                       method="POST"
                       className="flex flex-wrap gap-2"
                     >

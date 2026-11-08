@@ -9,6 +9,7 @@ import {
   BatchEditAdditiveFields,
   BatchEditFruitFields,
 } from "./BatchEditAdditionFields";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type MaltRow = {
   name: string;
@@ -86,6 +87,7 @@ export default function BatchEditTypeFields({
   batch: BatchEditRecord;
 }) {
   const { label } = useUnits();
+  const { t } = useTranslation();
   const [malts, setMalts] = useState<MaltRow[]>(
     () =>
       batch.malts?.map((malt) => ({
@@ -167,28 +169,27 @@ export default function BatchEditTypeFields({
   const isBraggot = batch.type === "Braggot";
   const isAllGrain = isBeer && beerSubtype === "all_grain";
   const juiceTypeLabel =
-    batch.type === "Wine" ? "Grape / Juice type" : "Juice type";
+    batch.type === "Wine" ? t("Grape / Juice type") : t("Juice type");
   const sugarAmountLabel =
     batch.type === "Wine" || batch.type === "Cider"
-      ? "Sugar added (optional)"
-      : "Sugar amount";
+      ? t("Sugar added (optional)")
+      : t("Sugar amount");
   const fullProcessPlaceholder = {
-    Beer: "Mash schedule, hop schedule, fermentation plan...",
-    Braggot: "Mash schedule, honey addition, fermentation plan...",
-    Mead: "Rehydration, pitching, degassing schedule, fermentation notes...",
-    Wine: "Crushing, maceration, punch-downs, temperature...",
-    Cider: "Describe the fermentation process, rehydration, temperature, etc.",
-    Seltzer:
-      "Describe the fermentation process, nutrient schedule, temperature...",
-    Other: "Describe the full process...",
-  }[batch.type] ?? "Describe the full process...";
+    Beer: t("Mash schedule, hop schedule, fermentation plan..."),
+    Braggot: t("Mash schedule, honey addition, fermentation plan..."),
+    Mead: t("Rehydration, pitching, degassing schedule, fermentation notes..."),
+    Wine: t("Crushing, maceration, punch-downs, temperature..."),
+    Cider: t("Describe the fermentation process, rehydration, temperature, etc."),
+    Seltzer: t("Describe the fermentation process, nutrient schedule, temperature..."),
+    Other: t("Describe the full process..."),
+  }[batch.type] ?? t("Describe the full process...");
 
   return (
     <>
       {isBeer && (
         <>
           <div>
-            <label className="mb-1 block font-semibold">Brewing method</label>
+            <label className="mb-1 block font-semibold">{t("Brewing method")}</label>
             <select
               name="beer_subtype"
               value={beerSubtype}
@@ -196,9 +197,9 @@ export default function BatchEditTypeFields({
               required
               className={inputClass}
             >
-              <option value="all_grain">All-grain</option>
-              <option value="fresh_wort_kit">Fresh wort kit</option>
-              <option value="malt_extract_kit">Malt extract kit</option>
+              <option value="all_grain">{t("All-grain")}</option>
+              <option value="fresh_wort_kit">{t("Fresh wort kit")}</option>
+              <option value="malt_extract_kit">{t("Malt extract kit")}</option>
             </select>
           </div>
           <BeerStyleSelect
@@ -208,7 +209,7 @@ export default function BatchEditTypeFields({
           />
           {beerSubtype !== "all_grain" && (
             <div>
-              <label className="mb-1 block font-semibold">Kit link</label>
+              <label className="mb-1 block font-semibold">{t("Kit link")}</label>
               <input
                 name="kit_url"
                 type="url"
@@ -236,7 +237,7 @@ export default function BatchEditTypeFields({
           {isBeer && beerSubtype === "fresh_wort_kit" && (
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block font-semibold">
-                IBU (from kit)
+                IBU ({t("from kit")})
                 <input
                   name="ibu"
                   type="number"
@@ -252,7 +253,7 @@ export default function BatchEditTypeFields({
                 />
               </label>
               <label className="block font-semibold">
-                EBC (from kit)
+                EBC ({t("from kit")})
                 <input
                   name="ebc"
                   type="number"
@@ -282,7 +283,7 @@ export default function BatchEditTypeFields({
               {isBeer && (
                 <div>
                   <label className="mb-1 block font-semibold">
-                    Boil volume (<UnitSymbol kind="volume" />)
+                    {t("Boil volume")} (<UnitSymbol kind="volume" />)
                   </label>
                   <UnitInput
                     name="boil_volume_l"
@@ -297,13 +298,13 @@ export default function BatchEditTypeFields({
               )}
 
               <div>
-                <label className="mb-2 block font-semibold">Malt additions</label>
+                <label className="mb-2 block font-semibold">{t("Malt additions")}</label>
                 <div className="space-y-3">
                   {malts.map((malt, index) => (
                     <div key={index} className={rowClass}>
                       <input
-                        aria-label={`Malt ${index + 1} name`}
-                        placeholder="Malt type"
+                        aria-label={`${t("Malt")} ${index + 1} ${t("name")}`}
+                        placeholder={t("Malt type")}
                         value={malt.name}
                         onChange={(event) =>
                           updateMalt(index, { name: event.target.value })
@@ -314,11 +315,11 @@ export default function BatchEditTypeFields({
                         kind="kg"
                         value={malt.amount}
                         onValueChange={(amount) => updateMalt(index, { amount })}
-                        placeholder={`Amount (${label("kg")})`}
+                        placeholder={`${t("Amount")} (${label("kg")})`}
                         className={inputClass}
                       />
                       <input
-                        aria-label={`Malt ${index + 1} EBC`}
+                        aria-label={`${t("Malt")} ${index + 1} EBC`}
                         type="number"
                         min="0"
                         step="any"
@@ -338,7 +339,7 @@ export default function BatchEditTypeFields({
                         }
                         className="col-span-2 rounded border border-white/20 bg-white/10 px-3 py-2 sm:col-span-1"
                       >
-                        Remove
+                        {t("Remove")}
                       </button>
                     </div>
                   ))}
@@ -353,18 +354,18 @@ export default function BatchEditTypeFields({
                   }
                   className="mt-2 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm"
                 >
-                  + Add malt
+                  + {t("Add malt")}
                 </button>
               </div>
 
               <div>
-                <label className="mb-2 block font-semibold">Hop additions</label>
+                <label className="mb-2 block font-semibold">{t("Hop additions")}</label>
                 <div className="space-y-3">
                   {hops.map((hop, index) => (
                     <div key={index} className="space-y-2">
                       <input
-                        aria-label={`Hop ${index + 1} name`}
-                        placeholder="Hop type"
+                        aria-label={`${t("Hop")} ${index + 1} ${t("name")}`}
+                        placeholder={t("Hop type")}
                         value={hop.name}
                         onChange={(event) =>
                           updateHop(index, { name: event.target.value })
@@ -372,7 +373,7 @@ export default function BatchEditTypeFields({
                         className={inputClass}
                       />
                       <select
-                        aria-label={`Hop ${index + 1} addition type`}
+                        aria-label={`${t("Hop")} ${index + 1} ${t("addition type")}`}
                         value={hop.addition_type}
                         onChange={(event) =>
                           updateHop(index, {
@@ -381,17 +382,17 @@ export default function BatchEditTypeFields({
                         }
                         className={inputClass}
                       >
-                        <option value="boil">Boil addition</option>
-                        <option value="whirlpool">Whirlpool / hop stand</option>
+                        <option value="boil">{t("Boil addition")}</option>
+                        <option value="whirlpool">{t("Whirlpool / hop stand")}</option>
                       </select>
                       <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(5rem,0.6fr)_minmax(5rem,0.6fr)_minmax(6rem,0.8fr)_minmax(6rem,0.8fr)_minmax(6rem,0.8fr)_auto]">
                         <input
-                          aria-label={`Hop ${index + 1} alpha acid percentage`}
+                          aria-label={`${t("Hop")} ${index + 1} ${t("alpha acid percentage")}`}
                           type="number"
                           min="0"
                           max="100"
                           step="any"
-                          placeholder="Alpha (%)"
+                          placeholder={t("Alpha (%)")}
                           value={hop.alpha}
                           onChange={(event) =>
                             updateHop(index, { alpha: event.target.value })
@@ -399,11 +400,11 @@ export default function BatchEditTypeFields({
                           className={inputClass}
                         />
                         <input
-                          aria-label={`Hop ${index + 1} crop year`}
+                          aria-label={`${t("Hop")} ${index + 1} ${t("crop year")}`}
                           type="number"
                           min="1900"
                           step="1"
-                          placeholder="Year"
+                          placeholder={t("Year")}
                           value={hop.year}
                           onChange={(event) =>
                             updateHop(index, { year: event.target.value })
@@ -414,11 +415,11 @@ export default function BatchEditTypeFields({
                           kind="g"
                           value={hop.amount}
                           onValueChange={(amount) => updateHop(index, { amount })}
-                          placeholder={`Amount (${label("g")})`}
+                          placeholder={`${t("Amount")} (${label("g")})`}
                           className={inputClass}
                         />
                         <input
-                          aria-label={`Hop ${index + 1} boil time in minutes`}
+                          aria-label={`${t("Hop")} ${index + 1} ${t("boil time in minutes")}`}
                           type="number"
                           min="0"
                           step="any"
@@ -427,8 +428,8 @@ export default function BatchEditTypeFields({
                           )}
                           placeholder={
                             hop.addition_type === "whirlpool"
-                              ? "Stand (min)"
-                              : "Boil (min)"
+                              ? t("Stand (min)")
+                              : t("Boil (min)")
                           }
                           value={hop.time}
                           onChange={(event) =>
@@ -438,7 +439,7 @@ export default function BatchEditTypeFields({
                         />
                         {hop.addition_type === "whirlpool" && (
                           <input
-                            aria-label={`Hop ${index + 1} whirlpool temperature in Celsius`}
+                            aria-label={`${t("Hop")} ${index + 1} ${t("whirlpool temperature in Celsius")}`}
                             type="number"
                             min="0"
                             max="100"
@@ -446,7 +447,7 @@ export default function BatchEditTypeFields({
                             required={Boolean(
                               hop.name.trim() || hop.amount.trim() || hop.alpha.trim()
                             )}
-                            placeholder="Temp (°C)"
+                            placeholder={t("Temp (°C)")}
                             value={hop.temperature}
                             onChange={(event) =>
                               updateHop(index, { temperature: event.target.value })
@@ -463,7 +464,7 @@ export default function BatchEditTypeFields({
                           }
                           className="col-span-2 rounded border border-white/20 bg-white/10 px-3 py-2 sm:col-span-1"
                         >
-                          Remove
+                          {t("Remove")}
                         </button>
                       </div>
                     </div>
@@ -488,17 +489,16 @@ export default function BatchEditTypeFields({
                   }
                   className="mt-2 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm"
                 >
-                  + Add hop
+                  + {t("Add hop")}
                 </button>
                 <p className="mt-2 text-sm text-white/65">
-                  Whirlpool IBU is estimated from the hop-stand duration and
-                  temperature. The estimate is zero below 60°C.
+                  {t("Whirlpool IBU is estimated from the hop-stand duration and temperature. The estimate is zero below 60°C.")}
                 </p>
               </div>
 
               <div>
                 <label className="mb-1 block font-semibold">
-                  {isBeer ? "Total boil time" : "Boil time"} (minutes)
+                  {t(isBeer ? "Total boil time" : "Boil time")} ({t("minutes")})
                 </label>
                 <input
                   name="boil_time"
@@ -514,13 +514,13 @@ export default function BatchEditTypeFields({
 
           {isBeer && (
             <div>
-              <label className="mb-2 block font-semibold">Dry hop additions</label>
+              <label className="mb-2 block font-semibold">{t("Dry hop additions")}</label>
               <div className="space-y-3">
                 {dryHops.map((hop, index) => (
                   <div key={index} className="space-y-2">
                     <input
-                      aria-label={`Dry hop ${index + 1} name`}
-                      placeholder="Hop type"
+                      aria-label={`${t("Dry hop")} ${index + 1} ${t("name")}`}
+                      placeholder={t("Hop type")}
                       value={hop.name}
                       onChange={(event) =>
                         updateDryHop(index, { name: event.target.value })
@@ -529,12 +529,12 @@ export default function BatchEditTypeFields({
                     />
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(5rem,0.6fr)_minmax(5rem,0.6fr)_minmax(6rem,0.8fr)_minmax(6rem,0.8fr)_auto]">
                       <input
-                        aria-label={`Dry hop ${index + 1} alpha acid percentage`}
+                        aria-label={`${t("Dry hop")} ${index + 1} ${t("alpha acid percentage")}`}
                         type="number"
                         min="0"
                         max="100"
                         step="any"
-                        placeholder="Alpha (%)"
+                        placeholder={t("Alpha (%)")}
                         value={hop.alpha}
                         onChange={(event) =>
                           updateDryHop(index, { alpha: event.target.value })
@@ -542,11 +542,11 @@ export default function BatchEditTypeFields({
                         className={inputClass}
                       />
                       <input
-                        aria-label={`Dry hop ${index + 1} crop year`}
+                        aria-label={`${t("Dry hop")} ${index + 1} ${t("crop year")}`}
                         type="number"
                         min="1900"
                         step="1"
-                        placeholder="Year"
+                        placeholder={t("Year")}
                         value={hop.year}
                         onChange={(event) =>
                           updateDryHop(index, { year: event.target.value })
@@ -559,15 +559,15 @@ export default function BatchEditTypeFields({
                         onValueChange={(amount) =>
                           updateDryHop(index, { amount })
                         }
-                        placeholder={`Amount (${label("g")})`}
+                        placeholder={`${t("Amount")} (${label("g")})`}
                         className={inputClass}
                       />
                       <input
-                        aria-label={`Dry hop ${index + 1} contact time in days`}
+                        aria-label={`${t("Dry hop")} ${index + 1} ${t("contact time in days")}`}
                         type="number"
                         min="0"
                         step="any"
-                        placeholder="Days"
+                        placeholder={t("Days")}
                         value={hop.contact}
                         onChange={(event) =>
                           updateDryHop(index, { contact: event.target.value })
@@ -583,7 +583,7 @@ export default function BatchEditTypeFields({
                         }
                         className="col-span-2 rounded border border-white/20 bg-white/10 px-3 py-2 sm:col-span-1"
                       >
-                        Remove
+                        {t("Remove")}
                       </button>
                     </div>
                   </div>
@@ -599,7 +599,7 @@ export default function BatchEditTypeFields({
                 }
                 className="mt-2 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm"
               >
-                + Add dry hop
+                + {t("Add dry hop")}
               </button>
             </div>
           )}
@@ -609,7 +609,7 @@ export default function BatchEditTypeFields({
       {isBraggot && (
         <>
           <div>
-            <label className="mb-1 block font-semibold">Honey type</label>
+            <label className="mb-1 block font-semibold">{t("Honey type")}</label>
             <input
               name="honey_type"
               defaultValue={batch.honey_type ?? ""}
@@ -618,7 +618,7 @@ export default function BatchEditTypeFields({
           </div>
           <div>
             <label className="mb-1 block font-semibold">
-              Honey amount (<UnitSymbol kind="kg" />)
+              {t("Honey amount")} (<UnitSymbol kind="kg" />)
             </label>
             <UnitInput
               name="honey_amount"
@@ -637,7 +637,7 @@ export default function BatchEditTypeFields({
             defaultAmount={valueOrEmpty(batch.base_liquid_amount)}
           />
           <div>
-            <label className="mb-1 block font-semibold">Honey type</label>
+            <label className="mb-1 block font-semibold">{t("Honey type")}</label>
             <input
               name="honey_type"
               defaultValue={batch.honey_type ?? ""}
@@ -646,7 +646,7 @@ export default function BatchEditTypeFields({
           </div>
           <div>
             <label className="mb-1 block font-semibold">
-              Honey amount (<UnitSymbol kind="kg" />)
+              {t("Honey amount")} (<UnitSymbol kind="kg" />)
             </label>
             <UnitInput
               name="honey_amount"
@@ -694,13 +694,13 @@ export default function BatchEditTypeFields({
             value={JSON.stringify(ingredients)}
           />
           <div>
-            <label className="mb-2 block font-semibold">Ingredients</label>
+            <label className="mb-2 block font-semibold">{t("Ingredients")}</label>
             <div className="space-y-2">
               {ingredients.map((ingredient, index) => (
                 <div key={index} className={rowClass}>
                   <input
-                    aria-label={`Ingredient ${index + 1} name`}
-                    placeholder="Ingredient name"
+                    aria-label={`${t("Ingredient")} ${index + 1} ${t("name")}`}
+                    placeholder={t("Ingredient name")}
                     value={ingredient.name}
                     onChange={(event) =>
                       updateIngredient(index, { name: event.target.value })
@@ -708,8 +708,8 @@ export default function BatchEditTypeFields({
                     className={`${inputClass} col-span-2 sm:col-span-1`}
                   />
                   <input
-                    aria-label={`Ingredient ${index + 1} amount`}
-                    placeholder="Amount"
+                    aria-label={`${t("Ingredient")} ${index + 1} ${t("amount")}`}
+                    placeholder={t("Amount")}
                     value={ingredient.amount}
                     onChange={(event) =>
                       updateIngredient(index, { amount: event.target.value })
@@ -717,8 +717,8 @@ export default function BatchEditTypeFields({
                     className={inputClass}
                   />
                   <input
-                    aria-label={`Ingredient ${index + 1} unit`}
-                    placeholder="Unit"
+                    aria-label={`${t("Ingredient")} ${index + 1} ${t("unit")}`}
+                    placeholder={t("Unit")}
                     value={ingredient.unit}
                     onChange={(event) =>
                       updateIngredient(index, { unit: event.target.value })
@@ -734,7 +734,7 @@ export default function BatchEditTypeFields({
                     }
                     className="col-span-2 rounded border border-white/20 bg-white/10 px-3 py-2 sm:col-span-1"
                   >
-                    Remove
+                    {t("Remove")}
                   </button>
                 </div>
               ))}
@@ -749,7 +749,7 @@ export default function BatchEditTypeFields({
               }
               className="mt-2 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm"
             >
-              + Add ingredient
+              + {t("Add ingredient")}
             </button>
           </div>
 
@@ -758,7 +758,7 @@ export default function BatchEditTypeFields({
 
       {batch.type !== "Other" && (
         <div>
-          <label className="mb-1 block font-semibold">Yeast strain</label>
+          <label className="mb-1 block font-semibold">{t("Yeast strain")}</label>
           <input
             name="yeast"
             defaultValue={batch.yeast ?? ""}
@@ -768,7 +768,7 @@ export default function BatchEditTypeFields({
       )}
       <BatchEditAdditiveFields defaultValue={batch.additives ?? ""} />
       <div>
-        <label className="mb-1 block font-semibold">Full process</label>
+        <label className="mb-1 block font-semibold">{t("Full process")}</label>
         <PublicMentionTextarea
           name="full_process"
           defaultValue={batch.full_process ?? ""}
@@ -778,11 +778,11 @@ export default function BatchEditTypeFields({
         />
       </div>
       <div>
-        <label className="mb-1 block font-semibold">Notes</label>
+        <label className="mb-1 block font-semibold">{t("Notes")}</label>
         <PublicMentionTextarea
           name="notes"
           defaultValue={batch.notes ?? ""}
-          placeholder="Any additional notes about the batch..."
+          placeholder={t("Any additional notes about the batch...")}
           rows={6}
           className={`${inputClass} h-32 resize-y`}
         />

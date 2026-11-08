@@ -3,8 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthContext } from "@/app/providers/AuthProvider";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { translateRecipeError } from "@/lib/i18n/apiErrors";
 
 export default function StartPublicRecipeButton({ recipeId }: { recipeId: string }) {
+  const { t } = useTranslation();
   const router = useRouter();
   const { user, loading } = useAuthContext();
   const [busy, setBusy] = useState(false);
@@ -25,12 +28,12 @@ export default function StartPublicRecipeButton({ recipeId }: { recipeId: string
       }
       const result: { recipeId?: string; error?: string } = await response.json();
       if (!response.ok || !result.recipeId) {
-        throw new Error(result.error || "Could not prepare this recipe for brewing.");
+        throw new Error(result.error || t("Could not prepare this recipe for brewing."));
       }
       router.push(`/my-recipes?start=${encodeURIComponent(result.recipeId)}`);
     } catch (startError) {
       console.error("Could not start from public recipe", startError);
-      setError(startError instanceof Error ? startError.message : "Could not prepare this recipe for brewing.");
+      setError(startError instanceof Error ? startError.message : t("Could not prepare this recipe for brewing."));
     } finally {
       setBusy(false);
     }
@@ -46,9 +49,9 @@ export default function StartPublicRecipeButton({ recipeId }: { recipeId: string
         onClick={() => void start()}
         className="min-h-11 rounded-lg border border-green-400 bg-green-700 px-4 py-2 text-sm font-semibold hover:bg-green-600 disabled:opacity-50"
       >
-        {busy ? "Preparing recipe…" : "Start a batch"}
+        {busy ? t("Preparing recipe…") : t("Start a batch")}
       </button>
-      {error && <p role="alert" className="mt-2 text-sm text-amber-200">{error}</p>}
+      {error && <p role="alert" className="mt-2 text-sm text-amber-200">{translateRecipeError(error, t)}</p>}
     </div>
   );
 }

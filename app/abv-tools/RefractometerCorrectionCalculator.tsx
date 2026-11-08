@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import CalculatorResult from "./CalculatorResult";
+import CalculatorDisclosure from "./CalculatorDisclosure";
+import CalculatorDisclosureArrow from "./CalculatorDisclosureArrow";
 import { getCalculatorInputError } from "@/lib/brewing/calculatorValidation";
 import {
   calculateWortCorrectionFactor,
@@ -15,6 +18,7 @@ function parseReading(value: string): number | null {
 }
 
 export default function RefractometerCorrectionCalculator() {
+  const { t } = useTranslation();
   const [originalBrix, setOriginalBrix] = useState("");
   const [finalBrix, setFinalBrix] = useState("");
   const [wortCorrectionFactor, setWortCorrectionFactor] = useState("1.04");
@@ -54,21 +58,15 @@ export default function RefractometerCorrectionCalculator() {
     : null);
 
   return (
-    <section
+    <CalculatorDisclosure
       id="refractometer-correction"
-      className="mt-6 scroll-mt-6 rounded-xl border border-white/10 bg-white/5 p-6"
+      title="Refractometer alcohol correction"
+      description="Correct a post-fermentation refractometer reading using the original and current Brix values."
+      className="mt-6"
     >
-      <h2 className="mb-2 text-center text-xl font-bold text-green-300">
-        Refractometer alcohol correction
-      </h2>
-      <p className="mb-6 text-center text-sm text-white/70">
-        Correct a post-fermentation refractometer reading using the original
-        and current Brix values.
-      </p>
-
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-sm">
-          Original Brix before fermentation (°Bx)
+          {t("Original Brix before fermentation (°Bx)")}
           <input
             type="number"
             min="0"
@@ -76,12 +74,12 @@ export default function RefractometerCorrectionCalculator() {
             step="any"
             value={originalBrix}
             onChange={(event) => setOriginalBrix(event.target.value)}
-            placeholder="e.g. 12.4"
+            placeholder={t("e.g. 12.4")}
             className="w-full rounded border border-white/20 bg-black/40 p-3 text-base"
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          Current refractometer reading (°Bx)
+          {t("Current refractometer reading (°Bx)")}
           <input
             type="number"
             min="0"
@@ -89,12 +87,12 @@ export default function RefractometerCorrectionCalculator() {
             step="any"
             value={finalBrix}
             onChange={(event) => setFinalBrix(event.target.value)}
-            placeholder="e.g. 6.0"
+            placeholder={t("e.g. 6.0")}
             className="w-full rounded border border-white/20 bg-black/40 p-3 text-base"
           />
         </label>
         <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-          Wort correction factor (WCF)
+          {t("Wort correction factor (WCF)")}
           <input
             type="number"
             min="0.9"
@@ -108,34 +106,23 @@ export default function RefractometerCorrectionCalculator() {
       </div>
 
       <p className="mt-4 text-xs leading-5 text-white/55">
-        Use the Brix reading taken before fermentation and your refractometer’s
-        current reading. A WCF of 1.04 is a common starting point, but it
-        varies by refractometer and wort. Use the calibration below for a
-        measured starting value.
+        {t("Use the Brix reading taken before fermentation and your refractometer’s current reading. A WCF of 1.04 is a common starting point, but it varies by refractometer and wort. Use the calibration below for a measured starting value.")}
       </p>
 
       <details className="mt-4 rounded-lg border border-white/10 bg-black/20 p-4">
-        <summary className="flex cursor-pointer list-none items-start gap-2 text-sm font-semibold text-green-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-300">
-          <span
-            aria-hidden="true"
-            className="disclosure-arrow mt-0.5 shrink-0 transition-transform"
-          >
-            &#9656;
-          </span>
+        <summary className="flex cursor-pointer list-none select-none items-start gap-2 text-sm font-semibold text-green-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-300">
+          <CalculatorDisclosureArrow />
           <span className="min-w-0">
-            Calibrate WCF with an unfermented wort sample
+            {t("Calibrate WCF with an unfermented wort sample")}
           </span>
         </summary>
         <div className="mt-4 space-y-3">
           <p className="text-xs leading-5 text-white/65">
-            Take both readings from the same well-mixed wort sample before
-            fermentation. Cool and correct the hydrometer reading for its
-            calibration temperature. Recalibrate when switching refractometers
-            or when wort composition changes.
+            {t("Take both readings from the same well-mixed wort sample before fermentation. Cool and correct the hydrometer reading for its calibration temperature. Recalibrate when switching refractometers or when wort composition changes.")}
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="flex flex-col gap-1 text-sm">
-              Refractometer Brix for calibration
+              {t("Refractometer Brix for calibration")}
               <input
                 type="number"
                 min="0.1"
@@ -143,12 +130,12 @@ export default function RefractometerCorrectionCalculator() {
                 step="any"
                 value={calibrationBrix}
                 onChange={(event) => setCalibrationBrix(event.target.value)}
-                placeholder="e.g. 12.4"
+                placeholder={t("e.g. 12.4")}
                 className="w-full rounded border border-white/20 bg-black/40 p-3 text-base"
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              Hydrometer OG (specific gravity)
+              {t("Hydrometer OG (specific gravity)")}
               <input
                 type="number"
                 min="0.8"
@@ -158,7 +145,7 @@ export default function RefractometerCorrectionCalculator() {
                 onChange={(event) =>
                   setCalibrationHydrometerSg(event.target.value)
                 }
-                placeholder="e.g. 1.048"
+                placeholder={t("e.g. 1.048")}
                 className="w-full rounded border border-white/20 bg-black/40 p-3 text-base"
               />
             </label>
@@ -172,7 +159,7 @@ export default function RefractometerCorrectionCalculator() {
             onReset={() => { setCalibrationBrix(""); setCalibrationHydrometerSg(""); }}
           >
             <div className="flex flex-wrap items-center gap-3 text-sm">
-              Suggested WCF: <strong>{calibrationFactor?.toFixed(4)}</strong>
+              {t("Suggested WCF")}: <strong>{calibrationFactor?.toFixed(4)}</strong>
               <button
                 type="button"
                 onClick={() => {
@@ -180,7 +167,7 @@ export default function RefractometerCorrectionCalculator() {
                 }}
                 className="rounded-lg border border-green-500 bg-green-700 px-3 py-2 font-semibold hover:bg-green-600"
               >
-                Use this WCF
+                {t("Use this WCF")}
               </button>
             </div>
           </CalculatorResult>
@@ -202,7 +189,7 @@ export default function RefractometerCorrectionCalculator() {
         <dl className="grid grid-cols-1 gap-3 text-center sm:grid-cols-3">
           <div className="rounded-lg border border-white/10 bg-black/20 p-3">
             <dt className="text-xs uppercase tracking-wide text-white/50">
-              Estimated original gravity
+              {t("Estimated original gravity")}
             </dt>
             <dd className="mt-1 text-lg font-semibold">
               {result.originalGravity.toFixed(3)}
@@ -210,7 +197,7 @@ export default function RefractometerCorrectionCalculator() {
           </div>
           <div className="rounded-lg border border-white/10 bg-black/20 p-3">
             <dt className="text-xs uppercase tracking-wide text-white/50">
-              Corrected final gravity
+              {t("Corrected final gravity")}
             </dt>
             <dd className="mt-1 text-lg font-semibold">
               {result.finalGravity.toFixed(3)}
@@ -218,7 +205,7 @@ export default function RefractometerCorrectionCalculator() {
           </div>
           <div className="rounded-lg border border-white/10 bg-black/20 p-3">
             <dt className="text-xs uppercase tracking-wide text-white/50">
-              Estimated ABV
+              {t("Estimated ABV")}
             </dt>
             <dd className="mt-1 text-lg font-semibold">
               {result.abv.toFixed(2)}%
@@ -227,6 +214,6 @@ export default function RefractometerCorrectionCalculator() {
         </dl>
       )}
       </CalculatorResult>
-    </section>
+    </CalculatorDisclosure>
   );
 }

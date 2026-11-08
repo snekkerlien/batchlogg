@@ -9,13 +9,28 @@ import JSZip from "jszip";
 import MenuOverlay from "../../components/MenuOverlay";
 import PageHeading from "../../components/PageHeading";
 import { UnitToggle } from "../../components/Units";
+import LanguagePreferenceSelect from "../../components/LanguagePreferenceSelect";
 import FeedbackForm from "./FeedbackForm";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import {
   deleteAccount,
   saveThemeAccentColor,
 } from "../my-account/actions";
-import { saveBrewingPreferences } from "@/app/actions/userPreferences";
+import {
+  saveBrewingPreferences,
+} from "@/app/actions/userPreferences";
+import {
+  type SiteLanguage,
+} from "@/lib/i18n/language";
+import { getMessage } from "@/lib/i18n/messages";
+import { useLanguage } from "@/app/components/LanguageProvider";
+import {
+  SIGNUP_AUTH_CODE_KEYS,
+  translateAccountBackupMessage,
+  translateAccountProfileError,
+  translateAuthCode,
+} from "@/lib/i18n/apiErrors";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import {
   applyAccentColor,
   DEFAULT_ACCENT_COLOR,
@@ -64,6 +79,9 @@ const backupContentLabels: Record<string, string> = {
 
 export default function SettingsPage() {
   const router = useRouter();
+  const { language, setLanguage, saveError: languageSaveError } = useLanguage();
+  const [savingLanguage, setSavingLanguage] = useState(false);
+  const { t } = useTranslation();
   const restoreInputRef = useRef<HTMLInputElement | null>(null);
   const preferencesSaveQueueRef = useRef<Promise<void>>(Promise.resolve());
   const pendingPreferencesSavesRef = useRef(0);
@@ -105,6 +123,7 @@ export default function SettingsPage() {
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteError, setDeleteError] = useState("");
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [showDownloadSpinner, setShowDownloadSpinner] = useState(false);
   const [downloadError, setDownloadError] = useState("");
   const [downloadProgress, setDownloadProgress] = useState("");
@@ -163,7 +182,7 @@ export default function SettingsPage() {
     loadSettings().catch((error) => {
       console.error("Failed to load settings", error);
       if (active) {
-        setLoadError("Could not load settings. Please reload and try again.");
+        setLoadError(t("Could not load settings. Please reload and try again."));
         setLoading(false);
       }
     });
@@ -171,7 +190,7 @@ export default function SettingsPage() {
     return () => {
       active = false;
     };
-  }, [router]);
+  }, [router, t]);
   async function saveAccentColor() {
     setSavingThemeAccentColor(true);
     setThemeAccentMessage("");
@@ -179,12 +198,28 @@ export default function SettingsPage() {
       await saveThemeAccentColor(themeAccentColor);
       applyAccentColor(themeAccentColor);
       window.dispatchEvent(new Event("batchlogg-preferences-saved"));
-      setThemeAccentMessage("Accent color saved.");
+      setThemeAccentMessage(t("Accent color saved."));
     } catch (error) {
       console.error("Failed to save accent color", error);
-      setThemeAccentMessage("Could not save the accent color. Please try again.");
+      setThemeAccentMessage(t("Could not save the accent color. Please try again."));
     } finally {
       setSavingThemeAccentColor(false);
+    }
+  }
+
+  async function changePreferredLanguage(nextLanguage: SiteLanguage) {
+    if (savingLanguage) return;
+    setSavingLanguage(true);
+    setPreferencesMessage(t("Saving…"));
+    try {
+      await setLanguage(nextLanguage);
+      window.dispatchEvent(new Event("batchlogg-preferences-saved"));
+      setPreferencesMessage(getMessage(nextLanguage, "Preferences saved."));
+    } catch (error) {
+      console.error("Could not save language preference", error);
+      setPreferencesMessage(t("Could not save language preference. Please try again."));
+    } finally {
+      setSavingLanguage(false);
     }
   }
 
@@ -199,7 +234,7 @@ export default function SettingsPage() {
   ) {
     pendingPreferencesSavesRef.current += 1;
     setSavingPreferences(true);
-    setPreferencesMessage("Saving…");
+    setPreferencesMessage(t("Saving…"));
 
     preferencesSaveQueueRef.current = preferencesSaveQueueRef.current.then(
       async () => {
@@ -213,7 +248,7 @@ export default function SettingsPage() {
               })
             );
           }
-          setPreferencesMessage("Preferences saved.");
+          setPreferencesMessage(t("Preferences saved."));
         } catch (error) {
           console.error("Could not save brewing preferences", error);
           if (typeof preference.guides_enabled === "boolean") {
@@ -223,7 +258,7 @@ export default function SettingsPage() {
                 : current
             );
           }
-          setPreferencesMessage("Could not save preferences. Please try again.");
+          setPreferencesMessage(t("Could not save preferences. Please try again."));
         } finally {
           pendingPreferencesSavesRef.current -= 1;
           if (pendingPreferencesSavesRef.current === 0) {
@@ -248,16 +283,16 @@ export default function SettingsPage() {
       });
       const result = await response.json();
       if (!response.ok) {
-        throw new Error(result.error || "Could not update username.");
+        throw new Error(result.error || t("Could not update username."));
       }
 
       setUsername(result.username);
       setSavedUsername(result.username);
-      setUsernameMessage("Username updated.");
+      setUsernameMessage(t("Username updated."));
     } catch (error) {
       console.error("Could not update username", error);
       setUsernameError(
-        error instanceof Error ? error.message : "Could not update username."
+        error instanceof Error ? error.message : t("Could not update username.")
       );
     } finally {
       setSavingUsername(false);
@@ -269,12 +304,12 @@ export default function SettingsPage() {
     setPrivacyMessage("");
     try {
       const result = await saveBrewingPreferences({ is_public: value });
-      if (result?.saved !== true) throw new Error("Profile visibility save was not confirmed");
+      if (result?.saved !== true) throw new Error(t("Profile visibility save was not confirmed"));
       setPublicProfile(value);
-      setPrivacyMessage("Profile visibility saved.");
+      setPrivacyMessage(t("Profile visibility saved."));
     } catch (error) {
       console.error("Could not save profile visibility", error);
-      setPrivacyMessage("Could not save profile visibility. Your previous setting is unchanged. Please try again.");
+      setPrivacyMessage(t("Could not save profile visibility. Your previous setting is unchanged. Please try again."));
     } finally {
       setSavingPrivacy(false);
     }
@@ -287,11 +322,11 @@ export default function SettingsPage() {
 
     const requestedEmail = newEmail.trim();
     if (!requestedEmail) {
-      setEmailError("Enter an email address.");
+      setEmailError(t("Enter an email address."));
       return;
     }
     if (requestedEmail.toLowerCase() === user?.email?.toLowerCase()) {
-      setEmailError("Enter an email address different from your current one.");
+      setEmailError(t("Enter an email address different from your current one."));
       return;
     }
 
@@ -303,15 +338,29 @@ export default function SettingsPage() {
       if (error) throw error;
       setShowEmailChange(false);
       setEmailMessage(
-        "Confirmation instructions have been sent. Your email changes after you confirm."
+        t("Confirmation instructions have been sent. Your email changes after you confirm.")
       );
     } catch (error) {
       console.error("Failed to request email change", error);
-      setEmailError(
-        error instanceof Error
-          ? error.message
-          : "Could not update your email address. Please try again."
+      const authErrorCode =
+        error &&
+        typeof error === "object" &&
+        "code" in error &&
+        typeof error.code === "string"
+          ? error.code
+          : undefined;
+      const translatedAuthError = translateAuthCode(
+        authErrorCode,
+        t,
+        SIGNUP_AUTH_CODE_KEYS
       );
+      const fallbackError =
+        error instanceof Error &&
+        !(error instanceof TypeError) &&
+        !(error instanceof SyntaxError)
+          ? error.message
+          : t("Could not update your email address. Please try again.");
+      setEmailError(translatedAuthError ?? fallbackError);
     } finally {
       setSavingEmail(false);
     }
@@ -321,11 +370,11 @@ export default function SettingsPage() {
     setPasswordError("");
     setPasswordMessage("");
     if (!oldPassword || !newPassword || !confirmPassword) {
-      setPasswordError("All fields must be filled out");
+      setPasswordError(t("All fields must be filled out"));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordError("New password does not match confirmation");
+      setPasswordError(t("New password does not match confirmation"));
       return;
     }
 
@@ -334,7 +383,7 @@ export default function SettingsPage() {
       password: oldPassword,
     });
     if (loginError) {
-      setPasswordError("Old password is incorrect");
+      setPasswordError(t("Old password is incorrect"));
       return;
     }
 
@@ -342,7 +391,7 @@ export default function SettingsPage() {
       password: newPassword,
     });
     if (updateError) {
-      setPasswordError("Could not change password");
+      setPasswordError(t("Could not change password"));
       return;
     }
 
@@ -350,33 +399,54 @@ export default function SettingsPage() {
     setNewPassword("");
     setConfirmPassword("");
     setShowPasswordChange(false);
-    setPasswordMessage("Password changed.");
+    setPasswordMessage(t("Password changed."));
   }
 
   async function handleDeleteAccount() {
+    if (deletingAccount) return;
     setDeleteError("");
     if (!deletePassword) {
-      setDeleteError("You must enter your password");
+      setDeleteError(t("You must enter your password"));
       return;
     }
 
-    const { error: loginError } = await supabaseBrowser.auth.signInWithPassword({
-      email: user.email,
-      password: deletePassword,
-    });
-    if (loginError) {
-      setDeleteError("Incorrect password");
-      return;
-    }
+    setDeletingAccount(true);
+    try {
+      let loginError: Error | null;
+      try {
+        const result = await supabaseBrowser.auth.signInWithPassword({
+          email: user.email,
+          password: deletePassword,
+        });
+        loginError = result.error;
+      } catch (error) {
+        console.error("Could not verify password for account deletion", error);
+        setDeleteError(t("Could not verify your password. Please try again."));
+        return;
+      }
+      if (loginError) {
+        setDeleteError(t("Incorrect password"));
+        return;
+      }
 
-    await deleteAccount();
-    await supabaseBrowser.auth.signOut();
-    router.replace("/auth/login");
+      try {
+        await deleteAccount();
+      } catch (error) {
+        console.error("Could not delete account", error);
+        setDeleteError(t("Could not complete account deletion. Please contact support."));
+        return;
+      }
+
+      await supabaseBrowser.auth.signOut();
+      router.replace("/auth/login");
+    } finally {
+      setDeletingAccount(false);
+    }
   }
   async function handleDownload() {
     setShowDownloadSpinner(true);
     setDownloadError("");
-    setDownloadProgress("Preparing your ZIP export…");
+    setDownloadProgress(t("Preparing your ZIP export…"));
     try {
       const response = await fetch("/api/account/export", {
         credentials: "include",
@@ -384,19 +454,19 @@ export default function SettingsPage() {
       });
       if (!response.ok) {
         const result: { error?: string } = await response.json();
-        throw new Error(result.error || `Backup failed (${response.status})`);
+        throw new Error(result.error || `${t("Backup failed")} (${response.status})`);
       }
-      setDownloadProgress("Downloading your ZIP file…");
+      setDownloadProgress(t("Downloading your ZIP file…"));
       const filename =
         response.headers
           .get("Content-Disposition")
           ?.match(/filename="([^"]+)"/)?.[1] ?? `${username}-batchlog-backup.zip`;
       await saveDownload(await response.blob(), filename);
-      setDownloadProgress("Your account export is ready.");
+      setDownloadProgress(t("Your account export is ready."));
     } catch (error) {
       console.error("Failed to export account data", error);
       setDownloadProgress("");
-      setDownloadError(getErrorMessage(error, "Could not create your backup. Please try again."));
+      setDownloadError(getErrorMessage(error, t("Could not create your backup. Please try again.")));
     } finally {
       setShowDownloadSpinner(false);
     }
@@ -413,7 +483,7 @@ export default function SettingsPage() {
     setRestorePreview(null);
     if (file.size > 50 * 1024 * 1024) {
       setPendingRestoreFile(null);
-      setRestoreReviewError("Backup ZIP must be 50 MB or smaller.");
+      setRestoreReviewError(t("Backup ZIP must be 50 MB or smaller."));
       return;
     }
     setPendingRestoreFile(file);
@@ -423,11 +493,11 @@ export default function SettingsPage() {
       const metadataFile = zip.file("metadata.json");
       const profileFile = zip.file("profile.json");
       if (!metadataFile || !profileFile) {
-        throw new Error("This ZIP is missing the Batchlogg backup manifest or profile.");
+        throw new Error(t("This ZIP is missing the Batchlogg backup manifest or profile."));
       }
       const metadataValue: unknown = JSON.parse(await metadataFile.async("string"));
       if (!isJsonRecord(metadataValue)) {
-        throw new Error("The backup manifest is not valid.");
+        throw new Error(t("The backup manifest is not valid."));
       }
       const version = metadataValue.format_version;
       if (
@@ -436,7 +506,7 @@ export default function SettingsPage() {
         version < 1 ||
         version > 5
       ) {
-        throw new Error("This backup format is not supported. Choose a Batchlogg ZIP backup.");
+        throw new Error(t("This backup format is not supported. Choose a Batchlogg ZIP backup."));
       }
       const included = Array.isArray(metadataValue.included)
         ? metadataValue.included.filter(
@@ -463,7 +533,7 @@ export default function SettingsPage() {
       setRestoreReviewError(
         error instanceof Error
           ? error.message
-          : "Could not read this backup. Choose a valid Batchlogg ZIP."
+          : t("Could not read this backup. Choose a valid Batchlogg ZIP.")
       );
     } finally {
       setReviewingBackup(false);
@@ -474,14 +544,14 @@ export default function SettingsPage() {
     if (!pendingRestoreFile || !restorePreview || reviewingBackup) return;
     setRestoringBackup(true);
     setRestoreMessage("");
-    setRestoreProgress("Uploading the selected ZIP…");
+    setRestoreProgress(t("Uploading the selected ZIP…"));
     try {
       const {
         data: { session },
         error: sessionError,
       } = await supabaseBrowser.auth.getSession();
       if (sessionError) throw sessionError;
-      if (!session) throw new Error("Sign in again before restoring a backup.");
+      if (!session) throw new Error(t("Sign in again before restoring a backup."));
 
       const storagePath = `${session.user.id}/${crypto.randomUUID()}.zip`;
       const { error: uploadError } = await supabaseBrowser.storage
@@ -490,9 +560,9 @@ export default function SettingsPage() {
           contentType: "application/zip",
           upsert: false,
         });
-      if (uploadError) throw new Error(`Could not upload backup: ${uploadError.message}`);
+      if (uploadError) throw new Error(`${t("Could not upload backup:")} ${uploadError.message}`);
 
-      setRestoreProgress("Checking the archive and restoring your data…");
+      setRestoreProgress(t("Checking the archive and restoring your data…"));
       const response = await fetch("/api/account/restore", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -501,19 +571,20 @@ export default function SettingsPage() {
       });
       const result: { message?: string; error?: string } = await response.json();
       if (!response.ok) {
-        throw new Error(result.error ?? `Restore failed (${response.status})`);
+        throw new Error(result.error ?? `${t("Restore failed")} (${response.status})`);
       }
-      setRestoreMessage(result.message ?? "Backup restored.");
-      setRestoreProgress("Restore complete.");
+      setRestoreMessage(result.message ?? t("Backup restored."));
+      setRestoreProgress(t("Restore complete."));
       setPendingRestoreFile(null);
       setRestorePreview(null);
+      window.dispatchEvent(new Event("batchlogg-profile-restored"));
     } catch (error) {
       console.error("Failed to restore account backup", error);
       setRestoreProgress("");
       setRestoreMessage(
         error instanceof Error
           ? error.message
-          : "Could not restore the backup. Please try again."
+          : t("Could not restore the backup. Please try again.")
       );
     } finally {
       setRestoringBackup(false);
@@ -524,7 +595,7 @@ export default function SettingsPage() {
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
         <div className="bg-black/60 backdrop-blur-md px-6 py-4 rounded-xl border border-white/10">
-          Loading settings…
+          {t("Loading settings…")}
         </div>
       </main>
     );
@@ -541,8 +612,8 @@ export default function SettingsPage() {
         </div>
 
         <PageHeading
-          title="Settings"
-          subtitle="Manage your preferences, security, and account data."
+          title={t("Settings")}
+          subtitle={t("Manage your preferences, security, and account data.")}
         />
         <section className="mb-8 flex flex-wrap justify-center gap-3 border-b border-white/10 pb-6">
           <button
@@ -550,7 +621,7 @@ export default function SettingsPage() {
             onClick={() => window.dispatchEvent(new Event("batchlogg-open-welcome-tour"))}
             className="rounded-lg border border-white/20 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white/80 transition hover:bg-white/10 hover:text-white"
           >
-            Revisit the Batchlogg tour
+            {t("Revisit the Batchlogg tour")}
           </button>
           {hasPremiumAccess && (
             <button
@@ -558,41 +629,63 @@ export default function SettingsPage() {
               onClick={() => window.dispatchEvent(new Event("batchlogg-open-premium-welcome"))}
               className="rounded-lg border border-green-300/20 bg-green-300/5 px-4 py-2.5 text-sm font-semibold text-green-200 transition hover:bg-green-300/10"
             >
-              Revisit the Premium tour
+              {t("Revisit the Premium tour")}
             </button>
           )}
         </section>
         {loadError && (
           <p role="alert" className="text-center text-sm text-red-400 mb-6">
-            {loadError}
+            {t(loadError)}
           </p>
         )}
 
-        <section id="appearance-units" className="mb-8 scroll-mt-6 border-t border-white/10 py-5">
+        <section id="language-preference" className="mb-8 scroll-mt-6 border-t border-white/10 py-5">
           <h2 className="text-lg font-semibold text-center mb-1 text-green-300">
-            Units
+            {t("Language")}
           </h2>
           <p className="text-sm text-zinc-400 text-center mb-4">
-            Choose how volumes and weights are shown across the site.
+            {getMessage(language, "language.description")}
+          </p>
+          <div className="mx-auto max-w-sm">
+            <LanguagePreferenceSelect
+              id="settings-language"
+              value={language}
+              disabled={savingLanguage}
+              onChange={(language) => void changePreferredLanguage(language)}
+            />
+          </div>
+          {languageSaveError && (
+            <p role="alert" className="mt-3 text-center text-sm text-amber-200">
+              {t(languageSaveError)}
+            </p>
+          )}
+        </section>
+
+        <section id="appearance-units" className="mb-8 scroll-mt-6 border-t border-white/10 py-5">
+          <h2 className="text-lg font-semibold text-center mb-1 text-green-300">
+            {t("Units")}
+          </h2>
+          <p className="text-sm text-zinc-400 text-center mb-4">
+            {t("Choose how volumes and weights are shown across the site.")}
           </p>
           <UnitToggle />
         </section>
 
         <section className="mb-8 border-y border-white/10 py-5">
           <h2 className="text-lg font-semibold text-center mb-1 text-green-300">
-            Site accent color
+            {t("Site accent color")}
           </h2>
           <p className="text-sm text-zinc-400 text-center mb-4">
-            Customize the site highlights.
+            {t("Customize the site highlights.")}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <label className="flex items-center gap-2 text-sm text-zinc-300">
-              <span>Color</span>
+              <span>{t("Color")}</span>
               <input
                 type="color"
                 value={themeAccentColor}
                 onChange={(event) => setThemeAccentColor(event.target.value)}
-                aria-label="Choose site accent color"
+                aria-label={t("Choose site accent color")}
                 className="h-9 w-12 cursor-pointer rounded border border-white/20 bg-transparent p-1"
               />
             </label>
@@ -602,7 +695,7 @@ export default function SettingsPage() {
               disabled={savingThemeAccentColor}
               className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20 disabled:cursor-wait disabled:opacity-60"
             >
-              {savingThemeAccentColor ? "Saving…" : "Save color"}
+              {savingThemeAccentColor ? t("Saving…") : t("Save color")}
             </button>
           </div>
           {themeAccentMessage && (
@@ -613,11 +706,10 @@ export default function SettingsPage() {
         </section>
         <section className="mb-8 border-b border-white/10 pb-6">
           <h2 className="text-lg font-semibold text-center mb-1 text-green-300">
-            Accessibility
+            {t("Accessibility")}
           </h2>
           <p className="text-sm text-zinc-400 text-center mb-5">
-            Reduce motion hides carbonation bubbles and minimizes animation,
-            including page transitions. Your device preference is used by default.
+            {t("Reduce motion hides carbonation bubbles and minimizes animation, including page transitions. Your device preference is used by default.")}
           </p>
           <div className="mx-auto max-w-xl">
             <label className="flex items-start gap-3">
@@ -633,16 +725,16 @@ export default function SettingsPage() {
                   } catch (error) {
                     console.error("Could not save reduced-motion preference", error);
                     setMotionPreferenceMessage(
-                      "Could not save this preference. Check your browser storage settings and try again."
+                      t("Could not save this preference. Check your browser storage settings and try again.")
                     );
                   }
                 }}
                 className="mt-1 h-4 w-4 accent-green-500"
               />
               <span>
-                <span className="block font-medium">Reduce motion</span>
+                <span className="block font-medium">{t("Reduce motion")}</span>
                 <span className="text-sm text-white/60">
-                  Minimize animations and hide carbonation bubbles throughout the site.
+                  {t("Minimize animations and hide carbonation bubbles throughout the site.")}
                 </span>
               </span>
             </label>
@@ -659,9 +751,9 @@ export default function SettingsPage() {
                 className="mt-1 h-4 w-4 accent-green-500"
               />
               <span>
-                <span className="block font-medium">Show page guides</span>
+                <span className="block font-medium">{t("Show page guides")}</span>
                 <span className="text-sm text-white/60">
-                  Show the Dashboard, Batch, Inventory, My recipes, and tool guides.
+                  {t("Show the Dashboard, Batch, Inventory, My recipes, and tool guides.")}
                 </span>
               </span>
             </label>
@@ -674,10 +766,10 @@ export default function SettingsPage() {
         </section>
         <section id="notifications" className="mb-8 scroll-mt-6 border-b border-white/10 pb-6">
           <h2 className="text-lg font-semibold text-center mb-1 text-green-300">
-            Notifications &amp; brewing preferences
+            {t("Notifications & brewing preferences")}
           </h2>
           <p className="text-sm text-zinc-400 text-center mb-5">
-            Choose which optional tools and reminders you want to use.
+            {t("Choose which optional tools and reminders you want to use.")}
           </p>
           <div className="mx-auto max-w-xl space-y-4">
             <label className="flex items-start gap-3">
@@ -692,9 +784,9 @@ export default function SettingsPage() {
                 className="mt-1 h-4 w-4 accent-green-500"
               />
               <span>
-                <span className="block font-medium">Use inventory when creating batches</span>
+                <span className="block font-medium">{t("Use inventory when creating batches")}</span>
                 <span className="text-sm text-white/60">
-                  Opt in to ingredient tracking and stock deductions as the batch integration is added.
+                  {t("Opt in to ingredient tracking and stock deductions as the batch integration is added.")}
                 </span>
               </span>
             </label>
@@ -710,9 +802,9 @@ export default function SettingsPage() {
                 className="mt-1 h-4 w-4 accent-green-500"
               />
               <span>
-                <span className="block font-medium">Enable brew reminders</span>
+                <span className="block font-medium">{t("Enable brew reminders")}</span>
                 <span className="text-sm text-white/60">
-                  Allow scheduled reminders and gravity-check reminders.
+                  {t("Allow scheduled reminders and gravity-check reminders.")}
                 </span>
               </span>
             </label>
@@ -728,9 +820,9 @@ export default function SettingsPage() {
                 className="mt-1 h-4 w-4 accent-green-500"
               />
               <span>
-                <span className="block font-medium">Enable Brewing Academy</span>
+                <span className="block font-medium">{t("Enable Brewing Academy")}</span>
                 <span className="text-sm text-white/60">
-                  Show the brewing learning challenges under More tools in the navigation menu.
+                  {t("Show the brewing learning challenges under More tools in the navigation menu.")}
                 </span>
               </span>
             </label>
@@ -738,7 +830,7 @@ export default function SettingsPage() {
           <div className="mt-5 flex flex-col items-center gap-2">
             {preferencesMessage && (
               <p role="status" className="text-center text-sm text-zinc-300">
-                {savingPreferences ? "Saving…" : preferencesMessage}
+                {savingPreferences ? t("Saving…") : preferencesMessage}
               </p>
             )}
           </div>
@@ -746,7 +838,7 @@ export default function SettingsPage() {
 
         <section id="sharing-privacy" aria-labelledby="sharing-privacy-title" className="mb-8 scroll-mt-6 border-b border-white/10 pb-6">
           <h2 id="sharing-privacy-title" className="mb-5 text-center text-lg font-semibold text-green-300">
-            Privacy and sharing
+            {t("Privacy and sharing")}
           </h2>
           <div className="mx-auto max-w-xl space-y-4">
             <label className="flex items-start gap-3">
@@ -758,46 +850,46 @@ export default function SettingsPage() {
                 className="mt-1 h-4 w-4 accent-green-500"
               />
               <span>
-                <span className="block font-medium">Make my profile visible to the community</span>
+                <span className="block font-medium">{t("Make my profile visible to the community")}</span>
                 <span className="text-sm text-white/60">
-                  {publicProfile ? "Public profile: signed-in members can see your showcase, shared vessels, public recipes, and public activity statistics." : "Private profile: other members see only your basic identity and any friend-request option. Friends can see your identity, but not your vessels or recipes through your profile."}
+                  {publicProfile ? t("Public profile: signed-in members can see your showcase, shared vessels, public recipes, and public activity statistics.") : t("Private profile: other members see only your basic identity and any friend-request option. Friends can see your identity, but not your vessels or recipes through your profile.")}
                 </span>
               </span>
             </label>
             {privacyMessage && <p role="status" className="text-sm text-white/70">{privacyMessage}</p>}
             <dl className="space-y-3 text-sm">
               <div>
-                <dt className="font-semibold">Recipes</dt>
-                <dd className="text-white/65">A recipe and your profile must both be public for it to appear in Public recipes. Anyone, including signed-out visitors, can read those recipes. Change each recipe in <Link href="/my-recipes" className="text-green-200 underline">My recipes</Link>.</dd>
+                <dt className="font-semibold">{t("Recipes")}</dt>
+                <dd className="text-white/65">{t("A recipe and your profile must both be public for it to appear in Public recipes. Anyone, including signed-out visitors, can read those recipes. Change each recipe in")} <Link href="/my-recipes" className="text-green-200 underline">{t("My recipes")}</Link>.</dd>
               </div>
               <div>
-                <dt className="font-semibold">Vessels and batches</dt>
-                <dd className="text-white/65">Each vessel has its own visibility switch. Shared vessels can expose their current batch, ingredients, measurements, and log entries. Open a vessel from your <Link href="/dashboard" className="text-green-200 underline">dashboard</Link> to change its visibility. Changing profile visibility does not change vessel or recipe switches.</dd>
+                <dt className="font-semibold">{t("Vessels and batches")}</dt>
+                <dd className="text-white/65">{t("Each vessel has its own visibility switch. Shared vessels can expose their current batch, ingredients, measurements, and log entries. Open a vessel from your")} <Link href="/dashboard" className="text-green-200 underline">{t("dashboard")}</Link> {t("to change its visibility. Changing profile visibility does not change vessel or recipe switches.")}</dd>
               </div>
               <div>
-                <dt className="font-semibold">Forum and recipe outcomes</dt>
-                <dd className="text-white/65">Forum posts, replies, and their attachments remain public when your profile is private. Finished-batch outcomes and tasting notes use separate sharing controls when finishing a batch. Making something private does not recall copies others have already saved.</dd>
+                <dt className="font-semibold">{t("Forum and recipe outcomes")}</dt>
+                <dd className="text-white/65">{t("Forum posts, replies, and their attachments remain public when your profile is private. Finished-batch outcomes and tasting notes use separate sharing controls when finishing a batch. Making something private does not recall copies others have already saved.")}</dd>
               </div>
               <div>
-                <dt className="font-semibold">Account details</dt>
-                <dd className="text-white/65">Your email and account settings are not shown on your member profile. Your username, avatar, membership, and account tier can still identify you when your profile is private.</dd>
+                <dt className="font-semibold">{t("Account details")}</dt>
+                <dd className="text-white/65">{t("Your email and account settings are not shown on your member profile. Your username, avatar, membership, and account tier can still identify you when your profile is private.")}</dd>
               </div>
             </dl>
             <Link href={`/members/${encodeURIComponent(savedUsername)}?preview=public`} className="inline-flex min-h-11 items-center rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20">
-              Preview my community profile
+              {t("Preview my community profile")}
             </Link>
-            <p className="text-xs text-white/50">Uses saved settings and shows the view of a signed-in member who is not your friend, without owner or admin access.</p>
+            <p className="text-xs text-white/50">{t("Uses saved settings and shows the view of a signed-in member who is not your friend, without owner or admin access.")}</p>
           </div>
         </section>
 
         <section id="profile" className="mb-8 scroll-mt-6 border-b border-white/10 pb-6">
           <h2 className="text-lg font-semibold text-center mb-1 text-green-300">
-            Profile
+            {t("Profile")}
           </h2>
           <p className="mb-4 text-center text-sm text-white/60">
-            Update your username here; change your profile picture and showcase on{" "}
+            {t("Update your username here; change your profile picture and showcase on")}{" "}
             <Link href="/my-account" className="text-green-200 underline">
-              My Account
+              {t("My Account")}
             </Link>.
           </p>
           <form
@@ -807,7 +899,7 @@ export default function SettingsPage() {
             <input
               id="settings-username"
               type="text"
-              aria-label="Username"
+              aria-label={t("Username")}
               autoComplete="username"
               maxLength={64}
               required
@@ -817,7 +909,7 @@ export default function SettingsPage() {
             />
             {usernameError && (
               <p role="alert" className="text-sm text-red-400">
-                {usernameError}
+                {translateAccountProfileError(usernameError, t)}
               </p>
             )}
             {usernameMessage && (
@@ -831,7 +923,7 @@ export default function SettingsPage() {
                 disabled={savingUsername}
                 className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20 disabled:cursor-wait disabled:opacity-60"
               >
-                {savingUsername ? "Saving…" : "Update username"}
+                {savingUsername ? t("Saving…") : t("Update username")}
               </button>
             </div>
           </form>
@@ -839,31 +931,31 @@ export default function SettingsPage() {
 
         <section id="billing" className="mb-8 scroll-mt-6 border-b border-white/10 pb-6">
           <h2 className="mb-2 text-center text-lg font-semibold text-green-300">
-            Billing
+            {t("Billing")}
           </h2>
           <p className="mb-4 text-center text-sm text-white/60">
             {accountTier === "premium"
-              ? "Manage your Premium plan and subscription."
-              : "Compare plans and manage your Batchlogg subscription."}
+              ? t("Manage your Premium plan and subscription.")
+              : t("Compare plans and manage your Batchlogg subscription.")}
           </p>
           <div className="text-center">
             <Link
               href="/premium"
               className="inline-flex rounded-lg border border-green-500/40 bg-green-800/60 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"
             >
-              {accountTier === "premium" ? "Manage subscription" : "View plans and billing"}
+              {accountTier === "premium" ? t("Manage subscription") : t("View plans and billing")}
             </Link>
           </div>
         </section>
 
         <section id="account-recovery" className="mb-8 scroll-mt-6 border-b border-white/10 pb-10">
           <h2 className="text-lg font-semibold text-center mb-4 text-green-300">
-            Account recovery &amp; security
+            {t("Account recovery & security")}
           </h2>
           <p className="mb-5 text-center text-sm text-white/60">
-            Keep your sign-in email current or change your password. If you are locked out,{" "}
+            {t("Keep your sign-in email current or change your password. If you are locked out,")}{" "}
             <Link href="/auth/forgot" className="text-green-200 underline">
-              reset your password
+              {t("reset your password")}
             </Link>.
           </p>
           {!showEmailChange ? (
@@ -878,7 +970,7 @@ export default function SettingsPage() {
                 }}
                 className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/20"
               >
-                Change email address
+                {t("Change email address")}
               </button>
               {emailMessage && (
                 <p role="status" className="mt-3 text-sm text-green-300">
@@ -892,7 +984,7 @@ export default function SettingsPage() {
               className="mx-auto mb-6 max-w-md space-y-3"
             >
               <label className="block text-sm text-zinc-300" htmlFor="settings-email">
-                New email address
+                {t("New email address")}
               </label>
               <input
                 id="settings-email"
@@ -919,14 +1011,14 @@ export default function SettingsPage() {
                   disabled={savingEmail}
                   className="rounded border border-white/20 bg-white/10 px-3 py-2 hover:bg-white/20 disabled:opacity-60"
                 >
-                  Cancel
+                  {t("Cancel")}
                 </button>
                 <button
                   type="submit"
                   disabled={savingEmail}
                   className="rounded border border-white/20 bg-white/10 px-3 py-2 font-semibold hover:bg-white/20 disabled:cursor-wait disabled:opacity-60"
                 >
-                  {savingEmail ? "Sending confirmation…" : "Save email"}
+                  {savingEmail ? t("Sending confirmation…") : t("Save email")}
                 </button>
               </div>
             </form>
@@ -938,7 +1030,7 @@ export default function SettingsPage() {
                 onClick={() => setShowPasswordChange(true)}
                 className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm"
               >
-                Change password
+                {t("Change password")}
               </button>
               {passwordMessage && (
                 <p role="status" className="mt-3 text-sm text-zinc-300">
@@ -950,21 +1042,21 @@ export default function SettingsPage() {
             <div className="mx-auto max-w-md space-y-3">
               <input
                 type="password"
-                placeholder="Old password"
+                placeholder={t("Old password")}
                 value={oldPassword}
                 onChange={(event) => setOldPassword(event.target.value)}
                 className="w-full px-3 py-2 rounded bg-zinc-800 border border-zinc-700"
               />
               <input
                 type="password"
-                placeholder="New password"
+                placeholder={t("New password")}
                 value={newPassword}
                 onChange={(event) => setNewPassword(event.target.value)}
                 className="w-full px-3 py-2 rounded bg-zinc-800 border border-zinc-700"
               />
               <input
                 type="password"
-                placeholder="Confirm new password"
+                placeholder={t("Confirm new password")}
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
                 className="w-full px-3 py-2 rounded bg-zinc-800 border border-zinc-700"
@@ -980,14 +1072,14 @@ export default function SettingsPage() {
                   onClick={() => setShowPasswordChange(false)}
                   className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded"
                 >
-                  Cancel
+                  {t("Cancel")}
                 </button>
                 <button
                   type="button"
                   onClick={changePassword}
                   className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded"
                 >
-                  Save password
+                  {t("Save password")}
                 </button>
               </div>
             </div>
@@ -995,28 +1087,28 @@ export default function SettingsPage() {
         </section>
         <section className="mb-8 border-b border-white/10 pb-6">
           <h2 className="text-lg font-semibold text-center mb-4 text-green-300">
-            Feedback
+            {t("Feedback")}
           </h2>
           <FeedbackForm />
         </section>
 
         <section id="data" className="mb-8 scroll-mt-6 border-b border-white/10 pb-6">
           <h2 className="text-lg font-semibold text-center mb-4 text-green-300">
-            Your data
+            {t("Your data")}
           </h2>
           <div className="flex flex-col items-center gap-4">
             <div className="max-w-xl space-y-3 text-sm text-zinc-300">
               <p>
-                Export creates a ZIP archive containing JSON data files and any personal profile or batch-note images. New exports use Batchlogg backup format version 5; restore accepts versions 1–5. ZIP files must be 50 MB or smaller.
+                {t("Export creates a ZIP archive containing JSON data files and any personal profile or batch-note images. New exports use Batchlogg backup format version 5; restore accepts versions 1–5. ZIP files must be 50 MB or smaller.")}
               </p>
               <p>
-                Included: profile preferences, vessels and batches, recipes, inventory, equipment and water profiles, notes, readings, reminders, shopping lists, saved discussions, private messages, feedback, bottle-aging data, and personal images.
+                {t("Included: profile preferences, vessels and batches, recipes, inventory, equipment and water profiles, notes, readings, reminders, shopping lists, saved discussions, private messages, feedback, bottle-aging data, and personal images.")}
               </p>
               <p>
-                Not included in new exports: passwords or sign-in credentials, forum posts and replies, and friendships or community uploads. Vessel contributor records may be present, but sharing access is not recreated after restore.
+                {t("Not included in new exports: passwords or sign-in credentials, forum posts and replies, and friendships or community uploads. Vessel contributor records may be present, but sharing access is not recreated after restore.")}
               </p>
               <p>
-                Restore adds records that are missing. If a record ID already exists, the existing record is kept unchanged. Archived profile settings are applied to your account; an archived username is skipped if another account is already using it. Restoring may therefore change your current profile preferences.
+                {t("Restore adds records that are missing. If a record ID already exists, the existing record is kept unchanged. Archived profile settings are applied to your account; an archived username is skipped if another account is already using it. Restoring may therefore change your current profile preferences.")}
               </p>
             </div>
             <button
@@ -1026,12 +1118,12 @@ export default function SettingsPage() {
               className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm disabled:opacity-60"
             >
               {showDownloadSpinner
-                ? downloadProgress || "Preparing backup…"
-                : "Download my data"}
+                ? downloadProgress || t("Preparing backup…")
+                : t("Download my data")}
             </button>
             {showDownloadSpinner && (
               <progress
-                aria-label={downloadProgress || "Preparing account export"}
+                aria-label={downloadProgress || t("Preparing account export")}
                 className="h-2 w-full max-w-xs accent-green-500"
               />
             )}
@@ -1046,7 +1138,7 @@ export default function SettingsPage() {
               accept=".zip,application/zip"
               onChange={handleRestoreFileChange}
               className="hidden"
-              aria-label="Choose Batchlog backup ZIP"
+              aria-label={t("Choose Batchlog backup ZIP")}
             />
             <button
               type="button"
@@ -1055,53 +1147,53 @@ export default function SettingsPage() {
               className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm disabled:cursor-wait disabled:opacity-60"
             >
               {reviewingBackup
-                ? "Reviewing backup…"
+                ? t("Reviewing backup…")
                 : restoringBackup
-                  ? restoreProgress || "Restoring backup…"
-                  : "Choose a backup to restore"}
+                  ? restoreProgress || t("Restoring backup…")
+                  : t("Choose a backup to restore")}
             </button>
             {reviewingBackup && (
               <p role="status" className="text-center text-sm text-white/70">
-                Reading the archive for your review…
+                {t("Reading the archive for your review…")}
               </p>
             )}
             {pendingRestoreFile && (
               <div className="w-full max-w-xl rounded-xl border border-green-400/25 bg-green-950/20 p-4">
                 <h3 className="text-base font-semibold text-green-200">
-                  Review this backup before restoring
+                  {t("Review this backup before restoring")}
                 </h3>
                 {restoreReviewError ? (
                   <p role="alert" className="mt-3 text-sm text-amber-200">
-                    {restoreReviewError}
+                    {translateAccountBackupMessage(restoreReviewError, t)}
                   </p>
                 ) : reviewingBackup || !restorePreview ? (
                   <p role="status" className="mt-3 text-sm text-white/65">
-                    Reading ZIP contents…
+                    {t("Reading ZIP contents…")}
                   </p>
                 ) : (
                   <>
                     <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
                       <div>
-                        <dt className="text-white/55">Selected file</dt>
+                        <dt className="text-white/55">{t("Selected file")}</dt>
                         <dd className="break-all">{pendingRestoreFile.name}</dd>
                       </div>
                       <div>
-                        <dt className="text-white/55">Archive size</dt>
+                        <dt className="text-white/55">{t("Archive size")}</dt>
                         <dd>
                           {(restorePreview.fileSize / (1024 * 1024)).toFixed(1)} MB
                         </dd>
                       </div>
                       <div>
-                        <dt className="text-white/55">Backup format</dt>
-                        <dd>Batchlogg ZIP, version {restorePreview.formatVersion}</dd>
+                        <dt className="text-white/55">{t("Backup format")}</dt>
+                        <dd>{t("Batchlogg ZIP, version")} {restorePreview.formatVersion}</dd>
                       </div>
                       <div>
-                        <dt className="text-white/55">Exported account</dt>
-                        <dd>{restorePreview.username || "Not specified"}</dd>
+                        <dt className="text-white/55">{t("Exported account")}</dt>
+                        <dd>{restorePreview.username || t("Not specified")}</dd>
                       </div>
                       {restorePreview.exportedAt && (
                         <div>
-                          <dt className="text-white/55">Exported</dt>
+                          <dt className="text-white/55">{t("Exported")}</dt>
                           <dd>
                             {Number.isNaN(Date.parse(restorePreview.exportedAt))
                               ? restorePreview.exportedAt
@@ -1110,22 +1202,22 @@ export default function SettingsPage() {
                         </div>
                       )}
                     </dl>
-                    <h4 className="mt-4 font-semibold">Contents in this archive</h4>
+                    <h4 className="mt-4 font-semibold">{t("Contents in this archive")}</h4>
                     <ul className="mt-1 list-inside list-disc space-y-1 text-sm text-white/75">
                       {restorePreview.included
                         .filter((item) => item in backupContentLabels)
                         .map((item) => (
                         <li key={item}>
-                          {backupContentLabels[item]}
+                          {t(backupContentLabels[item])}
                         </li>
                         ))}
                     </ul>
                     <div className="mt-4 rounded-lg border border-amber-300/20 bg-amber-950/25 p-3 text-sm text-amber-100">
                       <p>
-                        Restore adds records whose IDs are missing; records with IDs already in your account stay unchanged. Profile preferences are restored over your current preferences, except a username already used by someone else is skipped. Passwords, sign-in credentials, forum posts/replies, friendships, community uploads, and vessel-sharing access are not restored.
+                        {t("Restore adds records whose IDs are missing; records with IDs already in your account stay unchanged. Profile preferences are restored over your current preferences, except a username already used by someone else is skipped. Passwords, sign-in credentials, forum posts/replies, friendships, community uploads, and vessel-sharing access are not restored.")}
                       </p>
                       <p className="mt-2">
-                        If an error occurs during restore, some earlier records may already have been restored.
+                        {t("If an error occurs during restore, some earlier records may already have been restored.")}
                       </p>
                     </div>
                   </>
@@ -1141,7 +1233,7 @@ export default function SettingsPage() {
                     disabled={restoringBackup || reviewingBackup}
                     className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10 disabled:opacity-50"
                   >
-                    Cancel
+                    {t("Cancel")}
                   </button>
                   <button
                     type="button"
@@ -1149,7 +1241,7 @@ export default function SettingsPage() {
                     disabled={!restorePreview || reviewingBackup || restoringBackup}
                     className="rounded-lg border border-green-500/40 bg-green-800/70 px-4 py-2 text-sm font-semibold hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {restoringBackup ? "Restoring…" : "Restore this backup"}
+                    {restoringBackup ? t("Restoring…") : t("Restore this backup")}
                   </button>
                 </div>
               </div>
@@ -1160,19 +1252,19 @@ export default function SettingsPage() {
                   {restoreProgress}
                 </p>
                 <progress
-                  aria-label={restoreProgress || "Restoring account data"}
+                  aria-label={restoreProgress || t("Restoring account data")}
                   className="h-2 w-full accent-green-500"
                 />
               </div>
             )}
             {downloadError && (
               <p role="alert" className="text-center text-sm text-red-400">
-                {downloadError}
+                {translateAccountBackupMessage(downloadError, t)}
               </p>
             )}
             {restoreMessage && (
               <p role="status" className="text-center text-sm text-zinc-300">
-                {restoreMessage}
+                {translateAccountBackupMessage(restoreMessage, t)}
               </p>
             )}
             <button
@@ -1180,14 +1272,14 @@ export default function SettingsPage() {
             onClick={() => setShowDeleteConfirmation(true)}
             className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm"
           >
-            Delete my account
+            {t("Delete my account")}
           </button>
           </div>
         </section>
 
         <section className="mb-8 border-b border-white/10 pb-6">
           <h2 className="text-lg font-semibold text-center mb-4 text-green-300">
-            About Batchlogg
+            {t("About Batchlogg")}
           </h2>
           <div className="flex flex-col items-center gap-4">
             <button
@@ -1195,7 +1287,7 @@ export default function SettingsPage() {
               onClick={() => router.push("/changelog")}
               className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm"
             >
-              Changelogs
+              {t("Changelogs")}
             </button>
 
             <button
@@ -1203,7 +1295,7 @@ export default function SettingsPage() {
               onClick={() => router.push("/terms")}
               className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm"
             >
-              Terms of Service
+              {t("Terms of Service")}
             </button>
 
             <button
@@ -1211,7 +1303,7 @@ export default function SettingsPage() {
               onClick={() => router.push("/privacy")}
               className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm"
             >
-              Privacy Policy
+              {t("Privacy Policy")}
             </button>
           </div>
         </section>
@@ -1224,19 +1316,18 @@ export default function SettingsPage() {
       {showDeleteConfirmation && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center px-4">
           <div className="bg-zinc-900 p-6 rounded-xl w-full max-w-md border border-white/10">
-            <h2 className="text-xl font-bold mb-4">Delete account</h2>
+            <h2 className="text-xl font-bold mb-4">{t("Delete account")}</h2>
             <p className="text-sm text-zinc-300 mb-4">
-              This action is permanent. All your batches, recipes, vessels and
-              your profile will be deleted forever.
+              {t("This action is permanent. All your batches, recipes, vessels and your profile will be deleted forever.")}
             </p>
             <label className="block text-sm text-zinc-400 mb-2">
-              Confirm with your password
+              {t("Confirm with your password")}
             </label>
             <input
               type="password"
               value={deletePassword}
               onChange={(event) => setDeletePassword(event.target.value)}
-              placeholder="Password"
+              placeholder={t("Password")}
               className="w-full px-3 py-2 rounded bg-zinc-800 border border-zinc-700"
             />
             {deleteError && (
@@ -1248,16 +1339,18 @@ export default function SettingsPage() {
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirmation(false)}
+                disabled={deletingAccount}
                 className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded"
               >
-                Cancel
+                {t("Cancel")}
               </button>
               <button
                 type="button"
                 onClick={handleDeleteAccount}
-                className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded"
+                disabled={deletingAccount}
+                className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded disabled:cursor-wait disabled:opacity-60"
               >
-                Delete permanently
+                {deletingAccount ? t("Deleting…") : t("Delete permanently")}
               </button>
             </div>
           </div>

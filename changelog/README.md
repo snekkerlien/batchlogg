@@ -37,3 +37,6 @@ that recorded baseline to identify changes made since the last push. If Git
 and Tauri were updated at different times or to different revisions, record a
 separate baseline for each destination. Do not claim a push succeeded unless
 the command or release operation confirmed it.
+
+If a second Git push is needed only to publish the push-log update, name its
+commit exactly `Updated log push`.

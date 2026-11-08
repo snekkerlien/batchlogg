@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown";
 import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface ChangelogEntry {
   version: string;
@@ -14,6 +15,7 @@ interface ChangelogEntry {
 }
 
 export default function ChangelogClient() {
+  const { t, language } = useTranslation();
   const [logs, setLogs] = useState<ChangelogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -38,24 +40,24 @@ export default function ChangelogClient() {
         });
 
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Could not load changelogs");
+        if (!response.ok) throw new Error(data.error || t("Could not load changelogs"));
 
         setLogs(data.logs);
       } catch (err) {
         console.error("Could not load changelog", err);
-        setError(err instanceof Error ? err.message : "Could not load changelogs.");
+        setError(t("Could not load changelogs."));
       } finally {
         setLoading(false);
       }
     }
 
     load();
-  }, []);
+  }, [t]);
 
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center text-white">
-        Loading changelogs…
+        {t("Loading changelogs…")}
       </main>
     );
   }
@@ -73,8 +75,8 @@ export default function ChangelogClient() {
         </div>
 
         <PageHeading
-          title="Changelogs"
-          subtitle="See what’s new and what has changed over time."
+          title={t("Changelogs")}
+          subtitle={t("See what’s new and what has changed over time.")}
         />
 
         {error && (
@@ -94,12 +96,14 @@ export default function ChangelogClient() {
                   <div className="flex items-center justify-between">
                     <h2 className="text-lg font-semibold">{log.title}</h2>
                     <span className="text-white/50">
-                      {new Date(log.entry_date).toLocaleDateString("en-GB")}
+                      {new Date(log.entry_date).toLocaleDateString(
+                        language === "nb" ? "nb-NO" : "en-GB"
+                      )}
                     </span>
                   </div>
 
                   <p className="text-sm text-white/60 mt-1">
-                    Version {log.version}
+                    {t("Version")} {log.version}
                   </p>
 
                   <div className="mt-4 break-words text-sm leading-6 text-white/85 [&_h1]:mb-3 [&_h1]:mt-5 [&_h1]:text-xl [&_h1]:font-bold [&_h2]:mb-2 [&_h2]:mt-5 [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:mt-5 [&_h3]:text-base [&_h3]:font-semibold [&_li]:ml-5 [&_li]:list-disc [&_ol_li]:list-decimal [&_p]:my-2 [&_ul]:my-2 [&_ul]:space-y-1 [&_ol]:my-2 [&_ol]:space-y-1">
@@ -109,7 +113,7 @@ export default function ChangelogClient() {
               ))
             ) : (
               <li className="m-auto text-sm text-white/55">
-                No changelogs yet.
+                {t("No changelogs yet.")}
               </li>
             )}
           </ol>
@@ -129,7 +133,7 @@ export default function ChangelogClient() {
           className="fixed bottom-5 right-5 z-50 inline-flex min-h-11 items-center gap-2 rounded-full border border-white/20 bg-zinc-900/95 px-4 py-2 text-sm font-semibold text-white shadow-lg hover:border-green-300/40 hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-300"
         >
           <span aria-hidden="true">↑</span>
-          Back to top
+          {t("Back to top")}
         </button>
       )}
     </main>

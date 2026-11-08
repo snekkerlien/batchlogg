@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { INVENTORY_HISTORY_ERROR_KEYS, translateApiError } from "@/lib/i18n/apiErrors";
 
 type InventoryMovement = {
   id: string;
@@ -27,6 +29,7 @@ function formatQuantity(value: number) {
 }
 
 export default function InventoryMovementHistory() {
+  const { t } = useTranslation();
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -82,22 +85,22 @@ export default function InventoryMovementHistory() {
     >
       <summary className="cursor-pointer list-none px-4 py-4 text-center text-xl font-bold marker:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-300">
         <span className="inline-flex items-center gap-2">
-          Recent stock history
+          {t("Recent stock history")}
           <span aria-hidden="true" className="text-sm text-white/50">
             {expanded ? "−" : "+"}
           </span>
         </span>
       </summary>
-      <section aria-label="Recent stock history" className="px-4 pb-4">
+      <section aria-label={t("Recent stock history")} className="px-4 pb-4">
         {loading ? (
-          <p className="text-center text-sm text-white/60">Loading stock history…</p>
+          <p className="text-center text-sm text-white/60">{t("Loading stock history…")}</p>
         ) : error ? (
           <p role="status" className="text-center text-sm text-amber-200">
-            {error}
+            {translateApiError(error, t, INVENTORY_HISTORY_ERROR_KEYS)}
           </p>
         ) : movements.length === 0 ? (
           <p className="text-center text-sm text-white/60">
-            Stock changes will appear here as you add, update, use, or remove inventory.
+            {t("Stock changes will appear here as you add, update, use, or remove inventory.")}
           </p>
         ) : (
           <ol className="divide-y divide-white/10 rounded-xl border border-white/10">
@@ -119,7 +122,7 @@ export default function InventoryMovementHistory() {
                   <div className="min-w-0">
                     <p className="font-medium">{movement.item_name}</p>
                     <p className="text-xs text-white/60">
-                      {movementLabels[movement.movement_type]} ·{" "}
+                      {t(movementLabels[movement.movement_type])} ·{" "}
                       {new Date(movement.created_at).toLocaleString()}
                     </p>
                     {movement.batch_id && (
@@ -127,7 +130,7 @@ export default function InventoryMovementHistory() {
                         href={`/kar/${movement.batch_id}`}
                         className="mt-1 inline-block text-xs text-green-200 underline underline-offset-2"
                       >
-                        View batch
+                        {t("View batch")}
                       </Link>
                     )}
                   </div>
@@ -137,7 +140,7 @@ export default function InventoryMovementHistory() {
                       {formatQuantity(quantityChange)} {movement.unit}
                     </p>
                     <p className="text-xs text-white/60">
-                      Balance: {formatQuantity(Number(movement.balance_after))}{" "}
+                      {t("Balance")}: {formatQuantity(Number(movement.balance_after))}{" "}
                       {movement.unit}
                     </p>
                   </div>

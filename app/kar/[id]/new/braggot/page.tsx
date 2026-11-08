@@ -14,6 +14,7 @@ import {
   InventoryIngredientSelect,
   InventoryPreferenceFallback,
 } from "@/app/components/InventoryUsageFields";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export default function NewBraggotPage({
   params,
@@ -22,6 +23,7 @@ export default function NewBraggotPage({
   params: { id: string };
   searchParams?: { recipe?: string };
 }) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const { label } = useUnits();
   const { recipe, loading: recipeLoading, error: recipeError } =
@@ -100,9 +102,9 @@ useEffect(() => {
                 </div>
 
         {/* HEADER */}
-        <h1 className="text-4xl font-bold mb-2 text-center">New Braggot Batch</h1>
+        <h1 className="text-4xl font-bold mb-2 text-center">{t("New Braggot Batch")}</h1>
         <p className="text-center opacity-80 mb-10">
-          Fill out the details below to start a new braggot batch.
+          {t("Fill out the details below to start a new braggot batch.")}
         </p>
 
         {recipeError && <p role="alert" className="text-red-300 mb-4">{recipeError}</p>}
@@ -124,11 +126,11 @@ useEffect(() => {
 
           {/* Batch name */}
           <div>
-            <label className="block mb-1 font-semibold">Batch name</label>
+            <label className="block mb-1 font-semibold">{t("Batch name")}</label>
             <input
               name="name"
               defaultValue={recipe?.name ?? ""}
-              placeholder="Example: Honey Ale Braggot"
+              placeholder={t("Example: Honey Ale Braggot")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
             />
@@ -136,12 +138,12 @@ useEffect(() => {
 
           {/* Volume */}
           <div>
-            <label className="block mb-1 font-semibold">Volume (<UnitSymbol kind="volume" />)</label>
+            <label className="block mb-1 font-semibold">{t("Volume")} (<UnitSymbol kind="volume" />)</label>
             <UnitInput
               name="volume_l"
               kind="volume"
               defaultValue={recipe?.volume == null ? "" : String(recipe.volume)}
-              placeholder="Example: 10"
+              placeholder={t("Example: 10")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
             />
@@ -149,7 +151,7 @@ useEffect(() => {
 
           {/* Start date */}
           <div>
-            <label className="block mb-1 font-semibold">Start date</label>
+            <label className="block mb-1 font-semibold">{t("Start date")}</label>
             <input
               name="startdato"
               type="date"
@@ -161,13 +163,13 @@ useEffect(() => {
 
           {/* OG */}
           <div>
-            <label className="block mb-1 font-semibold">Original Gravity (OG)</label>
+            <label className="block mb-1 font-semibold">{t("Original Gravity (OG)")}</label>
             <input
               name="og"
               defaultValue={recipe?.og ?? ""}
               type="number"
               step="0.001"
-              placeholder="Example: 1.070"
+              placeholder={t("Example: 1.070")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
             />
@@ -175,7 +177,7 @@ useEffect(() => {
 
           {/* Dynamic malt additions */}
           <div>
-  <label className="block mb-2 font-semibold">Malt additions</label>
+  <label className="block mb-2 font-semibold">{t("Malt additions")}</label>
 
   {malts.map((m, i) => (
     <div
@@ -184,7 +186,7 @@ useEffect(() => {
     >
       <InventoryIngredientSelect
         selectionKey={`malt:${i}`}
-        placeholder="Malt type (e.g. Pale Ale, Munich)"
+        placeholder={t("Malt type (e.g. Pale Ale, Munich)")}
         category="malts"
         className="p-3 rounded bg-black/40 border border-white/20 w-full"
         value={m.name}
@@ -207,7 +209,7 @@ useEffect(() => {
 
       <UnitInput
         kind="kg"
-        placeholder={`Amount (${label("kg")})`}
+        placeholder={`${t("Amount")} (${label("kg")})`}
         className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-24"
         value={m.amount}
         onValueChange={(value) => {
@@ -223,7 +225,7 @@ useEffect(() => {
         min="0"
         step="any"
         placeholder="EBC"
-        aria-label={`Malt ${i + 1} EBC`}
+        aria-label={`${t("Malt")} ${i + 1} EBC`}
         required
         className="w-full rounded-lg border border-white/20 bg-black/40 p-3 md:w-24"
         value={m.ebc}
@@ -239,7 +241,7 @@ useEffect(() => {
         onClick={() => removeMalt(i)}
         className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm self-start md:self-auto"
       >
-        Remove
+        {t("Remove")}
       </button>
     </div>
   ))}
@@ -249,13 +251,13 @@ useEffect(() => {
     onClick={addMalt}
     className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
   >
-    + Add malt
+    + {t("Add malt")}
   </button>
 </div>
 
 {/* Hop additions */}
 <div>
-  <label className="block mb-2 font-semibold">Hop additions</label>
+  <label className="block mb-2 font-semibold">{t("Hop additions")}</label>
 
   {hops.map((h, i) => (
     <div
@@ -264,7 +266,7 @@ useEffect(() => {
     >
       <InventoryIngredientSelect
         selectionKey={`hop:${i}`}
-        placeholder="Hop type (e.g. Citra, Mosaic)"
+        placeholder={t("Hop type (e.g. Citra, Mosaic)")}
         category="hops"
         className="p-3 rounded bg-black/40 border border-white/20 w-full"
         value={h.name}
@@ -290,7 +292,7 @@ useEffect(() => {
       />
 
 <select
-  aria-label={`Hop ${i + 1} addition type`}
+  aria-label={t("Hop {index} addition type").replace("{index}", String(i + 1))}
   value={h.addition_type}
   onChange={(event) => {
     const updated = [...hops];
@@ -299,14 +301,14 @@ useEffect(() => {
   }}
   className="p-3 rounded bg-black/40 border border-white/20 w-full"
 >
-  <option value="boil">Boil addition</option>
-  <option value="whirlpool">Whirlpool / hop stand</option>
+  <option value="boil">{t("Boil addition")}</option>
+  <option value="whirlpool">{t("Whirlpool / hop stand")}</option>
 </select>
 
 <div className="grid grid-cols-2 gap-2 sm:grid-cols-[5rem_5rem_minmax(0,1fr)_minmax(0,1.4fr)_auto]">
 
       <input
-        placeholder="Alpha (%)"
+        placeholder={t("Alpha (%)")}
         type="number"
         min="0.1"
         max="100"
@@ -322,7 +324,7 @@ useEffect(() => {
       />
 
       <input
-        placeholder="Year"
+        placeholder={t("Year")}
         className="p-3 rounded bg-black/40 border border-white/20 w-full"
         value={h.year}
         onChange={(e) => {
@@ -334,7 +336,7 @@ useEffect(() => {
 
       <UnitInput
         kind="g"
-        placeholder={`Amount (${label("g")})`}
+        placeholder={`${t("Amount")} (${label("g")})`}
         className="p-3 rounded bg-black/40 border border-white/20 w-full"
         value={h.amount}
         onValueChange={(value) => {
@@ -346,7 +348,7 @@ useEffect(() => {
       />
 
       <input
-        placeholder={h.addition_type === "whirlpool" ? "Stand (min)" : "Boil (min)"}
+        placeholder={t(h.addition_type === "whirlpool" ? "Stand (min)" : "Boil (min)")}
         type="number"
         min="0"
         step="any"
@@ -362,8 +364,8 @@ useEffect(() => {
 
       {h.addition_type === "whirlpool" && (
         <input
-          aria-label={`Hop ${i + 1} whirlpool temperature in Celsius`}
-          placeholder="Temperature (°C)"
+          aria-label={t("Hop {index} whirlpool temperature in Celsius").replace("{index}", String(i + 1))}
+          placeholder={t("Temperature (°C)")}
           type="number"
           min="0"
           max="100"
@@ -384,7 +386,7 @@ useEffect(() => {
         onClick={() => removeHop(i)}
         className="col-span-2 sm:col-span-1 px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
       >
-        Remove
+        {t("Remove")}
       </button>
 </div>
     </div>
@@ -395,7 +397,7 @@ useEffect(() => {
     onClick={addHop}
     className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
   >
-    + Add hop
+    + {t("Add hop")}
   </button>
 </div>
 
@@ -409,20 +411,20 @@ useEffect(() => {
 
           {/* Boil time */}
           <div>
-            <label className="block mb-1 font-semibold">Boil time (minutes)</label>
+            <label className="block mb-1 font-semibold">{t("Boil time (minutes)")}</label>
             <input
               name="boil_time"
               defaultValue={recipe?.boil_time ?? ""}
               type="number"
               step="1"
-              placeholder="Example: 60"
+              placeholder={t("Example: 60")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
 
           {/* Honey amount */}
           <div>
-            <label className="block mb-1 font-semibold">Honey type</label>
+            <label className="block mb-1 font-semibold">{t("Honey type")}</label>
             <InventoryIngredientSelect
               name="honey_type"
               selectionKey="honey"
@@ -431,18 +433,18 @@ useEffect(() => {
               defaultAmount={recipe?.honey_amount == null ? "" : String(recipe.honey_amount)}
               defaultAmountUnit="kg"
               defaultValue={recipe?.honey_type ?? ""}
-              placeholder="Honey type"
+              placeholder={t("Honey type")}
               category="fermentables"
               subcategory="Honey"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
             <InventoryPreferenceFallback>
-              <label className="block mb-1 font-semibold">Honey amount (<UnitSymbol kind="kg" />)</label>
+              <label className="block mb-1 font-semibold">{t("Honey amount")} (<UnitSymbol kind="kg" />)</label>
               <UnitInput
                 name="honey_amount"
                 kind="kg"
                 defaultValue={recipe?.honey_amount == null ? "" : String(recipe.honey_amount)}
-                placeholder="Example: 1.5"
+                placeholder={t("Example: 1.5")}
                 className="w-full p-3 rounded bg-black/40 border border-white/20"
               />
             </InventoryPreferenceFallback>
@@ -450,13 +452,13 @@ useEffect(() => {
 
           {/* Yeast */}
           <div>
-            <label className="block mb-1 font-semibold">Yeast strain</label>
+            <label className="block mb-1 font-semibold">{t("Yeast strain")}</label>
             <InventoryIngredientSelect
               name="yeast"
               selectionKey="yeast"
               trackAmount
               defaultValue={recipe?.yeast ?? ""}
-              placeholder="Yeast strain"
+              placeholder={t("Yeast strain")}
               category="yeast"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
@@ -464,28 +466,28 @@ useEffect(() => {
 
           {/* Additives */}
           <div>
-            <label className="block mb-1 font-semibold">Additives</label>
+            <label className="block mb-1 font-semibold">{t("Additives")}</label>
             <InventoryAdditiveFields defaultValue={recipe?.additives ?? ""} />
           </div>
 
           {/* Full process */}
           <div>
-            <label className="block mb-1 font-semibold">Full process</label>
+            <label className="block mb-1 font-semibold">{t("Full process")}</label>
             <PublicMentionTextarea
               name="full_process"
               defaultValue={recipe?.full_process ?? ""}
-              placeholder="Mash schedule, honey addition, fermentation plan..."
+              placeholder={t("Mash schedule, honey addition, fermentation plan...")}
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-40"
             />
           </div>
 
           {/* Notes */}
           <div>
-            <label className="block mb-1 font-semibold">Notes</label>
+            <label className="block mb-1 font-semibold">{t("Notes")}</label>
             <PublicMentionTextarea
               name="notes"
               defaultValue={recipe?.notes ?? ""}
-              placeholder="Any additional notes about the batch..."
+              placeholder={t("Any additional notes about the batch...")}
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
             />
           </div>
@@ -495,7 +497,7 @@ useEffect(() => {
             disabled={loading || recipeLoading}
             className="w-full rounded-lg border border-green-500 bg-green-500/10 px-4 py-3 font-semibold text-green-300 transition hover:bg-green-500/20 disabled:opacity-50"
           >
-            {loading ? "Creating..." : "Create batch"}
+            {loading ? t("Creating...") : t("Create batch")}
           </button>
 
           </BatchInventoryProvider>

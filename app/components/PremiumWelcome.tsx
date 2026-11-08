@@ -8,6 +8,7 @@ import {
   dismissPremiumWelcome,
   getPremiumWelcomeStatus,
 } from "@/app/actions/batchGuide";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 const premiumFeatures = [
   {
@@ -61,6 +62,7 @@ const premiumFeatures = [
 ] as const;
 
 export default function PremiumWelcome() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { user, loading: authLoading } = useAuthContext();
   const [open, setOpen] = useState(false);
@@ -92,12 +94,12 @@ export default function PremiumWelcome() {
       return true;
     } catch (dismissError) {
       console.error("Could not dismiss Premium welcome", dismissError);
-      setError("Your choice could not be saved. Please try again.");
+      setError(t("Your choice could not be saved. Please try again."));
       return false;
     } finally {
       setSaving(false);
     }
-  }, [saving]);
+  }, [saving, t]);
 
   async function openFeature(href: string) {
     if (await close()) router.push(href);
@@ -179,11 +181,11 @@ export default function PremiumWelcome() {
       >
         <div className="flex items-center justify-between border-b border-white/10 px-5 py-4 sm:px-8">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-green-200">
-            Your Premium welcome
+            {t("Your Premium welcome")}
           </p>
           <button
             type="button"
-            aria-label="Close Premium welcome"
+            aria-label={t("Close Premium welcome")}
             disabled={saving}
             onClick={() => void close()}
             className="rounded-lg px-3 py-2 text-lg leading-none text-white/60 hover:bg-white/10 hover:text-white disabled:opacity-50"
@@ -202,11 +204,10 @@ export default function PremiumWelcome() {
             </div>
             <div>
               <h1 id="premium-welcome-title" className="text-2xl font-bold sm:text-3xl">
-                Welcome to Premium.
+                {t("Welcome to Premium.")}
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-7 text-white/65 sm:text-base">
-                Your brewing workspace just got roomier. Here are a few newly
-                unlocked ways to plan, organize, and learn from every batch.
+                {t("Your brewing workspace just got roomier. Here are a few newly unlocked ways to plan, organize, and learn from every batch.")}
               </p>
             </div>
           </div>
@@ -223,22 +224,21 @@ export default function PremiumWelcome() {
                 className="group rounded-xl border border-white/10 bg-white/[0.04] p-4 transition hover:border-green-300/30 hover:bg-white/[0.08] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-300"
               >
                 <span className="text-[11px] font-semibold uppercase tracking-widest text-green-200/70">
-                  {feature.label}
+                  {t(feature.label)}
                 </span>
                 <span className="mt-2 flex items-center justify-between gap-3 font-semibold text-white/90">
-                  {feature.title}
+                  {t(feature.title)}
                   <span aria-hidden="true" className="text-green-200">→</span>
                 </span>
                 <span className="mt-2 block text-sm leading-6 text-white/55">
-                  {feature.description}
+                  {t(feature.description)}
                 </span>
               </Link>
             ))}
           </div>
 
           <p className="mt-5 text-xs leading-5 text-white/45">
-            Premium can come from a subscription or a manual grant. Your access
-            is based on your account plan.
+            {t("Premium can come from a subscription or a manual grant. Your access is based on your account plan.")}
           </p>
           {error && <p role="alert" className="mt-4 text-sm text-red-300">{error}</p>}
           <div className="mt-6 flex justify-end border-t border-white/10 pt-5">
@@ -248,7 +248,7 @@ export default function PremiumWelcome() {
               onClick={() => void close()}
               className="rounded-lg bg-green-300 px-5 py-3 font-semibold text-zinc-950 transition hover:bg-green-200 disabled:opacity-50"
             >
-              {saving ? "Saving…" : "Explore Premium"}
+              {saving ? t("Saving…") : t("Explore Premium")}
             </button>
           </div>
         </div>

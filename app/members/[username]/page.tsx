@@ -18,13 +18,16 @@ import MemberAdminActions, { type MemberAdminDetails } from "./MemberAdminAction
 import FermentationBubbles from "@/app/components/FermentationBubbles";
 import ExpandArrowButton from "@/app/components/ExpandArrowButton";
 import BeerColorGlass from "@/app/components/BeerColorGlass";
+import { translateCommunityError } from "@/lib/i18n/apiErrors";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 function ProfilePreviewNotice() {
+  const { t } = useTranslation();
   return (
-    <aside aria-label="Profile preview" className="mb-6 w-full rounded-lg border border-green-300/30 bg-green-300/5 p-4 text-sm">
-      <p className="font-semibold text-green-200">Community profile preview</p>
-      <p className="mt-1 text-white/70">This is what a signed-in member who is not your friend can see. Owner and admin access are excluded. No visibility settings have changed.</p>
-      <Link href="/settings#sharing-privacy" className="mt-2 inline-flex min-h-11 items-center text-green-200 underline">Sharing and privacy settings</Link>
+    <aside aria-label={t("Profile preview")} className="mb-6 w-full rounded-lg border border-green-300/30 bg-green-300/5 p-4 text-sm">
+      <p className="font-semibold text-green-200">{t("Community profile preview")}</p>
+      <p className="mt-1 text-white/70">{t("This is what a signed-in member who is not your friend can see. Owner and admin access are excluded. No visibility settings have changed.")}</p>
+      <Link href="/settings#sharing-privacy" className="mt-2 inline-flex min-h-11 items-center text-green-200 underline">{t("Sharing and privacy settings")}</Link>
     </aside>
   );
 }
@@ -33,6 +36,7 @@ export default function ProfileDetailPage({ params, searchParams }: {
   params: { username: string };
   searchParams?: { preview?: string };
 }) {
+  const { t } = useTranslation();
   const router = useRouter();
   const preview = searchParams?.preview === "public";
   let routeUsername = params.username;
@@ -117,7 +121,7 @@ export default function ProfileDetailPage({ params, searchParams }: {
         return;
       }
       if (!response.ok || !profileResult.profile) {
-        throw new Error(profileResult.error || "Could not load profile");
+        throw new Error(profileResult.error || t("Could not load profile"));
       }
 
       const profileData = profileResult.profile;
@@ -229,19 +233,19 @@ const secondary = batchesRaw
     load().catch(error => {
       console.error("Could not load member profile", error);
       if (!active) return;
-      setLoadError("This profile could not be loaded. Please reload and try again.");
+      setLoadError(t("This profile could not be loaded. Please reload and try again."));
       setLoading(false);
     });
     return () => { active = false; };
-  }, [routeUsername, router, preview]);
+  }, [routeUsername, router, preview, t]);
 
   if (loadError) {
     return (
       <main className="min-h-screen flex items-center justify-center px-6 text-white">
         <div className="rounded-xl border border-white/10 bg-black/60 p-6">
           <p role="alert">{loadError}</p>
-          <button type="button" onClick={() => window.location.reload()} className="mt-3 min-h-11 rounded-lg border border-white/20 px-4 py-2">Reload profile</button>
-          <Link href="/settings#sharing-privacy" className="ml-4 inline-flex min-h-11 items-center underline">Sharing and privacy</Link>
+          <button type="button" onClick={() => window.location.reload()} className="mt-3 min-h-11 rounded-lg border border-white/20 px-4 py-2">{t("Reload profile")}</button>
+          <Link href="/settings#sharing-privacy" className="ml-4 inline-flex min-h-11 items-center underline">{t("Sharing and privacy")}</Link>
         </div>
       </main>
     );
@@ -251,7 +255,7 @@ const secondary = batchesRaw
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
         <div className="bg-black/60 backdrop-blur-md px-6 py-4 rounded-xl border border-white/10">
-          Loading…
+          {t("Loading…")}
         </div>
       </main>
     );
@@ -282,7 +286,7 @@ const secondary = batchesRaw
             {membershipLabel(privateProfile.membership_status)}
           </p>
           <p className="text-sm font-semibold text-green-200">
-            {privateProfile.account_tier === "premium" ? "Premium" : "Free"} tier
+            {privateProfile.account_tier === "premium" ? t("Premium") : t("Free")} {t("tier")}
           </p>
           {privateProfile.allow_friend_requests && (
             <div className="mt-2 flex flex-wrap justify-center gap-3">
@@ -293,12 +297,12 @@ const secondary = batchesRaw
                 className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20 disabled:cursor-default disabled:opacity-80"
               >
                 {friendRequest?.status === "sent"
-                  ? "Request sent"
+                  ? t("Request sent")
                   : friendRequest?.status === "received"
-                    ? "Request received"
+                    ? t("Request received")
                     : friendRequestBusy
-                      ? "Sending…"
-                      : "Add friend"}
+                      ? t("Sending…")
+                      : t("Add friend")}
               </button>
               {friendRequest?.status === "sent" && (
                 <button
@@ -307,19 +311,19 @@ const secondary = batchesRaw
                   disabled={friendRequestBusy}
                   className="rounded-lg border border-white/20 px-4 py-2 text-sm font-semibold hover:bg-white/10 disabled:cursor-wait disabled:opacity-60"
                 >
-                  {friendRequestBusy ? "Canceling…" : "Cancel request"}
+                  {friendRequestBusy ? t("Canceling…") : t("Cancel request")}
                 </button>
               )}
             </div>
           )}
           {friendRequestError && (
             <p role="alert" className="text-sm text-red-400">
-              {friendRequestError}
+              {translateCommunityError(friendRequestError, t)}
             </p>
           )}
-          <p className="mt-2 text-white/80">This profile is private.</p>
+          <p className="mt-2 text-white/80">{t("This profile is private.")}</p>
           <p className="max-w-xs text-sm text-white/50">
-            {name} has chosen to keep their profile private. Only friends can view it.
+            {name} {t("has chosen to keep their profile private. Only friends can view it.")}
           </p>
           <div className="mt-4">
             <BackButton />
@@ -333,7 +337,7 @@ const secondary = batchesRaw
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
         <div className="bg-black/60 backdrop-blur-md px-6 py-4 rounded-xl border border-white/10">
-          <h1 className="text-2xl font-bold text-green-300">Profile not found</h1>
+          <h1 className="text-2xl font-bold text-green-300">{t("Profile not found")}</h1>
         </div>
       </main>
     );
@@ -379,7 +383,7 @@ const secondary = batchesRaw
       });
       const result = await response.json();
       if (!response.ok) {
-        throw new Error(result.error || "Could not send friend request");
+        throw new Error(result.error || t("Could not send friend request"));
       }
       setFriendRequest({ id: result.id, status: "sent" });
     } catch (requestError) {
@@ -387,7 +391,7 @@ const secondary = batchesRaw
       setFriendRequestError(
         requestError instanceof Error
           ? requestError.message
-          : "Could not send friend request."
+          : t("Could not send friend request.")
       );
     } finally {
       setFriendRequestBusy(false);
@@ -408,7 +412,7 @@ const secondary = batchesRaw
       });
       const result = await response.json();
       if (!response.ok) {
-        throw new Error(result.error || "Could not cancel friend request");
+        throw new Error(result.error || t("Could not cancel friend request"));
       }
       setFriendRequest(null);
     } catch (requestError) {
@@ -416,7 +420,7 @@ const secondary = batchesRaw
       setFriendRequestError(
         requestError instanceof Error
           ? requestError.message
-          : "Could not cancel friend request."
+          : t("Could not cancel friend request.")
       );
     } finally {
       setFriendRequestBusy(false);
@@ -436,8 +440,8 @@ const secondary = batchesRaw
 
 {preview ? <ProfilePreviewNotice /> : isOwner && (
   <div className="mb-6 flex flex-wrap justify-center gap-4 text-sm">
-    <a href={`/members/${encodeURIComponent(profile.username)}?preview=public`} className="inline-flex min-h-11 items-center text-green-200 underline">Preview my community profile</a>
-    <Link href="/settings#sharing-privacy" className="inline-flex min-h-11 items-center text-white/70 underline">Sharing and privacy</Link>
+    <a href={`/members/${encodeURIComponent(profile.username)}?preview=public`} className="inline-flex min-h-11 items-center text-green-200 underline">{t("Preview my community profile")}</a>
+    <Link href="/settings#sharing-privacy" className="inline-flex min-h-11 items-center text-white/70 underline">{t("Sharing and privacy")}</Link>
   </div>
 )}
 
@@ -474,7 +478,7 @@ const secondary = batchesRaw
       ? profile.is_public && profile.profile_banner
         ? <span className="whitespace-pre-wrap break-words italic">“{profile.profile_banner.trim()}”</span>
         : ""
-      : "This is a private profile. You can see their name and profile picture because you’re friends."
+      : t("This is a private profile. You can see their name and profile picture because you’re friends.")
   }
 />
 
@@ -507,14 +511,14 @@ const secondary = batchesRaw
         }`}
       >
         {isFriend
-          ? "Friends"
+          ? t("Friends")
           : friendRequest?.status === "sent"
-            ? "Request sent"
+            ? t("Request sent")
             : friendRequest?.status === "received"
-              ? "Request received"
+              ? t("Request received")
               : friendRequestBusy
-                ? "Sending…"
-                : "Add friend"}
+                ? t("Sending…")
+                : t("Add friend")}
       </button>
     )}
     {friendRequest?.status === "sent" && (
@@ -524,7 +528,7 @@ const secondary = batchesRaw
         disabled={friendRequestBusy}
         className="rounded-lg border border-white/20 px-4 py-2 text-sm font-semibold hover:bg-white/10 disabled:cursor-wait disabled:opacity-60"
       >
-        {friendRequestBusy ? "Canceling…" : "Cancel request"}
+        {friendRequestBusy ? t("Canceling…") : t("Cancel request")}
       </button>
     )}
     {isFriend && (
@@ -532,12 +536,12 @@ const secondary = batchesRaw
         href={`/community/messages?peer_id=${encodeURIComponent(profile.id)}`}
         className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20"
       >
-        Send message
+        {t("Send message")}
       </Link>
     )}
     {friendRequestError && (
       <p role="alert" className="w-full text-center text-sm text-red-400">
-        {friendRequestError}
+        {translateCommunityError(friendRequestError, t)}
       </p>
     )}
   </div>
@@ -556,7 +560,7 @@ const secondary = batchesRaw
   href={`/members/${encodeURIComponent(profile.username)}/recipes/${featuredRecipe.id}`}
   className="mb-8 block rounded-xl border border-green-300/20 bg-green-300/5 p-5 transition hover:bg-green-300/10"
 >
-  <p className="text-xs font-semibold uppercase tracking-wider text-green-200">Featured recipe</p>
+  <p className="text-xs font-semibold uppercase tracking-wider text-green-200">{t("Featured recipe")}</p>
   <h2 className="mt-2 text-xl font-semibold">{featuredRecipe.name}</h2>
   <p className="mt-1 text-sm text-white/55">{featuredRecipe.type}</p>
 </Link>
@@ -565,7 +569,7 @@ const secondary = batchesRaw
 })()}
 {/* VESSELS */}
         <h2 className="text-2xl font-semibold mb-4 text-center text-green-300">
-          Vessels
+          {t("Vessels")}
         </h2>
 
         <div className="flex flex-wrap justify-center gap-6 mb-12">
@@ -583,22 +587,22 @@ const secondary = batchesRaw
                 <span
                   className="relative z-10 text-lg font-bold text-green-300 text-center leading-tight line-clamp-2"
                 >
-                  {k.batchName ?? `Vessel`}
+                  {k.batchName ?? t("Vessel")}
                 </span>
 
                 <span className="relative z-10 text-zinc-400 font-semibold mt-2">
-                  {k.status}
+                  {t(k.status)}
                 </span>
               </Link>
             ))
           ) : (
-            <p className="opacity-60 text-center">No vessels found.</p>
+            <p className="opacity-60 text-center">{t("No vessels found.")}</p>
           )}
         </div>
 
         {/* RECIPES */}
 <h2 className="text-2xl font-semibold mb-4 text-center text-green-300">
-  Public recipes
+  {t("Public recipes")}
 </h2>
 
 <RecipeFilters
@@ -624,14 +628,14 @@ const secondary = batchesRaw
           </span>
           <ExpandArrowButton
             expanded={expanded === r.id}
-            label={r.name || "recipe"}
+            label={r.name || t("recipe")}
             controls={`member-recipe-${r.id}`}
             onClick={() => toggle(r.id)}
           />
         </div>
         {expanded !== r.id && (
           <div
-            aria-label={`${r.name} recipe summary`}
+            aria-label={`${r.name} ${t("recipe summary")}`}
             className="mt-3 grid grid-cols-3 gap-x-2 gap-y-1.5 text-sm sm:flex sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-1"
           >
             {([
@@ -706,7 +710,7 @@ const secondary = batchesRaw
                 href={`/members/${encodeURIComponent(profile.username)}/recipes/${r.id}`}
                 className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm font-semibold"
               >
-                Open full recipe →
+                {t("Open full recipe →")}
               </Link>
             </div>
             {!isOwner && !preview && (
@@ -722,19 +726,19 @@ const secondary = batchesRaw
           </div>
         </div>
         <p className="mt-4 border-t border-white/10 pt-3 text-xs text-white/55">
-          Created{" "}
+          {t("Created")}{" "}
           {r.created_at
             ? new Date(r.created_at).toLocaleDateString("en-GB")
-            : "date unavailable"}
+            : t("date unavailable")}
           {" · "}
           {r.copyright_free === true
-            ? `Marked copyright-free by ${profile.username}`
-            : `Copyright © ${r.created_at ? new Date(r.created_at).getFullYear() : new Date().getFullYear()} ${profile.username}. All rights reserved.`}
+            ? `${t("Marked copyright-free by")} ${profile.username}`
+            : `${t("Copyright ©")} ${r.created_at ? new Date(r.created_at).getFullYear() : new Date().getFullYear()} ${profile.username}. ${t("All rights reserved.")}`}
         </p>
       </div>
     ))
   ) : (
-    <p className="opacity-60 text-center">No public recipes.</p>
+    <p className="opacity-60 text-center">{t("No public recipes.")}</p>
   )}
 </div>
 
@@ -749,7 +753,7 @@ const secondary = batchesRaw
   </>
 ) : (
   <p className="my-10 text-center text-sm text-white/60">
-    Their vessels and recipes are private.
+    {t("Their vessels and recipes are private.")}
   </p>
 )}
 

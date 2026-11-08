@@ -8,6 +8,8 @@ import { Qty } from "@/app/components/Units";
 import StartPublicRecipeButton from "@/app/components/StartPublicRecipeButton";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
 import { useAuthContext } from "@/app/providers/AuthProvider";
+import { translateRecipeError } from "@/lib/i18n/apiErrors";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import {
   filterPublicRecipes,
   publicRecipeFilterError,
@@ -24,6 +26,7 @@ export default function PublicRecipeList({
   recipes: PublicRecipeSummary[];
   canModerateRecipes: boolean;
 }) {
+  const { t, language } = useTranslation();
   const { user, loading: authLoading } = useAuthContext();
   const [search, setSearch] = useState("");
   const [type, setType] = useState("All types");
@@ -87,15 +90,19 @@ export default function PublicRecipeList({
       const response = await fetch(`/api/public-recipes/${encodeURIComponent(id)}`, { cache: "no-store" });
       const result: { recipe?: RecipePresentationData; error?: string } = await response.json();
       if (!response.ok || !result.recipe) {
-        throw new Error(result.error || "Could not load recipe details. Please try again.");
+        throw new Error(result.error || t("Could not load recipe details. Please try again."));
       }
       const recipe = result.recipe;
       setDetails(current => ({ ...current, [id]: recipe }));
     } catch (error) {
       console.error("Could not load public recipe details", error);
+      const errorMessage =
+        error instanceof Error && !(error instanceof TypeError)
+          ? error.message
+          : "Could not load recipe details. Please try again.";
       setDetailErrors(current => ({
         ...current,
-        [id]: error instanceof Error ? error.message : "Could not load recipe details. Please try again.",
+        [id]: translateRecipeError(errorMessage, t),
       }));
     } finally {
       pendingDetails.current.delete(id);
@@ -147,8 +154,7 @@ export default function PublicRecipeList({
   if (!recipes.length) {
     return (
       <p className="rounded-lg border border-white/10 bg-white/5 p-5 text-white/70">
-        No public recipes are available yet. Members can choose which recipes
-        to share from their recipe library.
+        {t("No public recipes are available yet. Members can choose which recipes to share from their recipe library.")}
       </p>
     );
   }
@@ -156,42 +162,50 @@ export default function PublicRecipeList({
   return (
     <>
       {!authLoading && user && requestedStart && recipes.some(recipe => recipe.id === requestedStart) && (
-        <section aria-label="Continue starting your batch" className="mb-5 rounded-lg border border-green-400/30 bg-green-400/5 p-4">
-          <p className="mb-3 text-sm">Continue with {recipes.find(recipe => recipe.id === requestedStart)?.name}. Choose an empty vessel on the next screen.</p>
+        <section
+          aria-label={t("Continue starting your batch")}
+          className="mb-5 rounded-lg border border-green-400/30 bg-green-400/5 p-4"
+        >
+          <p className="mb-3 text-sm">
+            {t("Continue with {name}. Choose an empty vessel on the next screen.").replace(
+              "{name}",
+              recipes.find(recipe => recipe.id === requestedStart)?.name ?? ""
+            )}
+          </p>
           <StartPublicRecipeButton recipeId={requestedStart} />
         </section>
       )}
       <section
-        aria-label="Filter public recipes"
+        aria-label={t("Filter public recipes")}
         className="mb-6 grid gap-3 rounded-xl border border-white/10 bg-white/5 p-4 sm:grid-cols-2"
       >
         <label className="sm:col-span-2">
-          <span className="sr-only">Search recipes and ingredients</span>
+          <span className="sr-only">{t("Search recipes and ingredients")}</span>
           <input
             type="search"
             value={search}
             onChange={(event) => { setSearch(event.target.value); resetVisibleRecipes(); }}
-            placeholder="Search recipes, brewers, or ingredients"
+            placeholder={t("Search recipes, brewers, or ingredients")}
             className="w-full rounded-lg border border-white/20 bg-black/40 p-3"
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          Recipe type
+          {t("Recipe type")}
           <select
             value={type}
             onChange={(event) => { setType(event.target.value); resetVisibleRecipes(); }}
             className="rounded-lg border border-white/20 bg-black/40 p-3"
           >
-            <option>All types</option>
+            <option value="All types">{t("All types")}</option>
             {types.map((recipeType) => (
               <option key={recipeType}>{recipeType}</option>
             ))}
           </select>
         </label>
         <fieldset className="grid grid-cols-2 gap-2">
-          <legend className="mb-1 text-sm">ABV range (%)</legend>
+          <legend className="mb-1 text-sm">{t("ABV range (%)")}</legend>
           <label>
-            <span className="sr-only">Minimum ABV</span>
+            <span className="sr-only">{t("Minimum ABV")}</span>
             <input
               type="number"
               min="0"
@@ -199,12 +213,12 @@ export default function PublicRecipeList({
               step="any"
               value={minimumAbv}
               onChange={(event) => { setMinimumAbv(event.target.value); resetVisibleRecipes(); }}
-              placeholder="Min"
+              placeholder={t("Min")}
               className="w-full rounded-lg border border-white/20 bg-black/40 p-3"
             />
           </label>
           <label>
-            <span className="sr-only">Maximum ABV</span>
+            <span className="sr-only">{t("Maximum ABV")}</span>
             <input
               type="number"
               min="0"
@@ -212,13 +226,13 @@ export default function PublicRecipeList({
               step="any"
               value={maximumAbv}
               onChange={(event) => { setMaximumAbv(event.target.value); resetVisibleRecipes(); }}
-              placeholder="Max"
+              placeholder={t("Max")}
               className="w-full rounded-lg border border-white/20 bg-black/40 p-3"
             />
           </label>
         </fieldset>
         <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-          Sort recipes
+          {t("Sort recipes")}
           <select
             value={sort}
             onChange={event => {
@@ -227,8 +241,8 @@ export default function PublicRecipeList({
             }}
             className="rounded-lg border border-white/20 bg-black/40 p-3"
           >
-            <option value="newest">Newest first</option>
-            <option value="popular">Most popular</option>
+            <option value="newest">{t("Newest first")}</option>
+            <option value="popular">{t("Most popular")}</option>
           </select>
         </label>
       </section>
@@ -236,15 +250,28 @@ export default function PublicRecipeList({
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-sm">
         <p role="status" aria-live="polite" aria-atomic="true" className="text-white/65">
           {filterError
-            ? "Update the ABV range to see matching recipes."
-            : `Showing ${visibleRecipes.length} of ${filteredRecipes.length} ${hasFilters ? "matching " : ""}${filteredRecipes.length === 1 ? "recipe" : "recipes"}${hasFilters ? ` · ${recipes.length} public in total` : ""}`}
-          {!filterError && <span className="text-white/45"> · {sort === "popular" ? "Most popular" : "Newest first"}</span>}
+            ? t(filterError)
+            : t(
+                `Showing {visible} of {total} ${hasFilters ? "matching " : ""}${filteredRecipes.length === 1 ? "recipe" : "recipes"}`
+              )
+                .replace("{visible}", String(visibleRecipes.length))
+                .replace("{total}", String(filteredRecipes.length))}
+          {hasFilters && !filterError && (
+            <span className="text-white/65">
+              {t(" · {count} public in total").replace("{count}", String(recipes.length))}
+            </span>
+          )}
+          {!filterError && <span className="text-white/45"> · {t(sort === "popular" ? "Most popular" : "Newest first")}</span>}
         </p>
         {hasFilters && <button type="button" onClick={clearFilters} className="min-h-11 rounded-lg border border-white/20 px-3 py-2 hover:bg-white/10">
-          Clear filters
+          {t("Clear filters")}
         </button>}
       </div>
-      {filterError && <p role="alert" className="mb-4 text-sm text-amber-200">{filterError}</p>}
+      {filterError && (
+        <p role="alert" className="mb-4 text-sm text-amber-200">
+          {t(filterError)}
+        </p>
+      )}
       {moderationNotice && (
         <p role="status" className="mb-4 text-sm text-green-200">{moderationNotice}</p>
       )}
@@ -269,30 +296,30 @@ export default function PublicRecipeList({
                 <div className="min-w-0">
                   <Link href={`/members/${encodeURIComponent(recipe.author)}/recipes/${recipe.id}`} className="block break-words text-lg font-semibold text-white hover:text-green-200">{recipe.name}</Link>
                   <p className="mt-1 text-sm text-white/60">
-                    {recipe.category} <span aria-hidden="true">·</span> by{" "}
+                    {recipe.category} <span aria-hidden="true">·</span> {t("by")}{" "}
                     <Link href={`/members/${encodeURIComponent(recipe.author)}`} className="text-green-200 underline underline-offset-2">{recipe.author}</Link>
                   </p>
                   <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-white/70">
-                    <span>{recipe.abv != null && recipe.abv !== "" && Number.isFinite(Number(recipe.abv)) ? `${Number(recipe.abv).toFixed(1)}% ABV` : "ABV not provided"}</span>
-                    <span>{recipe.volume != null && recipe.volume !== "" && Number.isFinite(Number(recipe.volume)) ? <>Batch: <Qty kind="volume" value={recipe.volume} /></> : "Volume not provided"}</span>
-                    <span>Created {recipe.created_at ? new Date(recipe.created_at).toLocaleDateString("en-GB") : "date unavailable"}</span>
-                    <span title="Unique brewers with active or finished batches. Cancelled batches do not count.">
-                      Brewed by {recipe.brewerCount} {recipe.brewerCount === 1 ? "brewer" : "brewers"}
+                    <span>{recipe.abv != null && recipe.abv !== "" && Number.isFinite(Number(recipe.abv)) ? `${Number(recipe.abv).toFixed(1)}% ABV` : t("ABV not provided")}</span>
+                    <span>{recipe.volume != null && recipe.volume !== "" && Number.isFinite(Number(recipe.volume)) ? <>{t("Batch:")} <Qty kind="volume" value={recipe.volume} /></> : t("Volume not provided")}</span>
+                    <span>{recipe.created_at ? t("Created {date}").replace("{date}", new Date(recipe.created_at).toLocaleDateString(language === "nb" ? "nb-NO" : "en-GB")) : t("date unavailable")}</span>
+                    <span title={t("Unique brewers with active or finished batches. Cancelled batches do not count.")}>
+                      {t(recipe.brewerCount === 1 ? "Brewed by {count} brewer" : "Brewed by {count} brewers").replace("{count}", String(recipe.brewerCount))}
                     </span>
                   </p>
                   <p className="mt-2 text-xs text-white/55">
-                    {recipe.copyright_free ? `Marked copyright-free by ${recipe.author}` : `Copyright belongs to ${recipe.author}`}
+                    {t(recipe.copyright_free ? "Marked copyright-free by {author}" : "Copyright belongs to {author}").replace("{author}", recipe.author)}
                   </p>
                   {recipe.source && (
                     <p className="mt-2 text-sm text-white/65">
-                      A version of{" "}
+                      {t("A version of")}{" "}
                       <Link
                         href={`/members/${encodeURIComponent(recipe.source.author)}/recipes/${recipe.source.id}`}
                         className="text-green-200 underline"
                       >
                         {recipe.source.name}
                       </Link>
-                      {" "}by{" "}
+                      {" "}{t("by")}{" "}
                       <Link href={`/members/${encodeURIComponent(recipe.source.author)}`} className="text-green-200 underline">{recipe.source.author}</Link>
                     </p>
                   )}
@@ -303,6 +330,8 @@ export default function PublicRecipeList({
                 <ExpandArrowButton
                   expanded={expandedRecipeId === recipe.id}
                   label={recipe.name || "recipe"}
+                  expandedAriaLabel={t("Collapse {name}").replace("{name}", recipe.name || t("recipe"))}
+                  collapsedAriaLabel={t("Expand {name}").replace("{name}", recipe.name || t("recipe"))}
                   controls={`public-recipe-${recipe.id}`}
                   onClick={() => toggleRecipe(recipe.id)}
                 />
@@ -325,7 +354,7 @@ export default function PublicRecipeList({
                         }
                         className="w-full cursor-pointer px-4 py-3 text-left text-sm font-semibold text-white/75 hover:text-white"
                       >
-                        Manage recipe
+                        {t("Manage recipe")}
                         <span aria-hidden="true" className="float-right text-white/60">
                           {recipeManageOpen === recipe.id ? "−" : "+"}
                         </span>
@@ -336,7 +365,7 @@ export default function PublicRecipeList({
                           className="border-t border-white/10 p-4"
                         >
                           <p className="mb-3 text-sm text-white/65">
-                            Remove this recipe from public listings without deleting the owner’s saved recipe.
+                            {t("Remove this recipe from public listings without deleting the owner’s saved recipe.")}
                           </p>
                           <button
                             type="button"
@@ -346,16 +375,16 @@ export default function PublicRecipeList({
                             }}
                             className="min-h-10 rounded-lg border border-red-300/25 bg-red-400/5 px-3 py-2 text-sm font-medium text-red-100/85 hover:bg-red-400/10 hover:text-red-100"
                           >
-                            Remove from public
+                            {t("Remove from public")}
                           </button>
                         </div>
                       )}
                     </div>
                   )}
-                  {loadingDetails[recipe.id] && <p role="status" className="text-sm text-white/65">Loading recipe details…</p>}
+                  {loadingDetails[recipe.id] && <p role="status" className="text-sm text-white/65">{t("Loading recipe details…")}</p>}
                   {detailErrors[recipe.id] && <div role="alert" className="rounded-lg border border-amber-300/30 bg-amber-300/5 p-3 text-sm text-amber-200">
                     <p>{detailErrors[recipe.id]}</p>
-                    <button type="button" onClick={() => void loadDetails(recipe.id)} className="mt-2 min-h-11 underline">Try again</button>
+                    <button type="button" onClick={() => void loadDetails(recipe.id)} className="mt-2 min-h-11 underline">{t("Try again")}</button>
                   </div>}
                   {details[recipe.id] && (
                     <RecipePresentation recipe={details[recipe.id]} linkTabIndex={expandedRecipeId === recipe.id ? undefined : -1} />
@@ -366,7 +395,7 @@ export default function PublicRecipeList({
                       href={`/members/${encodeURIComponent(recipe.author)}/recipes/${recipe.id}`}
                       className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10 hover:text-white"
                     >
-                      Open standalone recipe
+                      {t("Open standalone recipe")}
                     </Link>
                   </div>
                 </div>
@@ -376,7 +405,7 @@ export default function PublicRecipeList({
         </ul>
       ) : !filterError ? (
         <p className="rounded-lg border border-white/10 bg-white/5 p-5 text-white/70">
-          No recipes match these filters.
+          {t("No recipes match these filters.")}
         </p>
       ) : null}
       {visibleCount < filteredRecipes.length && (
@@ -393,20 +422,31 @@ export default function PublicRecipeList({
             }}
             className="min-h-11 rounded-lg border border-green-400 bg-green-700 px-5 py-3 font-semibold hover:bg-green-600"
           >
-            Load {Math.min(PUBLIC_RECIPE_PAGE_SIZE, filteredRecipes.length - visibleCount)} more recipes
+            {t("Load {count} more recipes").replace(
+              "{count}",
+              String(Math.min(PUBLIC_RECIPE_PAGE_SIZE, filteredRecipes.length - visibleCount))
+            )}
           </button>
-          <p className="mt-2 text-xs text-white/50">{filteredRecipes.length - visibleRecipes.length} more matching recipes</p>
+          <p className="mt-2 text-xs text-white/50">
+            {t("{count} more matching recipes").replace(
+              "{count}",
+              String(filteredRecipes.length - visibleRecipes.length)
+            )}
+          </p>
         </div>
       )}
       <ConfirmDialog
         open={recipePendingRemoval !== null}
-        title="Remove public recipe?"
+        title={t("Remove public recipe?")}
         message={
           recipePendingRemoval
-            ? `Remove "${recipePendingRemoval.name}" from public listings? The author's saved recipe will not be deleted.`
+            ? t('Remove "{name}" from public listings? The author’s saved recipe will not be deleted.').replace(
+                "{name}",
+                String(recipePendingRemoval.name)
+              )
             : ""
         }
-        confirmLabel="Remove from public"
+        confirmLabel={t("Remove from public")}
         onConfirm={removeRecipeFromPublicListing}
         onCancel={() => {
           setRecipePendingRemoval(null);

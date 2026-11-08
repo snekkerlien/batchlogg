@@ -4,18 +4,20 @@ import type { ReactNode } from "react";
 import type { Batch } from "@/app/types/batchTypes";
 import { Qty, UnitAwareText } from "@/app/components/Units";
 import PublicMentionText from "@/app/components/PublicMentionText";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 function brewTypeLabel(
-  batch: Pick<Batch, "type"> & Partial<Pick<Batch, "beer_subtype">>
+  batch: Pick<Batch, "type"> & Partial<Pick<Batch, "beer_subtype">>,
+  t: (key: string) => string
 ): string {
   if (batch.type !== "Beer") return batch.type;
 
   const subtypeLabels: Record<string, string> = {
-    all_grain: "All-grain",
-    fresh_wort_kit: "Fresh wort kit",
-    malt_extract_kit: "Malt extract kit",
+    all_grain: t("All-grain"),
+    fresh_wort_kit: t("Fresh wort kit"),
+    malt_extract_kit: t("Malt extract kit"),
   };
-  return `Beer${batch.beer_subtype ? ` — ${subtypeLabels[batch.beer_subtype] ?? batch.beer_subtype}` : ""}`;
+  return `${t("Beer")}${batch.beer_subtype ? ` — ${subtypeLabels[batch.beer_subtype] ?? batch.beer_subtype}` : ""}`;
 }
 
 function hasText(value: string | null | undefined): value is string {
@@ -25,9 +27,10 @@ function hasText(value: string | null | undefined): value is string {
 export type BatchRecipeDetails = Pick<Batch, "type"> & Partial<Omit<Batch, "type">>;
 
 function RecipeSection({ title, children }: { title: string; children: ReactNode }) {
+  const { t } = useTranslation();
   return (
     <section className="rounded-lg border border-white/10 bg-black/15 p-4">
-      <h4 className="mb-3 border-b border-white/10 pb-2 font-semibold text-green-300">{title}</h4>
+      <h4 className="mb-3 border-b border-white/10 pb-2 font-semibold text-green-300">{t(title)}</h4>
       <div className="space-y-3 text-sm leading-relaxed text-white/85">{children}</div>
     </section>
   );
@@ -40,6 +43,7 @@ export default function BatchRecipeCard({
   batch: BatchRecipeDetails;
   showNotes?: boolean;
 }) {
+  const { t } = useTranslation();
   const isBeerOrBraggot = batch.type === "Beer" || batch.type === "Braggot";
   const isWineCiderOrSeltzer =
     batch.type === "Wine" || batch.type === "Cider" || batch.type === "Seltzer";
@@ -69,10 +73,10 @@ export default function BatchRecipeCard({
   return (
     <div className="mt-5 rounded-xl border border-white/10 bg-white/[0.04] p-4 sm:p-5">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="text-lg font-semibold text-green-300">Recipe</h3>
+        <h3 className="text-lg font-semibold text-green-300">{t("Recipe")}</h3>
         <div className="flex flex-wrap gap-2">
           <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-white/70">
-            {brewTypeLabel(batch)}
+            {brewTypeLabel(batch, t)}
           </span>
           {batch.type === "Beer" && batch.beer_style && (
             <span className="rounded-full border border-green-300/30 bg-green-300/10 px-3 py-1 text-sm text-green-100">
@@ -92,15 +96,15 @@ export default function BatchRecipeCard({
           <RecipeSection title={batch.type === "Beer" ? "Grain & hop schedule" : "Malt, hops & honey"}>
             {batch.type === "Beer" && batch.kit_url && (
               <p>
-                <strong>Kit:</strong>{" "}
+                <strong>{t("Kit")}:</strong>{" "}
                 <a href={batch.kit_url} target="_blank" rel="noreferrer" className="text-green-300 underline">
-                  Open kit
+                  {t("Open kit")}
                 </a>
               </p>
             )}
             {batch.malts && batch.malts.length > 0 && (
               <div>
-                <h5 className="mb-2 font-medium text-white">Malts</h5>
+                <h5 className="mb-2 font-medium text-white">{t("Malts")}</h5>
                 <ul className="divide-y divide-white/10 rounded-lg border border-white/10">
                   {batch.malts.map((malt, index) => (
                     <li key={`${malt.name}-${index}`} className="flex justify-between gap-4 px-3 py-2">
@@ -116,7 +120,7 @@ export default function BatchRecipeCard({
             )}
             {batch.hops && batch.hops.length > 0 && (
               <div>
-                <h5 className="mb-2 font-medium text-white">Boil & whirlpool hops</h5>
+                <h5 className="mb-2 font-medium text-white">{t("Boil & whirlpool hops")}</h5>
                 <ul className="space-y-2">
                   {batch.hops.map((hop, index) => (
                     <li key={`${hop.name}-${index}`} className="flex justify-between gap-4 rounded-lg bg-white/[0.04] px-3 py-2">
@@ -124,9 +128,9 @@ export default function BatchRecipeCard({
                         <strong>{hop.name}</strong>
                         <span className="block text-white/60">
                           {hop.addition_type === "whirlpool"
-                            ? `Whirlpool · ${hop.time} min${hop.temperature != null ? ` at ${hop.temperature}°C` : ""}`
-                            : `${hop.time} min boil`}
-                          {hop.alpha != null && ` · ${hop.alpha}% alpha acid${hop.year ? ` · ${hop.year} crop` : ""}`}
+                            ? `${t("Whirlpool")} · ${hop.time} ${t("min")}${hop.temperature != null ? ` ${t("at")} ${hop.temperature}°C` : ""}`
+                            : `${hop.time} ${t("min boil")}`}
+                          {hop.alpha != null && ` · ${hop.alpha}% ${t("alpha acid")}${hop.year ? ` · ${hop.year} ${t("crop")}` : ""}`}
                         </span>
                       </span>
                       <span className="shrink-0 font-medium"><Qty kind="g" value={hop.amount} maxDecimals={0} /></span>
@@ -137,15 +141,15 @@ export default function BatchRecipeCard({
             )}
             {batch.type === "Beer" && batch.dry_hops && batch.dry_hops.length > 0 && (
               <div>
-                <h5 className="mb-2 font-medium text-white">Dry hops</h5>
+                <h5 className="mb-2 font-medium text-white">{t("Dry hops")}</h5>
                 <ul className="divide-y divide-white/10 rounded-lg border border-white/10">
                   {batch.dry_hops.map((hop, index) => (
                     <li key={`${hop.name}-${index}`} className="flex justify-between gap-4 px-3 py-2">
                       <span>
                         {hop.name}
                         <span className="block text-white/60">
-                          {hop.contact ? `${hop.contact} days contact` : "Contact time not specified"}
-                          {hop.alpha != null && ` · ${hop.alpha}% alpha acid${hop.year ? ` · ${hop.year} crop` : ""}`}
+                          {hop.contact ? `${hop.contact} ${t("days contact")}` : t("Contact time not specified")}
+                          {hop.alpha != null && ` · ${hop.alpha}% ${t("alpha acid")}${hop.year ? ` · ${hop.year} ${t("crop")}` : ""}`}
                         </span>
                       </span>
                       <span className="shrink-0 font-medium"><Qty kind="g" value={hop.amount} maxDecimals={0} /></span>
@@ -156,15 +160,15 @@ export default function BatchRecipeCard({
             )}
             {(batch.type === "Braggot" && (hasText(batch.honey_type) || batch.honey_amount != null)) && (
               <p>
-                <strong>Honey:</strong> {batch.honey_type || "Unspecified"}
+                <strong>{t("Honey")}:</strong> {batch.honey_type || t("Unspecified")}
                 {batch.honey_amount != null && <> · <Qty kind="kg" value={batch.honey_amount} /></>}
               </p>
             )}
             {batch.boil_volume_l != null && (
-              <p><strong>Boil volume:</strong> <Qty kind="volume" value={batch.boil_volume_l} /></p>
+              <p><strong>{t("Boil volume")}:</strong> <Qty kind="volume" value={batch.boil_volume_l} /></p>
             )}
-            {batch.boil_time != null && <p><strong>Total boil time:</strong> {batch.boil_time} min</p>}
-            {isBeerOrBraggot && hasText(batch.yeast) && <p><strong>Yeast:</strong> {batch.yeast}</p>}
+            {batch.boil_time != null && <p><strong>{t("Total boil time")}:</strong> {batch.boil_time} min</p>}
+            {isBeerOrBraggot && hasText(batch.yeast) && <p><strong>{t("Yeast")}:</strong> {batch.yeast}</p>}
           </RecipeSection>
         )}
 
@@ -172,13 +176,13 @@ export default function BatchRecipeCard({
           <RecipeSection title="Honey & fruit">
             {(batch.base_liquid || batch.base_liquid_amount != null) && (
               <p>
-                <strong>Base liquid:</strong> {batch.base_liquid || "Water"}
-                {batch.base_liquid_amount != null && <> · up to <Qty kind="volume" value={batch.base_liquid_amount} /></>}
+                <strong>{t("Base liquid")}:</strong> {batch.base_liquid || t("Water")}
+                {batch.base_liquid_amount != null && <> · {t("up to")} <Qty kind="volume" value={batch.base_liquid_amount} /></>}
               </p>
             )}
             {(hasText(batch.honey_type) || batch.honey_amount != null) && (
               <p>
-                <strong>Honey:</strong> {batch.honey_type || "Unspecified"}
+                <strong>{t("Honey")}:</strong> {batch.honey_type || t("Unspecified")}
                 {batch.honey_amount != null && <> · <Qty kind="kg" value={batch.honey_amount} /></>}
               </p>
             )}
@@ -192,15 +196,15 @@ export default function BatchRecipeCard({
                 ))}
               </ul>
             )}
-            {hasText(batch.yeast) && <p><strong>Yeast:</strong> {batch.yeast}</p>}
+            {hasText(batch.yeast) && <p><strong>{t("Yeast")}:</strong> {batch.yeast}</p>}
           </RecipeSection>
         )}
 
         {hasJuiceDetails && (
           <RecipeSection title={batch.type === "Wine" ? "Must & additions" : "Juice & additions"}>
-            {hasText(batch.juice_type) && <p><strong>{batch.type === "Wine" ? "Must / juice" : "Juice"}:</strong> {batch.juice_type}</p>}
-            {batch.sugar_amount != null && <p><strong>Sugar added:</strong> <Qty kind="kg" value={batch.sugar_amount} /></p>}
-            {hasText(batch.yeast) && <p><strong>Yeast:</strong> {batch.yeast}</p>}
+            {hasText(batch.juice_type) && <p><strong>{t(batch.type === "Wine" ? "Must / juice" : "Juice")}:</strong> {batch.juice_type}</p>}
+            {batch.sugar_amount != null && <p><strong>{t("Sugar added")}:</strong> <Qty kind="kg" value={batch.sugar_amount} /></p>}
+            {hasText(batch.yeast) && <p><strong>{t("Yeast")}:</strong> {batch.yeast}</p>}
           </RecipeSection>
         )}
 
@@ -228,7 +232,7 @@ export default function BatchRecipeCard({
                 ))}
               </ol>
             )}
-            {hasText(batch.yeast) && <p><strong>Yeast:</strong> {batch.yeast}</p>}
+            {hasText(batch.yeast) && <p><strong>{t("Yeast")}:</strong> {batch.yeast}</p>}
           </RecipeSection>
         )}
 

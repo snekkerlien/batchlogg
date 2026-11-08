@@ -71,6 +71,16 @@ body {
   box-shadow: 0 0 0 6px #09090b;
 }
 
+@media (max-width: 767px) {
+  :is(
+    input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="hidden"]):not([type="file"]):not([type="range"]):not([type="color"]),
+    textarea,
+    select
+  ) {
+    font-size: max(16px, 1em);
+  }
+}
+
 #main-content:focus-visible {
   outline: none;
   box-shadow: none;

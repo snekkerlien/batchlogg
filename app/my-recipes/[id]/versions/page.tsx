@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type RecipeSnapshot = Record<string, unknown>;
 type RecipeVersion = {
@@ -22,6 +23,7 @@ export default function RecipeVersionsPage({
   params: { id: string };
 }) {
   const router = useRouter();
+  const { t, language } = useTranslation();
   const [recipeName, setRecipeName] = useState("");
   const [currentRecipe, setCurrentRecipe] = useState<RecipeSnapshot | null>(null);
   const [versions, setVersions] = useState<RecipeVersion[]>([]);
@@ -51,7 +53,7 @@ export default function RecipeVersionsPage({
           if (active) setPremiumRequired(true);
           return;
         }
-        if (!response.ok) throw new Error(result.error || "Could not load recipe versions");
+        if (!response.ok) throw new Error(result.error || t("Could not load recipe versions"));
         if (!active || !result.recipe) return;
         setCurrentRecipe(result.recipe);
         setRecipeName(String(result.recipe.name ?? "Recipe"));
@@ -59,7 +61,7 @@ export default function RecipeVersionsPage({
       })
       .catch((loadError) => {
         console.error("Could not load recipe versions", loadError);
-        if (active) setError("Recipe history could not be loaded.");
+        if (active) setError(t("Recipe history could not be loaded."));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -67,7 +69,7 @@ export default function RecipeVersionsPage({
     return () => {
       active = false;
     };
-  }, [params.id, router]);
+  }, [params.id, router, t]);
 
   const comparison = useMemo(() => {
     if (!currentRecipe) return [];
@@ -92,31 +94,31 @@ export default function RecipeVersionsPage({
       <div className="relative mx-auto max-w-4xl rounded-xl border border-white/10 bg-black/60 p-5 pt-16 backdrop-blur-md sm:p-8">
         <div className="absolute left-4 top-3"><BackButton /></div>
         <div className="absolute right-4 top-3"><MenuOverlay current="recipes" /></div>
-        <PageHeading title="Recipe history" subtitle={recipeName || "Compare saved recipe versions."} />
+        <PageHeading title={t("Recipe history")} subtitle={recipeName || t("Compare saved recipe versions.")} />
         {loading ? (
-          <p className="py-10 text-center text-white/60">Loading recipe history…</p>
+          <p className="py-10 text-center text-white/60">{t("Loading recipe history…")}</p>
         ) : premiumRequired ? (
           <div className="rounded-xl border border-green-400/20 bg-green-500/10 p-6 text-center">
-            <p>Recipe version history and comparison are Premium features.</p>
-            <Link href="/premium" className="mt-4 inline-block rounded-lg bg-green-700 px-5 py-3 font-semibold">Explore Premium</Link>
+            <p>{t("Recipe version history and comparison are Premium features.")}</p>
+            <Link href="/premium" className="mt-4 inline-block rounded-lg bg-green-700 px-5 py-3 font-semibold">{t("Explore Premium")}</Link>
           </div>
         ) : error ? (
           <p role="alert" className="text-center text-red-300">{error}</p>
         ) : currentRecipe ? (
           <>
             <p className="mb-5 text-sm text-white/60">
-              Previous snapshots are saved when you edit this recipe while Premium is active.
+              {t("Previous snapshots are saved when you edit this recipe while Premium is active.")}
             </p>
             {versions.length === 0 ? (
               <p className="rounded-lg border border-white/10 bg-white/5 p-4 text-center text-white/70">
-                No saved versions yet. Edit this recipe to create the first snapshot.
+                {t("No saved versions yet. Edit this recipe to create the first snapshot.")}
               </p>
             ) : (
               <>
                 <div className="mb-5 grid gap-3 sm:grid-cols-2">
                   {[leftVersion, rightVersion].map((value, index) => (
                     <label key={index} className="text-sm text-white/70">
-                      {index === 0 ? "Compare" : "with"}
+                      {index === 0 ? t("Compare") : t("with")}
                       <select
                         value={value}
                         onChange={(event) =>
@@ -126,10 +128,10 @@ export default function RecipeVersionsPage({
                         }
                         className="mt-1 w-full rounded-lg border border-white/20 bg-black/40 p-3 text-white"
                       >
-                        <option value="current">Current recipe</option>
+                        <option value="current">{t("Current recipe")}</option>
                         {versions.map((version) => (
                           <option key={version.id} value={version.id}>
-                            Version {version.version_number} · {new Date(version.created_at).toLocaleDateString()}
+                            {t("Version")} {version.version_number} · {new Date(version.created_at).toLocaleDateString(language === "nb" ? "nb-NO" : undefined)}
                           </option>
                         ))}
                       </select>
@@ -137,12 +139,12 @@ export default function RecipeVersionsPage({
                   ))}
                 </div>
                 {comparison.length === 0 ? (
-                  <p className="text-center text-white/60">These versions have no field differences.</p>
+                  <p className="text-center text-white/60">{t("These versions have no field differences.")}</p>
                 ) : (
                   <div className="overflow-x-auto rounded-lg border border-white/10">
                     <table className="w-full min-w-[36rem] text-left text-sm">
                       <thead className="bg-white/5 text-white/60">
-                        <tr><th className="p-3">Field</th><th className="p-3">First version</th><th className="p-3">Second version</th></tr>
+                        <tr><th className="p-3">{t("Field")}</th><th className="p-3">{t("First version")}</th><th className="p-3">{t("Second version")}</th></tr>
                       </thead>
                       <tbody>
                         {comparison.map((change) => (

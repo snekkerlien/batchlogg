@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useBrewCompanionLLM } from "@/lib/BCLLM/useBrewCompanionLLM";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface BrewCompanionModalProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ export default function BrewCompanionModal({
   onClose,
   onFinish,
 }: BrewCompanionModalProps) {
+  const { t } = useTranslation();
   const [chat, setChat] = useState<{ sender: "ai" | "user"; text: string }[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -132,7 +134,7 @@ export default function BrewCompanionModal({
       ...prev,
       {
         sender: "ai",
-        text: "No problem! Just let me know when you want me to generate the recipe.",
+        text: t("No problem! Just let me know when you want me to generate the recipe."),
       },
     ]);
   }
@@ -144,7 +146,7 @@ export default function BrewCompanionModal({
       <div className="p-6 border-b border-white/10">
         <h1 className="text-3xl font-bold text-white">BrewCompanion</h1>
         <p className="opacity-70">
-          Let me help you build recipes or answer questions about anything brew-related!
+          {t("Let me help you build recipes or answer questions about anything brew-related!")}
         </p>
       </div>
 
@@ -166,7 +168,7 @@ export default function BrewCompanionModal({
         ))}
 
         {loading && (
-          <div className="text-white opacity-70">BrewCompanion is thinking…</div>
+          <div className="text-white opacity-70">{t("BrewCompanion is thinking…")}</div>
         )}
 
         {showRecipeButtons && (
@@ -175,13 +177,13 @@ export default function BrewCompanionModal({
               onClick={handleGenerateYes}
               className="px-4 py-3 bg-green-700 hover:bg-green-600 rounded-lg font-semibold"
             >
-              Yes, generate the recipe
+              {t("Yes, generate the recipe")}
             </button>
             <button
               onClick={handleGenerateNo}
               className="px-4 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
             >
-              No
+              {t("No")}
             </button>
           </div>
         )}
@@ -198,7 +200,7 @@ export default function BrewCompanionModal({
             }
           }}
           className="flex-1 p-3 rounded bg-black/40 border border-white/20 text-white resize-none"
-          placeholder="Type here… (Enter = send, Shift+Enter = new line)"
+          placeholder={t("Type here… (Enter = send, Shift+Enter = new line)")}
           rows={3}
         />
         <button
@@ -206,19 +208,19 @@ export default function BrewCompanionModal({
           onClick={sendMessage}
           className="px-4 py-3 bg-blue-700 hover:bg-blue-600 rounded-lg font-semibold"
         >
-          Send
+          {t("Send")}
         </button>
         <button
           onClick={onClose}
           className="px-4 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
         >
-          Close
+          {t("Close")}
         </button>
         <button
           onClick={resetChat}
           className="px-4 py-3 bg-yellow-600 hover:bg-yellow-500 rounded-lg font-semibold"
         >
-          New Chat
+          {t("New Chat")}
         </button>
       </div>
     </div>

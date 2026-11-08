@@ -3,6 +3,7 @@ import Link from "next/link";
 import PageHeading from "@/app/components/PageHeading";
 import RecipePresentation from "@/app/components/RecipePresentation";
 import PublicPageNavigation from "@/app/components/PublicPageNavigation";
+import TranslatedText from "@/app/components/TranslatedText";
 import { PUBLIC_RECIPE_DETAILS } from "@/lib/recipes/publicRecipes";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 
@@ -53,14 +54,17 @@ export default async function PublicMentionedRecipePage({
     <main className="min-h-screen px-6 py-12 text-white">
       <div className="mx-auto w-full max-w-4xl rounded-xl border border-white/10 bg-black/60 p-6 backdrop-blur-md sm:p-8">
         <PublicPageNavigation current="recipes" />
-        <PageHeading title={recipe.name || "Public recipe"} subtitle={`Shared by ${profile.username}`} />
+        <PageHeading
+          title={recipe.name || <TranslatedText text="Public recipe" />}
+          subtitle={<><TranslatedText text="Shared by" /> {profile.username}</>}
+        />
         <RecipePresentation recipe={recipe} />
         <p className="mt-6 text-center">
           <Link
             href={`/members/${encodeURIComponent(profile.username)}/recipes/${encodeURIComponent(recipe.id)}`}
             className="text-green-300 underline"
           >
-            View recipe and brewer notes
+            <TranslatedText text="View recipe and brewer notes" />
           </Link>
         </p>
       </div>

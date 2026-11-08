@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { useAuthContext } from "@/app/providers/AuthProvider";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 const DISMISSED_ANNOUNCEMENT_KEY = "batchlogg-dismissed-announcement";
 
@@ -13,6 +14,7 @@ interface Announcement {
 }
 
 export default function SiteAnnouncementBanner() {
+  const { t } = useTranslation();
   const { user, loading } = useAuthContext();
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [dismissedAnnouncementId, setDismissedAnnouncementId] = useState<string | null>(null);
@@ -77,12 +79,12 @@ export default function SiteAnnouncementBanner() {
   return (
     <aside
       role="status"
-      aria-label="Site announcement"
+      aria-label={t("Site announcement")}
       className="rounded-xl border border-white/10 bg-black/60 px-4 py-3 text-white backdrop-blur-md"
     >
       <div className="mx-auto flex items-center gap-3">
         <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-green-300">
-          Announcement
+          {t("Announcement")}
         </span>
         <div className="min-w-0 flex-1 text-sm leading-5 text-white/75 sm:flex sm:items-baseline sm:gap-2">
           <span className="font-medium text-white">{announcement.title}</span>
@@ -103,10 +105,10 @@ export default function SiteAnnouncementBanner() {
               console.error("Could not save dismissed site announcement", error);
             }
           }}
-          aria-label="Hide announcement"
+          aria-label={t("Hide announcement")}
           className="shrink-0 px-1 py-1 text-xs text-white/50 hover:text-white"
         >
-          Hide
+          {t("Hide")}
         </button>
       </div>
     </aside>

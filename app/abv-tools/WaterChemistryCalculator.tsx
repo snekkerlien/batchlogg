@@ -1,10 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
 import { UnitInput, UnitSymbol } from "@/app/components/Units";
 import { getCalculatorInputError } from "@/lib/brewing/calculatorValidation";
 import CalculatorResult from "./CalculatorResult";
+import CalculatorDisclosure from "./CalculatorDisclosure";
+import CalculatorDisclosureArrow from "./CalculatorDisclosureArrow";
+import { translateBrewingProfileError } from "@/lib/i18n/apiErrors";
 import {
   calculateWaterTreatment,
   WATER_ION_LABELS,
@@ -21,6 +25,14 @@ type SavedWaterProfile = {
   target_ions: WaterIonProfile;
 };
 
+function translateIfKnown(t: (key: string) => string, text: string): string {
+  try {
+    return t(text);
+  } catch {
+    return text;
+  }
+}
+
 function parseNonNegative(value: string): number | null {
   if (!value.trim()) return null;
   const parsed = Number(value.replace(",", "."));
@@ -33,6 +45,7 @@ function formatAmount(value: number): string {
 }
 
 export default function WaterChemistryCalculator() {
+  const { t } = useTranslation();
   const [volume, setVolume] = useState("");
   const [source, setSource] = useState<Record<keyof WaterIonProfile, string>>({
     calcium: "",
@@ -81,7 +94,11 @@ export default function WaterChemistryCalculator() {
         console.error("Could not load water chemistry profiles", error);
         if (active) {
           setProfileError(
-            error instanceof Error ? error.message : "Could not load water profiles."
+            error instanceof Error &&
+              !(error instanceof TypeError) &&
+              !(error instanceof SyntaxError)
+              ? error.message
+              : t("Could not load water profiles.")
           );
         }
       } finally {
@@ -92,7 +109,7 @@ export default function WaterChemistryCalculator() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [t]);
 
   function applySavedProfile(profile: SavedWaterProfile) {
     setSelectedProfileId(profile.id);
@@ -108,7 +125,7 @@ export default function WaterChemistryCalculator() {
     );
     setTargetName("Custom");
     setProfileError("");
-    setProfileMessage(`Loaded ${profile.name}.`);
+    setProfileMessage(t("Loaded {name}.").replace("{name}", profile.name));
   }
 
   function currentProfileValues(name: string) {
@@ -170,12 +187,16 @@ export default function WaterChemistryCalculator() {
       setSelectedProfileId(saved.id);
       if (!updateSelected) setProfileName("");
       setProfileMessage(
-        updateSelected ? `Updated ${saved.name}.` : `Saved ${saved.name}.`
+        t(updateSelected ? "Updated {name}." : "Saved {name}.").replace("{name}", saved.name)
       );
     } catch (error) {
       console.error("Could not save water chemistry profile", error);
       setProfileError(
-        error instanceof Error ? error.message : "Could not save water profile."
+        error instanceof Error &&
+          !(error instanceof TypeError) &&
+          !(error instanceof SyntaxError)
+          ? error.message
+          : t("Could not save water profile.")
       );
     } finally {
       setProfileBusy(false);
@@ -203,12 +224,16 @@ export default function WaterChemistryCalculator() {
         current.filter((profile) => profile.id !== selectedProfileId)
       );
       setSelectedProfileId("");
-      setProfileMessage(`${selected?.name ?? "Water profile"} deleted.`);
+      setProfileMessage(t("{name} deleted.").replace("{name}", selected?.name ?? t("Water profile")));
       return true;
     } catch (error) {
       console.error("Could not delete water chemistry profile", error);
       setProfileError(
-        error instanceof Error ? error.message : "Could not delete water profile."
+        error instanceof Error &&
+          !(error instanceof TypeError) &&
+          !(error instanceof SyntaxError)
+          ? error.message
+          : t("Could not delete water profile.")
       );
       return false;
     } finally {
@@ -270,32 +295,24 @@ export default function WaterChemistryCalculator() {
     : [];
 
   return (
-    <section className="mt-12 rounded-xl border border-white/10 bg-white/5 p-6">
-      <h2 className="mb-2 text-center text-2xl font-bold text-green-300">
-        Water chemistry planner
-      </h2>
-      <p className="mb-6 text-center text-sm text-white/70">
-        Compare a source-water analysis with a starting ion profile and estimate
-        additions for your brewing-water volume.
-      </p>
+    <CalculatorDisclosure
+      id="water-chemistry-calculator"
+      title="Water chemistry planner"
+      description="Compare a source-water analysis with a starting ion profile and estimate additions for your brewing-water volume."
+      className="mt-6"
+    >
       <details className="mt-4 rounded-lg border border-white/10 bg-black/20 p-4">
-        <summary className="flex cursor-pointer list-none items-start gap-2 text-sm font-semibold text-green-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-300">
-          <span
-            aria-hidden="true"
-            className="disclosure-arrow mt-0.5 shrink-0 transition-transform"
-          >
-            &#9656;
-          </span>
-          <span className="min-w-0">Saved water profiles</span>
+        <summary className="flex cursor-pointer list-none select-none items-start gap-2 text-sm font-semibold text-green-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-300">
+          <CalculatorDisclosureArrow />
+          <span className="min-w-0">{t("Saved water profiles")}</span>
         </summary>
         <div className="mt-4">
           <p className="mb-3 text-xs text-white/55">
-            Saves the source-water analysis and target ions together. Sign in
-            to save profiles to your account.
+            {t("Saves the source-water analysis and target ions together. Sign in to save profiles to your account.")}
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="flex flex-col gap-1 text-sm">
-              Load a saved profile
+              {t("Load a saved profile")}
               <select
                 value={selectedProfileId}
                 onChange={(event) => {
@@ -309,15 +326,15 @@ export default function WaterChemistryCalculator() {
                   }
                 }}
                 disabled={profileLoading || profiles.length === 0}
-                aria-label="Load a saved water profile"
+                aria-label={t("Load a saved water profile")}
                 className="w-full rounded border border-white/20 bg-black/40 p-3 text-base disabled:opacity-60"
               >
                 <option value="">
                   {profileLoading
-                    ? "Loading profiles…"
+                    ? t("Loading profiles…")
                     : profiles.length
-                      ? "Choose a profile"
-                      : "No saved profiles"}
+                      ? t("Choose a profile")
+                      : t("No saved profiles")}
                 </option>
                 {profiles.map((profile) => (
                   <option key={profile.id} value={profile.id}>
@@ -327,12 +344,12 @@ export default function WaterChemistryCalculator() {
               </select>
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              New profile name
+              {t("New profile name")}
               <input
                 value={profileName}
                 onChange={(event) => setProfileName(event.target.value)}
                 maxLength={80}
-                placeholder="e.g. Home tap water"
+                placeholder={t("e.g. Home tap water")}
                 className="w-full rounded border border-white/20 bg-black/40 p-3 text-base"
               />
             </label>
@@ -344,7 +361,7 @@ export default function WaterChemistryCalculator() {
               disabled={profileBusy}
               className="rounded-lg border border-green-500 bg-green-700 px-3 py-2 text-sm font-semibold disabled:opacity-50"
             >
-              {profileBusy ? "Saving…" : "Save current water"}
+              {profileBusy ? t("Saving…") : t("Save current water")}
             </button>
             <button
               type="button"
@@ -352,7 +369,7 @@ export default function WaterChemistryCalculator() {
               disabled={profileBusy || !selectedProfileId}
               className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold disabled:opacity-50"
             >
-              Update selected profile
+              {t("Update selected profile")}
             </button>
             <button
               type="button"
@@ -360,78 +377,60 @@ export default function WaterChemistryCalculator() {
               disabled={profileBusy || !selectedProfileId}
               className="rounded-lg border border-red-400/30 bg-red-900/30 px-3 py-2 text-sm font-semibold text-red-100 disabled:opacity-50"
             >
-              Delete selected profile
+              {t("Delete selected profile")}
             </button>
           </div>
           {profileError && (
             <p role="alert" className="mt-3 text-sm text-amber-200">
-              {profileError}
+              {translateBrewingProfileError(profileError, t)}
             </p>
           )}
           {profileMessage && (
             <p role="status" className="mt-3 text-sm text-green-200">
-              {profileMessage}
+              {translateIfKnown(t, profileMessage)}
             </p>
           )}
         </div>
       </details>
 
       <details className="mt-3 rounded-lg border border-white/10 bg-black/20 p-4">
-        <summary className="flex cursor-pointer list-none items-start gap-2 text-sm font-semibold text-green-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-300">
-          <span
-            aria-hidden="true"
-            className="disclosure-arrow mt-0.5 shrink-0 transition-transform"
-          >
-            &#9656;
-          </span>
-          <span className="min-w-0">Where do I find these water values?</span>
+        <summary className="flex cursor-pointer list-none select-none items-start gap-2 text-sm font-semibold text-green-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-300">
+          <CalculatorDisclosureArrow />
+          <span className="min-w-0">{t("Where do I find these water values?")}</span>
         </summary>
         <div className="mt-3 space-y-3 text-sm leading-6 text-white/75">
           <p>
-            <strong>Start with your water supplier.</strong> Search for
-            &ldquo;water quality report&rdquo; or &ldquo;drinking water
-            analysis&rdquo; plus your city or supplier name. Some suppliers let
-            you search by postcode or address. Look for calcium, magnesium,
-            sodium, chloride, sulfate, and alkalinity.
+            <strong>{t("Start with your water supplier.")}</strong>{" "}
+            {t("Search for “water quality report” or “drinking water analysis” plus your city or supplier name. Some suppliers let you search by postcode or address. Look for calcium, magnesium, sodium, chloride, sulfate, and alkalinity.")}
           </p>
           <p>
-            <strong>For a private well, use a certified lab.</strong> Ask for a
-            brewing water panel including those six values. If the report gives
-            alkalinity as mg/L CaCO₃ rather than bicarbonate, multiply by 1.22
-            and enter the result as bicarbonate. For example, 50 mg/L as CaCO₃
-            is about 61 mg/L bicarbonate.
+            <strong>{t("For a private well, use a certified lab.")}</strong>{" "}
+            {t("Ask for a brewing water panel including those six values. If the report gives alkalinity as mg/L CaCO₃ rather than bicarbonate, multiply by 1.22 and enter the result as bicarbonate. For example, 50 mg/L as CaCO₃ is about 61 mg/L bicarbonate.")}
           </p>
           <p>
-            Reports often show a range or an annual average, and water can vary
-            by location and season. Use a recent report for your supply, and
-            contact the supplier if you are unsure which values apply to your
-            tap. A basic bottled-water label may not list all six ions.
+            {t("Reports often show a range or an annual average, and water can vary by location and season. Use a recent report for your supply, and contact the supplier if you are unsure which values apply to your tap. A basic bottled-water label may not list all six ions.")}
           </p>
           <p>
-            If you use reverse-osmosis or distilled water, enter zeros only
-            when the product or your meter/test confirms it is effectively
-            mineral-free; otherwise use its analysis. You can also leave this
-            planner until you have a report and use the all-grain water planner
-            without it.
+            {t("If you use reverse-osmosis or distilled water, enter zeros only when the product or your meter/test confirms it is effectively mineral-free; otherwise use its analysis. You can also leave this planner until you have a report and use the all-grain water planner without it.")}
           </p>
         </div>
       </details>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-sm">
-          Water volume to treat (<UnitSymbol kind="volume" />)
+          {t("Water volume to treat")} (<UnitSymbol kind="volume" />)
           <UnitInput
             kind="volume"
             value={volume}
             onValueChange={setVolume}
             min="0.1"
             step="any"
-            placeholder="e.g. 30"
+            placeholder={t("e.g. 30")}
             className="w-full rounded border border-white/20 bg-black/40 p-3 text-base"
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          Starting target profile
+          {t("Starting target profile")}
           <select
             value={targetName}
             onChange={(event) => {
@@ -458,13 +457,13 @@ export default function WaterChemistryCalculator() {
             }}
             className="w-full rounded border border-white/20 bg-black/40 p-3 text-base"
           >
-            <option value="">Choose a starting profile</option>
+            <option value="">{t("Choose a starting profile")}</option>
             {Object.keys(WATER_TARGET_PROFILES).map((name) => (
               <option key={name} value={name}>
-                {name}
+                {t(name)}
               </option>
             ))}
-            <option value="Custom">Custom</option>
+            <option value="Custom">{t("Custom")}</option>
           </select>
         </label>
       </div>
@@ -472,12 +471,12 @@ export default function WaterChemistryCalculator() {
       <div className="mt-5 grid gap-5 md:grid-cols-2">
         <fieldset className="rounded-lg border border-white/10 p-4">
           <legend className="px-2 text-sm font-semibold text-green-200">
-            Source water analysis (mg/L or ppm)
+            {t("Source water analysis (mg/L or ppm)")}
           </legend>
           <div className="grid grid-cols-2 gap-3">
             {IONS.map((ion) => (
               <label key={ion} className="flex flex-col gap-1 text-sm">
-                {WATER_ION_LABELS[ion]}
+                {t(WATER_ION_LABELS[ion])}
                 <input
                   type="number"
                   min="0"
@@ -498,12 +497,12 @@ export default function WaterChemistryCalculator() {
 
         <fieldset className="rounded-lg border border-white/10 p-4">
           <legend className="px-2 text-sm font-semibold text-green-200">
-            Target ions (mg/L or ppm)
+            {t("Target ions (mg/L or ppm)")}
           </legend>
           <div className="grid grid-cols-2 gap-3">
             {IONS.map((ion) => (
               <label key={ion} className="flex flex-col gap-1 text-sm">
-                {WATER_ION_LABELS[ion]}
+                {t(WATER_ION_LABELS[ion])}
                 <input
                   type="number"
                   min="0"
@@ -523,13 +522,7 @@ export default function WaterChemistryCalculator() {
       </div>
 
       <p className="mt-4 text-xs leading-5 text-white/55">
-        Enter a water-report value for every source ion. The named profiles are
-        editable starting points, not style rules. Salt additions target
-        chloride, sulfate, magnesium, sodium, and bicarbonate; calcium is
-        reported from those additions because these salts raise multiple ions.
-        Salt assumptions are calcium chloride dihydrate, gypsum, Epsom salt
-        heptahydrate, and baking soda. If your report gives alkalinity as CaCO₃,
-        multiply it by 1.22 to estimate bicarbonate before entering it.
+        {t("Enter a water-report value for every source ion. The named profiles are editable starting points, not style rules. Salt additions target chloride, sulfate, magnesium, sodium, and bicarbonate; calcium is reported from those additions because these salts raise multiple ions. Salt assumptions are calcium chloride dihydrate, gypsum, Epsom salt heptahydrate, and baking soda. If your report gives alkalinity as CaCO₃, multiply it by 1.22 to estimate bicarbonate before entering it.")}
       </p>
 
       <CalculatorResult
@@ -550,16 +543,16 @@ export default function WaterChemistryCalculator() {
       {plan && (
         <>
           {aboveTarget.length > 0 && <p className="mb-3 text-sm text-amber-200">
-            Already above target in the source water: {aboveTarget.join(", ")}. Salt additions cannot lower these values; this plan does not calculate dilution or mineral removal. The separate acid estimate may reduce bicarbonate.
+            {t("Already above target in the source water: {ions}. Salt additions cannot lower these values; this plan does not calculate dilution or mineral removal. The separate acid estimate may reduce bicarbonate.").replace("{ions}", aboveTarget.map(t).join(", "))}
           </p>}
           <div className="rounded-lg border border-white/10 bg-black/20 p-4">
             <h3 className="mb-3 font-semibold text-green-200">
-              Estimated additions for the water volume entered above
+              {t("Estimated additions for the water volume entered above")}
             </h3>
             <ul className="grid gap-2 text-sm sm:grid-cols-2">
               {additions.map(([name, amount, unit]) => (
                 <li key={name}>
-                  <span className="text-white/70">{name}:</span>{" "}
+                  <span className="text-white/70">{t(name)}:</span>{" "}
                   <strong>{formatAmount(amount)} {unit}</strong>
                 </li>
               ))}
@@ -567,21 +560,21 @@ export default function WaterChemistryCalculator() {
           </div>
           <div className="mt-4 overflow-x-auto">
             <h3 className="mb-2 font-semibold text-green-200">
-              Estimated water after salts (mg/L or ppm)
+              {t("Estimated water after salts (mg/L or ppm)")}
             </h3>
             <table className="w-full min-w-[440px] text-left text-sm">
               <thead>
                 <tr className="border-b border-white/10 text-white/60">
-                  <th className="py-2 pr-3 font-medium">Ion</th>
-                  <th className="px-3 py-2 font-medium">Target</th>
-                  <th className="px-3 py-2 font-medium">Estimated</th>
+                  <th className="py-2 pr-3 font-medium">{t("Ion")}</th>
+                  <th className="px-3 py-2 font-medium">{t("Target")}</th>
+                  <th className="px-3 py-2 font-medium">{t("Estimated")}</th>
                 </tr>
               </thead>
               <tbody>
                 {IONS.map((ion) => (
                   <tr key={ion} className="border-b border-white/5">
                     <th scope="row" className="py-2 pr-3 font-medium">
-                      {WATER_ION_LABELS[ion]}
+                      {t(WATER_ION_LABELS[ion])}
                     </th>
                     <td className="px-3 py-2">
                       {targetProfile![ion].toFixed(1)}
@@ -595,25 +588,19 @@ export default function WaterChemistryCalculator() {
             </table>
           </div>
           <p className="mt-4 rounded-lg border border-amber-300/20 bg-amber-300/5 p-3 text-xs leading-5 text-amber-100/80">
-            Additions only raise ion levels. If a source value is already above
-            its target, this planner does not calculate dilution or removal.
-            Salt additions affect multiple ions, so the estimate may not match
-            every target exactly. The lactic-acid figure assumes 88% acid and
-            estimates alkalinity neutralization only; it is not a mash-pH
-            prediction. Measure mash pH and follow product guidance before
-            treating a full batch.
+            {t("Additions only raise ion levels. If a source value is already above its target, this planner does not calculate dilution or removal. Salt additions affect multiple ions, so the estimate may not match every target exactly. The lactic-acid figure assumes 88% acid and estimates alkalinity neutralization only; it is not a mash-pH prediction. Measure mash pH and follow product guidance before treating a full batch.")}
           </p>
         </>
       )}
       </CalculatorResult>
       <ConfirmDialog
         open={confirmDeleteProfile}
-        title="Delete water profile?"
-        message={`Delete "${profiles.find((profile) => profile.id === selectedProfileId)?.name ?? "this profile"}"? Current water values will not change.`}
-        confirmLabel="Delete profile"
+        title={t("Delete water profile?")}
+        message={t('Delete "{name}"? Current water values will not change.').replace("{name}", profiles.find((profile) => profile.id === selectedProfileId)?.name ?? t("this profile"))}
+        confirmLabel={t("Delete profile")}
         onConfirm={deleteSelectedProfile}
         onCancel={() => setConfirmDeleteProfile(false)}
       />
-    </section>
+    </CalculatorDisclosure>
   );
 }

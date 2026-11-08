@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type Activity = {
   id: string;
@@ -12,6 +13,7 @@ type Activity = {
 };
 
 export default function VesselActivity({ karId }: { karId: string }) {
+  const { t } = useTranslation();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [premiumRequired, setPremiumRequired] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -27,7 +29,7 @@ export default function VesselActivity({ karId }: { karId: string }) {
       setPremiumRequired(true);
       return;
     }
-    if (!response.ok) throw new Error(result.error || "Could not load shared activity");
+    if (!response.ok) throw new Error(result.error || t("Could not load shared activity"));
     setPremiumRequired(false);
     setActivities(result.activities ?? []);
   }, [karId]);
@@ -37,7 +39,7 @@ export default function VesselActivity({ karId }: { karId: string }) {
     loadActivity()
       .catch((loadError) => {
         console.error("Could not load shared vessel activity", loadError);
-        if (active) setError("Shared notes could not be loaded.");
+        if (active) setError(t("Shared notes could not be loaded."));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -51,15 +53,15 @@ export default function VesselActivity({ karId }: { karId: string }) {
     <section className="mb-6 rounded-xl border border-white/10 bg-white/5 p-4">
       {premiumRequired ? (
         <p className="text-sm text-white/70">
-          Shared vessel notes and activity are Premium features.{" "}
-          <Link href="/premium" className="text-green-200 underline">Explore Premium</Link>
+          {t("Shared vessel notes and activity are Premium features.")}{" "}
+          <Link href="/premium" className="text-green-200 underline">{t("Explore Premium")}</Link>
         </p>
       ) : (
         <>
           {loading ? (
-            <p className="text-sm text-white/60">Loading activity…</p>
+            <p className="text-sm text-white/60">{t("Loading activity…")}</p>
           ) : activities.length === 0 ? (
-            <p className="text-sm text-white/60">No shared notes yet.</p>
+            <p className="text-sm text-white/60">{t("No shared notes yet.")}</p>
           ) : (
             <ol className="space-y-2">
               {activities.map((activity) => (

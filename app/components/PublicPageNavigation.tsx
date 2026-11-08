@@ -5,6 +5,7 @@ import BackButton from "@/app/abv-tools/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PublicNavigationLinks from "@/app/components/PublicNavigationLinks";
 import { useAuthContext } from "@/app/providers/AuthProvider";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export default function PublicPageNavigation({
   current = "legal",
@@ -12,10 +13,11 @@ export default function PublicPageNavigation({
   current?: string;
 }) {
   const { user, loading } = useAuthContext();
+  const { t } = useTranslation();
 
   return (
     <nav
-      aria-label={user ? "Site navigation" : "Public site navigation"}
+      aria-label={user ? t("Site navigation") : t("Public site navigation")}
       className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4 text-sm"
     >
       {user ? (

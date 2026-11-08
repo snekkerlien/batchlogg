@@ -6,6 +6,7 @@ import PublicRecipeList from "./PublicRecipeList";
 import type { RecipePresentationData } from "@/app/components/RecipePresentation";
 import { countRecipeBrewers, searchableRecipeText, type PopularityBatch, type PublicRecipeSummary } from "@/lib/recipes/publicRecipes";
 import { getOtherRecipeStyle } from "@/lib/recipes/otherRecipe";
+import TranslatedText from "@/app/components/TranslatedText";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -149,21 +150,12 @@ export default async function PublicRecipesPage() {
       <div className="mx-auto w-full max-w-4xl rounded-xl border border-white/10 bg-black/60 p-6 backdrop-blur-md sm:p-8">
         <PublicPageNavigation current="recipes" />
         <header className="mb-8">
-          <h1 className="text-3xl font-bold text-green-300">Public brewing recipes</h1>
+          <h1 className="text-3xl font-bold text-green-300"><TranslatedText text="Public brewing recipes" /></h1>
           <p className="mt-3 text-white/75">
-            Recipes shared publicly by Batchlogg members. Private recipes and
-            recipes belonging to private profiles are not shown here.
+            <TranslatedText text="Recipes shared publicly by Batchlogg members. Private recipes and recipes belonging to private profiles are not shown here." />
           </p>
           <p className="mt-3 text-sm leading-6 text-white/65">
-            Expand a recipe to see its ingredients, fermentation guidance, and
-            notes. Gravity, alcohol, and batch-volume figures are supplied as
-            recipe data and may be estimates; verify measurements for your own
-            brew. Sort by newest or most popular. Popularity counts unique
-            brewers with active or finished batches; cancelled batches do not
-            count. Use Load more to browse
-            additional matches; filters search the entire public collection.
-            {" "}Start a batch saves a private version to your library (or
-            reuses your existing version), then lets you choose a vessel.
+            <TranslatedText text="Expand a recipe to see its ingredients, fermentation guidance, and notes. Gravity, alcohol, and batch-volume figures are supplied as recipe data and may be estimates; verify measurements for your own brew. Sort by newest or most popular. Popularity counts unique brewers with active or finished batches; cancelled batches do not count. Use Load more to browse additional matches; filters search the entire public collection. Start a batch saves a private version to your library (or reuses your existing version), then lets you choose a vessel." />
           </p>
         </header>
 

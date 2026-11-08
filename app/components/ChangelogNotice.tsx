@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import { useAuthContext } from "@/app/providers/AuthProvider";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface ChangelogEntry {
   version: string;
@@ -14,6 +15,7 @@ interface ChangelogEntry {
 }
 
 export default function ChangelogNotice() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { user } = useAuthContext();
   const [changelog, setChangelog] = useState<ChangelogEntry | null>(null);
@@ -60,7 +62,7 @@ export default function ChangelogNotice() {
     void loadNotices()
       .catch((loadError) => {
         console.error("Could not load site updates", loadError);
-        if (active) setError("Site updates could not be checked. Please reload to try again.");
+        if (active) setError(t("Site updates could not be checked. Please reload to try again."));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -68,7 +70,7 @@ export default function ChangelogNotice() {
     return () => {
       active = false;
     };
-  }, [user?.id]);
+  }, [t, user?.id]);
 
   useEffect(() => {
     if (!visible) return;
@@ -97,7 +99,7 @@ export default function ChangelogNotice() {
         .eq("id", user.id);
       if (saveError) {
         console.error("Could not save viewed site updates", saveError);
-        setError("Could not save that you have read these updates. Please try again.");
+        setError(t("Could not save that you have read these updates. Please try again."));
         setSaving(false);
         return false;
       }
@@ -132,7 +134,7 @@ export default function ChangelogNotice() {
         <div className="flex shrink-0 items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-green-300">
-              What’s new · {changelog?.version}
+              {t("What’s new")} · {changelog?.version}
             </p>
             <h2 id="site-updates-title" className="mt-2 text-2xl font-bold">
               {changelog?.title}
@@ -145,16 +147,16 @@ export default function ChangelogNotice() {
             type="button"
             onClick={() => void closeNotice()}
             disabled={saving}
-            aria-label="Close site updates"
+            aria-label={t("Close site updates")}
             className="shrink-0 rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm hover:bg-white/10 disabled:opacity-50"
           >
-            {saving ? "Saving…" : "Close"}
+            {saving ? t("Saving…") : t("Close")}
           </button>
         </div>
 
         <div
           tabIndex={0}
-          aria-label="Site updates details"
+          aria-label={t("Site updates details")}
           className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-2"
         >
           {error && <p role="alert" className="mt-4 text-sm text-amber-300">{error}</p>}
@@ -169,7 +171,7 @@ export default function ChangelogNotice() {
             disabled={saving}
             className="rounded-lg border border-green-400/40 bg-green-500/10 px-4 py-2 text-sm font-semibold text-green-300 transition hover:bg-green-500/20 disabled:opacity-50"
           >
-            View changelogs
+            {t("View changelogs")}
           </button>
         </div>
       </section>

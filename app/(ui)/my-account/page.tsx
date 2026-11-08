@@ -15,9 +15,12 @@ import MembershipStatus from "@/app/components/MembershipStatus";
 import ProfileOverview, { ProfileAchievements } from "@/app/components/ProfileOverview";
 import ExpandArrowButton from "@/app/components/ExpandArrowButton";
 import { saveBrewingPreferences } from "@/app/actions/userPreferences";
+import { translateCommunityError } from "@/lib/i18n/apiErrors";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export default function AccountPage() {
   const router = useRouter();
+  const { t, language } = useTranslation();
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -125,7 +128,7 @@ export default function AccountPage() {
       .order("name");
     if (recipesError) {
       console.error("Could not load public recipes for profile showcase", recipesError);
-      setShowcaseMessage("Public recipes could not be loaded.");
+      setShowcaseMessage(t("Public recipes could not be loaded."));
     } else {
       setShowcaseRecipes(publicRecipes ?? []);
     }
@@ -155,11 +158,11 @@ export default function AccountPage() {
 
     } catch (error) {
       console.error("Could not load account", error);
-      setLoadError("Your account could not be loaded. Please try again.");
+      setLoadError(t("Your account could not be loaded. Please try again."));
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [router, t]);
 
   useEffect(() => {
     void load(true);
@@ -187,7 +190,7 @@ export default function AccountPage() {
       setProfile((prev: any) => ({ ...prev, is_public: newValue }));
     } catch (error) {
       console.error("Could not save profile visibility", error);
-      setVisibilityError("Could not save profile visibility. Your previous setting is unchanged. Please try again.");
+      setVisibilityError(t("Could not save profile visibility. Your previous setting is unchanged. Please try again."));
     } finally {
       setSavingVisibility(false);
     }
@@ -208,8 +211,8 @@ export default function AccountPage() {
         }),
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Could not save profile showcase");
-      setShowcaseMessage("Profile showcase saved.");
+      if (!response.ok) throw new Error(result.error || t("Could not save profile showcase."));
+      setShowcaseMessage(t("Profile showcase saved."));
       setProfile((current: any) => ({
         ...current,
         profile_banner: showcaseBanner.trim() || null,
@@ -218,7 +221,7 @@ export default function AccountPage() {
     } catch (saveError) {
       console.error("Could not save profile showcase", saveError);
       setShowcaseMessage(
-        saveError instanceof Error ? saveError.message : "Could not save profile showcase."
+        saveError instanceof Error ? saveError.message : t("Could not save profile showcase.")
       );
     } finally {
       setSavingShowcase(false);
@@ -228,7 +231,7 @@ export default function AccountPage() {
   return (
     <main className="min-h-screen flex items-center justify-center text-white">
       <div className="bg-black/60 backdrop-blur-md px-6 py-4 rounded-xl border border-white/10">
-        <p role="status">Loading account…</p>
+        <p role="status">{t("Loading account…")}</p>
       </div>
     </main>
   );
@@ -244,7 +247,7 @@ export default function AccountPage() {
             onClick={() => setLoadAttempt((attempt) => attempt + 1)}
             className="mt-4 rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold hover:bg-white/20"
           >
-            Try again
+            {t("Try again")}
           </button>
         </div>
       </main>
@@ -265,15 +268,15 @@ export default function AccountPage() {
         </div>
 
         <PageHeading
-          title="My Account"
-          subtitle="Manage your profile and visibility."
+          title={t("My Account")}
+          subtitle={t("Manage your profile and visibility.")}
         />
         <div className="mb-6 flex justify-center">
           <Link
             href="/my-account/moderation"
             className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white/75 transition hover:bg-white/10"
           >
-            Moderation history &amp; appeals
+            {t("Moderation history & appeals")}
           </Link>
         </div>
         {loadError && (
@@ -284,7 +287,7 @@ export default function AccountPage() {
               onClick={() => setLoadAttempt((attempt) => attempt + 1)}
               className="mt-3 rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold text-white hover:bg-white/20"
             >
-              Try again
+              {t("Try again")}
             </button>
           </div>
         )}
@@ -309,7 +312,7 @@ export default function AccountPage() {
             onClick={() => setShowAvatarModal(true)}
             className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm mt-6"
           >
-            Change profile picture
+            {t("Change profile picture")}
           </button>
         </div>
 
@@ -323,14 +326,14 @@ export default function AccountPage() {
             href="/premium"
             className="inline-flex rounded-lg border border-green-500/40 bg-green-800/60 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700"
           >
-            Manage tier
+            {t("Manage tier")}
           </Link>
         </div>
 
         <div className="text-center mb-8">
-          <p className="text-zinc-400 text-sm">Registered since</p>
+          <p className="text-zinc-400 text-sm">{t("Registered since")}</p>
           <p className="font-semibold">
-            {new Date(user.created_at).toLocaleDateString("en-GB")}
+            {new Date(user.created_at).toLocaleDateString(language === "nb" ? "nb-NO" : "en-GB")}
           </p>
         </div>
 
@@ -339,14 +342,16 @@ export default function AccountPage() {
         <form onSubmit={saveShowcase} className="mb-10 rounded-xl border border-white/10 bg-white/5 p-4">
           <div className="flex w-full items-center justify-between gap-3 text-left">
             <span>
-              <span className="block font-semibold text-green-200">Profile showcase</span>
+              <span className="block font-semibold text-green-200">{t("Profile showcase")}</span>
               <span className="mt-1 block text-xs text-white/55">
-                A short banner is free. Featuring one public recipe is a Premium feature.
+                {t("A short banner is free. Featuring one public recipe is a Premium feature.")}
               </span>
             </span>
             <ExpandArrowButton
               expanded={showcaseOpen}
-              label="profile showcase"
+              label={t("profile showcase")}
+              expandedAriaLabel={t("Collapse profile showcase")}
+              collapsedAriaLabel={t("Expand profile showcase")}
               controls="profile-showcase-fields"
               onClick={() => setShowcaseOpen((open) => !open)}
             />
@@ -359,26 +364,26 @@ export default function AccountPage() {
             }`}
           >
             <div className="mt-4 space-y-3 overflow-hidden">
-              <label className="block text-sm">Banner message
+              <label className="block text-sm">{t("Banner message")}
                 <textarea
                   value={showcaseBanner}
                   onChange={(event) => setShowcaseBanner(event.target.value)}
                   disabled={!showcaseOpen}
                   maxLength={280}
                   rows={2}
-                  placeholder="A little about what you are brewing…"
+                  placeholder={t("A little about what you are brewing…")}
                   className="mt-1 w-full rounded-lg border border-white/20 bg-black/40 p-3"
                 />
                 <span className="mt-1 block text-right text-xs text-white/40">{showcaseBanner.length}/280</span>
               </label>
-              <label className="block text-sm">Featured public recipe
+              <label className="block text-sm">{t("Featured public recipe")}
                 <select
                   value={featuredRecipeId}
                   onChange={(event) => setFeaturedRecipeId(event.target.value)}
                   disabled={!showcaseOpen || !profile.has_premium_access}
                   className="mt-1 w-full rounded-lg border border-white/20 bg-black/40 p-3"
                 >
-                  <option value="">No featured recipe</option>
+                  <option value="">{t("No featured recipe")}</option>
                   {showcaseRecipes.map((recipe) => (
                     <option key={recipe.id} value={recipe.id}>{recipe.name}</option>
                   ))}
@@ -386,23 +391,23 @@ export default function AccountPage() {
               </label>
               {!profile.has_premium_access && (
                 <p className="text-sm text-amber-200">
-                  Upgrade to Premium to feature a public recipe on your profile.{" "}
+                  {t("Upgrade to Premium to feature a public recipe on your profile.")}{" "}
                   <a
                     href="/premium"
                     tabIndex={showcaseOpen ? 0 : -1}
                     className="underline"
                   >
-                    See Premium
+                    {t("See Premium")}
                   </a>
                 </p>
               )}
-              {showcaseMessage && <p role="status" className="text-sm text-white/70">{showcaseMessage}</p>}
+              {showcaseMessage && <p role="status" className="text-sm text-white/70">{translateCommunityError(showcaseMessage, t)}</p>}
               <button
                 type="submit"
                 disabled={!showcaseOpen || savingShowcase}
                 className="rounded-lg border border-green-500/40 bg-green-800/60 px-4 py-2 text-sm font-semibold disabled:opacity-50"
               >
-                {savingShowcase ? "Saving…" : "Save showcase"}
+                {savingShowcase ? t("Saving…") : t("Save showcase")}
               </button>
             </div>
           </div>
@@ -419,20 +424,20 @@ export default function AccountPage() {
         {/* PUBLIC / PRIVATE SLIDER */}
         <div className="mt-10 flex items-center justify-center gap-4">
           <VisibilitySwitch
-            label="Public profile"
+            label={t("Public profile")}
             checked={profile.is_public}
             onChange={toggleVisibility}
-            publicText="Public"
-            privateText="Private"
-            ariaLabel="Profile visibility"
+            publicText={t("Public")}
+            privateText={t("Private")}
+            ariaLabel={t("Profile visibility")}
           />
         </div>
         <div className="mt-3 text-center text-sm">
-          {savingVisibility && <p role="status" className="text-white/60">Saving visibility...</p>}
+          {savingVisibility && <p role="status" className="text-white/60">{t("Saving visibility...")}</p>}
           {visibilityError && <p role="alert" className="text-amber-200">{visibilityError}</p>}
           <div className="flex flex-wrap justify-center gap-x-4">
-            <Link href="/settings#sharing-privacy" className="inline-flex min-h-11 items-center text-green-200 underline">Sharing and privacy</Link>
-            <a href={`/members/${encodeURIComponent(profile.username)}?preview=public`} className="inline-flex min-h-11 items-center text-green-200 underline">Preview my community profile</a>
+            <Link href="/settings#sharing-privacy" className="inline-flex min-h-11 items-center text-green-200 underline">{t("Sharing and privacy")}</Link>
+            <a href={`/members/${encodeURIComponent(profile.username)}?preview=public`} className="inline-flex min-h-11 items-center text-green-200 underline">{t("Preview my community profile")}</a>
           </div>
         </div>
 
@@ -443,7 +448,7 @@ export default function AccountPage() {
   <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
     <div className="bg-zinc-900 p-6 rounded-xl w-full max-w-md border border-white/10">
 
-      <h2 className="text-xl font-bold mb-4 text-center">Change profile picture</h2>
+      <h2 className="text-xl font-bold mb-4 text-center">{t("Change profile picture")}</h2>
 
       {/* Current avatar */}
       <div className="flex justify-center mb-4">
@@ -485,7 +490,7 @@ export default function AccountPage() {
         onClick={() => document.getElementById("avatarInput")?.click()}
         className="w-1/2 px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm"
       >
-        Upload new picture
+        {t("Upload new picture")}
       </button>
 
       {/* Remove current */}
@@ -493,7 +498,7 @@ export default function AccountPage() {
         onClick={() => setConfirmRemoveAvatar(true)}
         className="w-1/2 px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm"
       >
-        Remove current picture
+        {t("Remove current picture")}
       </button>
     </div>
   ) : (
@@ -502,15 +507,15 @@ export default function AccountPage() {
       onClick={() => document.getElementById("avatarInput")?.click()}
       className="w-full px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold text-sm"
     >
-      Upload new picture
+      {t("Upload new picture")}
     </button>
   )}
 
   <ConfirmDialog
     open={confirmRemoveAvatar}
-    title="Remove profile picture?"
-    message="Your profile will show the default picture instead."
-    confirmLabel="Remove picture"
+    title={t("Remove profile picture?")}
+    message={t("Your profile will show the default picture instead.")}
+    confirmLabel={t("Remove picture")}
     onConfirm={async () => {
       try {
         await deleteAvatar();
@@ -549,7 +554,7 @@ export default function AccountPage() {
   }}
   className="px-3 py-2 bg-green-600 hover:bg-green-700 border border-green-700 rounded-lg font-semibold text-sm"
 >
-  Save new picture
+  {t("Save new picture")}
 </button>
 
   )}
@@ -563,7 +568,7 @@ export default function AccountPage() {
   }}
   className="px-3 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-lg font-semibold text-sm"
 >
-  Cancel
+  {t("Cancel")}
 </button>
 
 </div>

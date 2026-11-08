@@ -2,12 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface ConfirmDialogProps {
   open: boolean;
   title: string;
   message: string;
   confirmLabel: string;
+  cancelLabel?: string;
+  pendingLabel?: string;
   onConfirm: () => boolean | Promise<boolean>;
   onCancel: () => void;
 }
@@ -17,9 +20,12 @@ export default function ConfirmDialog({
   title,
   message,
   confirmLabel,
+  cancelLabel = "Cancel",
+  pendingLabel = "Please wait…",
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const { t } = useTranslation();
   const [confirming, setConfirming] = useState(false);
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -75,7 +81,7 @@ export default function ConfirmDialog({
             onClick={onCancel}
             className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold hover:bg-white/20 disabled:opacity-50"
           >
-            Cancel
+            {cancelLabel === "Cancel" ? t("Cancel") : cancelLabel}
           </button>
           <button
             type="button"
@@ -83,7 +89,11 @@ export default function ConfirmDialog({
             onClick={handleConfirm}
             className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold hover:bg-white/20 disabled:cursor-wait disabled:opacity-50"
           >
-            {confirming ? "Please wait…" : confirmLabel}
+            {confirming
+              ? pendingLabel === "Please wait…"
+                ? t("Please wait…")
+                : pendingLabel
+              : confirmLabel}
           </button>
         </div>
       </section>

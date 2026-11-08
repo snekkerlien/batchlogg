@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import PageHeading from "@/app/components/PageHeading";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import BackButton from "@/app/batch-history/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 
 type Keg = {
@@ -19,10 +20,10 @@ type Keg = {
   created_at: string;
 };
 
-function mapKeg(row: any): Keg {
+function mapKeg(row: any, defaultName = "Keg"): Keg {
   return {
     id: row.id,
-    name: row.name ?? "Keg",
+    name: row.name ?? defaultName,
     brew_name: row.brew_name ?? "",
     abv: typeof row.abv === "number" ? row.abv : null,
     brew_date: row.brew_date ?? null,
@@ -32,6 +33,7 @@ function mapKeg(row: any): Keg {
 }
 
 export default function KegTrackerPage() {
+  const { t } = useTranslation();
   const [kegs, setKegs] = useState<Keg[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectMode, setSelectMode] = useState(false);
@@ -45,7 +47,7 @@ export default function KegTrackerPage() {
   
 
 
-  async function loadKegs() {
+  const loadKegs = useCallback(async () => {
     setLoading(true);
     setLoadError("");
 
@@ -54,20 +56,27 @@ export default function KegTrackerPage() {
       if (!response.ok) throw new Error(`Could not load kegs (${response.status})`);
 
       const json = await response.json();
-      const nextKegs = (Array.isArray(json?.kegs) ? json.kegs : []).map(mapKeg);
+      const nextKegs = (Array.isArray(json?.kegs) ? json.kegs : []).map((row: any) =>
+        mapKeg(row, t("Keg"))
+      );
       setKegs(nextKegs);
     } catch (error) {
       console.error("Failed to load kegs", error);
       setKegs([]);
+      const message =
+        error instanceof Error ? error.message : "Could not load kegs. Please try again.";
       setLoadError(
-        error instanceof Error
-          ? error.message
-          : "Could not load kegs. Please try again."
+        message.startsWith("Could not load kegs (")
+          ? t("Could not load kegs ({status})").replace(
+              "{status}",
+              message.slice("Could not load kegs (".length, -1)
+            )
+          : t("Could not load kegs. Please try again.")
       );
     } finally {
       setLoading(false);
     }
-  }
+  }, [t]);
 
   useEffect(() => {
     let active = true;
@@ -111,7 +120,7 @@ export default function KegTrackerPage() {
       .catch((error) => {
         console.error("Could not determine login status", error);
         if (active) {
-          setLoadError("Could not verify your login status. Please reload the page.");
+          setLoadError(t("Could not verify your login status. Please reload the page."));
           setAccessLoaded(true);
         }
       });
@@ -123,7 +132,7 @@ export default function KegTrackerPage() {
           if (active) {
             setCanManageKegs(false);
             setAccessLoaded(true);
-            setLoadError("Could not verify keg permissions. Please reload the page.");
+            setLoadError(t("Could not verify keg permissions. Please reload the page."));
           }
         });
       }
@@ -133,12 +142,12 @@ export default function KegTrackerPage() {
       active = false;
       listener.subscription.unsubscribe();
     };
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (!accessLoaded) return;
     void loadKegs();
-  }, [accessLoaded, canManageKegs]);
+  }, [accessLoaded, canManageKegs, loadKegs]);
 
   useEffect(() => {
     if (canManageKegs) return;
@@ -160,11 +169,11 @@ export default function KegTrackerPage() {
       if (!response.ok) throw new Error("Could not create keg");
 
       const json = await response.json();
-      const created = mapKeg(json.keg);
+      const created = mapKeg(json.keg, t("Keg"));
       setKegs((current) => [...current, created]);
     } catch (error) {
       console.error("Failed to create keg", error);
-      setLoadError("Could not create a keg. Please try again.");
+      setLoadError(t("Could not create a keg. Please try again."));
     } finally {
       setSaving(false);
     }
@@ -210,7 +219,7 @@ export default function KegTrackerPage() {
       setSelectMode(false);
     } catch (error) {
       console.error("Failed to delete kegs", error);
-      setLoadError("Could not delete the selected kegs. Please try again.");
+      setLoadError(t("Could not delete the selected kegs. Please try again."));
     } finally {
       setSaving(false);
     }
@@ -220,7 +229,7 @@ export default function KegTrackerPage() {
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
         <div className="bg-black/60 backdrop-blur-md px-6 py-4 rounded-xl border border-white/10">
-          Loading kegs…
+          {t("Loading kegs…")}
         </div>
       </main>
     );
@@ -243,7 +252,7 @@ export default function KegTrackerPage() {
           }}
           className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
         >
-          Select kegs
+          {t("Select kegs")}
         </button>
       )}
     </div>
@@ -263,14 +272,14 @@ export default function KegTrackerPage() {
         }}
         className="absolute top-2 left-4 z-40 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold sm:top-4"
       >
-        Select kegs
+        {t("Select kegs")}
       </button>
     )}
     <Link
       href="/"
       className="absolute top-2 right-4 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold sm:top-4"
     >
-      Go to main site
+      {t("Go to main site")}
     </Link>
   </>
 ) : (
@@ -285,8 +294,8 @@ export default function KegTrackerPage() {
 )}
 
         <PageHeading
-          title="Keg Overview"
-          subtitle="Select a keg to view or update its brew details."
+          title={t("Keg Overview")}
+          subtitle={t("Select a keg to view or update its brew details.")}
         />
 
         {loadError && (
@@ -335,7 +344,7 @@ export default function KegTrackerPage() {
                       </div>
                     )}
                     <span className="relative z-10 text-lg font-bold text-green-300 text-center leading-tight line-clamp-2">
-                      {keg.brew_name || "Empty keg"}
+                      {keg.brew_name || t("Keg is empty")}
 
                     </span>
                     <span className="relative z-10 text-zinc-400 font-semibold mt-2">
@@ -374,7 +383,7 @@ export default function KegTrackerPage() {
                       </div>
                     )}
                     <span className="relative z-10 text-lg font-bold text-green-300 text-center leading-tight line-clamp-2">
-                      {keg.brew_name || "Empty keg"}
+                      {keg.brew_name || t("Keg is empty")}
                     </span>
                     <span className="relative z-10 text-zinc-400 text-center font-semibold mt-2">
                       {keg.brew_name ? "" : ""}
@@ -406,7 +415,7 @@ export default function KegTrackerPage() {
               type="button"
               onClick={addKeg}
               disabled={saving}
-              aria-label={saving ? "Creating keg" : "Create keg"}
+              aria-label={saving ? t("Creating keg") : t("Create keg")}
               className="border border-white/10 bg-white/5 hover:bg-white/10 disabled:opacity-60 disabled:cursor-wait rounded-xl p-4 w-32 h-32 flex items-center justify-center text-white text-3xl font-bold"
             >
               {saving ? "…" : "+"}
@@ -425,7 +434,7 @@ export default function KegTrackerPage() {
         disabled={selectedIds.length === 0 || saving}
         className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold disabled:opacity-40"
       >
-        Delete selected
+        {t("Delete selected")}
       </button>
 
       <button
@@ -436,16 +445,18 @@ export default function KegTrackerPage() {
         }}
         className="px-6 py-3 bg-zinc-700 hover:bg-zinc-600 border border-zinc-500 rounded-lg font-semibold"
       >
-        Cancel
+        {t("Cancel")}
       </button>
     </div>
   </div>
 )}
 <ConfirmDialog
   open={confirmOpen}
-  title="Delete selected kegs?"
-  message="Are you sure you want to delete the selected kegs? This action cannot be undone."
-  confirmLabel="Delete"
+  title={t("Delete selected kegs?")}
+  message={t("Are you sure you want to delete the selected kegs? This action cannot be undone.")}
+  confirmLabel={t("Delete")}
+  cancelLabel={t("Cancel")}
+  pendingLabel={t("Please wait…")}
   onConfirm={async () => {
     await deleteSelectedKegs();
     return true;

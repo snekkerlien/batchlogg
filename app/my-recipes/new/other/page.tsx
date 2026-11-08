@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import * as Actions from "../../actions/createRecipe";
+import { submitRecipe } from "../submitRecipe";
 import MenuOverlay from "../../MenuOverlay";
 import BackButton from "../../BackButton";
 import FormField from "@/app/components/FormField";
@@ -10,11 +10,15 @@ import PublicMentionTextarea from "@/app/components/PublicMentionTextarea";
 import { UnitInput, UnitSymbol } from "../../../components/Units";
 import RecipeAdditiveFields from "../RecipeAdditiveFields";
 import RecipeSecondaryFields from "../RecipeSecondaryFields";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import RecipeCreationError from "../RecipeCreationError";
 
 export default function NewOtherRecipePage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [warnings, setWarnings] = useState<string[]>([]);
+  const [error, setError] = useState("");
 
   // Dynamic ingredient list
   const [ingredients, setIngredients] = useState<
@@ -48,12 +52,14 @@ export default function NewOtherRecipePage() {
     e.preventDefault();
     setLoading(true);
     setWarnings([]);
+    setError("");
 
     const formData = new FormData(e.currentTarget as HTMLFormElement);
-    const result = await Actions.createRecipe(formData);
+    const result = await submitRecipe(formData);
 
     if (result?.success === false) {
       setWarnings(result.maltWarnings ?? []);
+      setError(result.error ?? (result.maltWarnings?.length ? "" : "Could not save the recipe."));
       setLoading(false);
       return;
     }
@@ -79,15 +85,16 @@ export default function NewOtherRecipePage() {
         </div>
 
         {/* HEADER */}
-        <h1 className="text-4xl font-bold mb-2 text-center">New Other Recipe</h1>
+        <h1 className="text-4xl font-bold mb-2 text-center">{t("New Other Recipe")}</h1>
         <p className="text-center opacity-80 mb-10">
-          Use this page for experimental recipes or anything that doesn&apos;t fit other categories.
+          {t("Use this page for experimental recipes or anything that doesn’t fit other categories.")}
         </p>
 
         {/* WARNINGS */}
+        <RecipeCreationError error={error} />
         {warnings.length > 0 && (
           <div className="bg-red-600 text-white p-4 rounded-md mb-6">
-            <strong>⚠️ Validation warnings:</strong>
+            <strong>{t("Validation warnings:")}</strong>
             <ul className="mt-2 list-disc list-inside">
               {warnings.map((w) => (
                 <li key={w}>{w}</li>
@@ -104,11 +111,11 @@ export default function NewOtherRecipePage() {
           <input type="hidden" name="type" value="Other" />
 
           {/* Recipe name */}
-          <FormField id="recipe-name" label="Recipe name" required>
+          <FormField id="recipe-name" label={t("Recipe name")} required>
             <input
               id="recipe-name"
               name="name"
-              placeholder="Example: Experimental Blend #1"
+              placeholder={t("Example: Experimental Blend #1")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
             />
@@ -116,61 +123,61 @@ export default function NewOtherRecipePage() {
 
           <div>
             <label htmlFor="other-style" className="mb-1 block font-semibold">
-              Style or type (optional)
+              {t("Style or type (optional)")}
             </label>
             <input
               id="other-style"
               name="other_style"
               maxLength={80}
-              placeholder="Example: Kombucha"
+              placeholder={t("Example: Kombucha")}
               className="w-full rounded border border-white/20 bg-black/40 p-3"
             />
           </div>
 
           {/* Volume */}
-          <FormField id="recipe-volume" label={<>Volume (<UnitSymbol kind="volume" />)</>}>
+          <FormField id="recipe-volume" label={<>{t("Volume")} (<UnitSymbol kind="volume" />)</>}>
             <UnitInput
               id="recipe-volume"
               name="volume"
               kind="volume"
-              placeholder="Example: 5"
+              placeholder={t("Example: 5")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </FormField>
 
           {/* OG */}
-          <FormField id="recipe-og" label="Original Gravity (OG)">
+          <FormField id="recipe-og" label={t("Original Gravity (OG)")}>
             <input
               id="recipe-og"
               name="og"
               type="number"
               step="0.001"
-              placeholder="Example: 1.060"
+              placeholder={t("Example: 1.060")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </FormField>
 
           {/* FG */}
-          <FormField id="recipe-fg" label="Final Gravity (FG)">
+          <FormField id="recipe-fg" label={t("Final Gravity (FG)")}>
             <input
               id="recipe-fg"
               name="fg"
               type="number"
               step="0.001"
-              placeholder="Example: 1.010"
+              placeholder={t("Example: 1.010")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </FormField>
 
           {/* Dynamic ingredients */}
           <div>
-            <label className="block mb-2 font-semibold">Ingredients</label>
+            <label className="block mb-2 font-semibold">{t("Ingredients")}</label>
 
             {ingredients.map((ing, i) => (
               <div key={i} className="flex gap-2 mb-2 items-center">
                 <input
-                  aria-label={`Ingredient ${i + 1} name`}
-                  placeholder="Ingredient name"
+                  aria-label={`${t("Ingredient")} ${i + 1} ${t("name")}`}
+                  placeholder={t("Ingredient name")}
                   className="flex-1 p-3 rounded bg-black/40 border border-white/20"
                   value={ing.name}
                   onChange={(e) => {
@@ -181,8 +188,8 @@ export default function NewOtherRecipePage() {
                 />
 
                 <input
-                  aria-label={`Ingredient ${i + 1} amount`}
-                  placeholder="Amount"
+                  aria-label={`${t("Ingredient")} ${i + 1} ${t("Amount").toLowerCase()}`}
+                  placeholder={t("Amount")}
                   type="number"
                   min="0"
                   step="any"
@@ -196,8 +203,8 @@ export default function NewOtherRecipePage() {
                 />
 
                 <input
-                  aria-label={`Ingredient ${i + 1} unit`}
-                  placeholder="Unit"
+                  aria-label={`${t("Ingredient")} ${i + 1} ${t("Unit").toLowerCase()}`}
+                  placeholder={t("Unit")}
                   className="w-20 p-3 rounded bg-black/40 border border-white/20"
                   value={ing.unit}
                   onChange={(e) => {
@@ -212,7 +219,7 @@ export default function NewOtherRecipePage() {
                   onClick={() => removeIngredient(i)}
                   className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
                 >
-                  Remove
+                  {t("Remove")}
                 </button>
               </div>
             ))}
@@ -222,7 +229,7 @@ export default function NewOtherRecipePage() {
               onClick={addIngredient}
               className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
             >
-              + Add ingredient
+              + {t("Add")} {t("ingredient")}
             </button>
           </div>
 
@@ -230,13 +237,13 @@ export default function NewOtherRecipePage() {
 
           {/* Dynamic process steps */}
           <div>
-            <label className="block mb-2 font-semibold">Process steps</label>
+            <label className="block mb-2 font-semibold">{t("Process steps")}</label>
 
             {steps.map((step, i) => (
               <div key={i} className="flex gap-2 mb-2 items-center">
                 <textarea
-                  aria-label={`Process step ${i + 1}`}
-                  placeholder={`Step ${i + 1}`}
+                  aria-label={`${t("Process step")} ${i + 1}`}
+                  placeholder={`${t("Step")} ${i + 1}`}
                   className="flex-1 p-3 rounded bg-black/40 border border-white/20 h-24"
                   value={step}
                   onChange={(e) => {
@@ -251,7 +258,7 @@ export default function NewOtherRecipePage() {
                   onClick={() => removeStep(i)}
                   className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm h-fit"
                 >
-                  Remove
+                  {t("Remove")}
                 </button>
               </div>
             ))}
@@ -261,7 +268,7 @@ export default function NewOtherRecipePage() {
               onClick={addStep}
               className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
             >
-              + Add step
+              + {t("Add")} {t("step")}
             </button>
           </div>
 
@@ -269,23 +276,23 @@ export default function NewOtherRecipePage() {
 
           {/* Additives */}
           <div>
-            <label className="block mb-1 font-semibold">Additives</label>
+            <label className="block mb-1 font-semibold">{t("Additives")}</label>
             <RecipeAdditiveFields />
           </div>
-          <FormField id="recipe-process" label="Full process">
+          <FormField id="recipe-process" label={t("Full process")}>
             <PublicMentionTextarea
               id="recipe-process"
               name="full_process"
-              placeholder="Describe the overall preparation and fermentation process..."
+              placeholder={t("Describe the overall preparation and fermentation process...")}
               className="h-40 w-full rounded border border-white/20 bg-black/40 p-3"
             />
           </FormField>
           {/* Notes */}
-          <FormField id="recipe-notes" label="Notes">
+          <FormField id="recipe-notes" label={t("Notes")}>
             <PublicMentionTextarea
               id="recipe-notes"
               name="notes"
-              placeholder="Any additional notes about the recipe..."
+              placeholder={t("Any additional notes about the recipe...")}
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
             />
           </FormField>
@@ -296,7 +303,7 @@ export default function NewOtherRecipePage() {
             disabled={loading}
             className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold"
           >
-            {loading ? "Saving..." : "Save recipe"}
+            {loading ? t("Saving...") : t("Save recipe")}
           </button>
         </form>
       </div>

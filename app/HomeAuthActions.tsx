@@ -6,9 +6,11 @@ import { useRouter } from "next/navigation";
 import type { Session } from "@supabase/supabase-js";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import { isDesktopApp } from "@/lib/desktopApp";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export default function HomeAuthActions() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
   const [username, setUsername] = useState("");
@@ -83,24 +85,24 @@ export default function HomeAuthActions() {
   }
 
   if (loading) {
-    return <p className="mt-6 text-sm text-white/60" aria-live="polite">Loading account…</p>;
+    return <p className="mt-6 text-sm text-white/60" aria-live="polite">{t("Loading account…")}</p>;
   }
 
   if (loadError) {
     return (
       <div className="mt-6 flex flex-col gap-4">
-        <p className="text-sm text-amber-300" role="alert">{loadError}</p>
+        <p className="text-sm text-amber-300" role="alert">{t(loadError)}</p>
         {session && (
           <button
             type="button"
             onClick={logout}
             className="rounded-lg border border-white/20 bg-white/10 p-3 font-semibold hover:bg-white/20"
           >
-            Log out
+            {t("Log out")}
           </button>
         )}
         {logoutError && (
-          <p className="text-sm text-red-300" role="alert">{logoutError}</p>
+          <p className="text-sm text-red-300" role="alert">{t(logoutError)}</p>
         )}
       </div>
     );
@@ -110,16 +112,16 @@ export default function HomeAuthActions() {
     return (
       <div className="mt-6 flex flex-col gap-4">
         <Link href="/auth/login" className="block rounded-lg bg-blue-600 p-3 font-semibold hover:bg-blue-700">
-          Log in
+          {t("Log in")}
         </Link>
         <Link href="/auth/signup" className="block rounded-lg bg-green-600 p-3 font-semibold hover:bg-green-700">
-          Sign up
+          {t("Sign up")}
         </Link>
         <Link
           href="/download-app"
           className="text-sm font-medium text-white/70 underline decoration-white/30 underline-offset-4 hover:text-white"
         >
-          Batchlogg for desktop
+          {t("Batchlogg for desktop")}
         </Link>
       </div>
     );
@@ -127,15 +129,15 @@ export default function HomeAuthActions() {
 
   return (
     <div className="mt-6 flex flex-col gap-4">
-      <p className="text-center font-semibold text-green-300">Logged in as {username}</p>
+      <p className="text-center font-semibold text-green-300">{t("Logged in as {username}").replace("{username}", username)}</p>
       <button
         onClick={logout}
         className="rounded-lg border border-white/20 bg-white/10 p-3 font-semibold hover:bg-white/20"
       >
-        Log out
+        {t("Log out")}
       </button>
       <Link href="/dashboard" className="block rounded-lg bg-white/10 p-3 font-semibold hover:bg-white/20">
-        Go to dashboard
+        {t("Go to dashboard")}
       </Link>
     </div>
   );

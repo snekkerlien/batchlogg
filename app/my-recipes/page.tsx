@@ -22,6 +22,8 @@ import ExpandArrowButton from "@/app/components/ExpandArrowButton";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
 import PublicMentionTextarea from "@/app/components/PublicMentionTextarea";
 import PublicMentionText from "@/app/components/PublicMentionText";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { translateRecipeError } from "@/lib/i18n/apiErrors";
 import {
   getOtherRecipeIngredients,
   getOtherRecipeStyle,
@@ -78,6 +80,7 @@ const batchFormRoutes: Record<string, string> = {
 
 export default function RecipesPage() {
   const router = useRouter();
+  const { t, language } = useTranslation();
   const { label } = useUnits();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -152,7 +155,7 @@ export default function RecipesPage() {
       });
       const profile = await profileResponse.json();
       if (!profileResponse.ok) {
-        throw new Error(profile.error || "Could not load your account plan.");
+        throw new Error(profile.error || t("Could not load your account plan."));
       }
       setIsPremium(profile.has_premium_access === true);
       setPlanLoaded(true);
@@ -309,14 +312,14 @@ export default function RecipesPage() {
       }
     } catch (error) {
       console.error("Could not load recipes", error);
-      setLoadError("Your recipes could not be loaded. Please try again.");
+      setLoadError(t("Your recipes could not be loaded. Please try again."));
     } finally {
       setLoading(false);
     }
   }
 
   load();
-}, [loadAttempt, router]);
+}, [loadAttempt, router, t]);
 
   const recipeLimitReached =
     planLoaded && !isPremium && recipes.length >= FREE_RECIPE_LIMIT;
@@ -362,7 +365,7 @@ export default function RecipesPage() {
         error: userError,
       } = await supabaseBrowser.auth.getUser();
       if (userError) throw userError;
-      if (!user) throw new Error("Your session has expired. Sign in and try again.");
+      if (!user) throw new Error(t("Your session has expired. Sign in and try again."));
 
       const { data: profile, error: profileError } = await supabaseBrowser
         .from("profiles")
@@ -402,7 +405,7 @@ export default function RecipesPage() {
       setRecipeStartErrors((previous) => ({
         ...previous,
         [String(recipe.id)]:
-          "Inventory could not be checked. Please try again before starting this batch.",
+          t("Inventory could not be checked. Please try again before starting this batch."),
       }));
     } finally {
       setStartingRecipeId(null);
@@ -428,7 +431,7 @@ export default function RecipesPage() {
         body: JSON.stringify({ is_public: !current }),
       });
       const result: { error?: string } = await response.json();
-      if (!response.ok) throw new Error(result.error || "Could not update recipe visibility.");
+      if (!response.ok) throw new Error(result.error || t("Could not update recipe visibility."));
 
       setRecipes((prev) =>
         prev.map((r) => (r.id === id ? { ...r, is_public: !current } : r))
@@ -440,7 +443,7 @@ export default function RecipesPage() {
         [id]:
           updateError instanceof Error
             ? updateError.message
-            : "Could not update recipe visibility.",
+            : t("Could not update recipe visibility."),
       }));
     }
   }
@@ -462,7 +465,7 @@ export default function RecipesPage() {
       } = await response.json();
       if (!response.ok) {
         throw new Error(
-          result.error || "Could not update the recipe's copyright setting."
+          result.error || t("Could not update the recipe's copyright setting.")
         );
       }
       setRecipes((previous) =>
@@ -479,7 +482,7 @@ export default function RecipesPage() {
         [id]:
           updateError instanceof Error
             ? updateError.message
-            : "Could not update the recipe's copyright setting.",
+            : t("Could not update the recipe's copyright setting."),
       }));
     } finally {
       setSavingCopyrightRecipeId(null);
@@ -500,7 +503,7 @@ export default function RecipesPage() {
       });
       const result: { error?: string } = await response.json();
       if (!response.ok) {
-        throw new Error(result.error || "Could not delete this recipe.");
+        throw new Error(result.error || t("Could not delete this recipe."));
       }
       setRecipes((prev) => prev.filter((r) => r.id !== id));
       setLimitNotice(false);
@@ -513,7 +516,7 @@ export default function RecipesPage() {
         [id]:
           deleteError instanceof Error
             ? deleteError.message
-            : "Could not delete this recipe.",
+            : t("Could not delete this recipe."),
       }));
       return false;
     }
@@ -700,7 +703,7 @@ function removeDryHop(index: number) {
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
         <div className="bg-black/60 backdrop-blur-md px-6 py-4 rounded-xl border border-white/10">
-            Loading recipes…
+            {t("Loading recipes…")}
           </div>
         </main>
     );
@@ -720,18 +723,18 @@ function removeDryHop(index: number) {
         </div>
 
         <PageHeading
-          title="My recipes"
-          subtitle="All your recipes in one place."
+          title={t("My recipes")}
+          subtitle={t("All your recipes in one place.")}
         />
         {(limitNotice || recipeLimitReached) && (
           <p role="status" className="mb-4 rounded-lg border border-amber-400/30 bg-amber-950/40 p-3 text-center text-sm text-amber-100">
-            Free accounts can save up to {FREE_RECIPE_LIMIT} recipes. Delete a recipe or upgrade to Premium to save more.
-            {" "}<Link href="/premium" className="font-semibold underline">View Premium</Link>
+            {t("Free accounts can save up to")} {FREE_RECIPE_LIMIT} {t("recipes")}. {t("Delete a recipe or upgrade to Premium to save more.")}
+            {" "}<Link href="/premium" className="font-semibold underline">{t("View Premium")}</Link>
           </p>
         )}
         {planLoaded && !isPremium && (
           <p className="mb-4 text-center text-sm text-white/60">
-            {recipes.length} of {FREE_RECIPE_LIMIT} free recipes used
+            {recipes.length} {t("of")} {FREE_RECIPE_LIMIT} {t("free recipes used")}
           </p>
         )}
         {/* NEW RECIPE BUTTON */}
@@ -741,7 +744,7 @@ function removeDryHop(index: number) {
             disabled={recipeLimitReached}
             className="px-4 py-2 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold disabled:cursor-not-allowed disabled:opacity-50"
           >
-            New recipe
+            {t("New recipe")}
           </button>
         </div>
 
@@ -787,7 +790,7 @@ function removeDryHop(index: number) {
                 onClick={() => setLoadAttempt((attempt) => attempt + 1)}
                 className="mt-3 rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold text-white hover:bg-white/20"
               >
-                Try again
+                {t("Try again")}
               </button>
             </div>
           ) : filteredRecipes.length > 0 ? (
@@ -826,7 +829,7 @@ function removeDryHop(index: number) {
       href={`/my-recipes/${encodeURIComponent(r.id)}`}
       className="flex items-center gap-3 text-lg font-bold leading-tight text-green-300 hover:text-green-200 sm:text-xl"
     >
-      {r.name ? r.name.charAt(0).toUpperCase() + r.name.slice(1) : "Unnamed recipe"}
+      {r.name ? r.name.charAt(0).toUpperCase() + r.name.slice(1) : t("Unnamed recipe")}
     </Link>
     {expanded === r.id ? (
       <RecipeBadges recipe={r} />
@@ -838,7 +841,7 @@ function removeDryHop(index: number) {
 <div className="flex shrink-0 items-center justify-end sm:mt-[6px]">
   <ExpandArrowButton
     expanded={expanded === r.id}
-    label={r.name || "recipe"}
+    label={r.name || t("recipe")}
     controls={`recipe-details-${r.id}`}
     onClick={() => toggle(r.id)}
   />
@@ -848,7 +851,7 @@ function removeDryHop(index: number) {
                   {/* Stats line */}
 {expanded !== r.id && (
 <div
-  aria-label={`${r.name} recipe summary`}
+  aria-label={`${r.name} ${t("recipe summary")}`}
   className="mt-3 grid grid-cols-3 gap-x-2 gap-y-1.5 text-sm sm:flex sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-1"
 >
   <span className="inline-flex min-w-0 items-center gap-1 whitespace-nowrap rounded-md border border-white/10 bg-black/20 px-2 py-1 sm:gap-1.5 sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
@@ -887,7 +890,7 @@ function removeDryHop(index: number) {
     href={`/my-recipes/${encodeURIComponent(r.id)}`}
     className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/20"
   >
-    View recipe
+    {t("View recipe")}
   </Link>
   <button
     type="button"
@@ -899,7 +902,7 @@ function removeDryHop(index: number) {
     }}
     className="rounded-lg border border-green-500 bg-green-700 px-3 py-2 text-sm font-semibold hover:bg-green-600"
   >
-    Start a batch
+    {t("Start a batch")}
   </button>
 </div>
 
@@ -913,7 +916,7 @@ function removeDryHop(index: number) {
                     <div className="space-y-3 opacity-90">
                       {r.source_recipe_id && (
                         <p className="text-sm text-white/65">
-                          This is your version of a shared community recipe.
+                          {t("This is your version of a shared community recipe.")}
                         </p>
                       )}
                       <RecipePresentation
@@ -933,7 +936,7 @@ function removeDryHop(index: number) {
                               }
                               className="w-full cursor-pointer px-4 py-3 text-left text-sm font-semibold text-white/75 hover:text-white"
                             >
-                              Manage recipe
+                              {t("Manage recipe")}
                               <span aria-hidden="true" className="float-right text-white/60">
                                 {recipeManageOpen === r.id ? "−" : "+"}
                               </span>
@@ -948,30 +951,30 @@ function removeDryHop(index: number) {
                                     role="alert"
                                     className="mb-3 rounded-lg border border-red-400/40 bg-red-950/50 p-3 text-sm text-red-200"
                                   >
-                                    {recipeActionErrors[r.id]}
+                                    {translateRecipeError(recipeActionErrors[r.id], t)}
                                   </p>
                                 )}
                                 <div className="flex flex-wrap items-center gap-3">
                                   <VisibilitySwitch
                                     checked={r.is_public}
                                     onChange={() => togglePublic(r.id, r.is_public)}
-                                    publicText="Public"
-                                    privateText="Private"
-                                    ariaLabel={`Recipe ${r.name} visibility`}
+                                    publicText={t("Public")}
+                                    privateText={t("Private")}
+                                    ariaLabel={`${t("Recipe")} ${r.name} ${t("visibility")}`}
                                   />
                                   <button
                                     type="button"
                                     onClick={() => openRecipeEditor(r)}
                                     className="rounded-lg border border-green-500 bg-green-700 px-4 py-2 text-sm font-semibold hover:bg-green-600"
                                   >
-                                    Edit recipe
+                                    {t("Edit recipe")}
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => setConfirmDeleteId(r.id)}
                                     className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20"
                                   >
-                                    Delete recipe
+                                    {t("Delete recipe")}
                                   </button>
                                 </div>
                               </div>
@@ -983,20 +986,19 @@ function removeDryHop(index: number) {
                         <section className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
                           <p className="text-sm text-white/70">
                             {r.source_copyright_free === true
-                              ? "The original author marked this recipe as copyright-free."
+                              ? t("The original author marked this recipe as copyright-free.")
                               : r.source_copyright_free === false
-                                ? "Copyright belongs to the original recipe author."
-                                : "Copyright status belongs to the original recipe author."}
+                                ? t("Copyright belongs to the original recipe author.")
+                                : t("Copyright status belongs to the original recipe author.")}
                           </p>
                           <p className="mt-2 text-xs text-white/55">
-                            This private brewing copy does not transfer ownership or change the source recipe’s copyright.
+                            {t("This private brewing copy does not transfer ownership or change the source recipe’s copyright.")}
                           </p>
                         </section>
                       ) : (
                       <section className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
                         <p className="text-sm text-white/70">
-                          Copyright belongs to you as the recipe uploader by
-                          default.
+                          {t("Copyright belongs to you as the recipe uploader by default.")}
                         </p>
                         <label className="mt-3 flex items-start gap-3 text-sm">
                           <input
@@ -1012,23 +1014,22 @@ function removeDryHop(index: number) {
                             className="mt-1"
                           />
                           <span>
-                            Mark this recipe as copyright-free
+                            {t("Mark this recipe as copyright-free")}
                             <span className="mt-1 block text-xs text-white/55">
-                              Leave unchecked to keep it marked as copyrighted
-                              by you.
+                              {t("Leave unchecked to keep it marked as copyrighted by you.")}
                             </span>
                           </span>
                         </label>
                         {savingCopyrightRecipeId === r.id && (
                           <p role="status" className="mt-2 text-xs text-white/55">
-                            Saving copyright setting…
+                            {t("Saving copyright setting…")}
                           </p>
                         )}
                       </section>
                       )}
                       {r.notes_log?.length > 0 && (
                         <div className="rounded-xl border border-white/10 bg-white/[0.04] p-5">
-                          <h3 className="mb-3 text-lg font-semibold text-green-300">Recipe note log</h3>
+                          <h3 className="mb-3 text-lg font-semibold text-green-300">{t("Recipe note log")}</h3>
                           <ul className="space-y-2">
                             {r.notes_log.map((note: any, index: number) => (
                               <li key={note.id ?? index} className="whitespace-pre-line text-sm text-white/80">
@@ -1046,7 +1047,7 @@ function removeDryHop(index: number) {
                       {startRecipeId === r.id ? (
                         <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row">
                           <select
-                            aria-label={`Select an empty vessel for ${r.name}`}
+                            aria-label={t("Select an empty vessel for {recipe}").replace("{recipe}", r.name)}
                             value={selectedVesselId}
                             onChange={(e) => setSelectedVesselId(e.target.value)}
                             className="flex-1 p-3 rounded bg-black/40 border border-white/20"
@@ -1054,13 +1055,13 @@ function removeDryHop(index: number) {
                             <option value="">
                               {vesselsLoaded
                                 ? emptyVessels.length
-                                  ? "Select an empty vessel"
-                                  : "No empty vessels available"
-                                : "Loading vessels…"}
+                                  ? t("Select an empty vessel")
+                                  : t("No empty vessels available")
+                                : t("Loading vessels…")}
                             </option>
                             {emptyVessels.map((vessel) => (
                               <option key={vessel.id} value={vessel.id}>
-                                Vessel {vessel.nummer}
+                                {t("Vessel")} {vessel.nummer}
                               </option>
                             ))}
                           </select>
@@ -1075,7 +1076,7 @@ function removeDryHop(index: number) {
                             onClick={() => void continueWithRecipe(r)}
                             className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold disabled:opacity-50"
                           >
-                            {startingRecipeId === r.id ? "Checking inventory..." : "Continue with recipe"}
+                            {startingRecipeId === r.id ? t("Checking inventory...") : t("Continue with recipe")}
                           </button>
                           <button
                             type="button"
@@ -1085,7 +1086,7 @@ function removeDryHop(index: number) {
                             }}
                             className="px-4 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg"
                           >
-                            Cancel
+                            {t("Cancel")}
                           </button>
                         </div>
                       ) : null}
@@ -1100,10 +1101,10 @@ function removeDryHop(index: number) {
                     </div>
                     </div>
                     <p className="mt-4 border-t border-white/10 pt-3 text-center text-xs text-white/55">
-                      Created{" "}
+                      {t("Created")}{" "}
                       {r.created_at
-                        ? new Date(r.created_at).toLocaleDateString("en-GB")
-                        : "date unavailable"}
+                        ? new Date(r.created_at).toLocaleDateString(language === "nb" ? "nb-NO" : "en-GB")
+                        : t("date unavailable")}
                       {" · "}
                       {r.source_recipe_id
                         ? r.source_copyright_free === true
@@ -1119,18 +1120,18 @@ function removeDryHop(index: number) {
             })
           ) : recipes.length === 0 ? (
             <div role="status" className="rounded-xl border border-white/10 bg-white/5 p-8 text-center">
-              <p className="text-white/75">You haven’t saved any recipes yet.</p>
+              <p className="text-white/75">{t("You haven’t saved any recipes yet.")}</p>
               <button
                 type="button"
                 onClick={() => setOpenStyleSelect(true)}
                 className="mt-4 rounded-lg border border-green-500/40 bg-green-800/60 px-4 py-2 font-semibold hover:bg-green-700"
               >
-                Create your first recipe
+                {t("Create your first recipe")}
               </button>
             </div>
           ) : (
             <div role="status" className="rounded-xl border border-white/10 bg-white/5 p-6 text-center">
-              <p className="text-white/75">No recipes match your search or filters.</p>
+              <p className="text-white/75">{t("No recipes match your search or filters.")}</p>
               <button
                 type="button"
                 onClick={() => {
@@ -1139,7 +1140,7 @@ function removeDryHop(index: number) {
                 }}
                 className="mt-3 rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold hover:bg-white/20"
               >
-                Clear filters
+                {t("Clear filters")}
               </button>
             </div>
           )}
@@ -1156,7 +1157,7 @@ function removeDryHop(index: number) {
       className="relative z-50 mx-auto mt-0 mb-8 w-full max-w-2xl rounded-xl border border-white/20 bg-zinc-900 p-6 text-white"
     >
 
-      <h2 id="edit-recipe-title" className="text-2xl font-bold mb-4">Edit recipe</h2>
+      <h2 id="edit-recipe-title" className="text-2xl font-bold mb-4">{t("Edit recipe")}</h2>
 
       <form
         className="flex flex-col gap-4"
@@ -1179,17 +1180,16 @@ function removeDryHop(index: number) {
             if (!response.ok) {
               setEditError(
                 result.details
-                  ? `${result.error || "Could not save the recipe."}: ${result.details}`
-                  : result.error || "Could not save the recipe."
+                ? `${result.error ? translateRecipeError(result.error, t) : t("Could not save the recipe.")}: ${result.details}`
+                : result.error ? translateRecipeError(result.error, t) : t("Could not save the recipe.")
               );
               return;
             }
             setOpenEdit(null);
             window.location.reload();
           } catch (error) {
-            setEditError(
-              error instanceof Error ? error.message : "Could not save the recipe."
-            );
+            console.error("Could not save recipe changes", error);
+            setEditError(t("Could not save the recipe."));
           } finally {
             setSavingEdit(false);
           }
@@ -1207,7 +1207,7 @@ function removeDryHop(index: number) {
 
         {/* COMMON FIELDS */}
         <label className="font-semibold">
-          {editRecipe.type === "Beer" && editBeerSubtype !== "all_grain" ? "Kit name" : "Name"}
+          {editRecipe.type === "Beer" && editBeerSubtype !== "all_grain" ? t("Kit name") : t("Name")}
         </label>
         <input
           name="name"
@@ -1218,7 +1218,7 @@ function removeDryHop(index: number) {
 
         {editRecipe.type === "Beer" && editBeerSubtype !== "all_grain" && (
           <label className="block">
-            <span className="font-semibold">Kit link (optional)</span>
+            <span className="font-semibold">{t("Kit link (optional)")}</span>
             <input
               name="kit_url"
               type="url"
@@ -1230,7 +1230,7 @@ function removeDryHop(index: number) {
         )}
 
         <label className="font-semibold">
-          Volume (<UnitSymbol kind="volume" />)
+          {t("Volume")} (<UnitSymbol kind="volume" />)
         </label>
         <UnitInput
           kind="volume"
@@ -1252,7 +1252,7 @@ function removeDryHop(index: number) {
         {editRecipe.type === "Beer" && editBeerSubtype === "fresh_wort_kit" && (
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block font-semibold">
-              IBU (from kit)
+            {t("IBU (from kit)")}
               <input
                 name="ibu"
                 type="number"
@@ -1268,7 +1268,7 @@ function removeDryHop(index: number) {
               />
             </label>
             <label className="block font-semibold">
-              EBC (from kit)
+            {t("EBC (from kit)")}
               <input
                 name="ebc"
                 type="number"
@@ -1297,7 +1297,7 @@ function removeDryHop(index: number) {
           </>
         )}
 
-        <label className="font-semibold">Yeast</label>
+        <label className="font-semibold">{t("Yeast")}</label>
         <input
           name="yeast"
           defaultValue={editRecipe.yeast}
@@ -1308,7 +1308,7 @@ function removeDryHop(index: number) {
         {/* TYPE SPECIFIC */}
         {editRecipe.type === "Mead" && (
   <>
-    <label className="block mb-2 font-semibold">Honey type</label>
+    <label className="block mb-2 font-semibold">{t("Honey type")}</label>
     <input
       name="honey_type"
       defaultValue={editRecipe.honey_type}
@@ -1316,7 +1316,7 @@ function removeDryHop(index: number) {
     />
 
     <label className="block mb-2 font-semibold">
-      Honey amount (<UnitSymbol kind="kg" />)
+      {t("Honey amount")} (<UnitSymbol kind="kg" />)
     </label>
     <UnitInput
       kind="kg"
@@ -1324,14 +1324,14 @@ function removeDryHop(index: number) {
       defaultValue={String(editRecipe.honey_amount ?? "")}
       className="p-3 rounded bg-black/40 border border-white/20"
     />
-    <label className="font-semibold">Base liquid</label>
+    <label className="font-semibold">{t("Base liquid")}</label>
     <input
       name="base_liquid"
       defaultValue={editRecipe.base_liquid ?? ""}
       className="p-3 rounded bg-black/40 border border-white/20"
     />
     <label className="font-semibold">
-      Base liquid amount (<UnitSymbol kind="volume" />)
+      {t("Base liquid amount")} (<UnitSymbol kind="volume" />)
     </label>
     <UnitInput
       kind="volume"
@@ -1342,7 +1342,7 @@ function removeDryHop(index: number) {
 
     {/* ⭐ Fruits — identisk med batch creation */}
     <div className="space-y-2">
-      <label className="block font-semibold">Fruit additions</label>
+      <label className="block font-semibold">{t("Fruit additions")}</label>
 
       {editFruits.map((f, i) => (
         <div
@@ -1350,21 +1350,21 @@ function removeDryHop(index: number) {
           className="flex w-full flex-col gap-2 md:flex-row md:items-center"
         >
           <input
-            placeholder="Fruit (e.g. Mango, Raspberry)"
+            placeholder={t("Fruit (e.g. Mango, Raspberry)")}
             className="p-3 rounded bg-black/40 border border-white/20 w-full md:flex-1"
             value={f.name}
             onChange={(e) => updateFruit(i, "name", e.target.value)}
           />
 
           <input
-            placeholder="Amount"
+            placeholder={t("Amount")}
             className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-24"
             value={f.amount}
             onChange={(e) => updateFruit(i, "amount", e.target.value)}
           />
 
           <input
-            placeholder="Unit"
+            placeholder={t("Unit")}
             className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-20"
             value={f.unit}
             onChange={(e) => updateFruit(i, "unit", e.target.value)}
@@ -1375,7 +1375,7 @@ function removeDryHop(index: number) {
             onClick={() => removeFruit(i)}
             className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm self-start md:self-auto"
           >
-            Remove
+            {t("Remove")}
           </button>
         </div>
       ))}
@@ -1385,7 +1385,7 @@ function removeDryHop(index: number) {
         onClick={addFruit}
         className="inline-flex w-32 self-start items-center justify-center whitespace-nowrap rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm hover:bg-white/20"
       >
-        + Add fruit
+        + {t("Add")} {t("fruit")}
       </button>
     </div>
     <input type="hidden" name="fruits" value={JSON.stringify(editFruits)} />
@@ -1396,7 +1396,7 @@ function removeDryHop(index: number) {
 
         {(editRecipe.type === "Wine" || editRecipe.type === "Cider") && (
           <>
-            <label className="font-semibold">Juice / Must</label>
+            <label className="font-semibold">{t("Juice / Must")}</label>
             <input
               name="juice_type"
               defaultValue={editRecipe.juice_type}
@@ -1404,7 +1404,7 @@ function removeDryHop(index: number) {
             />
 
             <label className="font-semibold">
-              Sugar added (<UnitSymbol kind="kg" />)
+              {t("Sugar added")} (<UnitSymbol kind="kg" />)
             </label>
             <UnitInput
               kind="kg"
@@ -1418,7 +1418,7 @@ function removeDryHop(index: number) {
         {editRecipe.type === "Seltzer" && (
   <>
     <label className="font-semibold">
-      Sugar added (<UnitSymbol kind="kg" />)
+      {t("Sugar added")} (<UnitSymbol kind="kg" />)
     </label>
     <UnitInput
       kind="kg"
@@ -1434,16 +1434,16 @@ function removeDryHop(index: number) {
   <>
     {editRecipe.type === "Beer" && (
       <label className="block">
-        <span className="font-semibold">Brewing method</span>
+        <span className="font-semibold">{t("Brewing method")}</span>
         <select
           name="beer_subtype"
           value={editBeerSubtype}
           onChange={(event) => setEditBeerSubtype(event.target.value)}
           className="mt-1 w-full rounded border border-white/20 bg-zinc-900 p-3"
         >
-          <option value="all_grain">All-grain</option>
-          <option value="fresh_wort_kit">Fresh wort kit</option>
-          <option value="malt_extract_kit">Malt extract kit</option>
+          <option value="all_grain">{t("All-grain")}</option>
+          <option value="fresh_wort_kit">{t("Fresh wort kit")}</option>
+          <option value="malt_extract_kit">{t("Malt extract kit")}</option>
         </select>
       </label>
     )}
@@ -1460,13 +1460,13 @@ function removeDryHop(index: number) {
     <>
           <div>
             <label className="block mb-1 font-semibold">
-              Boil Volume (<UnitSymbol kind="volume" />)
+              {t("Boil Volume")} (<UnitSymbol kind="volume" />)
             </label>
             <UnitInput
               kind="volume"
               name="boil_volume"
               defaultValue={String(editRecipe.boil_volume ?? "")}
-              placeholder="Total wort volume before the boil"
+              placeholder={t("Total wort volume before the boil")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
@@ -1477,12 +1477,12 @@ function removeDryHop(index: number) {
     {(editRecipe.type === "Braggot" || editBeerSubtype === "all_grain") && (
     <>
     <div>
-      <label className="block mb-2 font-semibold">Malt additions</label>
+      <label className="block mb-2 font-semibold">{t("Malt additions")}</label>
 
       {editMalts.map((m, i) => (
         <div key={i} className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full">
           <input
-            placeholder="Malt type"
+            placeholder={t("Malt type")}
             className="p-3 rounded bg-black/40 border border-white/20 w-full md:flex-1"
             value={m.name}
             onChange={(e) => updateMalt(i, "name", e.target.value)}
@@ -1493,7 +1493,7 @@ function removeDryHop(index: number) {
             min="0"
             step="any"
             placeholder="EBC"
-            aria-label={`Malt ${i + 1} EBC`}
+            aria-label={`${t("Malt")} ${i + 1} EBC`}
             className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-24"
             value={m.ebc}
             onChange={(e) => updateMalt(i, "ebc", e.target.value)}
@@ -1501,7 +1501,7 @@ function removeDryHop(index: number) {
 
           <UnitInput
             kind="kg"
-            placeholder={`Amount (${label("kg")})`}
+            placeholder={`${t("Amount")} (${label("kg")})`}
             className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-32"
             value={m.amount}
             onValueChange={(value) => updateMalt(i, "amount", value)}
@@ -1512,7 +1512,7 @@ function removeDryHop(index: number) {
             onClick={() => removeMalt(i)}
             className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
           >
-            Remove
+            {t("Remove")}
           </button>
         </div>
       ))}
@@ -1522,7 +1522,7 @@ function removeDryHop(index: number) {
         onClick={addMalt}
         className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
       >
-        + Add malt
+        + {t("Add")} {t("malt")}
       </button>
     </div>
 
@@ -1534,40 +1534,40 @@ function removeDryHop(index: number) {
     {(editRecipe.type === "Braggot" || editBeerSubtype === "all_grain") && (
     <>
     <div>
-      <label className="block mb-2 font-semibold">Hop additions</label>
+      <label className="block mb-2 font-semibold">{t("Hop additions")}</label>
 
       {editHops.map((h, i) => (
         <div key={i} className="mb-4 w-full space-y-2">
 
           <input
-            placeholder="Hop type"
+            placeholder={t("Hop type")}
             className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
             value={h.name}
             onChange={(e) => updateHop(i, "name", e.target.value)}
           />
 
           <select
-            aria-label={`Hop addition ${i + 1} type`}
+            aria-label={t("Hop addition {index} type").replace("{index}", String(i + 1))}
             value={h.addition_type}
             onChange={(e) =>
               updateHop(i, "addition_type", e.target.value as "boil" | "whirlpool")
             }
             className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
           >
-            <option value="boil">Boil addition</option>
-            <option value="whirlpool">Whirlpool / hop stand</option>
+            <option value="boil">{t("Boil addition")}</option>
+            <option value="whirlpool">{t("Whirlpool / hop stand")}</option>
           </select>
 
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(6.5rem,0.8fr)_minmax(5rem,0.6fr)_minmax(7rem,1fr)_minmax(9rem,1.4fr)_auto]">
           <input
-            placeholder="Alpha (%)"
+            placeholder={t("Alpha (%)")}
             className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
             value={h.alpha}
             onChange={(e) => updateHop(i, "alpha", e.target.value)}
           />
 
           <input
-            placeholder="Year"
+            placeholder={t("Year")}
             className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
             value={h.year}
             onChange={(e) => updateHop(i, "year", e.target.value)}
@@ -1575,18 +1575,18 @@ function removeDryHop(index: number) {
 
           <UnitInput
             kind="g"
-            placeholder={`Amount (${label("g")})`}
+            placeholder={`${t("Amount")} (${label("g")})`}
             className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
             value={h.amount}
             onValueChange={(value) => updateHop(i, "amount", value)}
           />
 
           <input
-            aria-label={`Hop addition ${i + 1} time in minutes`}
+            aria-label={t("Hop addition {index} time in minutes").replace("{index}", String(i + 1))}
             placeholder={
               h.addition_type === "whirlpool"
-                ? "Stand time (min)"
-                : "Boil time (min)"
+                ? t("Stand time (min)")
+                : t("Boil time (min)")
             }
             type="number"
             min="0"
@@ -1599,8 +1599,8 @@ function removeDryHop(index: number) {
 
           {h.addition_type === "whirlpool" && (
             <input
-              aria-label={`Hop addition ${i + 1} whirlpool temperature in Celsius`}
-              placeholder="Temperature (°C)"
+              aria-label={t("Hop addition {index} whirlpool temperature in Celsius").replace("{index}", String(i + 1))}
+              placeholder={t("Temperature (°C)")}
               type="number"
               min="0"
               max="100"
@@ -1617,7 +1617,7 @@ function removeDryHop(index: number) {
             onClick={() => removeHop(i)}
             className="col-span-2 justify-self-end rounded-lg border border-white/20 bg-white/10 px-4 py-3 text-sm hover:bg-white/20 sm:col-span-1 sm:justify-self-auto"
           >
-            Remove
+            {t("Remove")}
           </button>
           </div>
         </div>
@@ -1628,7 +1628,7 @@ function removeDryHop(index: number) {
         onClick={addHop}
         className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
       >
-        + Add hop
+        + {t("Add")} {t("hop")}
       </button>
     </div>
 
@@ -1641,14 +1641,14 @@ function removeDryHop(index: number) {
     <>
     <div>
       <label className="mb-2 block font-semibold">
-        Dry hop additions
+        {t("Dry hop additions")}
       </label>
 
       {editDryHops.map((h, i) => (
         <div key={i} className="mb-4 w-full space-y-2">
 
           <input
-            placeholder="Hop type"
+            placeholder={t("Hop type")}
             className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
             value={h.name}
             onChange={(e) => updateDryHop(i, "name", e.target.value)}
@@ -1660,8 +1660,8 @@ function removeDryHop(index: number) {
             min="0"
             max="100"
             step="any"
-            placeholder="Alpha (%)"
-            aria-label={`Dry hop ${i + 1} alpha acid percentage`}
+            placeholder={t("Alpha (%)")}
+            aria-label={t("Dry hop {index} alpha acid percentage").replace("{index}", String(i + 1))}
             className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
             value={h.alpha}
             onChange={(e) => updateDryHop(i, "alpha", e.target.value)}
@@ -1671,8 +1671,8 @@ function removeDryHop(index: number) {
             type="number"
             min="1900"
             step="1"
-            placeholder="Year"
-            aria-label={`Dry hop ${i + 1} crop year`}
+            placeholder={t("Year")}
+            aria-label={t("Dry hop {index} crop year").replace("{index}", String(i + 1))}
             className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
             value={h.year}
             onChange={(e) => updateDryHop(i, "year", e.target.value)}
@@ -1680,14 +1680,14 @@ function removeDryHop(index: number) {
 
           <UnitInput
             kind="g"
-            placeholder={`Amount (${label("g")})`}
+            placeholder={`${t("Amount")} (${label("g")})`}
             className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
             value={h.amount}
             onValueChange={(value) => updateDryHop(i, "amount", value)}
           />
 
           <input
-            placeholder="Contact time (days)"
+            placeholder={t("Contact time (days)")}
             className="w-full min-w-0 rounded-lg border border-white/20 bg-black/40 p-3"
             value={h.contact}
             onChange={(e) => updateDryHop(i, "contact", e.target.value)}
@@ -1698,7 +1698,7 @@ function removeDryHop(index: number) {
             onClick={() => removeDryHop(i)}
             className="col-span-2 justify-self-end rounded-lg border border-white/20 bg-white/10 px-4 py-3 text-sm hover:bg-white/20 sm:col-span-1 sm:justify-self-auto"
           >
-            Remove
+            {t("Remove")}
           </button>
           </div>
         </div>
@@ -1709,7 +1709,7 @@ function removeDryHop(index: number) {
         onClick={addDryHop}
         className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
       >
-        + Add dry hop
+        + {t("Add")} {t("dry hop")}
       </button>
 
       
@@ -1726,12 +1726,12 @@ function removeDryHop(index: number) {
     {(editRecipe.type === "Braggot" || editBeerSubtype === "all_grain") && (
     <>
           <div>
-            <label className="block mb-1 font-semibold">Total boil time (minutes)</label>
+            <label className="block mb-1 font-semibold">{t("Total boil time (minutes)")}</label>
             <input
               name="boil_time"
               type="text"
               defaultValue={editRecipe.boil_time}
-              placeholder="Length of the boil"
+              placeholder={t("Length of the boil")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
@@ -1745,18 +1745,18 @@ function removeDryHop(index: number) {
         {editRecipe.type === "Other" && (
           <>
             <label className="font-semibold">
-              Style or type (optional)
+              {t("Style or type (optional)")}
               <input
                 name="other_style"
                 value={editOtherStyle}
                 maxLength={80}
                 onChange={(event) => setEditOtherStyle(event.target.value)}
-                placeholder="Example: Kombucha"
+                placeholder={t("Example: Kombucha")}
                 className="mt-2 w-full rounded border border-white/20 bg-black/40 p-3"
               />
             </label>
             <label className="font-semibold">
-              Ingredients (JSON)
+              {t("Ingredients (JSON)")}
               <textarea
                 name="ingredients"
                 defaultValue={
@@ -1767,7 +1767,7 @@ function removeDryHop(index: number) {
               />
             </label>
             <label className="font-semibold">
-              Steps (JSON)
+              {t("Steps (JSON)")}
               <textarea
                 name="steps"
                 defaultValue={
@@ -1784,20 +1784,20 @@ function removeDryHop(index: number) {
 
         {/* Shared fields */}
         <div>
-          <label className="mb-2 block font-semibold">Additives</label>
+          <label className="mb-2 block font-semibold">{t("Additives")}</label>
           <RecipeAdditiveFields
             defaultValue={String(editRecipe.additives ?? "")}
           />
         </div>
 
-        <label className="font-semibold">Full process</label>
+        <label className="font-semibold">{t("Full process")}</label>
         <PublicMentionTextarea
           name="full_process"
           defaultValue={editRecipe.full_process}
           className="p-3 rounded bg-black/40 border border-white/20"
         />
 
-        <label className="font-semibold">Notes</label>
+        <label className="font-semibold">{t("Notes")}</label>
         <PublicMentionTextarea
           name="notes"
           defaultValue={editRecipe.notes}
@@ -1819,7 +1819,7 @@ function removeDryHop(index: number) {
           disabled={savingEdit}
           className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold disabled:opacity-50"
         >
-          {savingEdit ? "Saving..." : "Save changes"}
+          {savingEdit ? t("Saving...") : t("Save changes")}
         </button>
       </form>
 
@@ -1827,7 +1827,7 @@ function removeDryHop(index: number) {
         onClick={() => setOpenEdit(null)}
         className="mt-4 w-full px-4 py-2 bg-zinc-700 hover:bg-zinc-600 border border-zinc-500 rounded-lg font-semibold"
       >
-        Cancel
+        {t("Cancel")}
       </button>
     </div>
   </>
@@ -1843,8 +1843,8 @@ function removeDryHop(index: number) {
     >
       <h2 id="batch-inventory-dialog-title" className="mb-3 text-xl font-bold">
         {batchInventoryDialog.error
-          ? "Could not check inventory"
-          : "Not enough inventory for this recipe"}
+          ? t("Could not check inventory")
+          : t("Not enough inventory for this recipe")}
       </h2>
       {batchInventoryDialog.error ? (
         <p role="alert" className="mb-6 text-sm text-amber-200">
@@ -1853,8 +1853,7 @@ function removeDryHop(index: number) {
       ) : (
         <>
           <p className="mb-3 text-sm text-zinc-300">
-            The new batch has not been opened. Add or match these ingredients before
-            continuing:
+            {t("The new batch has not been opened. Add or match these ingredients before continuing:")}
           </p>
           <ul className="mb-4 list-disc space-y-1 pl-5 text-sm text-amber-200">
             {batchInventoryDialog.issues?.map((issue, index) => (
@@ -1862,8 +1861,7 @@ function removeDryHop(index: number) {
             ))}
           </ul>
           <p className="mb-6 text-sm text-zinc-300">
-            You can temporarily continue without using inventory for this batch. Your
-            inventory and inventory setting will not be changed.
+            {t("You can temporarily continue without using inventory for this batch. Your inventory and inventory setting will not be changed.")}
           </p>
         </>
       )}
@@ -1873,7 +1871,7 @@ function removeDryHop(index: number) {
           onClick={() => setBatchInventoryDialog(null)}
           className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold hover:bg-white/20"
         >
-          {batchInventoryDialog.error ? "Close" : "Review recipe"}
+          {batchInventoryDialog.error ? t("Close") : t("Review recipe")}
         </button>
         {!batchInventoryDialog.error && (
           <button
@@ -1888,7 +1886,7 @@ function removeDryHop(index: number) {
             }}
             className="rounded-lg border border-amber-400/40 bg-amber-700/80 px-4 py-2 font-semibold hover:bg-amber-700"
           >
-            Continue without inventory
+            {t("Continue without inventory")}
           </button>
         )}
       </div>
@@ -1899,17 +1897,16 @@ function removeDryHop(index: number) {
 
 <ConfirmDialog
   open={confirmDeleteId !== null}
-  title="Delete recipe?"
+  title={t("Delete recipe?")}
   message={
     confirmDeleteId && recipeActionErrors[confirmDeleteId]
-      ? `Could not delete this recipe: ${recipeActionErrors[confirmDeleteId]}`
-      : "Are you sure you want to delete this recipe? This action cannot be undone."
+      ? `${t("Could not delete this recipe:")} ${translateRecipeError(recipeActionErrors[confirmDeleteId], t)}`
+      : t("Are you sure you want to delete this recipe? This action cannot be undone.")
   }
-  confirmLabel="Delete"
+  confirmLabel={t("Delete")}
   onConfirm={async () => {
     if (!confirmDeleteId) return false;
-    await deleteRecipe(confirmDeleteId);
-    return true;
+    return await deleteRecipe(confirmDeleteId);
   }}
   onCancel={() => setConfirmDeleteId(null)}
 />
@@ -1924,7 +1921,7 @@ function removeDryHop(index: number) {
               className="max-h-[calc(100dvh-4rem)] w-full max-w-md overflow-y-auto rounded-xl border border-white/10 bg-black/60 p-6"
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 className="text-2xl font-bold text-center mb-6">Choose recipe type</h2>
+              <h2 className="text-2xl font-bold text-center mb-6">{t("Choose recipe type")}</h2>
 
               <div className="flex flex-col gap-4">
                 {["Mead", "Beer", "Cider", "Wine", "Seltzer", "Braggot", "Other"].map((type) => (
@@ -1935,7 +1932,7 @@ function removeDryHop(index: number) {
                     }}
                     className="px-4 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
                   >
-                    {type}
+                    {t(type)}
                   </button>
                 ))}
               </div>
@@ -1944,7 +1941,7 @@ function removeDryHop(index: number) {
                 onClick={() => setOpenStyleSelect(false)}
                 className="mt-8 w-full px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
               >
-                Cancel
+                {t("Cancel")}
               </button>
             </div>
           </div>,

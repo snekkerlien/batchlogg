@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { createBatch } from "../../actions/createBatch";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type KarType = {
   id: string;        // UUID
@@ -16,6 +17,7 @@ type KarClientProps = {
 
 export default function KarClient({ kar }: KarClientProps) {
   const router = useRouter();
+  const { t } = useTranslation();
 
   return (
     <form
@@ -36,29 +38,29 @@ export default function KarClient({ kar }: KarClientProps) {
       <input type="hidden" name="kar" value={kar.id} />
 
       <div>
-        <label className="block mb-1">Batch name</label>
+        <label className="block mb-1">{t("Batch name")}</label>
         <input
           type="text"
           name="name"
           required
-          placeholder="Enter batch name"
+          placeholder={t("Enter batch name")}
           className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
         />
       </div>
 
       <div>
-        <label className="block mb-1">Volume (liters)</label>
+        <label className="block mb-1">{t("Volume (liters)")}</label>
         <input
           type="number"
           name="volume_l"
           required
-          placeholder="Enter volume in liters"
+          placeholder={t("Enter volume in liters")}
           className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
         />
       </div>
 
       <div>
-        <label className="block mb-1">Brew date</label>
+        <label className="block mb-1">{t("Brew date")}</label>
         <input
           type="date"
           name="startdato"
@@ -69,13 +71,13 @@ export default function KarClient({ kar }: KarClientProps) {
       </div>
 
       <div>
-        <label className="block mb-1">Original Gravity (OG)</label>
+        <label className="block mb-1">{t("Original Gravity (OG)")}</label>
         <input
           type="number"
           step="0.001"
           name="og"
           required
-          placeholder="Enter original gravity"
+          placeholder={t("Enter original gravity")}
           className="w-full p-2 rounded bg-zinc-800 border border-zinc-700"
         />
       </div>
@@ -83,7 +85,7 @@ export default function KarClient({ kar }: KarClientProps) {
         type="submit"
         className="w-full bg-green-600 hover:bg-green-700 p-2 rounded font-semibold"
       >
-        Register batch
+        {t("Register batch")}
       </button>
     </form>
   );

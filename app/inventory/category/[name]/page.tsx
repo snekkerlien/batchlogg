@@ -13,8 +13,10 @@ import {
   LEGACY_CATEGORY_ALIASES,
   SNUS_CATEGORIES,
 } from "@/lib/inventory/categories";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export default function CategoryPage({ params }: { params: { name: string } }) {
+  const { t } = useTranslation();
   const {
     items,
     loading,
@@ -62,17 +64,17 @@ export default function CategoryPage({ params }: { params: { name: string } }) {
         {isRestrictedCategory ? (
           <>
             <h1 className="text-4xl font-bold text-center mt-20 sm:mt-6">
-              Access denied
+              {t("Access denied")}
             </h1>
             <p className="opacity-80 text-center mb-10 mt-6">
-              You do not have permission to view this category.
+              {t("You do not have permission to view this category.")}
             </p>
           </>
         ) : (
           <>
             <PageHeading
-              title={formattedCategoryTitle}
-              subtitle="All items in this category."
+              title={t(formattedCategoryTitle)}
+              subtitle={t("All items in this category.")}
             />
             {isKnownCategory && (
               <div className="mb-8 mt-6 text-center">
@@ -80,15 +82,15 @@ export default function CategoryPage({ params }: { params: { name: string } }) {
                   onClick={() => setModalOpen(true)}
                   className="rounded-lg border border-green-500 bg-green-700 px-6 py-3 font-semibold hover:bg-green-600"
                 >
-                  Add new item
+                  {t("Add new item")}
                 </button>
               </div>
             )}
             {loading ? (
-              <p className="opacity-60 text-center mt-10">Loading…</p>
+              <p className="opacity-60 text-center mt-10">{t("Loading…")}</p>
             ) : filtered.length === 0 ? (
               <p className="opacity-60 text-center mt-10">
-                No items in this category.
+                {t("No items in this category.")}
               </p>
             ) : (
               <InventoryList

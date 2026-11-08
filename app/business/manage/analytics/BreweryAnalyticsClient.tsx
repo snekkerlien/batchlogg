@@ -5,6 +5,8 @@ import Link from "next/link";
 import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
+import { translateBreweryAnalyticsError } from "@/lib/i18n/apiErrors";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type Period = "7d" | "30d" | "90d";
 type ProductSummary = {
@@ -65,6 +67,7 @@ function MetricCard({ label, value, detail }: { label: string; value: string | n
 }
 
 export default function BreweryAnalyticsClient() {
+  const { t, language } = useTranslation();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [period, setPeriod] = useState<Period>("30d");
   const [loading, setLoading] = useState(true);
@@ -79,15 +82,19 @@ export default function BreweryAnalyticsClient() {
         credentials: "include",
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Could not load business analytics.");
+      if (!response.ok) throw new Error(result.error || t("Could not load business analytics."));
       setData(result);
     } catch (loadError) {
       console.error("Could not load business analytics", loadError);
-      setError(loadError instanceof Error ? loadError.message : "Could not load business analytics.");
+      setError(
+        loadError instanceof Error && !(loadError instanceof TypeError)
+          ? translateBreweryAnalyticsError(loadError.message, t)
+          : t("Could not load business analytics.")
+      );
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load(period);
@@ -101,9 +108,9 @@ export default function BreweryAnalyticsClient() {
       <div className="relative mx-auto mt-8 max-w-5xl rounded-xl border border-white/10 bg-black/60 p-5 pt-16 backdrop-blur-md sm:p-9 sm:pt-16">
         <div className="absolute left-4 top-3 z-40"><BackButton /></div>
         <div className="absolute right-4 top-3 z-40"><MenuOverlay current="brewery" /></div>
-        <PageHeading title="Business analytics" subtitle="Understand how customers discover and rate your products." />
+        <PageHeading title={t("Business analytics")} subtitle={t("Understand how customers discover and rate your products.")} />
 
-        <div className="mb-6 flex flex-wrap items-center justify-center gap-2" aria-label="Analytics date range">
+        <div className="mb-6 flex flex-wrap items-center justify-center gap-2" aria-label={t("Analytics date range")}>
           {periods.map((option) => (
             <button
               key={option.value}
@@ -112,7 +119,7 @@ export default function BreweryAnalyticsClient() {
               onClick={() => setPeriod(option.value)}
               className={`rounded-lg border px-4 py-2 text-sm font-semibold ${period === option.value ? "border-green-400/50 bg-green-700 text-white" : "border-white/15 bg-white/5 text-white/70 hover:bg-white/10"}`}
             >
-              {option.label}
+              {t(option.label)}
             </button>
           ))}
         </div>
@@ -120,35 +127,35 @@ export default function BreweryAnalyticsClient() {
         {error ? (
           <div role="alert" className="rounded-lg border border-red-400/30 bg-red-950/40 p-4 text-center text-red-200">
             <p>{error}</p>
-            <button type="button" onClick={() => void load(period)} className="mt-3 underline">Try again</button>
+            <button type="button" onClick={() => void load(period)} className="mt-3 underline">{t("Try again")}</button>
           </div>
         ) : loading && !data ? (
-          <p className="text-center text-white/65">Loading business analytics…</p>
+          <p className="text-center text-white/65">{t("Loading business analytics…")}</p>
         ) : data ? (
           <div className="space-y-6">
-            {loading && <p role="status" className="text-center text-sm text-white/50">Updating analytics…</p>}
-            <section aria-label={`${data.periodDays}-day summary`} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <MetricCard label="Product page visits" value={data.summary.pageViews.toLocaleString()} detail={`Last ${data.periodDays} days`} />
-              <MetricCard label="QR scans" value={data.summary.qrScans.toLocaleString()} detail={`Last ${data.periodDays} days`} />
-              <MetricCard label="Shop clicks" value={data.summary.outboundClicks.toLocaleString()} detail={`Last ${data.periodDays} days`} />
-              <MetricCard label="Shop click rate" value={data.summary.shopClickRate == null ? "—" : `${data.summary.shopClickRate.toFixed(1)}%`} detail="Clicks divided by product page visits" />
-              <MetricCard label="Published products" value={data.summary.publishedProducts} detail="Visible to customers" />
-              <MetricCard label="Customer rating" value={data.summary.averageRating == null ? "—" : `${data.summary.averageRating.toFixed(1)} / 5`} detail={`${data.summary.reviewCount} published review${data.summary.reviewCount === 1 ? "" : "s"} overall`} />
-              <MetricCard label="New reviews" value={data.summary.newReviews} detail={`Last ${data.periodDays} days`} />
+            {loading && <p role="status" className="text-center text-sm text-white/50">{t("Updating analytics…")}</p>}
+            <section aria-label={`${data.periodDays} ${t("day summary")}`} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <MetricCard label={t("Product page visits")} value={data.summary.pageViews.toLocaleString()} detail={`${t("Last")} ${data.periodDays} ${t("days")}`} />
+              <MetricCard label={t("QR scans")} value={data.summary.qrScans.toLocaleString()} detail={`${t("Last")} ${data.periodDays} ${t("days")}`} />
+              <MetricCard label={t("Shop clicks")} value={data.summary.outboundClicks.toLocaleString()} detail={`${t("Last")} ${data.periodDays} ${t("days")}`} />
+              <MetricCard label={t("Shop click rate")} value={data.summary.shopClickRate == null ? "—" : `${data.summary.shopClickRate.toFixed(1)}%`} detail={t("Clicks divided by product page visits")} />
+              <MetricCard label={t("Published products")} value={data.summary.publishedProducts} detail={t("Visible to customers")} />
+              <MetricCard label={t("Customer rating")} value={data.summary.averageRating == null ? "—" : `${data.summary.averageRating.toFixed(1)} / 5`} detail={`${data.summary.reviewCount} ${t(data.summary.reviewCount === 1 ? "published review" : "published reviews overall")}`} />
+              <MetricCard label={t("New reviews")} value={data.summary.newReviews} detail={`${t("Last")} ${data.periodDays} ${t("days")}`} />
             </section>
 
             <section className="rounded-xl border border-white/10 bg-white/5 p-5">
-              <h2 className="text-lg font-semibold text-green-200">Product visits</h2>
-              <p className="mt-1 text-sm text-white/55">Product page visits, owner QR scans, and clicks through to product pages. Counts are not deduplicated by visitor.</p>
+              <h2 className="text-lg font-semibold text-green-200">{t("Product visits")}</h2>
+              <p className="mt-1 text-sm text-white/55">{t("Product page visits, owner QR scans, and clicks through to product pages. Counts are not deduplicated by visitor.")}</p>
               {data.daily.every((day) => day.pageViews + day.qrScans + day.outboundClicks === 0) ? (
-                <p className="mt-5 text-sm text-white/55">No product visits have been recorded in this period yet.</p>
+                <p className="mt-5 text-sm text-white/55">{t("No product visits have been recorded in this period yet.")}</p>
               ) : (
                 <div className="mt-5 flex h-44 items-end gap-1 border-b border-white/10 pb-6">
                   {data.daily.map((day, index) => {
                     const total = day.pageViews + day.qrScans + day.outboundClicks;
-                    const dateLabel = new Date(`${day.date}T00:00:00Z`).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" });
+                    const dateLabel = new Date(`${day.date}T00:00:00Z`).toLocaleDateString(language === "nb" ? "nb-NO" : undefined, { month: "short", day: "numeric", timeZone: "UTC" });
                     return (
-                      <div key={day.date} className="relative flex h-full min-w-0 flex-1 flex-col justify-end" title={`${dateLabel}: ${day.pageViews} page visits, ${day.qrScans} QR scans, ${day.outboundClicks} shop clicks`}>
+                      <div key={day.date} className="relative flex h-full min-w-0 flex-1 flex-col justify-end" title={`${dateLabel}: ${day.pageViews} ${t("page visits")}, ${day.qrScans} ${t("QR scans")}, ${day.outboundClicks} ${t("shop clicks")}`}>
                         {total > 0 && (
                           <div className="flex w-full flex-col justify-end overflow-hidden rounded-t-sm" style={{ height: `${Math.max(4, total / maxDailyViews * 100)}%` }}>
                             <div className="min-h-0 flex-1 bg-green-400/70" style={{ flexGrow: day.pageViews }} />
@@ -165,16 +172,16 @@ export default function BreweryAnalyticsClient() {
                 </div>
               )}
               <div className="mt-3 flex gap-4 text-xs text-white/55">
-                <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-green-400/70" />Product page visits</span>
-                <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-amber-300/80" />QR scans</span>
-                <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-sky-300/80" />Shop clicks</span>
+                <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-green-400/70" />{t("Product page visits")}</span>
+                <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-amber-300/80" />{t("QR scans")}</span>
+                <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-sky-300/80" />{t("Shop clicks")}</span>
               </div>
             </section>
 
             <div className="grid gap-6 lg:grid-cols-2">
               <section className="rounded-xl border border-white/10 bg-white/5 p-5">
-                <h2 className="text-lg font-semibold text-green-200">Customer ratings</h2>
-                <p className="mt-1 text-sm text-white/55">Published ratings across all products.</p>
+                <h2 className="text-lg font-semibold text-green-200">{t("Customer ratings")}</h2>
+                <p className="mt-1 text-sm text-white/55">{t("Published ratings across all products.")}</p>
                 <div className="mt-4 space-y-2">
                   {[...(data.ratingDistribution ?? [])].reverse().map((entry) => (
                     <div key={entry.rating} className="grid grid-cols-[3rem_1fr_2rem] items-center gap-3 text-sm">
@@ -188,22 +195,22 @@ export default function BreweryAnalyticsClient() {
                 </div>
               </section>
               <section className="rounded-xl border border-white/10 bg-white/5 p-5">
-                <h2 className="text-lg font-semibold text-green-200">Popular products</h2>
-                <p className="mt-1 text-sm text-white/55">Ranked by product page visits and QR scans in the selected period.</p>
-                {data.products.length === 0 ? <p className="mt-4 text-sm text-white/55">Add a product to start seeing product analytics.</p> : (
+                <h2 className="text-lg font-semibold text-green-200">{t("Popular products")}</h2>
+                <p className="mt-1 text-sm text-white/55">{t("Ranked by product page visits and QR scans in the selected period.")}</p>
+                {data.products.length === 0 ? <p className="mt-4 text-sm text-white/55">{t("Add a product to start seeing product analytics.")}</p> : (
                   <ol className="mt-4 space-y-3">
                     {data.products.slice(0, 5).map((product, index) => (
                       <li key={product.id} className="flex items-start justify-between gap-3 border-b border-white/5 pb-3 last:border-0">
                         <div className="min-w-0">
                           <p className="truncate font-medium"><span className="mr-2 text-white/40">{index + 1}.</span>{product.name}</p>
                           <p className="mt-1 text-xs text-white/50">
-                            {product.averageRating == null ? "No ratings" : `★ ${product.averageRating.toFixed(1)}`} · {product.reviewCount} review{product.reviewCount === 1 ? "" : "s"}
+                            {product.averageRating == null ? t("No ratings") : `★ ${product.averageRating.toFixed(1)}`} · {product.reviewCount} {t(product.reviewCount === 1 ? "review" : "reviews")}
                           </p>
                           <p className="mt-1 text-xs text-white/50">
-                            {product.outboundClicks} shop click{product.outboundClicks === 1 ? "" : "s"} · {product.shopClickRate == null ? "No page visits" : `${product.shopClickRate.toFixed(1)}% click rate`}
+                            {product.outboundClicks} {t(product.outboundClicks === 1 ? "shop click" : "shop clicks")} · {product.shopClickRate == null ? t("No page visits") : `${product.shopClickRate.toFixed(1)}% ${t("click rate")}`}
                           </p>
                         </div>
-                        <p className="shrink-0 text-right text-sm text-white/70">{(product.pageViews + product.qrScans).toLocaleString()} visits</p>
+                        <p className="shrink-0 text-right text-sm text-white/70">{(product.pageViews + product.qrScans).toLocaleString()} {t("visits")}</p>
                       </li>
                     ))}
                   </ol>
@@ -212,9 +219,9 @@ export default function BreweryAnalyticsClient() {
             </div>
 
             <section className="rounded-xl border border-white/10 bg-white/5 p-5">
-              <h2 className="text-lg font-semibold text-green-200">Recent customer feedback</h2>
-              <p className="mt-1 text-sm text-white/55">The latest published product reviews.</p>
-              {data.recentReviews.length === 0 ? <p className="mt-4 text-sm text-white/55">No customer reviews yet.</p> : (
+              <h2 className="text-lg font-semibold text-green-200">{t("Recent customer feedback")}</h2>
+              <p className="mt-1 text-sm text-white/55">{t("The latest published product reviews.")}</p>
+              {data.recentReviews.length === 0 ? <p className="mt-4 text-sm text-white/55">{t("No customer reviews yet.")}</p> : (
                 <ul className="mt-4 space-y-4">
                   {data.recentReviews.map((review) => (
                     <li key={`${review.productId}-${review.createdAt}`} className="border-b border-white/5 pb-4 last:border-0 last:pb-0">
@@ -224,7 +231,7 @@ export default function BreweryAnalyticsClient() {
                       </div>
                       {review.title && <p className="mt-2 text-sm font-medium text-white/85">{review.title}</p>}
                       <p className="mt-1 whitespace-pre-line text-sm leading-6 text-white/65">{review.body}</p>
-                      <time dateTime={review.createdAt} className="mt-2 block text-xs text-white/40">{new Date(review.createdAt).toLocaleDateString()}</time>
+                      <time dateTime={review.createdAt} className="mt-2 block text-xs text-white/40">{new Date(review.createdAt).toLocaleDateString(language === "nb" ? "nb-NO" : undefined)}</time>
                     </li>
                   ))}
                 </ul>
@@ -232,8 +239,8 @@ export default function BreweryAnalyticsClient() {
             </section>
 
             <div className="flex flex-wrap justify-center gap-3">
-              <Link href="/business/manage/catalogue" className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10">Manage product catalogue</Link>
-              <Link href={`/business/${data.businessSlug}`} className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10">View public business page</Link>
+              <Link href="/business/manage/catalogue" className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10">{t("Manage product catalogue")}</Link>
+              <Link href={`/business/${data.businessSlug}`} className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10">{t("View public business page")}</Link>
             </div>
           </div>
         ) : null}

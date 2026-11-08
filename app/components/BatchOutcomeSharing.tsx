@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { translateBatchError } from "@/lib/i18n/apiErrors";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export default function BatchOutcomeSharing({
   batchId,
@@ -15,6 +17,7 @@ export default function BatchOutcomeSharing({
   initiallyShared: boolean;
   initiallySharingTastingNotes: boolean;
 }) {
+  const { t } = useTranslation();
   const [shared, setShared] = useState(initiallyShared);
   const [recipeLinked, setRecipeLinked] = useState(hasSourceRecipe);
   const [linkedFromBatchRecipe, setLinkedFromBatchRecipe] = useState(false);
@@ -48,7 +51,7 @@ export default function BatchOutcomeSharing({
           error?: string;
         } = await response.json();
         if (!response.ok) {
-          throw new Error(result.error || "Could not load matching recipes.");
+          throw new Error(result.error || t("Could not load matching recipes."));
         }
         if (result.savedFromBatch) {
           const linkResponse = await fetch(
@@ -63,7 +66,7 @@ export default function BatchOutcomeSharing({
           const linkResult: { error?: string } = await linkResponse.json();
           if (!linkResponse.ok) {
             throw new Error(
-              linkResult.error || "Could not link the recipe saved from this batch."
+              linkResult.error || t("Could not link the recipe saved from this batch.")
             );
           }
           if (active) {
@@ -78,9 +81,9 @@ export default function BatchOutcomeSharing({
         console.error("Could not load recipes for batch linking", loadError);
         if (active) {
           setError(
-            loadError instanceof Error
+            loadError instanceof Error && !(loadError instanceof TypeError)
               ? loadError.message
-              : "Could not load matching recipes."
+              : t("Could not load matching recipes.")
           );
         }
       })
@@ -91,7 +94,7 @@ export default function BatchOutcomeSharing({
     return () => {
       active = false;
     };
-  }, [batchId, recipeLinked]);
+  }, [batchId, recipeLinked, t]);
 
   async function updateSharing(nextShared: boolean, nextTastingNotes: boolean) {
     setSaving(true);
@@ -111,16 +114,16 @@ export default function BatchOutcomeSharing({
       );
       const result: { error?: string } = await response.json();
       if (!response.ok) {
-        throw new Error(result.error || "Could not update outcome sharing.");
+        throw new Error(result.error || t("Could not update outcome sharing."));
       }
       setShared(nextShared);
       setSharingTastingNotes(nextTastingNotes);
     } catch (updateError) {
       console.error("Could not update batch outcome sharing", updateError);
       setError(
-        updateError instanceof Error
+        updateError instanceof Error && !(updateError instanceof TypeError)
           ? updateError.message
-          : "Could not update outcome sharing."
+          : t("Could not update outcome sharing.")
       );
     } finally {
       setSaving(false);
@@ -129,7 +132,7 @@ export default function BatchOutcomeSharing({
 
   async function linkRecipe() {
     if (!selectedRecipeId) {
-      setError("Choose a recipe to link to this batch.");
+      setError(t("Choose a recipe to link to this batch."));
       return;
     }
     setLinkingRecipe(true);
@@ -146,16 +149,16 @@ export default function BatchOutcomeSharing({
       );
       const result: { error?: string } = await response.json();
       if (!response.ok) {
-        throw new Error(result.error || "Could not link the recipe.");
+        throw new Error(result.error || t("Could not link the recipe."));
       }
       setRecipeLinked(true);
       setLinkedFromBatchRecipe(false);
     } catch (linkError) {
       console.error("Could not link recipe to batch", linkError);
       setError(
-        linkError instanceof Error
+        linkError instanceof Error && !(linkError instanceof TypeError)
           ? linkError.message
-          : "Could not link the recipe."
+          : t("Could not link the recipe.")
       );
     } finally {
       setLinkingRecipe(false);
@@ -165,7 +168,7 @@ export default function BatchOutcomeSharing({
   return (
     <fieldset className="mt-4 space-y-3 rounded-lg border border-white/10 bg-black/20 p-4">
       <legend className="px-2 font-semibold text-green-300">
-        Community result
+        {t("Community result")}
       </legend>
       <label className="flex items-start gap-3 text-sm">
         <input
@@ -181,10 +184,9 @@ export default function BatchOutcomeSharing({
           className="mt-1"
         />
         <span>
-          Share this batch outcome publicly with your username
+          {t("Share this batch outcome publicly with your username")}
           <span className="mt-1 block text-xs text-white/55">
-            Results appear on the public source recipe. Your recipe and profile
-            must both be public. You can turn sharing off at any time.
+            {t("Results appear on the public source recipe. Your recipe and profile must both be public. You can turn sharing off at any time.")}
           </span>
         </span>
       </label>
@@ -199,9 +201,9 @@ export default function BatchOutcomeSharing({
           className="mt-1"
         />
         <span>
-          Include my tasting notes
+          {t("Include my tasting notes")}
           <span className="mt-1 block text-xs text-white/55">
-            Tasting notes stay private unless you separately opt in here.
+            {t("Tasting notes stay private unless you separately opt in here.")}
           </span>
         </span>
       </label>
@@ -211,7 +213,7 @@ export default function BatchOutcomeSharing({
             htmlFor={`batch-recipe-${batchId}`}
             className="block text-xs font-medium text-white/65"
           >
-            Link a {batchType} recipe to this batch
+            {t("Link a {type} recipe to this batch").replace("{type}", batchType)}
           </label>
           <div className="flex flex-wrap gap-2">
             <select
@@ -223,14 +225,14 @@ export default function BatchOutcomeSharing({
             >
               <option value="">
                 {loadingRecipes
-                  ? "Loading recipes…"
+                  ? t("Loading recipes…")
                   : recipes.length > 0
-                    ? "Choose a recipe"
-                    : "No matching recipes"}
+                    ? t("Choose a recipe")
+                    : t("No matching recipes")}
               </option>
               {recipes.map((recipe) => (
                 <option key={recipe.id} value={recipe.id}>
-                  {recipe.name || "Unnamed recipe"}
+                  {recipe.name || t("Unnamed recipe")}
                 </option>
               ))}
             </select>
@@ -240,13 +242,12 @@ export default function BatchOutcomeSharing({
               onClick={() => void linkRecipe()}
               className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {linkingRecipe ? "Linking…" : "Link recipe"}
+              {linkingRecipe ? t("Linking…") : t("Link recipe")}
             </button>
           </div>
           {recipes.length === 0 && !loadingRecipes && (
             <p className="text-xs text-white/55">
-              Save a {batchType} recipe first. You can then link it here and
-              share the batch result.
+              {t("Save a {type} recipe first. You can then link it here and share the batch result.").replace("{type}", batchType)}
             </p>
           )}
         </div>
@@ -254,12 +255,12 @@ export default function BatchOutcomeSharing({
       {recipeLinked && !hasSourceRecipe && (
         <p role="status" className="text-xs text-green-200">
           {linkedFromBatchRecipe
-            ? "The recipe saved from this batch was linked automatically. You can now share this result."
-            : "Recipe linked. You can now share this batch result."}
+            ? t("The recipe saved from this batch was linked automatically. You can now share this result.")
+            : t("Recipe linked. You can now share this batch result.")}
         </p>
       )}
-      {error && <p role="alert" className="text-sm text-amber-300">{error}</p>}
-      {saving && <p role="status" className="text-xs text-white/55">Saving sharing preference…</p>}
+      {error && <p role="alert" className="text-sm text-amber-300">{translateBatchError(error, t)}</p>}
+      {saving && <p role="status" className="text-xs text-white/55">{t("Saving sharing preference…")}</p>}
     </fieldset>
   );
 }

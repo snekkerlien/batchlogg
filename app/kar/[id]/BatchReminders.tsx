@@ -3,6 +3,8 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
 import ExpandArrowButton from "@/app/components/ExpandArrowButton";
+import { translateBatchError, translateGeneratedGravityReminder } from "@/lib/i18n/apiErrors";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface BatchReminder {
   id: string;
@@ -24,6 +26,7 @@ export default function BatchReminders({
   batchId: string;
   stage: "primary" | "secondary" | "conditioning";
 }) {
+  const { t } = useTranslation();
   const [reminders, setReminders] = useState<BatchReminder[]>([]);
   const [remindAt, setRemindAt] = useState(() =>
     localDateTimeValue(new Date(Date.now() + 24 * 60 * 60 * 1000))
@@ -38,24 +41,24 @@ export default function BatchReminders({
   const suggestedReminders =
     stage === "conditioning"
       ? [
-          "Check clarity before finishing",
-          "Schedule a tasting",
-          "Prepare packaging",
+          t("Check clarity before finishing"),
+          t("Schedule a tasting"),
+          t("Prepare packaging"),
         ]
       : stage === "secondary"
       ? [
-          "Check gravity before packaging",
-          "Check for clearing",
-          "Schedule rack or transfer",
-          "Prepare packaging",
-          "Check carbonation",
+          t("Check gravity before packaging"),
+          t("Check for clearing"),
+          t("Schedule rack or transfer"),
+          t("Prepare packaging"),
+          t("Check carbonation"),
         ]
       : [
-          "Take a gravity reading",
-          "Check fermentation temperature",
-          "Check fermentation activity",
-          "Schedule nutrient addition",
-          "Schedule rack or transfer",
+          t("Take a gravity reading"),
+          t("Check fermentation temperature"),
+          t("Check fermentation activity"),
+          t("Schedule nutrient addition"),
+          t("Schedule rack or transfer"),
         ];
 
   const loadReminders = useCallback(async () => {
@@ -65,18 +68,18 @@ export default function BatchReminders({
     );
     const data = await response.json();
     if (!response.ok) {
-      throw new Error(data.error || "Could not load reminders");
+      throw new Error(data.error || t("Could not load reminders"));
     }
     setReminders(data.reminders);
     setError("");
-  }, [batchId]);
+  }, [batchId, t]);
 
   useEffect(() => {
     let active = true;
     loadReminders()
       .catch((loadError) => {
         console.error("Could not load batch reminders", loadError);
-        if (active) setError("Reminders could not be loaded.");
+        if (active) setError(t("Reminders could not be loaded."));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -85,7 +88,7 @@ export default function BatchReminders({
     return () => {
       active = false;
     };
-  }, [loadReminders]);
+  }, [loadReminders, t]);
 
   useEffect(() => {
     function openFromGuide() {
@@ -117,19 +120,19 @@ export default function BatchReminders({
         }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Could not create reminder");
+      if (!response.ok) throw new Error(data.error || t("Could not create reminder"));
 
       setMessage("");
       try {
         await loadReminders();
       } catch (refreshError) {
         console.error("Reminder was saved, but its list could not refresh", refreshError);
-        setError("Reminder was saved, but the scheduled list could not be refreshed.");
+        setError(t("Reminder was saved, but the scheduled list could not be refreshed."));
       }
     } catch (saveError) {
       console.error("Could not create batch reminder", saveError);
       setError(
-        saveError instanceof Error ? saveError.message : "Could not create reminder."
+        saveError instanceof Error ? translateBatchError(saveError.message, t) : t("Could not create reminder.")
       );
     } finally {
       setSaving(false);
@@ -145,7 +148,7 @@ export default function BatchReminders({
         { method: "DELETE", credentials: "include" }
       );
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Could not delete reminder");
+      if (!response.ok) throw new Error(data.error || t("Could not delete reminder"));
       setReminders((current) =>
         current.filter((reminder) => reminder.id !== reminderToDelete.id)
       );
@@ -156,10 +159,10 @@ export default function BatchReminders({
     } catch (deleteError) {
       console.error("Could not delete batch reminder", deleteError);
       setError(
-        deleteError instanceof Error ? deleteError.message : "Could not delete reminder."
+        deleteError instanceof Error ? translateBatchError(deleteError.message, t) : t("Could not delete reminder.")
       );
       setDeleteError(
-        deleteError instanceof Error ? deleteError.message : "Could not delete reminder."
+        deleteError instanceof Error ? translateBatchError(deleteError.message, t) : t("Could not delete reminder.")
       );
       return false;
     }
@@ -168,10 +171,10 @@ export default function BatchReminders({
   return (
     <section id="batch-reminders" className="mt-6 mb-6 scroll-mt-6 rounded-xl border border-white/10 bg-white/5 p-4">
       <div className="flex w-full items-center justify-between gap-3 text-left text-lg font-semibold text-green-300">
-        <span>Reminders</span>
+        <span>{t("Reminders")}</span>
         <ExpandArrowButton
           expanded={open}
-          label="batch reminders"
+          label={t("Batch reminders")}
           controls="batch-reminders-content"
           onClick={() => setOpen((current) => !current)}
         />
@@ -184,13 +187,12 @@ export default function BatchReminders({
       >
         <div className="overflow-hidden">
           <p className="mt-1 text-sm text-white/70">
-            Set a reminder for this stage of the batch. We’ll also remind you if
-            7 days pass without a gravity reading.
+            {t("Set a reminder for this stage of the batch. We’ll also remind you if 7 days pass without a gravity reading.")}
           </p>
 
           <form onSubmit={createReminder} className="mt-4 grid gap-3 sm:grid-cols-2">
             <label className="flex flex-col gap-1 text-sm">
-              Reminder date and time
+              {t("Reminder date and time")}
               <input
                 type="datetime-local"
                 required
@@ -201,14 +203,14 @@ export default function BatchReminders({
               />
             </label>
             <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-              What should we remind you about?
+              {t("What should we remind you about?")}
               <input
                 type="text"
                 required
                 maxLength={300}
                 value={message}
                 onChange={(event) => setMessage(event.target.value)}
-                placeholder="For example, check gravity or prepare to bottle"
+                placeholder={t("For example, check gravity or prepare to bottle")}
                 className="rounded-lg border border-white/20 bg-black/40 p-3 text-white"
               />
             </label>
@@ -229,22 +231,22 @@ export default function BatchReminders({
               disabled={saving}
               className="w-fit rounded-lg border border-green-500/50 bg-green-700/70 px-4 py-2 font-semibold hover:bg-green-700 disabled:opacity-50"
             >
-              {saving ? "Saving…" : "Set reminder"}
+              {saving ? t("Saving…") : t("Set reminder")}
             </button>
           </form>
 
           {error && (
             <p role="alert" className="mt-3 text-sm text-amber-300">
-              {error}
+              {translateBatchError(error, t)}
             </p>
           )}
 
           <div className="mt-5 border-t border-white/10 pt-4">
-            <h3 className="font-semibold">Scheduled reminders</h3>
+            <h3 className="font-semibold">{t("Scheduled reminders")}</h3>
             {loading ? (
-              <p className="mt-2 text-sm text-white/60">Loading reminders…</p>
+              <p className="mt-2 text-sm text-white/60">{t("Loading reminders…")}</p>
             ) : reminders.length === 0 ? (
-              <p className="mt-2 text-sm text-white/60">No reminders scheduled.</p>
+              <p className="mt-2 text-sm text-white/60">{t("No reminders scheduled.")}</p>
             ) : (
               <ul className="mt-2 space-y-2">
                 {reminders.map((reminder) => (
@@ -254,19 +256,23 @@ export default function BatchReminders({
                   >
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm">{reminder.message}</p>
+                        <p className="text-sm">
+                          {reminder.type === "sg_check"
+                            ? translateGeneratedGravityReminder(reminder.message, t)
+                            : reminder.message}
+                        </p>
                         {new Date(reminder.remind_at).getTime() <= Date.now() && (
                           <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[11px] font-semibold text-amber-100">
-                            Due
+                            {t("Due")}
                           </span>
                         )}
                       </div>
                       <p className="mt-1 text-xs text-white/50">
                         {reminder.type === "manual"
-                          ? "Scheduled task"
+                          ? t("Scheduled task")
                           : reminder.message.includes("stayed within 0.001")
-                            ? "Stable gravity trend"
-                            : "Gravity check"}{" "}
+                            ? t("Stable gravity trend")
+                            : t("Gravity check")}{" "}
                         ·{" "}
                         {new Date(reminder.remind_at).toLocaleString("en-GB", {
                           dateStyle: "medium",
@@ -283,7 +289,7 @@ export default function BatchReminders({
                         }}
                         className="w-fit rounded-lg border border-white/15 px-3 py-1.5 text-sm hover:bg-white/10"
                       >
-                        Cancel
+                        {t("Cancel")}
                       </button>
                     )}
                   </li>
@@ -296,9 +302,9 @@ export default function BatchReminders({
 
       <ConfirmDialog
         open={!!reminderToDelete}
-        title="Cancel this reminder?"
-        message={deleteError || "This scheduled reminder will be removed."}
-        confirmLabel="Cancel reminder"
+        title={t("Cancel this reminder?")}
+        message={deleteError ? translateBatchError(deleteError, t) : t("This scheduled reminder will be removed.")}
+        confirmLabel={t("Cancel reminder")}
         onConfirm={deleteReminder}
         onCancel={() => {
           setReminderToDelete(null);

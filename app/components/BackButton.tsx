@@ -1,14 +1,19 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export default function BackButton({ href }: { href?: string } = {}) {
   const router = useRouter();
+  const pathname = usePathname();
+  const { t } = useTranslation();
+  const isAdminPath = pathname === "/admin" || pathname.startsWith("/admin/");
+  const label = isAdminPath ? "Go back" : t("Go back");
 
   return (
     <button
       type="button"
-      aria-label="Go back"
+      aria-label={label}
       onClick={() => {
         if (href) {
           router.push(href);

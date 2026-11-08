@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { translateRecipeError } from "@/lib/i18n/apiErrors";
 
 export type SavedRecipe = Record<string, any> & {
   id: string;
@@ -14,6 +16,7 @@ function normalizeRecipeType(type: unknown) {
 }
 
 export function useRecipePrefill(recipeId?: string, expectedType?: string) {
+  const { t } = useTranslation();
   const [recipe, setRecipe] = useState<SavedRecipe | null>(null);
   const [loading, setLoading] = useState(Boolean(recipeId));
   const [error, setError] = useState("");
@@ -50,9 +53,9 @@ export function useRecipePrefill(recipeId?: string, expectedType?: string) {
         setRecipe(loadedRecipe);
       })
       .catch((loadError: unknown) => {
-        if (loadError instanceof Error && loadError.name !== "AbortError") {
-          setError(loadError.message);
-        }
+        if (controller.signal.aborted) return;
+        console.error("Could not load recipe for batch", loadError);
+        setError(loadError instanceof Error ? loadError.message : "Could not load recipe.");
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
@@ -61,5 +64,5 @@ export function useRecipePrefill(recipeId?: string, expectedType?: string) {
     return () => controller.abort();
   }, [expectedType, recipeId]);
 
-  return { recipe, loading, error };
+  return { recipe, loading, error: error ? translateRecipeError(error, t) : "" };
 }

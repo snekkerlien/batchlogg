@@ -3,10 +3,15 @@
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { isAccentColor } from "@/lib/theme/accentColor";
 import { isUnitSystem, type UnitSystem } from "@/lib/units";
+import {
+  isAvailableSiteLanguage,
+  type SiteLanguage,
+} from "@/lib/i18n/language";
 
 export type UserPreferences = {
   theme_accent_color: string;
   preferred_unit_system: UnitSystem;
+  preferred_language?: SiteLanguage;
   use_inventory_for_batches: boolean;
   batch_reminders_enabled: boolean;
   games_enabled?: boolean;
@@ -64,10 +69,12 @@ export async function saveBrewingPreferences(
   return { saved: true };
 }
 
-export async function saveUserPreferences(preferences: UserPreferences) {
+export async function saveUserPreferences(preferences: UserPreferences, expectedUserId: string) {
   if (
     !isAccentColor(preferences.theme_accent_color) ||
     !isUnitSystem(preferences.preferred_unit_system) ||
+    (preferences.preferred_language !== undefined &&
+      !isAvailableSiteLanguage(preferences.preferred_language)) ||
     typeof preferences.use_inventory_for_batches !== "boolean" ||
     typeof preferences.batch_reminders_enabled !== "boolean" ||
     (preferences.games_enabled !== undefined &&
@@ -87,12 +94,16 @@ export async function saveUserPreferences(preferences: UserPreferences) {
     error: userError,
   } = await supabase.auth.getUser();
   if (userError || !user) throw new Error("Authentication required");
+  if (user.id !== expectedUserId) throw new Error("The signed-in account changed. Please try again.");
 
   const { data, error } = await supabase
     .from("profiles")
     .update({
       theme_accent_color: preferences.theme_accent_color,
       preferred_unit_system: preferences.preferred_unit_system,
+      ...(preferences.preferred_language === undefined
+        ? {}
+        : { preferred_language: preferences.preferred_language }),
       use_inventory_for_batches: preferences.use_inventory_for_batches,
       batch_reminders_enabled: preferences.batch_reminders_enabled,
       ...(preferences.games_enabled === undefined
@@ -131,4 +142,28 @@ export async function savePreferredUnitSystem(system: UnitSystem) {
     .eq("id", user.id);
 
   if (error) throw new Error(`Could not save unit preference: ${error.message}`);
+}
+
+export async function savePreferredLanguage(language: SiteLanguage, expectedUserId: string) {
+  if (!isAvailableSiteLanguage(language)) {
+    throw new Error("This language is not available yet");
+  }
+
+  const { supabase } = await supabaseServer();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+  if (userError || !user) throw new Error("Authentication required");
+  if (user.id !== expectedUserId) throw new Error("The signed-in account changed. Please try again.");
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({ preferred_language: language })
+    .eq("id", user.id)
+    .select("id")
+    .maybeSingle();
+
+  if (error) throw new Error(`Could not save language preference: ${error.message}`);
+  if (!data) throw new Error("Could not find the profile to save language preference");
 }

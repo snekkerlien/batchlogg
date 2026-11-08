@@ -1,4 +1,5 @@
 import Link from "next/link";
+import TranslatedText from "./TranslatedText";
 
 export default function PublicNavigationLinks({
   className = "flex flex-wrap items-center gap-x-4 gap-y-2 text-white/75",
@@ -10,30 +11,30 @@ export default function PublicNavigationLinks({
   return (
     <div className={className}>
       <Link href="/about" className="hover:text-white hover:underline">
-        About
+        <TranslatedText text="About" />
       </Link>
       <Link href="/contact" className="hover:text-white hover:underline">
-        Contact
+        <TranslatedText text="Contact" />
       </Link>
       <Link href="/recipes" className="hover:text-white hover:underline">
-        Public recipes
+        <TranslatedText text="Public recipes" />
       </Link>
       <Link href="/business" className="hover:text-white hover:underline">
-        Beer &amp; Brewing Reviews
+        <TranslatedText text="Beer & Brewing Reviews" />
       </Link>
       <Link href="/abv-tools" className="hover:text-white hover:underline">
-        ABV tools
+        <TranslatedText text="ABV tools" />
       </Link>
       <Link href="/games" className="hover:text-white hover:underline">
-        Brewing Academy
+        <TranslatedText text="Brewing Academy" />
       </Link>
       {showAuthLinks && (
         <>
           <Link href="/auth/login" className="hover:text-white hover:underline">
-            Log in
+            <TranslatedText text="Log in" />
           </Link>
           <Link href="/auth/signup" className="hover:text-white hover:underline">
-            Sign up
+            <TranslatedText text="Sign up" />
           </Link>
         </>
       )}

@@ -13,6 +13,7 @@ import {
   InventoryAdditiveFields,
   InventoryIngredientSelect,
 } from "@/app/components/InventoryUsageFields";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 const WINE_JUICE_INVENTORY_FILTERS = [
   { category: "fermentables", subcategory: "Juice" },
@@ -27,6 +28,7 @@ export default function NewWinePage({
   params: { id: string };
   searchParams?: { recipe?: string };
 }) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const { recipe, loading: recipeLoading, error: recipeError } =
     useRecipePrefill(searchParams?.recipe, "Wine");
@@ -46,9 +48,9 @@ export default function NewWinePage({
                 </div>
 
         {/* HEADER */}
-        <h1 className="text-4xl font-bold mb-2 text-center">New Wine Batch</h1>
+        <h1 className="text-4xl font-bold mb-2 text-center">{t("New Wine Batch")}</h1>
         <p className="text-center opacity-80 mb-10">
-          Fill out the details below to start a new wine batch.
+          {t("Fill out the details below to start a new wine batch.")}
         </p>
 
         {recipeError && <p role="alert" className="text-red-300 mb-4">{recipeError}</p>}
@@ -70,11 +72,11 @@ export default function NewWinePage({
 
           {/* Batch name */}
           <div>
-            <label className="block mb-1 font-semibold">Batch name</label>
+            <label className="block mb-1 font-semibold">{t("Batch name")}</label>
             <input
               name="name"
               defaultValue={recipe?.name ?? ""}
-              placeholder="Example: Cabernet Sauvignon"
+              placeholder={t("Example: Cabernet Sauvignon")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
             />
@@ -82,12 +84,12 @@ export default function NewWinePage({
 
           {/* Volume */}
           <div>
-            <label className="block mb-1 font-semibold">Volume (<UnitSymbol kind="volume" />)</label>
+            <label className="block mb-1 font-semibold">{t("Volume")} (<UnitSymbol kind="volume" />)</label>
             <UnitInput
               name="volume_l"
               kind="volume"
               defaultValue={recipe?.volume == null ? "" : String(recipe.volume)}
-              placeholder="Example: 20"
+              placeholder={t("Example: 20")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
             />
@@ -95,7 +97,7 @@ export default function NewWinePage({
 
           {/* Start date */}
           <div>
-            <label className="block mb-1 font-semibold">Start date</label>
+            <label className="block mb-1 font-semibold">{t("Start date")}</label>
             <input
               name="startdato"
               type="date"
@@ -107,13 +109,13 @@ export default function NewWinePage({
 
           {/* OG */}
           <div>
-            <label className="block mb-1 font-semibold">Original Gravity (OG)</label>
+            <label className="block mb-1 font-semibold">{t("Original Gravity (OG)")}</label>
             <input
               name="og"
               defaultValue={recipe?.og ?? ""}
               type="number"
               step="0.001"
-              placeholder="Example: 1.090"
+              placeholder={t("Example: 1.090")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
             />
@@ -121,7 +123,7 @@ export default function NewWinePage({
 
           {/* Grape / Juice type */}
           <div>
-            <label className="block mb-1 font-semibold">Grape / Juice type</label>
+            <label className="block mb-1 font-semibold">{t("Grape / Juice type")}</label>
             <InventoryIngredientSelect
               name="juice_type"
               selectionKey="juice"
@@ -129,17 +131,17 @@ export default function NewWinePage({
               trackAmount
               amountFieldName="inventory_juice_amount"
               defaultValue={recipe?.juice_type ?? ""}
-              placeholder="Grape / Juice type"
+              placeholder={t("Grape / Juice type")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
 
           {/* Sugar (optional) */}
           <div>
-            <label className="block mb-1 font-semibold">Sugar added (optional) (<UnitSymbol kind="kg" />)</label>
+            <label className="block mb-1 font-semibold">{t("Sugar added (optional)")} (<UnitSymbol kind="kg" />)</label>
             <InventoryIngredientSelect
               selectionKey="sugar"
-              placeholder="Sugar inventory item"
+              placeholder={t("Sugar inventory item")}
               category="fermentables"
               subcategory="Sugar"
               enabledOnly
@@ -149,20 +151,20 @@ export default function NewWinePage({
               name="sugar_amount"
               kind="kg"
               defaultValue={recipe?.sugar_amount == null ? "" : String(recipe.sugar_amount)}
-              placeholder="Example: 1.5 kg"
+              placeholder={t("Example: 1.5 kg")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </div>
 
           {/* Yeast */}
           <div>
-            <label className="block mb-1 font-semibold">Yeast strain</label>
+            <label className="block mb-1 font-semibold">{t("Yeast strain")}</label>
             <InventoryIngredientSelect
               name="yeast"
               selectionKey="yeast"
               trackAmount
               defaultValue={recipe?.yeast ?? ""}
-              placeholder="Yeast strain"
+              placeholder={t("Yeast strain")}
               category="yeast"
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
@@ -170,28 +172,28 @@ export default function NewWinePage({
 
           {/* Additives */}
           <div>
-            <label className="block mb-1 font-semibold">Additives</label>
+            <label className="block mb-1 font-semibold">{t("Additives")}</label>
             <InventoryAdditiveFields defaultValue={recipe?.additives ?? ""} />
           </div>
 
           {/* Full process */}
           <div>
-            <label className="block mb-1 font-semibold">Full process</label>
+            <label className="block mb-1 font-semibold">{t("Full process")}</label>
             <PublicMentionTextarea
               name="full_process"
               defaultValue={recipe?.full_process ?? ""}
-              placeholder="Crushing, maceration, punch-downs, temperature..."
+              placeholder={t("Crushing, maceration, punch-downs, temperature...")}
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-40"
             />
           </div>
 
           {/* Notes */}
           <div>
-            <label className="block mb-1 font-semibold">Notes</label>
+            <label className="block mb-1 font-semibold">{t("Notes")}</label>
             <PublicMentionTextarea
               name="notes"
               defaultValue={recipe?.notes ?? ""}
-              placeholder="Any additional notes about the batch..."
+              placeholder={t("Any additional notes about the batch...")}
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
             />
           </div>
@@ -201,7 +203,7 @@ export default function NewWinePage({
             disabled={loading || recipeLoading}
             className="w-full rounded-lg border border-green-500 bg-green-500/10 px-4 py-3 font-semibold text-green-300 transition hover:bg-green-500/20 disabled:opacity-50"
           >
-            {loading ? "Creating..." : "Create batch"}
+            {loading ? t("Creating...") : t("Create batch")}
           </button>
           </BatchInventoryProvider>
         </form>

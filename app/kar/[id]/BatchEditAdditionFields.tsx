@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import RecipeAdditiveFields from "@/app/my-recipes/new/RecipeAdditiveFields";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export function BatchEditAdditiveFields({ defaultValue = "" }: { defaultValue?: string }) {
+  const { t } = useTranslation();
   return (
     <div>
-      <label className="block mb-2 font-semibold">Additives</label>
+      <label className="block mb-2 font-semibold">{t("Additives")}</label>
       <RecipeAdditiveFields defaultValue={defaultValue} />
     </div>
   );
@@ -19,6 +21,7 @@ type FruitRow = {
 };
 
 export function BatchEditFruitFields({ defaultValue = [] }: { defaultValue?: FruitRow[] }) {
+  const { t } = useTranslation();
   const [fruits, setFruits] = useState<FruitRow[]>(() =>
     defaultValue.map((fruit) => ({
       name: fruit.name ?? "",
@@ -37,7 +40,7 @@ export function BatchEditFruitFields({ defaultValue = [] }: { defaultValue?: Fru
 
   return (
     <div>
-      <label className="block mb-2 font-semibold">Fruit additions</label>
+      <label className="block mb-2 font-semibold">{t("Fruit additions")}</label>
       <div className="space-y-2">
         <input type="hidden" name="fruits_json" value={JSON.stringify(fruits)} />
         {fruits.map((fruit, index) => (
@@ -46,15 +49,15 @@ export function BatchEditFruitFields({ defaultValue = [] }: { defaultValue?: Fru
             className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(6rem,0.35fr)_minmax(5rem,0.25fr)_auto]"
           >
             <input
-              aria-label={`Fruit ${index + 1}`}
-              placeholder="Fruit (e.g. Mango, Raspberry)"
+              aria-label={`${t("Fruit")} ${index + 1}`}
+              placeholder={t("Fruit (e.g. Mango, Raspberry)")}
               value={fruit.name}
               onChange={(event) => updateFruit(index, { name: event.target.value })}
               className="col-span-2 min-w-0 rounded border border-white/20 bg-black/40 p-3 sm:col-span-1"
             />
             <input
-              aria-label={`Fruit ${index + 1} amount`}
-              placeholder="Amount"
+              aria-label={`${t("Fruit")} ${index + 1} ${t("amount")}`}
+              placeholder={t("Amount")}
               type="number"
               min="0"
               step="any"
@@ -63,8 +66,8 @@ export function BatchEditFruitFields({ defaultValue = [] }: { defaultValue?: Fru
               className="min-w-0 rounded border border-white/20 bg-black/40 p-3"
             />
             <input
-              aria-label={`Fruit ${index + 1} unit`}
-              placeholder="Unit"
+              aria-label={`${t("Fruit")} ${index + 1} ${t("unit")}`}
+              placeholder={t("Unit")}
               value={fruit.unit}
               onChange={(event) => updateFruit(index, { unit: event.target.value })}
               className="min-w-0 rounded border border-white/20 bg-black/40 p-3"
@@ -78,7 +81,7 @@ export function BatchEditFruitFields({ defaultValue = [] }: { defaultValue?: Fru
               }
               className="col-span-2 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm hover:bg-white/20 sm:col-span-1"
             >
-              Remove
+              {t("Remove")}
             </button>
           </div>
         ))}
@@ -92,7 +95,7 @@ export function BatchEditFruitFields({ defaultValue = [] }: { defaultValue?: Fru
           }
           className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm hover:bg-white/20"
         >
-          + Add fruit
+          + {t("Add fruit")}
         </button>
       </div>
     </div>

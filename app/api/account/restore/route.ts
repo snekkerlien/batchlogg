@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import JSZip from "jszip";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { isAccentColor } from "@/lib/theme/accentColor";
+import { isSiteLanguage } from "@/lib/i18n/language";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,6 +21,7 @@ const PROFILE_FIELDS = [
   "allow_friend_requests",
   "theme_accent_color",
   "preferred_unit_system",
+  "preferred_language",
   "use_inventory_for_batches",
   "batch_reminders_enabled",
   "games_enabled",
@@ -275,6 +277,8 @@ function safeProfileValues(profile: JsonRecord): JsonRecord {
       if (typeof value === "string" && isAccentColor(value)) values[field] = value;
     } else if (field === "preferred_unit_system") {
       if (value === "metric" || value === "imperial") values[field] = value;
+    } else if (field === "preferred_language") {
+      if (isSiteLanguage(value)) values[field] = value;
     } else if (field === "max_vessels") {
       if (typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 100) {
         values[field] = value;

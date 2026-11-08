@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import * as Actions from "../../actions/createRecipe";
+import { submitRecipe } from "../submitRecipe";
 import MenuOverlay from "../../MenuOverlay";
 import BackButton from "../../BackButton";
 import FormField from "@/app/components/FormField";
@@ -10,9 +10,12 @@ import PublicMentionTextarea from "@/app/components/PublicMentionTextarea";
 import { UnitInput, UnitSymbol, useUnits } from "../../../components/Units";
 import RecipeAdditiveFields from "../RecipeAdditiveFields";
 import RecipeSecondaryFields from "../RecipeSecondaryFields";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import RecipeCreationError from "../RecipeCreationError";
 
 export default function NewBraggotRecipePage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const { label } = useUnits();
 
@@ -62,17 +65,20 @@ export default function NewBraggotRecipePage() {
 
 
   const [warnings, setWarnings] = useState<string[]>([]);
+  const [error, setError] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
   e.preventDefault();
   setLoading(true);
   setWarnings([]);
+  setError("");
 
   const formData = new FormData(e.currentTarget as HTMLFormElement);
-  const result = await Actions.createRecipe(formData);
+  const result = await submitRecipe(formData);
 
   if (result?.success === false) {
     setWarnings(result.maltWarnings ?? []);
+    setError(result.error ?? (result.maltWarnings?.length ? "" : "Could not save the recipe."));
     setLoading(false);
     return;
   }
@@ -105,20 +111,21 @@ export default function NewBraggotRecipePage() {
         </div>
 
         {/* HEADER */}
-        <h1 className="text-4xl font-bold mb-2 text-center">New Braggot Recipe</h1>
+        <h1 className="text-4xl font-bold mb-2 text-center">{t("New Braggot Recipe")}</h1>
         <p className="text-center opacity-80 mb-10">
-          Fill out the details below to create a new braggot recipe.
+          {t("Fill out the details below to create a new braggot recipe.")}
         </p>
 
+        <RecipeCreationError error={error} />
         {warnings.length > 0 && (
   <div className="bg-red-600 text-white p-4 rounded-md mb-6">
-    <strong>⚠️ Malt EBC is missing:</strong>
+    <strong>{t("⚠️ Malt EBC is missing:")}</strong>
     <ul className="mt-2 list-disc list-inside">
       {warnings.map((w) => (
         <li key={w}>{w}</li>
       ))}
     </ul>
-    <p className="mt-2">Enter the EBC value for each malt before saving.</p>
+    <p className="mt-2">{t("Enter the EBC value for each malt before saving.")}</p>
   </div>
 )}
 
@@ -132,54 +139,54 @@ export default function NewBraggotRecipePage() {
           <input type="hidden" name="type" value="Braggot" />
 
           {/* Recipe name */}
-          <FormField id="recipe-name" label="Recipe name" required>
+          <FormField id="recipe-name" label={t("Recipe name")} required>
             <input
               id="recipe-name"
               name="name"
-              placeholder="Example: Honey Ale Braggot"
+              placeholder={t("Example: Honey Ale Braggot")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
               required
             />
           </FormField>
 
           {/* Volume */}
-          <FormField id="recipe-volume" label={<>Volume (<UnitSymbol kind="volume" />)</>}>
+          <FormField id="recipe-volume" label={<>{t("Volume")} (<UnitSymbol kind="volume" />)</>}>
             <UnitInput
               id="recipe-volume"
               name="volume"
               kind="volume"
-              placeholder="Example: 10"
+              placeholder={t("Example: 10")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </FormField>
 
           {/* OG */}
-          <FormField id="recipe-og" label="Original Gravity (OG)">
+          <FormField id="recipe-og" label={t("Original Gravity (OG)")}>
             <input
               id="recipe-og"
               name="og"
               type="number"
               step="0.001"
-              placeholder="Example: 1.070"
+              placeholder={t("Example: 1.070")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </FormField>
 
           {/* FG */}
-          <FormField id="recipe-fg" label="Final Gravity (FG)">
+          <FormField id="recipe-fg" label={t("Final Gravity (FG)")}>
             <input
               id="recipe-fg"
               name="fg"
               type="number"
               step="0.001"
-              placeholder="Example: 1.010"
+              placeholder={t("Example: 1.010")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </FormField>
 
           {/* Malt additions */}
           <div>
-            <label className="block mb-2 font-semibold">Malt additions</label>
+            <label className="block mb-2 font-semibold">{t("Malt additions")}</label>
 
             {malts.map((m, i) => (
               <div
@@ -187,8 +194,8 @@ export default function NewBraggotRecipePage() {
                 className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full"
               >
                 <input
-                  aria-label={`Malt ${i + 1} name`}
-                  placeholder="Malt type (e.g. Pale Ale, Munich)"
+                  aria-label={`${t("Malt")} ${i + 1} ${t("name")}`}
+                  placeholder={t("Malt type (e.g. Pale Ale, Munich)")}
                   className="p-3 rounded bg-black/40 border border-white/20 w-full md:flex-1"
                   value={m.name}
                   onChange={(e) => {
@@ -203,7 +210,7 @@ export default function NewBraggotRecipePage() {
                   min="0"
                   step="any"
                   placeholder="EBC"
-                  aria-label={`Malt ${i + 1} EBC`}
+                  aria-label={`${t("Malt")} ${i + 1} EBC`}
                   required
                   className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-24"
                   value={m.ebc}
@@ -216,8 +223,8 @@ export default function NewBraggotRecipePage() {
 
                 <UnitInput
                   kind="kg"
-                  aria-label={`Malt ${i + 1} amount`}
-                  placeholder={`Amount (${label("kg")})`}
+                  aria-label={`${t("Malt")} ${i + 1} ${t("Amount").toLowerCase()}`}
+                  placeholder={`${t("Amount")} (${label("kg")})`}
                   className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-24"
                   value={m.amount}
                   onValueChange={(value) => {
@@ -233,7 +240,7 @@ export default function NewBraggotRecipePage() {
                   onClick={() => removeMalt(i)}
                   className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm self-start md:self-auto"
                 >
-                  Remove
+                  {t("Remove")}
                 </button>
               </div>
             ))}
@@ -243,7 +250,7 @@ export default function NewBraggotRecipePage() {
               onClick={addMalt}
               className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
             >
-              + Add malt
+              + {t("Add")} {t("malt")}
             </button>
           </div>
 
@@ -251,7 +258,7 @@ export default function NewBraggotRecipePage() {
 
           {/* Hop additions */}
           <div>
-            <label className="block mb-2 font-semibold">Hop additions</label>
+            <label className="block mb-2 font-semibold">{t("Hop additions")}</label>
 
             {hops.map((h, i) => (
               <div
@@ -259,8 +266,8 @@ export default function NewBraggotRecipePage() {
                 className="flex flex-col md:flex-row md:items-center gap-2 mb-2 w-full"
               >
                 <input
-                  aria-label={`Hop addition ${i + 1} name`}
-                  placeholder="Hop type (e.g. Citra, Mosaic)"
+                  aria-label={`${t("Hop addition")} ${i + 1} ${t("name")}`}
+                  placeholder={t("Hop type (e.g. Citra, Mosaic)")}
                   className="p-3 rounded bg-black/40 border border-white/20 w-full md:flex-1"
                   value={h.name}
                   onChange={(e) => {
@@ -271,8 +278,8 @@ export default function NewBraggotRecipePage() {
                 />
 
                 <input
-                  aria-label={`Hop addition ${i + 1} alpha acid percentage`}
-                  placeholder="Alpha (%)"
+                  aria-label={`${t("Hop addition")} ${i + 1} ${t("Alpha acid (%)")}`}
+                  placeholder={t("Alpha (%)")}
                   type="number"
                   min="0"
                   step="any"
@@ -286,8 +293,8 @@ export default function NewBraggotRecipePage() {
                 />
 
                 <input
-                  aria-label={`Hop addition ${i + 1} harvest year`}
-                  placeholder="Year"
+                  aria-label={`${t("Hop addition")} ${i + 1} ${t("Year")}`}
+                  placeholder={t("Year")}
                   type="number"
                   min="1900"
                   step="1"
@@ -302,8 +309,8 @@ export default function NewBraggotRecipePage() {
 
                 <UnitInput
   kind="g"
-                  aria-label={`Hop addition ${i + 1} amount`}
-                  placeholder={`Amount (${label("g")})`}
+                  aria-label={`${t("Hop addition")} ${i + 1} ${t("Amount").toLowerCase()}`}
+                  placeholder={`${t("Amount")} (${label("g")})`}
   className="p-3 rounded bg-black/40 border border-white/20 w-full md:w-20"
   value={h.amount}
   onValueChange={(value) => {
@@ -314,7 +321,7 @@ export default function NewBraggotRecipePage() {
 />
 
 <select
-  aria-label={`Hop addition ${i + 1} type`}
+  aria-label={`${t("Hop addition")} ${i + 1} ${t("type")}`}
   value={h.addition_type}
   onChange={(e) => {
     const updated = [...hops];
@@ -323,13 +330,13 @@ export default function NewBraggotRecipePage() {
   }}
   className="p-3 rounded bg-black/40 border border-white/20 w-full"
 >
-  <option value="boil">Boil addition</option>
-  <option value="whirlpool">Whirlpool / hop stand</option>
+  <option value="boil">{t("Boil addition")}</option>
+  <option value="whirlpool">{t("Whirlpool / hop stand")}</option>
 </select>
 
 <input
-  aria-label={`Hop addition ${i + 1} time in minutes`}
-  placeholder={h.addition_type === "whirlpool" ? "Stand time (min)" : "Boil time (min)"}
+  aria-label={`${t("Hop addition")} ${i + 1} ${t("time in minutes")}`}
+  placeholder={h.addition_type === "whirlpool" ? t("Stand time (min)") : t("Boil time (min)")}
   type="number"
   min="0"
   step="1"
@@ -345,8 +352,8 @@ export default function NewBraggotRecipePage() {
 
 {h.addition_type === "whirlpool" && (
   <input
-    aria-label={`Hop addition ${i + 1} whirlpool temperature in Celsius`}
-    placeholder="Temperature (°C)"
+    aria-label={`${t("Hop addition")} ${i + 1} ${t("whirlpool temperature in Celsius")}`}
+    placeholder={t("Temperature (°C)")}
     type="number"
     min="0"
     max="100"
@@ -367,7 +374,7 @@ export default function NewBraggotRecipePage() {
                   onClick={() => removeHop(i)}
                   className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm self-start md:self-auto"
                 >
-                  Remove
+                  {t("Remove")}
                 </button>
               </div>
             ))}
@@ -377,78 +384,78 @@ export default function NewBraggotRecipePage() {
               onClick={addHop}
               className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-sm"
             >
-              + Add hop
+              + {t("Add")} {t("hop")}
             </button>
           </div>
 
           <input type="hidden" name="hops_json" value={JSON.stringify(hops)} />
 
           {/* Boil time */}
-          <FormField id="recipe-boil-time" label="Boil time (minutes)">
+          <FormField id="recipe-boil-time" label={t("Boil time (minutes)")}>
             <input
               id="recipe-boil-time"
               name="boil_time"
               type="number"
               min="0"
               step="1"
-              placeholder="Example: 60"
+              placeholder={t("Example: 60")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </FormField>
 
           {/* Honey amount */}
-          <FormField id="recipe-honey-amount" label={<>Honey amount (<UnitSymbol kind="kg" />)</>}>
+          <FormField id="recipe-honey-amount" label={<>{t("Honey amount")} (<UnitSymbol kind="kg" />)</>}>
             <UnitInput
               id="recipe-honey-amount"
               name="honey_amount"
               kind="kg"
-              placeholder="Example: 1.5"
+              placeholder={t("Example: 1.5")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </FormField>
 
           {/* Honey type */}
-          <FormField id="recipe-honey-type" label="Honey type">
+          <FormField id="recipe-honey-type" label={t("Honey type")}>
             <input
               id="recipe-honey-type"
               name="honey_type"
-              placeholder="Example: Wildflower, Clover, Heather"
+              placeholder={t("Example: Wildflower, Clover, Heather")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </FormField>
 
 
           {/* Yeast */}
-          <FormField id="recipe-yeast" label="Yeast strain">
+          <FormField id="recipe-yeast" label={t("Yeast strain")}>
             <input
               id="recipe-yeast"
               name="yeast"
-              placeholder="Example: US-05 or Kveik"
+              placeholder={t("Example: US-05 or Kveik")}
               className="w-full p-3 rounded bg-black/40 border border-white/20"
             />
           </FormField>
 
           {/* Additives */}
           <div>
-            <label className="block mb-1 font-semibold">Additives</label>
+            <label className="block mb-1 font-semibold">{t("Additives")}</label>
             <RecipeAdditiveFields />
           </div>
           {/* Full process */}
-          <FormField id="recipe-process" label="Full process">
+          <FormField id="recipe-process" label={t("Full process")}>
             <PublicMentionTextarea
               id="recipe-process"
               name="full_process"
-              placeholder="Mash schedule, honey addition, fermentation plan..."
+              placeholder={t("Mash schedule, honey addition, fermentation plan...")}
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-40"
             />
           </FormField>
 
           {/* Notes */}
-          <FormField id="recipe-notes" label="Notes">
+          <FormField id="recipe-notes" label={t("Notes")}>
             <PublicMentionTextarea
               id="recipe-notes"
               name="notes"
-              placeholder="Any additional notes about the recipe..."
+              placeholder={t("Any additional notes about the recipe...")}
               className="w-full p-3 rounded bg-black/40 border border-white/20 h-32"
             />
           </FormField>
@@ -459,7 +466,7 @@ export default function NewBraggotRecipePage() {
             disabled={loading}
             className="px-4 py-3 bg-green-700 hover:bg-green-600 border border-green-500 rounded-lg font-semibold"
           >
-            {loading ? "Saving..." : "Save recipe"}
+            {loading ? t("Saving...") : t("Save recipe")}
           </button>
         </form>
       </div>

@@ -2,14 +2,16 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { translateAccountProfileError } from "@/lib/i18n/apiErrors";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
-function formatCountdown(milliseconds: number) {
+function formatCountdown(milliseconds: number, t: (key: string) => string) {
   const seconds = Math.max(0, Math.floor(milliseconds / 1000));
   const days = Math.floor(seconds / 86_400);
   const hours = Math.floor((seconds % 86_400) / 3_600);
   const minutes = Math.floor((seconds % 3_600) / 60);
   const remainingSeconds = seconds % 60;
-  return `${days}d ${hours}h ${minutes}m ${remainingSeconds}s`;
+  return `${days}${t("d")} ${hours}${t("h")} ${minutes}${t("m")} ${remainingSeconds}${t("s")}`;
 }
 
 export default function BanNotice({
@@ -29,6 +31,7 @@ export default function BanNotice({
   }>;
 }) {
   const router = useRouter();
+  const { t, language } = useTranslation();
   const [remaining, setRemaining] = useState<number | null>(null);
   const [appealOpen, setAppealOpen] = useState(false);
   const [appeal, setAppeal] = useState("");
@@ -79,20 +82,20 @@ export default function BanNotice({
         body: JSON.stringify({ message: appeal }),
       });
       const result: { error?: string; notificationWarning?: boolean } = await response.json();
-      if (!response.ok) throw new Error(result.error || "Could not send your appeal.");
+      if (!response.ok) throw new Error(result.error || t("Could not send your appeal."));
       setAppeal("");
       setSuccess(
         result.notificationWarning
-          ? "Your message was saved, but the admin email notification could not be sent."
-          : "Your message has been sent to the administrators."
+          ? t("Your message was saved, but the admin email notification could not be sent.")
+          : t("Your message has been sent to the administrators.")
       );
       setAppealOpen(false);
       router.refresh();
     } catch (submitError) {
       setError(
-        submitError instanceof Error
+        submitError instanceof Error && !(submitError instanceof TypeError)
           ? submitError.message
-          : "Could not send your appeal. Please try again."
+          : t("Could not send your appeal. Please try again.")
       );
     } finally {
       setSubmitting(false);
@@ -102,22 +105,22 @@ export default function BanNotice({
   return (
     <>
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-red-300">You are banned</h1>
+        <h1 className="text-3xl font-bold text-red-300">{t("You are banned")}</h1>
         <p className="mt-4 text-white/80">
-          Your account is currently banned from using Batchlogg.
+          {t("Your account is currently banned from using Batchlogg.")}
         </p>
         {reason && (
           <div className="mt-4 rounded-lg border border-white/10 bg-white/5 p-4 text-center text-white/75">
-            <p className="font-semibold text-white">Reason:</p>
+            <p className="font-semibold text-white">{t("Reason:")}</p>
             <p className="mt-1 whitespace-pre-wrap">{reason}</p>
           </div>
         )}
         {endsAt && (
           <div className="mt-5 rounded-lg border border-white/10 bg-white/5 p-4">
             <p>
-              Ban lifted:{" "}
+              {t("Ban lifted:")}{" "}
               <time dateTime={endsAt}>
-                {new Intl.DateTimeFormat("en-GB", {
+                {new Intl.DateTimeFormat(language === "nb" ? "nb-NO" : "en-GB", {
                   dateStyle: "medium",
                   timeStyle: "short",
                   timeZone: "UTC",
@@ -127,7 +130,7 @@ export default function BanNotice({
             </p>
             {remaining !== null && (
               <p className="mt-2 text-lg font-semibold" aria-live="off">
-                Time remaining: {formatCountdown(remaining)}
+                {t("Time remaining:")} {formatCountdown(remaining, t)}
               </p>
             )}
           </div>
@@ -140,7 +143,11 @@ export default function BanNotice({
           className="mt-8 rounded-xl border border-white/10 bg-white/5 p-4"
         >
           <h2 id="appeal-status-title" className="font-semibold text-white">
-            Appeal status: {appealStatus.replace("_", " ")}
+            {t("Appeal status:")} {t(
+              appealStatus === "pending" ? "pending"
+                : appealStatus === "info_requested" ? "info requested"
+                  : appealStatus === "granted" ? "granted" : "dismissed"
+            )}
           </h2>
           <ol className="mt-3 space-y-3">
             {appealMessages.map((item) => (
@@ -153,8 +160,8 @@ export default function BanNotice({
                 }`}
               >
                 <p className="text-xs text-white/55">
-                  {item.sender_role === "admin" ? "Admin request" : "Your message"} ·{" "}
-                  {new Date(item.created_at).toLocaleString("en-GB")}
+                  {item.sender_role === "admin" ? t("Admin request") : t("Your message")} ·{" "}
+                  {new Date(item.created_at).toLocaleString(language === "nb" ? "nb-NO" : "en-GB")}
                 </p>
                 <p className="mt-2 whitespace-pre-wrap text-sm text-white/85">
                   {item.message}
@@ -176,7 +183,7 @@ export default function BanNotice({
             }}
             className="rounded-lg bg-red-700 px-5 py-3 font-semibold hover:bg-red-600"
           >
-            Plead for mercy
+            {t("Plead for mercy")}
           </button>
         ) : appealStatus === "info_requested" ? (
           <button
@@ -188,15 +195,15 @@ export default function BanNotice({
             }}
             className="rounded-lg bg-amber-700 px-5 py-3 font-semibold hover:bg-amber-600"
           >
-            Send requested information
+            {t("Send requested information")}
           </button>
         ) : (
           <p className="text-sm text-white/60">
             {appealStatus === "pending"
-              ? "Your appeal is awaiting review. You can send another message only if an admin requests more information."
+              ? t("Your appeal is awaiting review. You can send another message only if an admin requests more information.")
               : appealStatus === "granted"
-                ? "Your appeal was granted. Refresh the page to continue if your ban has been lifted."
-                : "Your appeal was dismissed. You cannot submit another appeal."}
+                ? t("Your appeal was granted. Refresh the page to continue if your ban has been lifted.")
+                : t("Your appeal was dismissed. You cannot submit another appeal.")}
           </p>
         )}
         {success && <p role="status" className="mt-3 text-sm text-green-300">{success}</p>}
@@ -227,17 +234,17 @@ export default function BanNotice({
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 id="ban-appeal-title" className="text-xl font-semibold">
-                  {appealStatus === "info_requested" ? "Reply to admin request" : "Plead for mercy"}
+                  {appealStatus === "info_requested" ? t("Reply to admin request") : t("Plead for mercy")}
                 </h2>
                 <p className="mt-2 text-sm text-white/65">
                   {appealStatus === "info_requested"
-                    ? "An administrator requested more information about your appeal. You may send one reply."
-                    : "Explain why you believe your ban should be reviewed. You can only submit one appeal."}
+                    ? t("An administrator requested more information about your appeal. You may send one reply.")
+                    : t("Explain why you believe your ban should be reviewed. You can only submit one appeal.")}
                 </p>
               </div>
               <button
                 type="button"
-                aria-label="Close appeal"
+                aria-label={t("Close appeal")}
                 onClick={() => setAppealOpen(false)}
                 disabled={submitting}
                 className="rounded-lg px-2 py-1 text-xl text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-50"
@@ -248,7 +255,7 @@ export default function BanNotice({
 
             <form onSubmit={submitAppeal} className="mt-5 space-y-3">
               <label className="sr-only" htmlFor="ban-appeal">
-                Appeal message
+                {t("Appeal message")}
               </label>
               <textarea
                 id="ban-appeal"
@@ -261,21 +268,21 @@ export default function BanNotice({
                 className="w-full rounded-lg border border-white/20 bg-black/50 p-3 text-white"
                 placeholder={
                   appealStatus === "info_requested"
-                    ? "Reply to the administrator's request."
-                    : "Explain why you are appealing the ban."
+                    ? t("Reply to the administrator's request.")
+                    : t("Explain why you are appealing the ban.")
                 }
               />
-              {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
+              {error && <p role="alert" className="text-sm text-red-300">{translateAccountProfileError(error, t)}</p>}
               <button
                 type="submit"
                 disabled={submitting}
                 className="w-full rounded-lg bg-red-700 px-4 py-3 font-semibold hover:bg-red-600 disabled:cursor-wait disabled:opacity-50"
               >
                 {submitting
-                  ? "Sending…"
+                  ? t("Sending…")
                   : appealStatus === "info_requested"
-                    ? "Send reply"
-                    : "Send appeal"}
+                    ? t("Send reply")
+                    : t("Send appeal")}
               </button>
             </form>
           </section>

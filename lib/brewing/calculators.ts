@@ -133,6 +133,35 @@ export function calculateDilutedAbv(
   return Number.isFinite(totalVolume) && Number.isFinite(result) ? result : null;
 }
 
+export function calculateBottleCount(batchVolumeL: number, bottleVolumeL: number) {
+  if (
+    !Number.isFinite(batchVolumeL) ||
+    !Number.isFinite(bottleVolumeL) ||
+    batchVolumeL <= 0 ||
+    bottleVolumeL <= 0
+  ) {
+    return null;
+  }
+
+  const ratio = batchVolumeL / bottleVolumeL;
+  if (!Number.isFinite(ratio) || ratio > Number.MAX_SAFE_INTEGER) return null;
+
+  const nearestWholeBottle = Math.round(ratio);
+  const tolerance = Number.EPSILON * Math.max(1, ratio) * 4;
+  const fullBottleCount =
+    Math.abs(ratio - nearestWholeBottle) <= tolerance
+      ? nearestWholeBottle
+      : Math.floor(ratio);
+  const leftoverVolumeL = Math.max(
+    0,
+    batchVolumeL - fullBottleCount * bottleVolumeL
+  );
+
+  return Number.isFinite(leftoverVolumeL)
+    ? { fullBottleCount, leftoverVolumeL }
+    : null;
+}
+
 export function calculateVolumeForTargetAbv(
   currentAbv: number,
   currentVolume: number,

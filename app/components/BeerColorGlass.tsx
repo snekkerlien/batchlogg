@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 import {
   getReducedMotionPreference,
   REDUCED_MOTION_EVENT,
@@ -34,6 +35,7 @@ export default function BeerColorGlass({
   ebc: number;
   compact?: boolean;
 }) {
+  const { t } = useTranslation();
   const color = ebcToHex(ebc);
   const liquidClipId = useId();
   const glassGradientId = `${liquidClipId}-glass`;
@@ -79,7 +81,7 @@ export default function BeerColorGlass({
   return (
     <svg
       role="img"
-      aria-label={`${Math.round(ebc)} EBC beer color`}
+      aria-label={t("{value} EBC beer color").replace("{value}", String(Math.round(ebc)))}
       viewBox="0 0 48 64"
       className={`beer-color-glass shrink-0 ${compact ? "beer-color-glass--compact h-5 w-4" : "h-[5.5rem] w-[4.125rem]"}`}
     >

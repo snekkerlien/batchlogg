@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Qty } from "@/app/components/Units";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type FinishedBatchResult = {
   id: string;
@@ -77,6 +78,7 @@ function consistentDeviation(
 }
 
 export default function RecipeBatchResults({ recipeId }: { recipeId: string }) {
+  const { t, language } = useTranslation();
   const [batches, setBatches] = useState<FinishedBatchResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -92,7 +94,7 @@ export default function RecipeBatchResults({ recipeId }: { recipeId: string }) {
       const result: { batches?: FinishedBatchResult[]; error?: string } =
         await response.json();
       if (!response.ok) {
-        throw new Error(result.error || "Could not load recipe batch results");
+        throw new Error(result.error || t("Could not load recipe batch results"));
       }
       if (active) setBatches(result.batches ?? []);
     }
@@ -100,7 +102,7 @@ export default function RecipeBatchResults({ recipeId }: { recipeId: string }) {
     load()
       .catch((loadError) => {
         console.error("Could not load recipe batch results", loadError);
-        if (active) setError("Finished batches for this recipe could not be loaded.");
+        if (active) setError(t("Finished batches for this recipe could not be loaded."));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -109,7 +111,7 @@ export default function RecipeBatchResults({ recipeId }: { recipeId: string }) {
     return () => {
       active = false;
     };
-  }, [recipeId]);
+  }, [recipeId, t]);
 
   const averageAbv = average(
     batches.flatMap((batch) => {
@@ -170,10 +172,18 @@ export default function RecipeBatchResults({ recipeId }: { recipeId: string }) {
   );
   const reviewSuggestions = [
     ogPattern
-      ? `In ${ogPattern.count} of ${ogPattern.total} comparable batches, OG was ${ogPattern.direction} the saved target by an average of ${ogPattern.average > 0 ? "+" : ""}${ogPattern.average.toFixed(3)}. Review ingredient measurements and batch volume before changing the recipe.`
+      ? t("In {count} of {total} comparable batches, OG was {direction} the saved target by an average of {average}. Review ingredient measurements and batch volume before changing the recipe.")
+          .replace("{count}", String(ogPattern.count))
+          .replace("{total}", String(ogPattern.total))
+          .replace("{direction}", t(ogPattern.direction))
+          .replace("{average}", `${ogPattern.average > 0 ? "+" : ""}${ogPattern.average.toFixed(3)}`)
       : null,
     fgPattern
-      ? `In ${fgPattern.count} of ${fgPattern.total} comparable batches, FG was ${fgPattern.direction} the saved target by an average of ${fgPattern.average > 0 ? "+" : ""}${fgPattern.average.toFixed(3)}. Review fermentation conditions and gravity readings before changing the recipe.`
+      ? t("In {count} of {total} comparable batches, FG was {direction} the saved target by an average of {average}. Review fermentation conditions and gravity readings before changing the recipe.")
+          .replace("{count}", String(fgPattern.count))
+          .replace("{total}", String(fgPattern.total))
+          .replace("{direction}", t(fgPattern.direction))
+          .replace("{average}", `${fgPattern.average > 0 ? "+" : ""}${fgPattern.average.toFixed(3)}`)
       : null,
   ].filter((suggestion): suggestion is string => suggestion !== null);
 
@@ -187,46 +197,46 @@ export default function RecipeBatchResults({ recipeId }: { recipeId: string }) {
           id="recipe-batch-results-heading"
           className="text-lg font-semibold text-green-200"
         >
-          Results from this recipe
+          {t("Results from this recipe")}
         </h2>
         <p className="mt-1 text-sm text-white/60">
-          Compare finished batches made from this recipe.
+          {t("Compare finished batches made from this recipe.")}
         </p>
       </div>
 
       {loading ? (
-        <p className="text-sm text-white/60">Loading finished batches…</p>
+        <p className="text-sm text-white/60">{t("Loading finished batches…")}</p>
       ) : error ? (
         <p role="alert" className="text-sm text-red-300">{error}</p>
       ) : batches.length === 0 ? (
         <div className="rounded-lg border border-white/10 bg-black/20 p-4">
           <p className="text-sm text-white/60">
-            No finished batches have been made from this recipe yet. Start one
-            from this recipe to keep its targets and results together.
+            {t("No finished batches have been made from this recipe yet. Start one from this recipe to keep its targets and results together.")}
           </p>
           <Link
             href={`/my-recipes?start=${encodeURIComponent(recipeId)}`}
             className="mt-3 inline-flex min-h-10 items-center rounded-lg border border-green-400/50 bg-green-700 px-4 py-2 text-sm font-semibold text-white hover:bg-green-600"
           >
-            Start a batch from this recipe
+            {t("Start a batch from this recipe")}
           </Link>
         </div>
       ) : (
         <>
           <p className="mb-3 text-xs text-white/50">
-            Performance across {batches.length} finished{" "}
-            {batches.length === 1 ? "batch" : "batches"}.
+            {t("Performance across {count} finished {batches}.")
+              .replace("{count}", String(batches.length))
+              .replace("{batches}", t(batches.length === 1 ? "batch" : "batches"))}
           </p>
           <dl
-            aria-label="Recipe performance summary"
+            aria-label={t("Recipe performance summary")}
             className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4"
           >
             <PerformanceMetric
-              label="Average ABV"
+              label={t("Average ABV")}
               value={averageAbv === null ? "—" : `${averageAbv.toFixed(1)}%`}
             />
             <PerformanceMetric
-              label="Average packaged yield"
+              label={t("Average packaged yield")}
               value={
                 averagePackagedYield === null
                   ? "—"
@@ -234,28 +244,27 @@ export default function RecipeBatchResults({ recipeId }: { recipeId: string }) {
               }
             />
             <PerformanceMetric
-              label="Average OG distance to target"
+              label={t("Average OG distance to target")}
               value={
                 averageOgDistance === null ? "—" : averageOgDistance.toFixed(3)
               }
             />
             <PerformanceMetric
-              label="Average FG distance to target"
+              label={t("Average FG distance to target")}
               value={
                 averageFgDistance === null ? "—" : averageFgDistance.toFixed(3)
               }
             />
           </dl>
           <p className="mb-4 text-xs text-white/45">
-            Gravity distances use each batch’s saved recipe targets; smaller is
-            closer to target. Packaged yield uses recorded packaged volume.
+            {t("Gravity distances use each batch’s saved recipe targets; smaller is closer to target. Packaged yield uses recorded packaged volume.")}
           </p>
           <aside
-            aria-label="Recipe performance patterns"
+            aria-label={t("Recipe performance patterns")}
             className="mb-4 rounded-lg border border-amber-300/15 bg-amber-300/[0.04] p-3"
           >
             <h3 className="text-sm font-semibold text-amber-100">
-              Patterns to review
+              {t("Patterns to review")}
             </h3>
             {reviewSuggestions.length > 0 ? (
               <ul className="mt-2 space-y-2 text-sm text-white/75">
@@ -265,9 +274,7 @@ export default function RecipeBatchResults({ recipeId }: { recipeId: string }) {
               </ul>
             ) : (
               <p className="mt-1 text-sm text-white/55">
-                No consistent target drift stands out yet. A review prompt
-                appears when at least three comparable batches show a meaningful
-                pattern.
+                {t("No consistent target drift stands out yet. A review prompt appears when at least three comparable batches show a meaningful pattern.")}
               </p>
             )}
           </aside>
@@ -284,13 +291,13 @@ export default function RecipeBatchResults({ recipeId }: { recipeId: string }) {
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium text-white">
-                      {batch.name || "Unnamed batch"}
+                      {batch.name || t("Unnamed batch")}
                     </p>
                     <p className="mt-1 text-xs text-white/55">
-                      Finished{" "}
+                      {t("Finished")}{" "}
                       {batch.finished_date
-                        ? new Date(batch.finished_date).toLocaleDateString("en-GB")
-                        : "date unavailable"}
+                        ? new Date(batch.finished_date).toLocaleDateString(language === "nb" ? "nb-NO" : "en-GB")
+                        : t("date unavailable")}
                     </p>
                     <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:flex sm:flex-wrap sm:gap-x-5">
                       <div>
@@ -306,7 +313,7 @@ export default function RecipeBatchResults({ recipeId }: { recipeId: string }) {
                         <dd>{formatAbv(batch)}</dd>
                       </div>
                       <div>
-                        <dt className="text-xs text-white/50">Packaged</dt>
+                        <dt className="text-xs text-white/50">{t("Packaged")}</dt>
                         <dd>
                           {volume === null ? "—" : <Qty kind="volume" value={volume} />}
                         </dd>
@@ -317,7 +324,7 @@ export default function RecipeBatchResults({ recipeId }: { recipeId: string }) {
                     href={`/brew-insights/${encodeURIComponent(batch.id)}`}
                     className="shrink-0 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm font-semibold text-green-200 hover:bg-white/10"
                   >
-                    View results
+                    {t("View results")}
                   </Link>
                 </li>
               );

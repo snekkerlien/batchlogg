@@ -8,6 +8,7 @@ import PageHeading from "@/app/components/PageHeading";
 import { supabaseBrowser } from "@/lib/supabase/supabaseBrowser";
 import BackButton from "@/app/batch-history/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 type Keg = {
   id: string;
@@ -30,6 +31,7 @@ async function fetchKeg(id: string) {
 }
 
 export default function KegPublicPage() {
+  const { t } = useTranslation();
   const params = useParams();
   const rawId = Array.isArray(params?.id) ? params.id[0] : params?.id;
   const [keg, setKeg] = useState<Keg | null>(null);
@@ -38,6 +40,7 @@ export default function KegPublicPage() {
   const [brewDate, setBrewDate] = useState("");
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -71,11 +74,20 @@ export default function KegPublicPage() {
   }, []);
 
   useEffect(() => {
-    async function load() {
-      if (!rawId) return;
+    let active = true;
 
+    async function load() {
+      if (!rawId) {
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setLoadError("");
+      setKeg(null);
       try {
         const item = await fetchKeg(rawId);
+        if (!active) return;
         setKeg(item ?? null);
         setBrewName(item?.brew_name ?? "");
         setAbv(item?.abv === null || item?.abv === undefined ? "" : String(item.abv));
@@ -83,13 +95,17 @@ export default function KegPublicPage() {
         setNotes(item?.notes ?? "");
       } catch (error) {
         console.error("Could not load keg", error);
+        if (active) setLoadError(t("Could not load keg. Please try again."));
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     }
 
-    load();
-  }, [rawId]);
+    void load();
+    return () => {
+      active = false;
+    };
+  }, [rawId, t]);
 
   async function saveKeg() {
     if (!keg || !rawId) return;
@@ -127,7 +143,7 @@ export default function KegPublicPage() {
       window.setTimeout(() => setSaved(false), 1800);
     } catch (error) {
       console.error("Could not save keg data", error);
-      setSaveError("Could not save keg details. Please try again.");
+      setSaveError(t("Could not save keg details. Please try again."));
     } finally {
       setSaving(false);
     }
@@ -149,7 +165,7 @@ export default function KegPublicPage() {
       setQrSrc(png);
     } catch (error) {
       console.error("Could not generate keg QR code", error);
-      setQrError("Could not generate the QR code. Please try again.");
+      setQrError(t("Could not generate the QR code. Please try again."));
     }
   }
 
@@ -195,7 +211,7 @@ export default function KegPublicPage() {
     window.setTimeout(() => setSaved(false), 1800);
   } catch (error) {
     console.error("Could not empty keg", error);
-    setSaveError("Could not empty keg. Please try again.");
+    setSaveError(t("Could not empty keg. Please try again."));
   } finally {
     setSaving(false);
   }
@@ -213,18 +229,18 @@ export default function KegPublicPage() {
 
   if (diffDays < 30) {
     const d = Math.floor(diffDays);
-    return `(${d} day${d === 1 ? "" : "s"})`;
+    return t(d === 1 ? "({count} day)" : "({count} days)").replace("{count}", String(d));
   }
 
   const diffMonths = diffDays / 30.437; // average month length
   if (diffMonths < 12) {
     const m = Math.floor(diffMonths);
-    return `(${m} month${m === 1 ? "" : "s"})`;
+    return t(m === 1 ? "({count} month)" : "({count} months)").replace("{count}", String(m));
   }
 
   const diffYears = diffMonths / 12;
   const y = Math.floor(diffYears);
-  return `(${y} year${y === 1 ? "" : "s"})`;
+  return t(y === 1 ? "({count} year)" : "({count} years)").replace("{count}", String(y));
 }
 
 
@@ -232,18 +248,34 @@ export default function KegPublicPage() {
     return (
       <main className="min-h-screen flex items-center justify-center text-white">
         <div className="bg-black/60 backdrop-blur-md px-6 py-4 rounded-xl border border-white/10">
-          Loading keg…
+          {t("Loading keg…")}
         </div>
       </main>
     );
   }
 
   if (!rawId || !keg) {
+    if (loadError) {
+      return (
+        <main className="min-h-screen px-6 py-12 text-white">
+          <div className="bg-black/60 backdrop-blur-md p-6 pt-16 sm:p-8 sm:pt-16 rounded-xl border border-white/10 max-w-3xl mx-auto mt-20 sm:mt-24 relative">
+            <KegPageTopBar isLoggedIn={isLoggedIn} />
+            <div role="alert">
+              <PageHeading title={t("Keg")} subtitle={loadError} />
+            </div>
+          </div>
+        </main>
+      );
+    }
+
     return (
       <main className="min-h-screen px-6 py-12 text-white">
         <div className="bg-black/60 backdrop-blur-md p-6 pt-16 sm:p-8 sm:pt-16 rounded-xl border border-white/10 max-w-3xl mx-auto mt-20 sm:mt-24 relative">
           <KegPageTopBar isLoggedIn={isLoggedIn} />
-          <PageHeading title="Keg not found" subtitle="This keg is not registered in the database yet." />
+          <PageHeading
+            title={t("Keg not found")}
+            subtitle={t("This keg is not registered in the database yet.")}
+          />
         </div>
       </main>
     );
@@ -255,22 +287,22 @@ export default function KegPublicPage() {
         <KegPageTopBar isLoggedIn={isLoggedIn} />
         <PageHeading
           title={keg.name}
-          subtitle={keg.brew_name || "No brew registered yet"}
+          subtitle={keg.brew_name || t("No brew registered yet")}
         />
 
       <div className="mt-6 space-y-5">
         <label className="block">
-          <span className="mb-2 block text-sm font-medium text-zinc-300">Brew name</span>
+          <span className="mb-2 block text-sm font-medium text-zinc-300">{t("Brew name")}</span>
           <input
             value={brewName}
             onChange={(event) => setBrewName(event.target.value)}
             className="w-full rounded-lg border border-white/20 bg-black/30 px-3 py-3 outline-none focus:border-green-400"
-            placeholder="Example: Hazy IPA"
+            placeholder={t("Example: Hazy IPA")}
           />
         </label>
 
         <div>
-  <span className="mb-2 block text-sm font-medium text-zinc-300">Keg number</span>
+  <span className="mb-2 block text-sm font-medium text-zinc-300">{t("Keg number")}</span>
   <div className="w-full rounded-lg border border-white/20 bg-black/20 px-3 py-3 text-zinc-300">
     {keg.name}
   </div>
@@ -279,7 +311,7 @@ export default function KegPublicPage() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-zinc-300">ABV (%)</span>
+              <span className="mb-2 block text-sm font-medium text-zinc-300">{t("ABV (%)")}</span>
               <input
                 type="number"
                 min="0"
@@ -288,13 +320,13 @@ export default function KegPublicPage() {
                 value={abv}
                 onChange={(event) => setAbv(event.target.value)}
                 className="w-full rounded-lg border border-white/20 bg-black/30 px-3 py-3 outline-none focus:border-green-400"
-                placeholder="Example: 5.2"
+                placeholder={t("Example: 5.2")}
               />
             </label>
 
             <label className="block">
   <span className="mb-2 block text-sm font-medium text-zinc-300">
-    Date {brewDate && <span className="opacity-70 ml-2">{formatAge(brewDate)}</span>}
+    {t("Date")} {brewDate && <span className="opacity-70 ml-2">{formatAge(brewDate)}</span>}
   </span>
 
   <input
@@ -308,13 +340,13 @@ export default function KegPublicPage() {
           </div>
 
           <label className="block">
-            <span className="mb-2 block text-sm font-medium text-zinc-300">Notes</span>
+            <span className="mb-2 block text-sm font-medium text-zinc-300">{t("Notes")}</span>
             <textarea
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
               rows={6}
               className="w-full rounded-lg border border-white/20 bg-black/30 px-3 py-3 outline-none focus:border-green-400"
-              placeholder="Add brewing notes, carbonation, tasting notes, or anything else that matters."
+              placeholder={t("Add brewing notes, carbonation, tasting notes, or anything else that matters.")}
             />
           </label>
         </div>
@@ -326,7 +358,7 @@ export default function KegPublicPage() {
             disabled={saving}
             className="px-6 py-3 bg-green-700 hover:bg-green-800 rounded-lg font-semibold"
           >
-            {saving ? "Saving…" : "Save keg details"}
+            {saving ? t("Saving…") : t("Save keg details")}
           </button>
 
           <button
@@ -334,7 +366,7 @@ export default function KegPublicPage() {
             onClick={emptyKeg}
             className="px-6 py-3 bg-red-700 hover:bg-red-800 rounded-lg font-semibold"
           >
-            Empty keg
+            {t("Empty keg")}
           </button>
 
 
@@ -343,12 +375,12 @@ export default function KegPublicPage() {
             onClick={generateQr}
             className="px-6 py-3 border border-white/20 bg-white/10 hover:bg-white/20 rounded-lg font-semibold"
           >
-            QR code
+            {t("QR code")}
           </button>
 
           {saved && (
             <span className="rounded-full border border-emerald-400/60 bg-emerald-500/10 px-3 py-1 text-sm font-medium text-emerald-200">
-              Saved
+              {t("Saved")}
             </span>
           )}
         </div>
@@ -378,12 +410,12 @@ export default function KegPublicPage() {
             className="w-full max-w-lg rounded-xl border border-white/10 bg-black/80 p-6 text-center backdrop-blur-md"
           >
             <h2 id="keg-qr-title" className="mb-4 text-2xl font-bold">
-              Keg QR code
+              {t("Keg QR code")}
             </h2>
             <div className="rounded-2xl bg-white p-4">
               <img
                 src={qrSrc}
-                alt={`QR code for ${keg.name}`}
+                alt={t("QR code for {name}").replace("{name}", keg.name)}
                 className="mx-auto h-auto w-full max-w-xs"
               />
             </div>
@@ -393,14 +425,14 @@ export default function KegPublicPage() {
                 download={`keg-${keg.id}.png`}
                 className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold hover:bg-white/20"
               >
-                Save PNG
+                {t("Save PNG")}
               </a>
               <button
                 type="button"
                 onClick={() => setQrSrc(null)}
                 className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 font-semibold hover:bg-white/20"
               >
-                Close
+                {t("Close")}
               </button>
             </div>
           </section>
@@ -411,6 +443,7 @@ export default function KegPublicPage() {
 }
 
 function KegPageTopBar({ isLoggedIn }: { isLoggedIn: boolean | null }) {
+  const { t } = useTranslation();
   if (isLoggedIn === true) {
     return (
       <>
@@ -431,13 +464,13 @@ function KegPageTopBar({ isLoggedIn }: { isLoggedIn: boolean | null }) {
           href="/kegs"
           className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
         >
-          Back to kegs
+          {t("Back to kegs")}
         </Link>
         <Link
           href="/"
           className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-semibold"
         >
-          Go to main site
+          {t("Go to main site")}
         </Link>
       </div>
     );
