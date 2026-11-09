@@ -13,6 +13,8 @@ import ReportContentButton from "@/app/components/ReportContentButton";
 import RecipeFilters, { type RecipeSort } from "@/app/my-recipes/RecipeFilters";
 import { membershipLabel } from "@/lib/auth/membership";
 import ProfileOverview, { ProfileAchievements } from "@/app/components/ProfileOverview";
+import BrewMixChart from "@/app/components/BrewMixChart";
+import type { BrewMixEntry } from "@/lib/brewing/brewMix";
 import RecipePresentation from "@/app/components/RecipePresentation";
 import MemberAdminActions, { type MemberAdminDetails } from "./MemberAdminActions";
 import FermentationBubbles from "@/app/components/FermentationBubbles";
@@ -74,6 +76,8 @@ export default function ProfileDetailPage({ params, searchParams }: {
   const [publicRecipeType, setPublicRecipeType] = useState("All");
   const [publicRecipeSearch, setPublicRecipeSearch] = useState("");
   const [publicRecipeSort, setPublicRecipeSort] = useState<RecipeSort>("newest");
+  const [brewMix, setBrewMix] = useState<BrewMixEntry[]>([]);
+  const [recipeMix, setRecipeMix] = useState<BrewMixEntry[]>([]);
   const [profileStats, setProfileStats] = useState<{
     totalBatches: number;
     totalRecipes: number;
@@ -130,6 +134,8 @@ export default function ProfileDetailPage({ params, searchParams }: {
       setCanManageUsers(profileResult.canManageUsers === true);
       setAdminDetails(profileResult.adminDetails ?? null);
       setProfileStats(profileResult.stats ?? null);
+      setBrewMix(profileResult.brewMix ?? []);
+      setRecipeMix(profileResult.recipeMix ?? []);
       setIsOwner(!preview && session.user.id === profileData.id);
       setIsFriend(profileResult.isFriend);
       setFriendRequest(profileResult.friendRequest);
@@ -552,6 +558,7 @@ const secondary = batchesRaw
 {profileStats && (
   <ProfileOverview stats={profileStats} />
 )}
+<BrewMixChart mix={brewMix} recipeMix={recipeMix} />
 {canViewContent && profile.is_public && profile.has_premium_access && profile.featured_recipe_id && (() => {
   const featuredRecipe = recipes.find((recipe) => recipe.id === profile.featured_recipe_id);
   if (!featuredRecipe) return null;

@@ -13,6 +13,8 @@ import ConfirmDialog from "../../components/ConfirmDialog";
 import PageHeading from "../../components/PageHeading";
 import MembershipStatus from "@/app/components/MembershipStatus";
 import ProfileOverview, { ProfileAchievements } from "@/app/components/ProfileOverview";
+import BrewMixChart from "@/app/components/BrewMixChart";
+import type { BrewMixEntry } from "@/lib/brewing/brewMix";
 import ExpandArrowButton from "@/app/components/ExpandArrowButton";
 import { saveBrewingPreferences } from "@/app/actions/userPreferences";
 import { translateCommunityError } from "@/lib/i18n/apiErrors";
@@ -42,6 +44,8 @@ export default function AccountPage() {
   const [showcaseMessage, setShowcaseMessage] = useState("");
   const [showcaseOpen, setShowcaseOpen] = useState(false);
   const [profileStats, setProfileStats] = useState<any>(null);
+  const [brewMix, setBrewMix] = useState<BrewMixEntry[]>([]);
+  const [recipeMix, setRecipeMix] = useState<BrewMixEntry[]>([]);
   const [categoryPercentiles, setCategoryPercentiles] = useState<Record<
     string,
     number | null
@@ -145,7 +149,10 @@ export default function AccountPage() {
         }),
       ]);
       if (statsRes.ok) {
-        setProfileStats((await statsRes.json()).stats ?? null);
+        const statsBody = await statsRes.json();
+        setProfileStats(statsBody.stats ?? null);
+        setBrewMix(statsBody.brewMix ?? []);
+        setRecipeMix(statsBody.recipeMix ?? []);
       } else {
         console.error("Could not load account profile statistics", statsRes.status);
       }
@@ -338,6 +345,7 @@ export default function AccountPage() {
         </div>
 
         {profileStats && <ProfileOverview stats={profileStats} />}
+        <BrewMixChart mix={brewMix} recipeMix={recipeMix} />
 
         <form onSubmit={saveShowcase} className="mb-10 rounded-xl border border-white/10 bg-white/5 p-4">
           <div className="flex w-full items-center justify-between gap-3 text-left">

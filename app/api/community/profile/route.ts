@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
 import { hasPremiumEntitlement } from "@/lib/auth/plan";
+import { computeBrewMix, type BrewMixEntry } from "@/lib/brewing/brewMix";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -135,6 +136,8 @@ export async function GET(request: NextRequest) {
   }
 
   let stats = null;
+  let brewMix: BrewMixEntry[] = [];
+  let recipeMix: BrewMixEntry[] = [];
   if (isOwner || profile.is_public) {
     let publicVesselIds: string[] | null = null;
     if (!isOwner) {
@@ -151,12 +154,15 @@ export async function GET(request: NextRequest) {
     }
 
     const [
+      { data: batchTypeRows, error: batchTypesError },
       { count: batchCount, error: batchesError },
       { data: recipeRows, error: recipesError },
       { count: topicCount, error: topicsError },
       { count: replyCount, error: repliesError },
       { count: ratingCount, error: ratingsError },
     ] = await Promise.all([
+      // All batches count toward the mix, including private ones; only percentages are exposed.
+      serviceRole.from("batches").select("type").eq("user_id", profile.id),
       isOwner
         ? serviceRole
             .from("batches")
@@ -172,7 +178,7 @@ export async function GET(request: NextRequest) {
       (() => {
         let query = serviceRole
           .from("recipes")
-          .select("is_public")
+          .select("is_public, type")
           .eq("user_id", profile.id);
         if (!isOwner) query = query.eq("is_public", true);
         return query;
@@ -192,7 +198,7 @@ export async function GET(request: NextRequest) {
         .eq("status", "published"),
     ]);
     const statsError =
-      batchesError || recipesError || topicsError || repliesError || ratingsError;
+      batchTypesError || batchesError || recipesError || topicsError || repliesError || ratingsError;
     if (statsError) {
       console.error("Could not load community profile statistics", statsError);
       return NextResponse.json({ error: "Could not load profile statistics" }, { status: 500 });
@@ -207,6 +213,8 @@ export async function GET(request: NextRequest) {
       forumPosts: (topicCount ?? 0) + (replyCount ?? 0),
       totalRatings: ratingCount ?? 0,
     };
+    brewMix = computeBrewMix((batchTypeRows ?? []).map((row) => row.type));
+    recipeMix = computeBrewMix(recipes.map((recipe) => recipe.type));
   }
 
   let adminDetails: {
@@ -269,6 +277,8 @@ export async function GET(request: NextRequest) {
     isFriend,
     friendRequest,
     stats,
+    brewMix,
+    recipeMix,
     canManageUsers,
     adminDetails,
   });
