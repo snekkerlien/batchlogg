@@ -1,5 +1,6 @@
 import Link from "next/link";
 import TranslatedText from "./TranslatedText";
+import { useFeatureVisibility } from "@/lib/features/useFeatureVisibility";
 
 export default function PublicNavigationLinks({
   className = "flex flex-wrap items-center gap-x-4 gap-y-2 text-white/75",
@@ -8,6 +9,7 @@ export default function PublicNavigationLinks({
   className?: string;
   showAuthLinks?: boolean;
 }) {
+  const features = useFeatureVisibility();
   return (
     <div className={className}>
       <Link href="/about" className="hover:text-white hover:underline">
@@ -19,9 +21,11 @@ export default function PublicNavigationLinks({
       <Link href="/recipes" className="hover:text-white hover:underline">
         <TranslatedText text="Public recipes" />
       </Link>
-      <Link href="/business" className="hover:text-white hover:underline">
-        <TranslatedText text="Beer & Brewing Reviews" />
-      </Link>
+      {features["brewery-reviews"] && (
+        <Link href="/business" className="hover:text-white hover:underline">
+          <TranslatedText text="Beer & Brewing Reviews" />
+        </Link>
+      )}
       <Link href="/abv-tools" className="hover:text-white hover:underline">
         <TranslatedText text="ABV tools" />
       </Link>

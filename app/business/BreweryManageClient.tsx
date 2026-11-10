@@ -9,6 +9,7 @@ import BreweryTeamManager from "@/app/business/BreweryTeamManager";
 import { BUSINESS_TYPES, businessTypeLabel } from "@/lib/brewery/business";
 import { translateBusinessManagementError } from "@/lib/i18n/apiErrors";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { useFeatureVisibility } from "@/lib/features/useFeatureVisibility";
 
 const inputClass = "mt-1 w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-white";
 
@@ -43,6 +44,7 @@ type BusinessOption = {
 
 export default function BreweryManageClient() {
   const { t } = useTranslation();
+  const features = useFeatureVisibility();
   const [account, setAccount] = useState<Account | null>(null);
   const [businesses, setBusinesses] = useState<BusinessOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -392,7 +394,7 @@ export default function BreweryManageClient() {
                     )}
                   </div>
                 </div>
-                {account.hasAccess && <Link href={`/business/${account.slug}`} className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20">{t("View public page")} <span aria-hidden="true">↗</span></Link>}
+                {features["brewery-reviews"] && account.hasAccess && <Link href={`/business/${account.slug}`} className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20">{t("View public page")} <span aria-hidden="true">↗</span></Link>}
               </div>
               {account.status === "pending" && <p className="mt-4 text-sm text-amber-200">{t("Your application is awaiting review. You’ll be able to subscribe and publish after approval.")}</p>}
               {account.status === "rejected" && <p className="mt-4 text-sm text-amber-200">{t("This application was not approved. Contact support if you believe this is a mistake.")}</p>}
@@ -468,7 +470,7 @@ export default function BreweryManageClient() {
                 {(account.isOwner || account.role === "manager") && <form id="business-page-details" onSubmit={savePage} className="scroll-mt-6 rounded-xl border border-white/10 bg-white/5 p-5">
                   <h2 className="text-xl font-semibold text-green-200">{t("Page details")}</h2>
                   <div className="mt-4 space-y-4">
-                  <p className="text-sm text-white/60">{t("Public link:")} <Link className="underline" href={`/business/${account.slug}`}>/business/{account.slug}</Link></p>
+                  {features["brewery-reviews"] && <p className="text-sm text-white/60">{t("Public link:")} <Link className="underline" href={`/business/${account.slug}`}>/business/{account.slug}</Link></p>}
                   <label className="block text-sm">{t("Business name")}<input required maxLength={120} className={inputClass} value={page.name} onChange={(event) => setPage({ ...page, name: event.target.value })} /></label>
                   <label className="block text-sm">{t("Business type")}<select required className={inputClass} value={page.businessType} onChange={(event) => setPage({ ...page, businessType: event.target.value })}>{BUSINESS_TYPES.map((type) => <option key={type.value} value={type.value} className="bg-zinc-900">{t(type.label)}</option>)}</select></label>
                   {page.businessType === "other" && <label className="block text-sm">{t("Type of business")}<input required minLength={2} maxLength={100} className={inputClass} value={page.businessTypeOther} onChange={(event) => setPage({ ...page, businessTypeOther: event.target.value })} placeholder={t("e.g. tasting room")} /></label>}
@@ -486,9 +488,9 @@ export default function BreweryManageClient() {
                   </p>
                   <div className="grid gap-4 sm:grid-cols-2">
                   {(account.isOwner || account.role === "manager" || account.role === "editor") && <Link href="/business/manage/catalogue" className="group flex min-h-32 flex-col rounded-xl border border-white/10 bg-white/5 p-5 transition hover:border-green-400/30 hover:bg-white/10">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-green-200/60">{t("Products & reviews")}</span>
+                    <span className="text-xs font-semibold uppercase tracking-wider text-green-200/60">{features["brewery-reviews"] ? t("Products & reviews") : t("Products")}</span>
                     <h2 className="mt-2 text-lg font-semibold text-green-200">{t("Product catalogue")} <span className="transition-transform group-hover:translate-x-1">→</span></h2>
-                    <p className="mt-1 text-sm leading-5 text-white/60">{t("Manage products, customer reviews, and owner QR codes.")}</p>
+                    {features["brewery-reviews"] && <p className="mt-1 text-sm leading-5 text-white/60">{t("Manage products, customer reviews, and owner QR codes.")}</p>}
                   </Link>}
                   {(account.isOwner || account.role === "manager" || account.role === "editor") && <Link href="/business/manage/analytics" className="group flex min-h-32 flex-col rounded-xl border border-white/10 bg-white/5 p-5 transition hover:border-green-400/30 hover:bg-white/10">
                     <span className="text-xs font-semibold uppercase tracking-wider text-white/45">{t("Performance")}</span>
@@ -503,7 +505,9 @@ export default function BreweryManageClient() {
               <section className="rounded-xl border border-white/10 bg-white/5 p-5">
                 <h2 className="text-lg font-semibold text-green-200">{t("Delete business account")}</h2>
                 <p className="mt-2 text-sm leading-6 text-white/70">
-                  {t("This permanently deletes the public business page, products, team memberships, analytics, and all reviews and reports tied to its products. Uploaded product images will also be removed. This cannot be undone.")}
+                  {features["brewery-reviews"]
+                    ? t("This permanently deletes the public business page, products, team memberships, analytics, and all reviews and reports tied to its products. Uploaded product images will also be removed. This cannot be undone.")
+                    : t("This permanently deletes the business account and all associated data. This cannot be undone.")}
                 </p>
                 {account.stripe_subscription_id &&
                   !["canceled", "incomplete_expired"].includes(account.stripe_subscription_status ?? "") && (

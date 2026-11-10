@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { ensureCommunityAndRatingAchievementNotifications } from "@/lib/community/achievementNotifications";
+import { getMembershipRole } from "@/lib/auth/permissions";
+import { isFeatureEnabled } from "@/lib/features/toggles";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function canSeeRatings(supabase: SupabaseClient, user: User) {
+  const role = await getMembershipRole(supabase, user);
+  return role === "developer" || await isFeatureEnabled(supabase, "brewery-reviews");
+}
 
 export async function GET() {
   const { supabase, serviceRole } = supabaseServer();
@@ -28,23 +36,28 @@ export async function GET() {
     );
   }
 
+  const showRatings = await canSeeRatings(supabase, user);
+  let notificationsQuery = serviceRole
+    .from("achievement_notifications")
+    .select("id, achievement_name, category, goal, created_at, read_at")
+    .eq("recipient_id", user.id)
+    .is("dismissed_at", null);
+  let countQuery = serviceRole
+    .from("achievement_notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("recipient_id", user.id)
+    .is("dismissed_at", null)
+    .is("read_at", null);
+  if (!showRatings) {
+    notificationsQuery = notificationsQuery.neq("category", "Ratings");
+    countQuery = countQuery.neq("category", "Ratings");
+  }
   const [
     { data: notifications, error: notificationsError },
     { count: unreadCount, error: countError },
   ] = await Promise.all([
-    serviceRole
-      .from("achievement_notifications")
-      .select("id, achievement_name, category, goal, created_at, read_at")
-      .eq("recipient_id", user.id)
-      .is("dismissed_at", null)
-      .order("created_at", { ascending: false })
-      .limit(20),
-    serviceRole
-      .from("achievement_notifications")
-      .select("id", { count: "exact", head: true })
-      .eq("recipient_id", user.id)
-      .is("dismissed_at", null)
-      .is("read_at", null),
+    notificationsQuery.order("created_at", { ascending: false }).limit(20),
+    countQuery,
   ]);
 
   if (notificationsError || countError) {
@@ -101,6 +114,7 @@ export async function PATCH(request: NextRequest) {
     .eq("recipient_id", user.id)
     .is("read_at", null)
     .is("dismissed_at", null);
+  if (!(await canSeeRatings(supabase, user))) update = update.neq("category", "Ratings");
   if (!markAll) update = update.in("id", body.ids as string[]);
 
   const { error } = await update;
@@ -124,11 +138,13 @@ export async function DELETE() {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
 
-  const { error } = await serviceRole
+  let update = serviceRole
     .from("achievement_notifications")
     .update({ dismissed_at: new Date().toISOString() })
     .eq("recipient_id", user.id)
     .is("dismissed_at", null);
+  if (!(await canSeeRatings(supabase, user))) update = update.neq("category", "Ratings");
+  const { error } = await update;
   if (error) {
     console.error("Could not clear achievement notifications", error);
     return NextResponse.json(

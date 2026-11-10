@@ -4,6 +4,18 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { beerStyleOptions } from "@/lib/brewing/beerStyles";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 
+const translatedBeerStyles = new Set([
+  "Sour",
+  "Fruited Sour",
+  "Kettle Sour",
+  "Berliner Weisse",
+  "Gose",
+  "Lambic",
+  "Gueuze",
+  "Flanders Red Ale",
+  "Oud Bruin",
+]);
+
 function editDistanceWithinOne(left: string, right: string): boolean {
   if (Math.abs(left.length - right.length) > 1) return false;
 
@@ -90,9 +102,14 @@ export default function BeerStyleSelect({
   const filteredStyles = useMemo(
     () =>
       searching
-        ? beerStyleOptions.filter((style) => matchesBeerStyle(style, query.trim()))
+        ? beerStyleOptions.filter(
+            (style) =>
+              matchesBeerStyle(style, query.trim()) ||
+              (translatedBeerStyles.has(style) &&
+                matchesBeerStyle(t(style), query.trim()))
+          )
         : beerStyleOptions,
-    [query, searching]
+    [query, searching, t]
   );
 
   function selectStyle(style: string) {
@@ -198,7 +215,7 @@ export default function BeerStyleSelect({
                   index === activeIndex ? "bg-white/10" : ""
                 }`}
               >
-                {style}
+                {translatedBeerStyles.has(style) ? t(style) : style}
               </li>
             ))
           ) : (

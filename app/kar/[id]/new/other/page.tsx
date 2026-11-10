@@ -79,7 +79,7 @@ export default function NewOtherPage({
         </p>
 
         {recipeError && <p role="alert" className="text-red-300 mb-4">{recipeError}</p>}
-        <BatchEntryGuide vesselId={params.id} recipeName={recipe?.name} />
+        <BatchEntryGuide vesselId={params.id} batchType="Other" recipeName={recipe?.name} />
         <form
           key={recipe?.id ?? "new-batch"}
           action={Actions.createBatch}

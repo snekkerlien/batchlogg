@@ -3,6 +3,8 @@ import Link from "next/link";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { hasBreweryAccess } from "@/lib/brewery/access";
 import { businessTypeLabel } from "@/lib/brewery/business";
+import { getMembershipRole } from "@/lib/auth/permissions";
+import { isFeatureEnabled } from "@/lib/features/toggles";
 import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
@@ -20,6 +22,17 @@ export default async function BreweryPublicPage({
   params: { slug: string };
   searchParams?: { sort?: string | string[] };
 }) {
+  const { supabase, serviceRole } = supabaseServer();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const role = await getMembershipRole(supabase, user);
+  const featureEnabled = await isFeatureEnabled(supabase, "brewery-reviews");
+
+  if (!featureEnabled && role !== "developer") notFound();
+
   const requestedSort = Array.isArray(searchParams?.sort)
     ? searchParams.sort[0]
     : searchParams?.sort;
@@ -27,7 +40,6 @@ export default async function BreweryPublicPage({
     ? requestedSort
     : "name";
 
-  const { serviceRole } = supabaseServer();
   const { data: brewery, error } = await serviceRole
     .from("brewery_accounts")
     .select("*")

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import type { ReactNode } from "react";
 import { usePageGuidesEnabled } from "@/lib/accessibility/usePageGuidesEnabled";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 
@@ -24,7 +25,7 @@ type PageGuideProps = {
     | "calendar"
     | "history"
     | "shopping";
-  footer: string;
+  footer: ReactNode;
 };
 
 function GuideIllustration({

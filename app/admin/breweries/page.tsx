@@ -2,6 +2,7 @@ import Link from "next/link";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
 import AdminBreweriesClient from "./AdminBreweriesClient";
+import { requireVisibleFeature } from "@/lib/features/server";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,8 @@ export default async function AdminBreweriesPage() {
   const { supabase } = supabaseServer();
   const { data: { user }, error } = await supabase.auth.getUser();
   const role = error ? "member" : await getMembershipRole(supabase, user);
+  await requireVisibleFeature("business-accounts");
+  await requireVisibleFeature("brewery-reviews");
   if (!hasPermission(role, "manage_users")) {
     return (
       <main className="flex min-h-screen items-center justify-center px-6 text-white">

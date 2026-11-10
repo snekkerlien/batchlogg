@@ -26,6 +26,9 @@ function MenuOverlayContent({ current }: { current: string }) {
   const [gamesEnabled, setGamesEnabled] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isModerator, setIsModerator] = useState(false);
+  const [isDeveloper, setIsDeveloper] = useState(false);
+  const [breweryReviewsEnabled, setBreweryReviewsEnabled] = useState(false);
+  const [businessAccountsEnabled, setBusinessAccountsEnabled] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const router = useRouter();
@@ -91,6 +94,9 @@ function MenuOverlayContent({ current }: { current: string }) {
             setGamesEnabled(false);
             setIsAdmin(false);
             setIsModerator(false);
+            setIsDeveloper(false);
+            setBreweryReviewsEnabled(false);
+            setBusinessAccountsEnabled(false);
           }
           return;
         }
@@ -106,6 +112,7 @@ function MenuOverlayContent({ current }: { current: string }) {
         if (active) {
           setIsAdmin(sessionData.role === "admin" || sessionData.role === "developer");
           setIsModerator(sessionData.role === "moderator");
+          setIsDeveloper(sessionData.role === "developer");
         }
 
         const response = await fetch("/api/profile", {
@@ -124,6 +131,18 @@ function MenuOverlayContent({ current }: { current: string }) {
             sessionData.role === "developer"
           );
           setGamesEnabled(profile.games_enabled === true);
+        }
+
+        const featuresResponse = await fetch("/api/features", {
+          cache: "no-store",
+        });
+        if (!featuresResponse.ok) {
+          throw new Error(`Could not load feature settings (${featuresResponse.status})`);
+        }
+        const features = await featuresResponse.json();
+        if (active) {
+          setBreweryReviewsEnabled(features["brewery-reviews"] === true);
+          setBusinessAccountsEnabled(features["business-accounts"] === true);
         }
       } catch (error) {
         console.error("Could not load navigation preferences", error);
@@ -184,7 +203,9 @@ function MenuOverlayContent({ current }: { current: string }) {
         { href: "/shopping-list", label: "Shopping list", key: "shopping-list" },
         { href: "/brew-insights", label: "Brewing insights", key: "brew-insights" },
         { href: "/abv-tools", label: "Brewing calculators", key: "abvtools" },
-        { href: "/business", label: "Beer & Brewing Reviews", key: "breweries" },
+        ...(breweryReviewsEnabled || isDeveloper
+          ? [{ href: "/business", label: "Beer & Brewing Reviews", key: "breweries" }]
+          : []),
         ...(gamesEnabled
           ? [{ href: "/games", label: "Brewing Academy", key: "games" }]
           : []),
@@ -219,6 +240,9 @@ function MenuOverlayContent({ current }: { current: string }) {
               ...(canManageKegs
                 ? [{ href: "/kegs", label: "Kegs", key: "kegs" }]
                 : []),
+              ...(isDeveloper
+                ? [{ href: "/admin/feature-rollout", label: "Feature rollout", key: "feature-rollout" }]
+                : []),
             ],
           },
         ]
@@ -227,7 +251,9 @@ function MenuOverlayContent({ current }: { current: string }) {
       label: "Account",
       items: [
         { href: "/my-account", label: "My account", key: "account" },
-        { href: "/business/manage", label: "Business account", key: "brewery" },
+        ...(businessAccountsEnabled || isDeveloper
+          ? [{ href: "/business/manage", label: "Business account", key: "brewery" }]
+          : []),
         { href: "/settings", label: "Settings", key: "settings" },
       ],
     },

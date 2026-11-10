@@ -287,8 +287,18 @@ Rye Beer
 Vegetable Beer
 `;
 
+const SOUR_BEER_STYLE_NAMES = `
+Sour
+Fruited Sour
+Kettle Sour
+`;
+
 export const beerStyleOptions = [...new Set(
-  WIKIPEDIA_BEER_STYLE_NAMES.split("\n").map((style) => style.trim()).filter(Boolean)
+  [WIKIPEDIA_BEER_STYLE_NAMES, SOUR_BEER_STYLE_NAMES]
+    .join("\n")
+    .split("\n")
+    .map((style) => style.trim())
+    .filter(Boolean)
 )].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
 
 const legacyBeerStyleOptions = new Set(

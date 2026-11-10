@@ -33,6 +33,8 @@ import brewCategory from "../../icons_achievements/ach_brew.svg";
 import forumCategory from "../../icons_achievements/ach_forum.svg";
 import recipesCategory from "../../icons_achievements/ach_recepies.svg";
 import ratingsCategory from "../../icons_achievements/ach_ratings.svg";
+import { useFeatureVisibility } from "@/lib/features/useFeatureVisibility";
+import { visibleAchievementCategories } from "@/lib/features/visibility";
 import {
   COMMUNITY_ACHIEVEMENT_TIERS,
   RATING_ACHIEVEMENT_TIERS,
@@ -555,6 +557,7 @@ function ProgressRing({
 }
 export default function ProfileOverview({ stats }: { stats: ProfileStats }) {
   const { t } = useTranslation();
+  const features = useFeatureVisibility();
   return (
     <section className="mb-10">
       <h2 className="mb-3 text-center text-2xl font-semibold text-green-300">
@@ -566,7 +569,7 @@ export default function ProfileOverview({ stats }: { stats: ProfileStats }) {
           ["Recipes created", stats.totalRecipes],
           ["Public recipes", stats.publicRecipes],
           ["Forum posts", stats.forumPosts],
-          ["Ratings given", stats.totalRatings],
+          ...(features["brewery-reviews"] ? [["Ratings given", stats.totalRatings] as const] : []),
         ] as const).map(([label, value]) => (
           <div
             key={label}
@@ -595,13 +598,15 @@ export function ProfileAchievements({
   categoryPercentiles?: Record<string, number | null> | null;
 }) {
   const { t } = useTranslation();
+  const features = useFeatureVisibility();
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].name);
   const accentStyle: CSSProperties = isAccentColor(accentColor)
     ? getAccessibleAccentStyle(accentColor)
     : {};
-  const achievements = CATEGORIES.flatMap(({ name: category, stat, tiers }) =>
+  const categories = visibleAchievementCategories(CATEGORIES, features["brewery-reviews"]);
+  const achievements = categories.flatMap(({ name: category, stat, tiers }) =>
     tiers.map(([name, goal]): Achievement => {
       const progress = Math.max(0, stats[stat]);
       return {
@@ -616,7 +621,7 @@ export function ProfileAchievements({
     })
   );
   const unlockedCount = achievements.filter((a) => a.unlocked).length;
-  const earnedHighlights = CATEGORIES.flatMap(({ name }) => {
+  const earnedHighlights = categories.flatMap(({ name }) => {
     const unlockedInCategory = achievements.filter(
       (achievement) => achievement.category === name && achievement.unlocked
     );
@@ -626,7 +631,7 @@ export function ProfileAchievements({
   const visibleAchievements = showProgress
     ? achievements
     : achievements.filter((achievement) => achievement.unlocked);
-  const visibleCategories = CATEGORIES.map((category) => ({
+  const visibleCategories = categories.map((category) => ({
     ...category,
     achievements: visibleAchievements.filter(
       (achievement) => achievement.category === category.name
@@ -805,7 +810,9 @@ export function ProfileAchievements({
             )}
           {!visibleAchievements.length && (
             <p className="text-sm text-white/55">
-              {t("No achievements earned yet. Start brewing, sharing recipes, posting, or rating products.")}
+              {features["brewery-reviews"]
+                ? t("No achievements earned yet. Start brewing, sharing recipes, posting, or rating products.")
+                : t("No achievements earned yet.")}
             </p>
           )}
           </div>

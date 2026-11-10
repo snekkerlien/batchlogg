@@ -7,6 +7,7 @@ import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
 import { translateBreweryAnalyticsError } from "@/lib/i18n/apiErrors";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { useFeatureVisibility } from "@/lib/features/useFeatureVisibility";
 
 type Period = "7d" | "30d" | "90d";
 type ProductSummary = {
@@ -68,6 +69,7 @@ function MetricCard({ label, value, detail }: { label: string; value: string | n
 
 export default function BreweryAnalyticsClient() {
   const { t, language } = useTranslation();
+  const features = useFeatureVisibility();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [period, setPeriod] = useState<Period>("30d");
   const [loading, setLoading] = useState(true);
@@ -140,8 +142,8 @@ export default function BreweryAnalyticsClient() {
               <MetricCard label={t("Shop clicks")} value={data.summary.outboundClicks.toLocaleString()} detail={`${t("Last")} ${data.periodDays} ${t("days")}`} />
               <MetricCard label={t("Shop click rate")} value={data.summary.shopClickRate == null ? "—" : `${data.summary.shopClickRate.toFixed(1)}%`} detail={t("Clicks divided by product page visits")} />
               <MetricCard label={t("Published products")} value={data.summary.publishedProducts} detail={t("Visible to customers")} />
-              <MetricCard label={t("Customer rating")} value={data.summary.averageRating == null ? "—" : `${data.summary.averageRating.toFixed(1)} / 5`} detail={`${data.summary.reviewCount} ${t(data.summary.reviewCount === 1 ? "published review" : "published reviews overall")}`} />
-              <MetricCard label={t("New reviews")} value={data.summary.newReviews} detail={`${t("Last")} ${data.periodDays} ${t("days")}`} />
+              {features["brewery-reviews"] && <MetricCard label={t("Customer rating")} value={data.summary.averageRating == null ? "—" : `${data.summary.averageRating.toFixed(1)} / 5`} detail={`${data.summary.reviewCount} ${t(data.summary.reviewCount === 1 ? "published review" : "published reviews overall")}`} />}
+              {features["brewery-reviews"] && <MetricCard label={t("New reviews")} value={data.summary.newReviews} detail={`${t("Last")} ${data.periodDays} ${t("days")}`} />}
             </section>
 
             <section className="rounded-xl border border-white/10 bg-white/5 p-5">
@@ -179,7 +181,7 @@ export default function BreweryAnalyticsClient() {
             </section>
 
             <div className="grid gap-6 lg:grid-cols-2">
-              <section className="rounded-xl border border-white/10 bg-white/5 p-5">
+              {features["brewery-reviews"] && <section className="rounded-xl border border-white/10 bg-white/5 p-5">
                 <h2 className="text-lg font-semibold text-green-200">{t("Customer ratings")}</h2>
                 <p className="mt-1 text-sm text-white/55">{t("Published ratings across all products.")}</p>
                 <div className="mt-4 space-y-2">
@@ -193,7 +195,7 @@ export default function BreweryAnalyticsClient() {
                     </div>
                   ))}
                 </div>
-              </section>
+              </section>}
               <section className="rounded-xl border border-white/10 bg-white/5 p-5">
                 <h2 className="text-lg font-semibold text-green-200">{t("Popular products")}</h2>
                 <p className="mt-1 text-sm text-white/55">{t("Ranked by product page visits and QR scans in the selected period.")}</p>
@@ -203,9 +205,9 @@ export default function BreweryAnalyticsClient() {
                       <li key={product.id} className="flex items-start justify-between gap-3 border-b border-white/5 pb-3 last:border-0">
                         <div className="min-w-0">
                           <p className="truncate font-medium"><span className="mr-2 text-white/40">{index + 1}.</span>{product.name}</p>
-                          <p className="mt-1 text-xs text-white/50">
+                          {features["brewery-reviews"] && <p className="mt-1 text-xs text-white/50">
                             {product.averageRating == null ? t("No ratings") : `★ ${product.averageRating.toFixed(1)}`} · {product.reviewCount} {t(product.reviewCount === 1 ? "review" : "reviews")}
-                          </p>
+                          </p>}
                           <p className="mt-1 text-xs text-white/50">
                             {product.outboundClicks} {t(product.outboundClicks === 1 ? "shop click" : "shop clicks")} · {product.shopClickRate == null ? t("No page visits") : `${product.shopClickRate.toFixed(1)}% ${t("click rate")}`}
                           </p>
@@ -218,7 +220,7 @@ export default function BreweryAnalyticsClient() {
               </section>
             </div>
 
-            <section className="rounded-xl border border-white/10 bg-white/5 p-5">
+            {features["brewery-reviews"] && <section className="rounded-xl border border-white/10 bg-white/5 p-5">
               <h2 className="text-lg font-semibold text-green-200">{t("Recent customer feedback")}</h2>
               <p className="mt-1 text-sm text-white/55">{t("The latest published product reviews.")}</p>
               {data.recentReviews.length === 0 ? <p className="mt-4 text-sm text-white/55">{t("No customer reviews yet.")}</p> : (
@@ -236,11 +238,11 @@ export default function BreweryAnalyticsClient() {
                   ))}
                 </ul>
               )}
-            </section>
+            </section>}
 
             <div className="flex flex-wrap justify-center gap-3">
               <Link href="/business/manage/catalogue" className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10">{t("Manage product catalogue")}</Link>
-              <Link href={`/business/${data.businessSlug}`} className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10">{t("View public business page")}</Link>
+              {features["brewery-reviews"] && <Link href={`/business/${data.businessSlug}`} className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10">{t("View public business page")}</Link>}
             </div>
           </div>
         ) : null}

@@ -1,7 +1,10 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { hasBreweryAccess } from "@/lib/brewery/access";
 import { businessTypeLabel } from "@/lib/brewery/business";
+import { getMembershipRole } from "@/lib/auth/permissions";
+import { isFeatureEnabled } from "@/lib/features/toggles";
 import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
@@ -10,7 +13,18 @@ import TranslatedText from "@/app/components/TranslatedText";
 export const dynamic = "force-dynamic";
 
 export default async function BreweriesPage() {
-  const { serviceRole } = supabaseServer();
+  const { supabase, serviceRole } = supabaseServer();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const role = await getMembershipRole(supabase, user);
+  const featureEnabled = await isFeatureEnabled(supabase, "brewery-reviews");
+
+  if (!featureEnabled && role !== "developer") notFound();
+  const businessEnabled = role === "developer" || await isFeatureEnabled(supabase, "business-accounts");
+
   const { data: accounts, error } = await serviceRole
     .from("brewery_accounts")
     .select("id, name, business_type, business_type_other, slug, description, location, logo_url, status, manual_access_granted_at, manual_access_expires_at, stripe_subscription_status")
@@ -30,7 +44,7 @@ export default async function BreweriesPage() {
         <div className="absolute right-4 top-3 z-40"><MenuOverlay current="brewery" /></div>
         <div className="absolute left-4 top-3 z-40"><BackButton /></div>
         <PageHeading title={<TranslatedText text="Beer & Brewing Reviews" />} subtitle={<TranslatedText text="Discover and review beer kits, beverages, breweries, pubs, homebrew shops, and more." />} />
-        <div className="mb-5 mt-3 text-center text-sm text-white/55">
+        {businessEnabled && <div className="mb-5 mt-3 text-center text-sm text-white/55">
           <TranslatedText text="Own a brewing business?" />{" "}
           <Link
             href="/business/manage"
@@ -38,7 +52,7 @@ export default async function BreweriesPage() {
           >
             <TranslatedText text="Register your business" />
           </Link>
-        </div>
+        </div>}
         {error ? (
           <p role="alert" className="rounded-lg border border-red-400/30 bg-red-950/40 p-4 text-red-200"><TranslatedText text="The drinks directory could not be loaded." /></p>
         ) : eligible.length === 0 ? (

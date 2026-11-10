@@ -18,6 +18,7 @@ import {
   slugifyBreweryValue,
   normalizeOptionalUrl,
 } from "@/lib/brewery/access";
+import { isFeatureEnabled } from "@/lib/features/toggles";
 
 export const runtime = "nodejs";
 
@@ -79,6 +80,8 @@ export default async function UserAdminPage({
     throw new Error(`Failed to load user restrictions: ${restrictionsError.message}`);
   }
 
+  const showBusinessAccount = role === "developer" || await isFeatureEnabled(supabase, "business-accounts");
+  const showBusinessReviews = role === "developer" || await isFeatureEnabled(supabase, "brewery-reviews");
   const { data: businessAccount, error: businessAccountError } = await serviceRole
     .from("brewery_accounts")
     .select("id, name, business_type, business_type_other, slug, status, manual_access_granted_at, manual_access_expires_at, manual_access_note, stripe_subscription_status")
@@ -445,7 +448,7 @@ export default async function UserAdminPage({
             </button>
           </form>
 
-          <section className="mt-8 rounded-xl border border-white/10 bg-black/20 p-5">
+          {showBusinessAccount && <section className="mt-8 rounded-xl border border-white/10 bg-black/20 p-5">
             <h2 className="text-lg font-semibold text-green-200">Business account access</h2>
             {businessAccount ? (
               <div className="mt-3 space-y-3">
@@ -468,12 +471,12 @@ export default async function UserAdminPage({
                   {businessAccount.manual_access_note && (
                     <p className="text-sm text-white/50">Grant note: {businessAccount.manual_access_note}</p>
                   )}
-                  <Link
+                  {showBusinessReviews && <Link
                     href={`/business/${businessAccount.slug}`}
                     className="mt-2 inline-block text-sm text-green-200 underline"
                   >
                     View public page
-                  </Link>
+                  </Link>}
                 </div>
                 <form action={updateBusinessGrant} className="space-y-3">
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -611,7 +614,7 @@ export default async function UserAdminPage({
                 </button>
               </form>
             )}
-          </section>
+          </section>}
 
           <DeleteUserButton
             userId={userId}

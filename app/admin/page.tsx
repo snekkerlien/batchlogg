@@ -1,5 +1,6 @@
 import { supabaseServer } from "../../lib/supabase/supabaseServerFinal";
 import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
+import { isFeatureEnabled } from "@/lib/features/toggles";
 import Link from "next/link";
 import BackButton from "../batch-history/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
@@ -49,6 +50,13 @@ export default async function AdminPage() {
     );
   }
 
+  const [businessEnabled, reviewsEnabled] = role === "developer"
+    ? [true, true]
+    : await Promise.all([
+        isFeatureEnabled(supabase, "business-accounts"),
+        isFeatureEnabled(supabase, "brewery-reviews"),
+      ]);
+  const showBusinessAdmin = businessEnabled && reviewsEnabled;
   let feedbackCount: number | null = null;
   let pendingBanAppealCount: number | null = null;
   let pendingCommunityAppealCount: number | null = null;
@@ -75,20 +83,20 @@ export default async function AdminPage() {
             .select("user_id", { count: "exact", head: true })
             .eq("status", "pending")
         ),
-        loadNotificationCount(
+        showBusinessAdmin ? loadNotificationCount(
           "pending business applications",
           serviceRole
             .from("brewery_accounts")
             .select("id", { count: "exact", head: true })
             .eq("status", "pending")
-        ),
-        loadNotificationCount(
+        ) : Promise.resolve({ count: 0, error: null }),
+        showBusinessAdmin ? loadNotificationCount(
           "open brewery review reports",
           serviceRole
             .from("brewery_review_reports")
             .select("id", { count: "exact", head: true })
             .in("status", ["open", "under_review"])
-        ),
+        ) : Promise.resolve({ count: 0, error: null }),
       ]);
     feedbackCount = feedbackResult.count;
     pendingBanAppealCount = pendingBanAppealsResult.count;
@@ -222,7 +230,7 @@ export default async function AdminPage() {
             </Link>
           )}
 
-          {hasPermission(role, "manage_users") && (
+          {hasPermission(role, "manage_users") && showBusinessAdmin && (
             <Link
               href="/admin/breweries"
               className="group rounded-xl border border-white/10 bg-white/5 p-6 transition hover:border-green-400/40 hover:bg-white/10"

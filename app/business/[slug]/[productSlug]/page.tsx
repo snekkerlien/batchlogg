@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/supabaseServerFinal";
 import { hasBreweryAccess } from "@/lib/brewery/access";
+import { getMembershipRole } from "@/lib/auth/permissions";
+import { isFeatureEnabled } from "@/lib/features/toggles";
 import BackButton from "@/app/components/BackButton";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import PageHeading from "@/app/components/PageHeading";
@@ -22,7 +24,17 @@ export default async function BreweryProductPage({
   params: { slug: string; productSlug: string };
   searchParams?: { source?: string };
 }) {
-  const { serviceRole } = supabaseServer();
+  const { supabase, serviceRole } = supabaseServer();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const role = await getMembershipRole(supabase, user);
+  const featureEnabled = await isFeatureEnabled(supabase, "brewery-reviews");
+
+  if (!featureEnabled && role !== "developer") notFound();
+
   const { data: brewery, error: breweryError } = await serviceRole
     .from("brewery_accounts")
     .select("id, name, slug, status, manual_access_granted_at, manual_access_expires_at, stripe_subscription_status")

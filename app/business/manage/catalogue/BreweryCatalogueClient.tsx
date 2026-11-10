@@ -12,6 +12,7 @@ import ProductCardTitle from "@/app/business/ProductCardTitle";
 import { getErrorMessage, saveDownload } from "@/lib/desktopDownloads";
 import { translateBreweryProductError } from "@/lib/i18n/apiErrors";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { useFeatureVisibility } from "@/lib/features/useFeatureVisibility";
 import { BREWERY_PRODUCT_CATEGORIES } from "@/lib/brewery/productCategories";
 
 const inputClass = "mt-1 w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-white";
@@ -106,6 +107,7 @@ function productForm(product: Product & Record<string, unknown>): ProductForm {
 
 export default function BreweryCatalogueClient() {
   const { t } = useTranslation();
+  const features = useFeatureVisibility();
   const qrCodeRef = useRef<HTMLDivElement>(null);
   const [account, setAccount] = useState<Account | null>(null);
   const [products, setProducts] = useState<(Product & Record<string, unknown>)[]>([]);
@@ -470,15 +472,15 @@ export default function BreweryCatalogueClient() {
                             </p>
                           )}
                           <p className="mt-2 text-xs text-white/50">{item.is_published ? t("Published") : t("Unpublished")} · {item.analytics.pageViews} {t("page views")} · {item.analytics.qrScans} {t("QR scans")} (30 {t("days")})</p>
-                          {item.is_published && <Link href={`/business/${account.slug}/${item.slug}`} className="mt-2 inline-block text-sm text-green-200 underline">{t("Open public product page")}</Link>}
+                          {features["brewery-reviews"] && item.is_published && <Link href={`/business/${account.slug}/${item.slug}`} className="mt-2 inline-block text-sm text-green-200 underline">{t("Open public product page")}</Link>}
                         </div>
                         <div className="mt-auto flex flex-wrap gap-2 pt-4">
-                          <button type="button" aria-expanded={qrProductId === item.id} onClick={() => setQrProductId(qrProductId === item.id ? null : item.id)} className="rounded border border-white/20 bg-white/10 px-3 py-1.5 text-sm">QR</button>
+                          {features["brewery-reviews"] && <button type="button" aria-expanded={qrProductId === item.id} onClick={() => setQrProductId(qrProductId === item.id ? null : item.id)} className="rounded border border-white/20 bg-white/10 px-3 py-1.5 text-sm">QR</button>}
                           <button type="button" onClick={() => editProduct(item)} className="rounded border border-white/20 bg-white/10 px-3 py-1.5 text-sm">{t("Edit")}</button>
                           <button type="button" disabled={busy} onClick={() => setPendingDelete(item)} className="rounded border border-red-400/30 bg-red-950/30 px-3 py-1.5 text-sm text-red-200 disabled:opacity-50">{t("Delete")}</button>
                         </div>
                       </div>
-                      {qrProductId === item.id && item.is_published && (
+                      {features["brewery-reviews"] && qrProductId === item.id && item.is_published && (
                         <div className="brewery-product-qr absolute inset-0 z-30 flex flex-col items-center justify-center gap-2 rounded-xl border border-white/10 bg-zinc-900/95 p-3 text-center text-white shadow-xl backdrop-blur-sm">
                           <button
                             type="button"
@@ -562,7 +564,7 @@ export default function BreweryCatalogueClient() {
                   ) : (
                     <>
                   <h2 id="product-modal-title" className="pr-8 text-xl font-semibold text-green-200">{editingId ? t("Edit product") : productKind === "beverage" ? t("Add beverage") : t("Add brewing kit")}</h2>
-                  <p className="mt-1 text-sm text-white/60">{editingId ? t("Update this product listing. Customers can rate and review published listings.") : productKind === "beverage" ? t("Create a listing for a beverage your bar or business serves or sells. Customers can rate and review published listings.") : t("Create a listing for your brewing kit. Customers can rate and review published listings.")}</p>
+                  {features["brewery-reviews"] && <p className="mt-1 text-sm text-white/60">{editingId ? t("Update this product listing. Customers can rate and review published listings.") : productKind === "beverage" ? t("Create a listing for a beverage your bar or business serves or sells. Customers can rate and review published listings.") : t("Create a listing for your brewing kit. Customers can rate and review published listings.")}</p>}
                   <form onSubmit={saveProduct} className="mt-5 grid gap-4 sm:grid-cols-2">
               <label className="block text-sm">{t("Product name")}<input required maxLength={160} className={inputClass} value={product.name} onChange={(event) => setProduct({ ...product, name: event.target.value })} /></label>
               <label className="block text-sm">{t("Category")}<select className={inputClass} value={product.category} onChange={(event) => setProduct({ ...product, category: event.target.value })}>{(account.business_type === "homebrew_shop" ? beerKitCategories : productKind === "beverage" && !editingId ? beverageCategories : categories).map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}</select></label>
@@ -720,7 +722,7 @@ export default function BreweryCatalogueClient() {
       <ConfirmDialog
         open={pendingDelete !== null}
         title={t("Delete product?")}
-        message={pendingDelete ? `${t("Delete")} "${pendingDelete.name}"? ${t("This also removes its reviews. This action cannot be undone.")}` : ""}
+        message={pendingDelete ? `${t("Delete")} "${pendingDelete.name}"? ${features["brewery-reviews"] ? t("This also removes its reviews. This action cannot be undone.") : t("This also removes associated data. This action cannot be undone.")}` : ""}
         confirmLabel={t("Delete product")}
         onConfirm={deleteProduct}
         onCancel={() => setPendingDelete(null)}
