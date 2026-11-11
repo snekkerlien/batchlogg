@@ -12,6 +12,7 @@ import PageHeading from "../components/PageHeading";
 import PageGuide from "@/app/components/PageGuide";
 import ExpandArrowButton from "@/app/components/ExpandArrowButton";
 import BatchOutcomeSharing from "@/app/components/BatchOutcomeSharing";
+import SGReadingsList from "@/app/components/SGReadingsList";
 import { Qty, UnitAwareText } from "@/app/components/Units";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
 import { formatSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
@@ -845,7 +846,25 @@ function BatchHistoryContent() {
                        </p>
                       ) : canViewSGGraph ? (
                        <div className="bg-black/40 p-4 rounded-lg border border-white/10">
-                         <BatchSGChart readings={batch.sgReadings} />
+                         <BatchSGChart
+                           batchId={String(batch.id)}
+                           readings={batch.sgReadings}
+                           onDeleted={(readingId) =>
+                             setBatches((current) =>
+                               current.map((item) =>
+                                 item.id === batch.id
+                                   ? {
+                                       ...item,
+                                       sgReadings: item.sgReadings.filter(
+                                         (reading: { id: string }) =>
+                                           reading.id !== readingId
+                                       ),
+                                     }
+                                   : item
+                               )
+                             )
+                           }
+                         />
                        </div>
                       ) : (
                        <p className="text-sm text-white/70">
@@ -857,6 +876,35 @@ function BatchHistoryContent() {
                         <p className="mt-4 text-center text-lg font-semibold text-green-300">
                           {t("Current ABV")}: {currentAbv}%
                         </p>
+                      )}
+                      {!canViewSGGraph && batch.sgReadings.length > 0 && (
+                        <section
+                          aria-label={t("Saved specific gravity readings")}
+                          className="mt-4 rounded-lg border border-white/10 bg-black/30 p-4"
+                        >
+                          <h3 className="mb-3 font-semibold text-green-300">
+                            {t("Recorded readings")}
+                          </h3>
+                          <SGReadingsList
+                            batchId={String(batch.id)}
+                            readings={batch.sgReadings}
+                            onDeleted={(readingId) =>
+                              setBatches((current) =>
+                                current.map((item) =>
+                                  item.id === batch.id
+                                    ? {
+                                        ...item,
+                                        sgReadings: item.sgReadings.filter(
+                                          (reading: { id: string }) =>
+                                            reading.id !== readingId
+                                        ),
+                                      }
+                                    : item
+                                )
+                              )
+                            }
+                          />
+                        </section>
                       )}
                     </section>
 

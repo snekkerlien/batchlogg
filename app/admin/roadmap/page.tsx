@@ -3,6 +3,7 @@ import Link from "next/link";
 import BackButton from "@/app/components/BackButton";
 import { getMembershipRole, hasPermission } from "@/lib/auth/permissions";
 import DeleteRoadmapEntryButton from "./DeleteRoadmapEntryButton";
+import ClearCompletedButton from "./ClearCompletedButton";
 import { getRoadmapReturnPath } from "@/lib/admin/roadmapNavigation";
 
 export const dynamic = "force-dynamic";
@@ -74,16 +75,6 @@ export default async function RoadmapPage({
         </div>
       </div>
 
-      {searchParams?.completed === "1" && (
-        <p role="status" className="mb-6 text-green-300">
-          The roadmap entry was marked completed.
-        </p>
-      )}
-      {searchParams?.created === "1" && (
-        <p role="status" className="mb-6 text-green-300">
-          The roadmap entry was added.
-        </p>
-      )}
       {searchParams?.error && (
         <p role="alert" className="mb-6 text-center text-red-300">
           {searchParams.error === "invalid"
@@ -180,7 +171,12 @@ export default async function RoadmapPage({
             key={col.key}
             className="bg-black/40 border border-white/10 rounded-xl p-4 backdrop-blur-md"
           >
-            <h2 className="mb-4 text-xl font-semibold text-green-300">{col.label}</h2>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-xl font-semibold text-green-300">{col.label}</h2>
+              {col.key === "completed" && (
+                <ClearCompletedButton disabled={grouped[col.key].length === 0} />
+              )}
+            </div>
 
             <div className="space-y-4">
               {grouped[col.key].length === 0 && (

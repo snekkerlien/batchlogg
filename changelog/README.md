@@ -38,5 +38,15 @@ and Tauri were updated at different times or to different revisions, record a
 separate baseline for each destination. Do not claim a push succeeded unless
 the command or release operation confirmed it.
 
+After a requested push, also provide a public-facing changelog in the response
+for the user to paste into the site's admin content form. Ask whether the
+changes belong to a new version or an existing version, and which version
+to use if it is not already clear. Include only changes that directly affect
+site users since the relevant previous push baseline; exclude admin-related
+changes and internal implementation details. Provide the Markdown body in a copyable
+code block, using `###` headings and bullet lists; give the version, date, and
+title separately when known. Do not invent a version or claim an unconfirmed
+push succeeded. Do not publish the entry to the site unless explicitly asked.
+
 If a second Git push is needed only to publish the push-log update, name its
 commit exactly `Updated log push`.

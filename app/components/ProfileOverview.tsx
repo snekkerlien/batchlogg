@@ -558,19 +558,25 @@ function ProgressRing({
 export default function ProfileOverview({ stats }: { stats: ProfileStats }) {
   const { t } = useTranslation();
   const features = useFeatureVisibility();
+  const ratingsEnabled = features["brewery-reviews"];
+  const overviewStats = [
+    ["Batches brewed", stats.totalBatches],
+    ["Recipes created", stats.totalRecipes],
+    ["Public recipes", stats.publicRecipes],
+    ["Forum posts", stats.forumPosts],
+    ...(ratingsEnabled ? [["Ratings given", stats.totalRatings] as const] : []),
+  ] as const;
   return (
     <section className="mb-10">
       <h2 className="mb-3 text-center text-2xl font-semibold text-green-300">
         {t("Brewing overview")}
       </h2>
-      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {([
-          ["Batches brewed", stats.totalBatches],
-          ["Recipes created", stats.totalRecipes],
-          ["Public recipes", stats.publicRecipes],
-          ["Forum posts", stats.forumPosts],
-          ...(features["brewery-reviews"] ? [["Ratings given", stats.totalRatings] as const] : []),
-        ] as const).map(([label, value]) => (
+      <dl
+        className={`grid grid-cols-2 gap-3 ${
+          ratingsEnabled ? "sm:grid-cols-3 lg:grid-cols-5" : "sm:grid-cols-4"
+        }`}
+      >
+        {overviewStats.map(([label, value]) => (
           <div
             key={label}
             className="rounded-xl border border-white/10 bg-white/5 p-4 text-center"

@@ -34,6 +34,7 @@ const ACTION_LABELS: Record<string, string> = {
   "community_report.appeal_overturned": "Overturned community moderation action appeal",
   "roadmap.status_updated": "Updated roadmap entry",
   "roadmap.entry_removed": "Removed completed roadmap entry",
+  "roadmap.completed_cleared": "Cleared completed roadmap entries",
   "changelog.saved": "Saved a release note",
   "changelog.removed": "Removed a release note",
   "announcement.created": "Created announcement",

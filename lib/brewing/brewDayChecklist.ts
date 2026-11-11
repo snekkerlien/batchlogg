@@ -62,32 +62,43 @@ const allGrainBeerSteps = [
   },
 ] as const satisfies readonly ChecklistStep[];
 
-const kitBeerSteps = [
+const freshWortBeerSteps = [
   {
     id: "prepare",
     title: "Prepare and sanitize equipment",
+    description: "Clean the fermenter and anything that will touch the wort.",
+  },
+  {
+    id: "prepare-wort",
+    title: "Prepare the fresh wort kit",
     description:
-      "Clean the kettle, fermenter, and anything that will touch cooled wort.",
+      "Follow the fresh wort kit instructions to thaw or dilute the pre-boiled wort; it does not need another boil.",
+  },
+  {
+    id: "pitch",
+    title: "Transfer, aerate, and pitch yeast",
+    description:
+      "Transfer into the sanitized fermenter, take an original-gravity reading, and pitch yeast.",
+  },
+  {
+    id: "finish",
+    title: "Seal, label, and clean up",
+    description:
+      "Fit the airlock, record the batch details, and clean your equipment.",
+  },
+] as const satisfies readonly ChecklistStep[];
+
+const maltExtractBeerSteps = [
+  {
+    id: "prepare",
+    title: "Prepare and sanitize equipment",
+    description: "Clean the fermenter and anything that will touch the wort.",
   },
   {
     id: "prepare-wort",
     title: "Prepare the kit wort",
     description:
-      "Follow the kit instructions to heat water, dissolve the extract, and prepare the wort.",
-  },
-  {
-    id: "boil",
-    title: "Boil and follow the hop schedule",
-    description:
-      "Follow the kit's boil time and add hops or other ingredients as directed.",
-    timerMinutes: 60,
-  },
-  {
-    id: "chill",
-    title: "Chill wort to pitching temperature",
-    description:
-      "Cool promptly, using a sanitized chiller or another safe method.",
-    timerMinutes: 20,
+      "Follow the kit instructions to dissolve the extract and prepare the wort.",
   },
   {
     id: "pitch",
@@ -276,8 +287,8 @@ const otherSteps = [
 
 export const BREW_DAY_STEPS = {
   "Beer:all_grain": allGrainBeerSteps,
-  "Beer:fresh_wort_kit": kitBeerSteps,
-  "Beer:malt_extract_kit": kitBeerSteps,
+  "Beer:fresh_wort_kit": freshWortBeerSteps,
+  "Beer:malt_extract_kit": maltExtractBeerSteps,
   Braggot: [
     ...allGrainBeerSteps.slice(0, 6),
     {
@@ -358,6 +369,21 @@ export type ChecklistState = {
     remainingMs: number;
   } | null;
 };
+
+export function filterChecklistForSteps(
+  state: ChecklistState,
+  steps: readonly ChecklistStep[]
+): ChecklistState {
+  const stepIds = new Set(steps.map((step) => step.id));
+  const timedStepIds = new Set(
+    steps.filter((step) => step.timerMinutes !== undefined).map((step) => step.id)
+  );
+  return {
+    ...state,
+    completed: state.completed.filter((id) => stepIds.has(id)),
+    timer: state.timer && timedStepIds.has(state.timer.stepId) ? state.timer : null,
+  };
+}
 
 export const DEFAULT_DURATIONS: Record<string, number> = {
   mash: 60,

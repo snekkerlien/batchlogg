@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import type { BrewMixEntry } from "@/lib/brewing/brewMix";
 
@@ -38,11 +38,15 @@ export default function BrewMixChart({
   const { t } = useTranslation();
   if (mix.length === 0 && recipeMix.length === 0) return null;
   return (
-    <section className="mb-10">
+    <section className="-mx-4 mb-10 sm:mx-0">
       <h2 className="mb-3 text-center text-2xl font-semibold text-green-300">
         {t("Brewing mix")}
       </h2>
-      <div className="flex flex-wrap items-start justify-center gap-4">
+      <div
+        className={`mx-auto grid max-w-[37rem] items-start gap-2 sm:gap-4 ${
+          mix.length > 0 && recipeMix.length > 0 ? "grid-cols-2" : "grid-cols-1"
+        }`}
+      >
         <MixDonut mix={mix} title={t("Batches")} />
         <MixDonut mix={recipeMix} title={t("Recipes")} />
       </div>
@@ -55,10 +59,23 @@ function MixDonut({ mix, title }: { mix: BrewMixEntry[]; title: string }) {
   const uid = useId().replace(/:/g, "");
   const [ready, setReady] = useState(false);
   const [hovered, setHovered] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [keyboardFocused, setKeyboardFocused] = useState<string | null>(null);
+  const figureRef = useRef<HTMLElement>(null);
   useEffect(() => {
     const frame = requestAnimationFrame(() => setReady(true));
     return () => cancelAnimationFrame(frame);
   }, []);
+  useEffect(() => {
+    if (!selected) return;
+    function dismissOutside(event: PointerEvent) {
+      if (event.target instanceof Node && !figureRef.current?.contains(event.target)) {
+        setSelected(null);
+      }
+    }
+    document.addEventListener("pointerdown", dismissOutside);
+    return () => document.removeEventListener("pointerdown", dismissOutside);
+  }, [selected]);
   if (mix.length === 0) return null;
 
   let fallbackIndex = 0;
@@ -80,10 +97,11 @@ function MixDonut({ mix, title }: { mix: BrewMixEntry[]; title: string }) {
     return segment;
   });
 
-  const focus = segments.find((s) => s.type === hovered) ?? segments[0];
+  const selectedSegment = segments.find((s) => s.type === selected);
+  const focus = selectedSegment ?? segments.find((s) => s.type === hovered) ?? segments[0];
 
   return (
-    <figure className="w-full max-w-[18rem] sm:w-72">
+    <figure ref={figureRef} className="min-w-0 w-full max-w-[18rem] justify-self-center">
       <figcaption className="mb-2 text-center text-sm font-semibold uppercase tracking-wide text-white/70">
         {title}
       </figcaption>
@@ -93,7 +111,7 @@ function MixDonut({ mix, title }: { mix: BrewMixEntry[]; title: string }) {
           className="pointer-events-none absolute left-1/2 top-1/2 h-48 w-48 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl transition-colors duration-500"
           style={{ backgroundColor: focus.tone.glow, opacity: 0.18 }}
         />
-        <svg viewBox="0 0 220 220" className="relative mx-auto h-auto w-full" role="img" aria-label={`${t("Brewing mix")}: ${title}`}>
+        <svg viewBox="0 0 220 220" className="relative mx-auto h-auto w-full" role="group" aria-label={`${t("Brewing mix")}: ${title}`}>
           <defs>
             {segments.map((s) => (
               <linearGradient key={s.type} id={`${uid}-${s.index}`} x1="0" y1="0" x2="1" y2="1">
@@ -113,10 +131,24 @@ function MixDonut({ mix, title }: { mix: BrewMixEntry[]; title: string }) {
           <g transform={`rotate(-90 ${CENTER} ${CENTER})`}>
             {segments.map((s) => {
               const visible = Math.max(s.length - (segments.length > 1 ? GAP : 0), 0.01);
-              const active = hovered === s.type;
+              const active = selected === s.type || keyboardFocused === s.type || (!selected && hovered === s.type);
               return (
+                <g key={s.type}>
+                {(selected === s.type || keyboardFocused === s.type) && (
+                  <circle
+                    cx={CENTER}
+                    cy={CENTER}
+                    r={RADIUS}
+                    fill="none"
+                    stroke="rgba(255,255,255,0.9)"
+                    strokeWidth={STROKE + 12}
+                    strokeDasharray={`${ready ? visible : 0} ${CIRCUMFERENCE}`}
+                    strokeDashoffset={-(s.offset + GAP / 2)}
+                    pointerEvents="none"
+                    aria-hidden="true"
+                  />
+                )}
                 <circle
-                  key={s.type}
                   cx={CENTER}
                   cy={CENTER}
                   r={RADIUS}
@@ -125,14 +157,36 @@ function MixDonut({ mix, title }: { mix: BrewMixEntry[]; title: string }) {
                   strokeWidth={active ? STROKE + 8 : STROKE}
                   strokeDasharray={`${ready ? visible : 0} ${CIRCUMFERENCE}`}
                   strokeDashoffset={-(s.offset + GAP / 2)}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${title}: ${t(s.type)}, ${s.percent}%`}
+                  aria-pressed={selected === s.type}
+                  onClick={() => setSelected((current) => current === s.type ? null : s.type)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setSelected((current) => current === s.type ? null : s.type);
+                    }
+                  }}
                   onMouseEnter={() => setHovered(s.type)}
                   onMouseLeave={() => setHovered(null)}
+                  onFocus={(event) => {
+                    setHovered(s.type);
+                    setKeyboardFocused(event.currentTarget.matches(":focus-visible") ? s.type : null);
+                  }}
+                  onBlur={() => {
+                    setHovered(null);
+                    setKeyboardFocused(null);
+                  }}
                   style={{
                     cursor: "pointer",
+                    outline: "none",
+                    opacity: selected && selected !== s.type && keyboardFocused !== s.type ? 0.35 : 1,
                     filter: `drop-shadow(0 0 ${active ? 10 : 4}px ${s.tone.glow}${active ? "cc" : "66"})`,
-                    transition: `stroke-dasharray 1000ms cubic-bezier(.22,1,.36,1) ${s.index * 140}ms, stroke-width 200ms ease, filter 200ms ease`,
+                    transition: `stroke-dasharray 1000ms cubic-bezier(.22,1,.36,1) ${s.index * 140}ms, stroke-width 200ms ease, filter 200ms ease, opacity 200ms ease`,
                   }}
                 />
+                </g>
               );
             })}
           </g>
@@ -151,7 +205,7 @@ function MixDonut({ mix, title }: { mix: BrewMixEntry[]; title: string }) {
                   x={s.x}
                   y={s.y}
                   dominantBaseline="middle"
-                  style={{ paintOrder: "stroke", stroke: "rgba(0,0,0,0.45)", strokeWidth: 2.5, strokeLinejoin: "round" }}
+                  style={{ opacity: selected && selected !== s.type ? 0.35 : 1, paintOrder: "stroke", stroke: "rgba(0,0,0,0.45)", strokeWidth: 2.5, strokeLinejoin: "round" }}
                 >
                   {s.percent >= 12 && (
                     <tspan x={s.x} dy="-0.6em"                     fontSize="11" fontWeight="600">{t(s.type)}</tspan>
@@ -165,6 +219,9 @@ function MixDonut({ mix, title }: { mix: BrewMixEntry[]; title: string }) {
           </g>
         </svg>
       </div>
+      <p className="mt-2 min-h-6 break-words text-center text-base font-semibold text-white" aria-live="polite">
+        {selectedSegment ? `${t(selectedSegment.type)} · ${selectedSegment.percent}%` : ""}
+      </p>
     </figure>
   );
 }

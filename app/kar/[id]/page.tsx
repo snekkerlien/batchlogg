@@ -11,6 +11,7 @@ import VesselContributors from "./VesselContributors";
 import MenuOverlay from "@/app/components/MenuOverlay";
 import VisibilitySwitch from "@/app/components/VisibilitySwitch";
 import ConfirmDialog from "@/app/components/ConfirmDialog";
+import SGReadingsList from "@/app/components/SGReadingsList";
 import PageHeading from "@/app/components/PageHeading";
 import BatchReminders from "./BatchReminders";
 import BatchRecipeCard from "./BatchRecipeCard";
@@ -1396,19 +1397,15 @@ const sharingSection = isOwner ? (
                 className="mt-6 rounded-lg border border-white/10 bg-black/30 p-4"
               >
                 <h3 className="mb-3 font-semibold text-green-300">{t("Recorded readings")}</h3>
-                <ul className="space-y-2 text-sm text-white/75">
-                  {[...sgReadings].reverse().map((reading, index) => (
-                    <li
-                      key={reading.id ?? `${reading.created_at}-${index}`}
-                      className="flex justify-between gap-4"
-                    >
-                      <time dateTime={reading.created_at}>
-                        {new Date(reading.created_at).toLocaleString()}
-                      </time>
-                      <span className="font-mono">{Number(reading.sg).toFixed(3)}</span>
-                    </li>
-                  ))}
-                </ul>
+                <SGReadingsList
+                  batchId={String(activeBatch.id)}
+                  readings={[...sgReadings].reverse()}
+                  onDeleted={(readingId) =>
+                    setSgReadings((current) =>
+                      current.filter((reading) => reading.id !== readingId)
+                    )
+                  }
+                />
               </section>
             )}
 
@@ -1418,7 +1415,15 @@ const sharingSection = isOwner ? (
               </h3>
               {canViewSGGraph ? (
                 <div className="rounded-lg border border-white/10 bg-black/40 p-4">
-                  <BatchSGChart readings={sgReadings} />
+                  <BatchSGChart
+                    batchId={String(activeBatch.id)}
+                    readings={sgReadings}
+                    onDeleted={(readingId) =>
+                      setSgReadings((current) =>
+                        current.filter((reading) => reading.id !== readingId)
+                      )
+                    }
+                  />
                   {currentAbv && (
                     <p className="mt-4 text-center text-lg font-semibold text-green-300">
                       {t("Current ABV")}: {currentAbv}%

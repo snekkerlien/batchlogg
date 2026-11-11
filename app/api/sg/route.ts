@@ -5,6 +5,9 @@ import { hasPremiumAccess } from "@/lib/auth/plan";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 async function getAccessibleBatches(
   serviceRole: ReturnType<typeof supabaseServer>["serviceRole"],
   userId: string,
@@ -167,4 +170,62 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({ success: true, data });
+}
+
+export async function DELETE(req: Request) {
+  const { supabase, serviceRole } = supabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
+
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
+
+  const { id, batchId } = body as Record<string, unknown>;
+  if (
+    typeof id !== "string" ||
+    !UUID_PATTERN.test(id) ||
+    typeof batchId !== "string" ||
+    !UUID_PATTERN.test(batchId)
+  ) {
+    return NextResponse.json(
+      { error: "A valid reading ID and batch ID are required" },
+      { status: 400 }
+    );
+  }
+
+  const access = await getAccessibleBatches(serviceRole, user.id, [batchId]);
+  if ("error" in access) {
+    return NextResponse.json({ error: access.error }, { status: access.status });
+  }
+
+  const { data, error } = await serviceRole
+    .from("sg_readings")
+    .delete()
+    .eq("id", id)
+    .eq("batch_id", batchId)
+    .select("id")
+    .maybeSingle();
+  if (error) {
+    console.error("Could not delete SG reading", error);
+    return NextResponse.json(
+      { error: "Could not delete SG reading" },
+      { status: 500 }
+    );
+  }
+  if (!data) {
+    return NextResponse.json({ error: "SG reading not found" }, { status: 404 });
+  }
+
+  return NextResponse.json({ success: true });
 }

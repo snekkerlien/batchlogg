@@ -14,6 +14,7 @@ import BatchRecipeCard, {
 import { formatSecondaryAdditions } from "@/lib/recipes/secondaryAdditions";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { translateBatchError } from "@/lib/i18n/apiErrors";
+import SGReadingsList from "@/app/components/SGReadingsList";
 
 type BatchInsight = Omit<Partial<BatchRecipeDetails>, "type"> & {
   id: string;
@@ -391,18 +392,15 @@ export default function BatchInsightsPage() {
               {readings.length === 0 ? (
                 <p className="mt-3 text-sm text-white/60">{t("No gravity readings recorded.")}</p>
               ) : (
-                <ol className="mt-4 divide-y divide-white/10">
-                  {readings.map((reading) => (
-                    <li key={reading.id} className="flex flex-wrap justify-between gap-2 py-3 text-sm">
-                      <time dateTime={reading.created_at} className="text-white/65">
-                        {new Date(reading.created_at).toLocaleString(language === "nb" ? "nb-NO" : "en-GB")}
-                      </time>
-                      <span className="font-mono font-semibold text-white">
-                        {Number(reading.sg).toFixed(3)} SG
-                      </span>
-                    </li>
-                  ))}
-                </ol>
+                <SGReadingsList
+                  batchId={batch.id}
+                  readings={readings}
+                  onDeleted={(readingId) =>
+                    setReadings((current) =>
+                      current.filter((reading) => reading.id !== readingId)
+                    )
+                  }
+                />
               )}
             </section>
 

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   createDefaultChecklistState,
+  filterChecklistForSteps,
   getBrewDaySteps,
   MAX_TIMER_MINUTES,
   parseChecklistState,
@@ -89,14 +90,12 @@ export default function BrewDayChecklist({
           throw new Error(result.error || t("Could not load batch checklist."));
         }
 
-        const loaded =
+        const loaded = filterChecklistForSteps(
           result.checklist === null
             ? createDefaultChecklistState(boilMinutes ?? undefined)
-            : parseChecklistState(result.checklist);
-        loaded.completed = loaded.completed.filter((id) => stepIds.has(id));
-        if (loaded.timer && !stepIds.has(loaded.timer.stepId)) {
-          loaded.timer = null;
-        }
+            : parseChecklistState(result.checklist),
+          visibleSteps
+        );
         if (!active) return;
         setChecklist(loaded);
         setNow(Date.now());
@@ -115,7 +114,7 @@ export default function BrewDayChecklist({
     return () => {
       active = false;
     };
-  }, [batchId, batchType, beerSubtype, boilMinutes, loadAttempt, stepIds, t]);
+  }, [batchId, batchType, beerSubtype, boilMinutes, loadAttempt, visibleSteps, t]);
 
   useEffect(() => {
     if (loadStatus !== "ready" || loadedBatchId !== batchId) return;
